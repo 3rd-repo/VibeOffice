@@ -868,6 +868,7 @@
     const w = pgEl.offsetWidth, hh = pgEl.offsetHeight;
     const clone = pgEl.cloneNode(true);
     clone.style.margin = '0'; clone.style.boxShadow = 'none';
+    for (const e of clone.querySelectorAll('.format-marks')) e.remove();
     for (const e of clone.querySelectorAll('[contenteditable]')) e.removeAttribute('contenteditable');
     let xhtml = new XMLSerializer().serializeToString(clone);
     for (const [u, dd] of map) xhtml = xhtml.split(u).join(dd);

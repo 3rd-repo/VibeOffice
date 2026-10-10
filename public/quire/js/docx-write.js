@@ -279,10 +279,12 @@
     let out = '';
     let buf = '';
     const tag = del ? 'w:delText' : 'w:t';
-    const flush = () => { if (buf) { out += `<${tag} xml:space="preserve">${X(buf)}</${tag}>`; buf = ''; } };
+    // A literal CR would be normalized to LF when XML is read again.
+    const flush = () => { if (buf) { out += `<${tag} xml:space="preserve">${X(buf).replace(/\r/g, '&#13;')}</${tag}>`; buf = ''; } };
     for (const ch of s) {
       if (ch === '‑') { flush(); out += '<w:noBreakHyphen/>'; }
       else if (ch === '­') { flush(); out += '<w:softHyphen/>'; }
+      else if (ch === '\n' && buf.endsWith('\r')) buf += ch; // retain an encoded CRLF pair as text
       else if (ch === '\n') { flush(); out += '<w:br/>'; }
       else if (ch === '\t') { flush(); out += '<w:tab/>'; }
       else if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/.test(ch)) continue;

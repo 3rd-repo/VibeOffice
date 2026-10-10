@@ -846,7 +846,11 @@
     if (G().guardProtect(null, true)) return;
     O.tx(wb(), 'Fill ' + dir[0].toUpperCase() + dir.slice(1), () => {
       for (const rg0 of G().ranges()) {
-        const rg = O.clip(shx, rg0);
+        // Explicit destinations include empty cells. Bound only whole rows/columns,
+        // as other bulk commands do, instead of clipping every fill to used cells.
+        const rg = { ...rg0 }, used = O.clip(shx, rg0);
+        if (rg.r1 === 0 && rg.r2 === MAXR - 1) rg.r2 = used.r2;
+        if (rg.c1 === 0 && rg.c2 === MAXC - 1) rg.c2 = used.c2;
         if (dir === 'down') { const src = rg.r1 === rg.r2 ? { r1: rg.r1 - 1, c1: rg.c1, r2: rg.r1 - 1, c2: rg.c2 } : { r1: rg.r1, c1: rg.c1, r2: rg.r1, c2: rg.c2 }; if (src.r1 < 0) continue; O.autoFill(shx, src, { r1: src.r1, c1: rg.c1, r2: rg.r2, c2: rg.c2 }, 'copy'); }
         if (dir === 'up') { const src = rg.r1 === rg.r2 ? { r1: rg.r2 + 1, c1: rg.c1, r2: rg.r2 + 1, c2: rg.c2 } : { r1: rg.r2, c1: rg.c1, r2: rg.r2, c2: rg.c2 }; O.autoFill(shx, src, { r1: rg.r1, c1: rg.c1, r2: src.r2, c2: rg.c2 }, 'copy'); }
         if (dir === 'right') { const src = rg.c1 === rg.c2 ? { r1: rg.r1, c1: rg.c1 - 1, r2: rg.r2, c2: rg.c1 - 1 } : { r1: rg.r1, c1: rg.c1, r2: rg.r2, c2: rg.c1 }; if (src.c1 < 0) continue; O.autoFill(shx, src, { r1: rg.r1, c1: src.c1, r2: rg.r2, c2: rg.c2 }, 'copy'); }

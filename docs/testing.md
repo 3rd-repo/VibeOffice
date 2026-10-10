@@ -52,6 +52,14 @@ Classic must not change when only the theme machinery changes: compare screensho
 
 ## Quire: tools/quire/test/
 
+`node tools/issue-1.mjs OUTPUT [fill|fields|marks|breaks]` runs the issue #1 browser regressions
+in isolated tabs without persistence. It checks Ledger's real Ctrl+D/Ctrl+R events, formulas,
+formatting and undo/redo; Quire's 9/10 and 99/100 page totals, section counts and tab positions;
+unchanged visible-text geometry when toggling marks in Print and Web Layout; and encoded
+carriage returns through edits, history and DOCX save/reopen. It writes screenshots, a JSON report
+and generated DOCX fixtures for independent package/SDK and LibreOffice comparisons. Set `BASE`
+to an isolated previous checkout to demonstrate the failures before a fix.
+
 | | |
 |---|---|
 | `node tools/quire/test/mdspec.js DIR` | The Markdown reader against the CommonMark spec examples and the GFM extension examples (in Node). DIR holds `spec.json` (https://spec.commonmark.org/0.31.2/spec.json), cmark-gfm's `test/spec.txt` saved as `gfm-spec.txt`, and the WHATWG `entities.json` |

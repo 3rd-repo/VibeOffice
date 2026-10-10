@@ -41,6 +41,16 @@ Licences for the word lists are in `public/common/dict/LICENSES.txt`.
   section break in a one-column layout starts a new page; "page break before" on the first paragraph
   of a table breaks before the table; Word 2013+ documents drop space before after a manual page break,
   and keep the paragraph mark of a page break that ends the document on the same page.
+- Page and section totals are measured in tabbed text and headers/footers using the completed
+  pagination. A bounded layout pass handles changes such as 9 to 10 or 99 to 100 pages, including
+  when deleting pages reduces the count again.
+- Formatting symbols are drawn over the text without changing run shaping, line wrapping or
+  paragraph heights. The symbols are omitted from PDF and print output. Showing hidden text can
+  still reveal additional content and affect layout.
+- Encoded carriage returns (`&#13;`) inside DOCX text runs render as line breaks; CRLF pairs render
+  as one break. Their original text characters and editing offsets survive save and reopen.
+  This reproduces the line-break symptom in issue #1 with a synthetic fixture; the reporter's
+  original document has not been available to confirm that it uses the same encoding.
 - Equations (Office Math, `m:oMath`) are rendered as MathML: fractions, scripts, radicals, delimiters,
   n-ary operators, accents, matrices and equation arrays. They are kept unchanged when saving.
 - Content controls bound to custom XML or to the document properties show the bound values, as Word
@@ -232,6 +242,14 @@ corpus inputs: six save/edit/draft attempts and 14 package/SDK states pass, as d
 tests. All emitted package content matches the frozen saves except generated metadata timestamps,
 so the existing layout evidence applies. The scope scan retains 35 failed archive/main-XML reads
 separately. Evidence: `~/corpora/results/quire-structure-notices-2026-10-09/`.
+
+The issue #1 regressions pass all **4 browser checks**, each of which fails on the previous
+commit. The full save/reopen recheck completes **2,880/2,902 inputs**, with the same **22 failures**
+reproduced on the previous commit. Nine independently authored page-field documents save with
+byte-identical package contents under both writers and add no package/SDK diagnostics.
+LibreOffice opens **8 original/saved pairs** with matching page counts; the remaining original
+fails to load. The generated carriage-return fixtures also pass package/SDK checks and retain
+their separate lines in LibreOffice. Reports: `~/corpora/results/issue-1-2026-10-11/`.
 
 The convention scan has 193 signatures, unchanged from the preceding full writer. The earlier
 scoped MC rules and Strict list-alignment entries retain their reviewed source properties.

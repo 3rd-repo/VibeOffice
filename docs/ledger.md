@@ -40,6 +40,9 @@ types, Justify), Clear, Delete, Delete Sheet, Move or Copy Sheet, Find and Repla
 within sheet or workbook, by rows or columns, formulas, values or comments, match case or entire cell),
 Go To and Go To Special, Edit Links. Copying to and from other programs carries tab-separated text and
 HTML tables.
+Ctrl+D and Ctrl+R fill the entire selected range, including empty destinations beyond the used
+cells, and copy formatting and translated relative formulas. A single destination cell copies
+from above or from the left; whole-row/column selections bound only the selected whole dimension.
 
 **Entering data.** Excel's own input rules: numbers, percentages, currency, fractions (`1 1/2`),
 dates and times in the usual short forms, a leading apostrophe for text, formulas with point mode
