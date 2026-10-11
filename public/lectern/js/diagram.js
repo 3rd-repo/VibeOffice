@@ -19,14 +19,28 @@
   DG.STYLES = [['simple', 'Simple Fill'], ['white', 'White Outline'], ['subtle', 'Subtle Effect'], ['moderate', 'Moderate Effect'], ['intense', 'Intense Effect']];
   const COLORFUL = ['accent2', 'accent3', 'accent4', 'accent5', 'accent6'];
 
-  /** the theme's usable colours: accents too close to the background are skipped (some themes have a white
-      accent), and text is dark on light fills; the saved colours part follows the same choice (smartart-io.js) */
+  /** the theme's usable colours: accents too close to the background are skipped (pale fill colours such as the
+      Default Design's accent 1, a white accent), and text is dark on light fills. Instead of a skipped accent the
+      diagram takes the mid-toned accent that best carries white text. The saved colours part follows the same
+      choice (smartart-io.js) */
   DG.palette = (d) => {
     const lum = (slot) => L.color.luma(M.resolveColor(slot, d));
-    const bg = lum('lt1'), ok = (slot) => Math.abs(lum(slot) - bg) > 0.15;
-    const first = ['accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6'].find(ok) || 'accent1';
+    const ACC = ['accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6'];
+    const bg = lum('lt1'), ok = (slot) => Math.abs(lum(slot) - bg) > 0.3;
+    const first = ACC.filter(ok).sort((x, y) => Math.abs(lum(x) - 0.42) - Math.abs(lum(y) - 0.42) || ACC.indexOf(x) - ACC.indexOf(y))[0] || 'accent1';
     const colorful = COLORFUL.filter(ok);
-    return { slot: (slot) => (ok(slot) ? slot : first), colorful: colorful.length ? colorful : [first], text: (slot) => (lum(slot) > 0.62 ? 'dk1' : 'lt1') };
+    return { slot: (slot) => (ok(slot) ? slot : first), colorful: colorful.length ? colorful : [first], /* the theme's text colour that stands out more from the fill (dk1 is not always the dark one), light preferred */
+      text: (slot) => (Math.abs(lum(slot) - lum('dk1')) > Math.abs(lum(slot) - lum('lt1')) + 0.15 ? 'dk1' : 'lt1'), ok, lum };
+  };
+  /** the colours a new diagram starts with: the design's most vivid accent that stands out from the slide and
+      carries white text well (a grey or pale accent 1 makes a dull diagram); saved as that accent's own choice */
+  DG.defaultColors = (d) => {
+    d = d || design();
+    const pal = DG.palette(d);
+    const sat = (slot) => { const [r, g, b] = L.color.hexToRgb(M.resolveColor(slot, d)).map((v) => v / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b); return mx === mn ? 0 : (mx - mn) / (1 - Math.abs(mx + mn - 1)); };
+    const score = (slot) => sat(slot) - 1.2 * Math.abs(pal.lum(slot) - 0.42);
+    const ACC = ['accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6'].filter(pal.ok);
+    return ACC.sort((x, y) => score(y) - score(x) || ACC.indexOf(x) - ACC.indexOf(y))[0] || 'accent1';
   };
   /** fill, line, shadow and text colour of one laid-out shape */
   function paint(s, sa, pal) {
@@ -42,7 +56,7 @@
     if (s.role === 'ring') return { fill: { t: 'none' }, line: { c, a: 0.4, w: 8, dash: 'solid' }, shadow: null };
     if (s.role === 'bg') return { fill: { t: 'solid', c, a: 0.25 }, line: { t: 'none' }, shadow: null };
     if (s.role === 'marker') return { fill: { t: 'solid', c, a: 1 }, line: { c: 'lt1', w: 1.5, dash: 'solid' }, shadow: null };
-    if (s.role === 'arrow') return { fill: { t: 'solid', c, a: a * (s.big ? 0.3 : 0.45) }, line: { t: 'none' }, shadow: null };
+    if (s.role === 'arrow') return { fill: { t: 'solid', c, a: a * (s.big ? 0.3 : 0.6) }, line: { t: 'none' }, shadow: null };
     const solid = { t: 'solid', c, a };
     const grad = (top) => ({ t: 'grad', stops: [{ p: 0, c, a: a * top }, { p: 1, c, a }], ang: 90, path: 'lin' });
     const shadow = (o, dy, blur) => ({ c: '#000000', a: o, dx: 0, dy, blur });
@@ -164,7 +178,7 @@
     L.hist.push('Insert IntelliArt');
     const lay = SA.get(layout) || SA.LAYOUTS[0];
     const g = { id: L.uid('s'), type: 'group', name: lay.name + ' ' + (slide.shapes.length + 1), rot: 0, x: box.x, y: box.y, w: box.w, h: box.h,
-      sa: { layout: lay.id, colors: 'accent1', style: 'simple', items: SA.blank(lay.id) }, kids: [] };
+      sa: { layout: lay.id, colors: DG.defaultColors(), style: 'simple', items: SA.blank(lay.id) }, kids: [] };
     DG.relayout(g);
     if (ph) slide.shapes.splice(slide.shapes.indexOf(ph), 1, g); else slide.shapes.push(g);
     E().select([g.id]);
@@ -190,7 +204,7 @@
     const box = { x: at.x, y: at.y, w: at.w, h: at.h };
     const lay = SA.get(layout) || SA.LAYOUTS[0];
     const g = Object.assign({ id: L.uid('s'), type: 'group', name: lay.name + ' ' + (slide.shapes.length + 1), rot: 0 }, box,
-      { sa: Object.assign({ layout: lay.id, colors: 'accent1', style: 'simple', items: DG.itemsFrom(lines) }, opts || {}), kids: [] });
+      { sa: Object.assign({ layout: lay.id, colors: DG.defaultColors(M.design(pres, slide)), style: 'simple', items: DG.itemsFrom(lines) }, opts || {}), kids: [] });
     DG.relayout(g, M.design(pres, slide));
     const i = slide.shapes.indexOf(at);
     if (i >= 0) slide.shapes.splice(i, 1, g); else slide.shapes.push(g);
@@ -204,7 +218,7 @@
     const d = opts.design || design();
     const items = opts.items || sampleItems(layout);
     const { shapes } = SA.layout(layout, items, { x: 2, y: 2, w: w - 4, h: hh - 4 }, { measure: (t, sz) => t.length * sz * 0.5, maxFont: 9, minFont: 4 });
-    const sa = { colors: opts.colors || 'accent1', style: 'simple' };
+    const sa = { colors: opts.colors || DG.defaultColors(d), style: 'simple' };
     const col = (c) => M.resolveColor(c, d), pal = DG.palette(d);
     let out = '';
     for (const s of shapes) {
@@ -349,7 +363,7 @@
     g = g || DG.current();
     if (!g) return;
     change(g, 'Reset Graphic', () => {
-      g.sa.colors = 'accent1'; g.sa.style = 'simple';
+      g.sa.colors = DG.defaultColors(); g.sa.style = 'simple';
       for (const k of g.kids) if (k.sa) delete k.sa.gen;   // nothing to capture: the shapes start again
       for (const o of SA.outline(g.sa.items)) delete o.item.fmt;
     });

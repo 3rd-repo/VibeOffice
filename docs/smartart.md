@@ -92,11 +92,25 @@ LibreOffice is a partial stand-in. Without the stored drawing (`tmp/smartart-ite
 
 ## To do
 
-**Paused 2026-10-11** with final5 built and not yet opened in PowerPoint.
+**Final5 (`tmp/smartart-final5`, 2026-10-11):** text sizes and alignment now match Lectern, and the trees are right,
+including Hierarchy's slanted lines (`lineInv`). One shape is still drawn across the whole diagram in a few counts:
+the middle arrow of a 4-item Process or Vertical Process (in every frame shape), an arrow of a 4-item Cycle, box 5 of
+a 7-item Process, the centre of a 2-satellite Radial. The copies without presentation points and drawing show the
+same, so the definition causes it, not the data link. PowerPoint ignores all four constraints of that one node,
+although they look like its neighbours'.
 
-1. **Final5** (`tmp/smartart-final5`, 17 decks, CHECKLIST.md there): PowerPoint PDFs, and Add Shape on two
-   diagrams. Decks `15-…` are copies without presentation points, a control for the link fix. Then fix what is
-   left, update this page, and commit. Items 2–5 are what final4 already showed right; check them in final5:
+PowerPoint's re-saves of final5 (`*-saved.pptx`, `*-added.pptx` there) record the size it gave each shape
+(`tmp/smartart-r6-tools/ppsaved.py`): the stretched shapes are exactly the diagram's size, so their four
+constraints were ignored. They are the same nodes at every frame shape, so the cause is the structure, not the values.
+**Add Shape works:** a fifth process item took our 5-item layout at Lectern's spacing; a new org-chart box took the
+tree fallback with its connectors. `powerpoint-own.pptx` (Basic Process, Name and Title Organization Chart, Labeled
+Hierarchy made in PowerPoint) is a reference; its Basic Process boxes are 123 × 74 pt to our 125 × 75.
+
+1. **Round 7** (`tmp/smartart-r7`, 17 one-slide decks, CHECKLIST.md there; `tmp/smartart-bisect7/variants.py`):
+   the 4-item process and the 2-satellite radial, each changing one thing (node names, values, removing the node,
+   only that count's branch, centre constraints, constraint order, one loop per shape or per item). The user saves
+   each in PowerPoint; read the sizes with `ppsaved.py`. Fix from that, then rerun final5's decks.
+   Already right in final5, to keep an eye on:
 2. **Processes:** box proportions; Chevron, Step Up, Continuous Arrow and Basic Timeline shapes; visible arrows.
 3. **Cycles:** spacing on the ring, and arrows between items.
 4. **Lists:** Stacked, Lined and Vertical Box List differ from Vertical Bullet; Block List colours.

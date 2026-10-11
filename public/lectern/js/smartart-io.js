@@ -394,7 +394,7 @@
     const lbl = (n) => {
       let f = fills, line = `<dgm:linClrLst meth="repeat">${sc('lt1')}</dgm:linClrLst>`, tx = sc(pal.text(id === 'colorful' ? pal.colorful[0] : base));
       if (n === 'vennNode1') { f = fills.replace(/<\/a:schemeClr>/g, '<a:alpha val="50000"/></a:schemeClr>'); tx = sc('tx1'); }
-      if (n === 'sibTrans2D1') { f = clr([sc(base, '<a:alpha val="45000"/>')]); line = `<dgm:linClrLst meth="repeat">${sc(base, '<a:alpha val="45000"/>')}</dgm:linClrLst>`; }
+      if (n === 'sibTrans2D1') { f = clr([sc(base, '<a:alpha val="60000"/>')]); line = `<dgm:linClrLst meth="repeat">${sc(base, '<a:alpha val="60000"/>')}</dgm:linClrLst>`; }
       if (n === 'parChTrans1D2') { f = clr([sc(base)]); line = `<dgm:linClrLst meth="repeat">${sc(base)}</dgm:linClrLst>`; }
       /* the sub-item cards and the pyramid behind cards: a pale tint of the colour, dark text (as diagram.js paints them) */
       if (n === 'alignAcc1' || n === 'bgShp') { f = clr([sc(base, `<a:alpha val="${n === 'bgShp' ? 25000 : 18000}"/>`)]); line = `<dgm:linClrLst meth="repeat">${sc(base)}</dgm:linClrLst>`; tx = sc('tx1'); }
