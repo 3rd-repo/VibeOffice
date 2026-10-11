@@ -390,29 +390,29 @@
   const colorsKey = (id) => (id === 'range' ? 'accent1-range' : id || 'accent1');
   /** the saved id of the colours with the style's design language */
   const colorsId = (id, lang) => colorsKey(id) + (lang && lang !== 'fill' ? '/' + lang : '');
-  const colorsCat = (id) => { const [ref, kind] = L.diagram.colorsOf(id); return ref === 'colorful' || /^accent/.test(kind) ? 'colorful' : ref === 'dark2' ? 'mainScheme' : ref; };
+  const colorsCat = (id) => { const [ref, kind] = L.diagram.colorsOf(id); return ref === 'colorful' || /^accent/.test(kind) || L.diagram.PALETTES[ref] ? 'colorful' : ref === 'dark2' ? 'mainScheme' : ref; };
   /** pal: the theme's usable colours (L.diagram.palette); lang: the style's design language (L.diagram.styleLang):
       outlined and tinted shapes have colours of their own, saved under their own id ('accent2-accent3/outline') */
   IO.colorsXML = (id, pal, lang) => {
     id = colorsKey(id);
     lang = lang || 'fill';
-    const clr = (vals, meth, tag) => `<dgm:${tag || 'fillClrLst'} meth="${meth || 'repeat'}">${vals.join('')}</dgm:${tag || 'fillClrLst'}>`;
-    const sc = (v, mods) => `<a:schemeClr val="${v}">${mods || ''}</a:schemeClr>`;
-    const [ref, kind] = L.diagram.colorsOf(id);
-    const base = pal.slot(ref === 'dark2' ? 'dk2' : /^accent[1-6]$/.test(ref) ? ref : 'accent1');
+    /* a list of colours; a range ('span', the default) is written as Office writes it, without meth */
+    const clr = (vals, meth, tag) => `<dgm:${tag || 'fillClrLst'}${meth === 'span' ? '' : ` meth="${meth || 'repeat'}"`}>${vals.join('')}</dgm:${tag || 'fillClrLst'}>`;
+    /* a theme slot, or one of our palettes' own colours */
+    const sc = (v, mods) => (v[0] === '#' ? `<a:srgbClr val="${v.slice(1).toUpperCase()}">${mods || ''}</a:srgbClr>` : `<a:schemeClr val="${v}">${mods || ''}</a:schemeClr>`);
     const mods = (list) => list.map(([n, v]) => `<a:${n} val="${v}"/>`).join('');
-    /* the items' colours: [slot, colour changes] each, and how they spread over the items */
-    const [cols, meth] = ref === 'colorful' ? [pal.colorful.map((v) => [v, []]), 'cycle'] : kind === 'range' ? [L.diagram.rangeMods(pal, base).map((m) => [base, m]), 'span']
-      : kind !== 'fill' ? [[[base, []], [pal.slot(kind), []]], 'span'] : [[[base, []]], 'repeat'];
-    /* extra: more colour changes, a string or (slot, changes) → string */
+    /* the items' colours, how they spread over the items, and their text colours (L.diagram.colorSpec) */
+    const { cols, meth, base, texts } = L.diagram.colorSpec(id, pal), [, kind] = L.diagram.colorsOf(id);
+    /* extra: more colour changes, a string or (colour, changes) → string */
     const list = (extra, tag, only) => clr((only || cols).map(([v, m]) => sc(v, mods(m) + (typeof extra === 'function' ? extra(v, m) : extra || ''))), only ? 'repeat' : meth, tag);
     const fills = list();
+    const textList = clr(texts.map(([v, m]) => sc(v, mods(m))), meth === 'cycle' ? 'cycle' : 'repeat', 'txFillClrLst');
     /* outlined and tinted: the colour on the edge and in the text (a range of shades writes in its deep end), the
        text deeper or lighter where it would be faint on the slide */
-    const ink = (tag) => list((v, m) => mods(L.diagram.inkMods(pal, L.color.applyMods(pal.hex(v), m.map(([name, val]) => ({ name, val }))))), tag, kind === 'range' ? [[base, []]] : null);
+    const ink = (tag) => list((v, m) => mods(L.diagram.inkMods(pal, L.diagram.hexOf(pal, [v, m]))), tag, kind === 'range' ? [[base, []]] : null);
     const lbl = (n) => {
-      let f = fills, line = `<dgm:linClrLst meth="repeat">${sc('lt1')}</dgm:linClrLst>`, tx = sc(pal.text(ref === 'colorful' ? pal.colorful[0] : base)), txl = '';
-      if (n === 'vennNode1') { f = list('<a:alpha val="50000"/>'); tx = sc('tx1'); }
+      let f = fills, line = `<dgm:linClrLst meth="repeat">${sc('lt1')}</dgm:linClrLst>`, tx = '', txl = textList;
+      if (n === 'vennNode1') { f = list('<a:alpha val="50000"/>'); tx = sc('tx1'); txl = ''; }
       if (lang !== 'fill' && ['node0', 'node1', 'lnNode1', 'vennNode1'].includes(n)) {
         const venn = n === 'vennNode1';
         f = lang === 'outline' ? clr([sc('lt1', venn ? '<a:alpha val="50000"/>' : '')]) : list(mods(L.diagram.washMods(pal)) + (venn ? '<a:alpha val="70000"/>' : ''));
@@ -422,10 +422,10 @@
       if (n === 'sibTrans2D1') { f = clr([sc(base, '<a:alpha val="60000"/>')]); line = `<dgm:linClrLst meth="repeat">${sc(base, '<a:alpha val="60000"/>')}</dgm:linClrLst>`; }
       if (n === 'parChTrans1D2') { f = clr([sc(base)]); line = `<dgm:linClrLst meth="repeat">${sc(base)}</dgm:linClrLst>`; }
       /* the sub-item cards and the pyramid behind cards: a pale tint of the colour, dark text (as diagram.js paints them) */
-      if (n === 'alignAcc1' || n === 'bgShp') { f = clr([sc(base, `<a:alpha val="${n === 'bgShp' ? 25000 : 18000}"/>`)]); line = `<dgm:linClrLst meth="repeat">${sc(base)}</dgm:linClrLst>`; tx = sc('tx1'); }
+      if (n === 'alignAcc1' || n === 'bgShp') { f = clr([sc(base, `<a:alpha val="${n === 'bgShp' ? 25000 : 18000}"/>`)]); line = `<dgm:linClrLst meth="repeat">${sc(base)}</dgm:linClrLst>`; tx = sc('tx1'); txl = ''; }
       /* the text over each shape: its colour, or each item's own on outlined and tinted shapes */
-      if (n === 'trAlignAcc1') { f = clr([sc('lt1', '<a:alpha val="0"/>')]); line = `<dgm:linClrLst meth="repeat">${sc('lt1', '<a:alpha val="0"/>')}</dgm:linClrLst>`; tx = sc(pal.text(ref === 'colorful' ? pal.colorful[0] : base)); if (lang !== 'fill') txl = ink('txFillClrLst'); }
-      if (n === 'revTx') { f = clr([sc('lt1', '<a:alpha val="0"/>')]); line = `<dgm:linClrLst meth="repeat">${sc('dk1', '<a:alpha val="0"/>')}</dgm:linClrLst>`; tx = sc('tx1'); }
+      if (n === 'trAlignAcc1') { f = clr([sc('lt1', '<a:alpha val="0"/>')]); line = `<dgm:linClrLst meth="repeat">${sc('lt1', '<a:alpha val="0"/>')}</dgm:linClrLst>`; if (lang !== 'fill') txl = ink('txFillClrLst'); }
+      if (n === 'revTx') { f = clr([sc('lt1', '<a:alpha val="0"/>')]); line = `<dgm:linClrLst meth="repeat">${sc('dk1', '<a:alpha val="0"/>')}</dgm:linClrLst>`; tx = sc('tx1'); txl = ''; }
       return `<dgm:styleLbl name="${n}">${f}${line}<dgm:effectClrLst/><dgm:txLinClrLst/>${txl || `<dgm:txFillClrLst meth="repeat">${tx}</dgm:txFillClrLst>`}<dgm:txEffectClrLst/></dgm:styleLbl>`;
     };
     const name = L.diagram.colorsName(id) + (lang === 'fill' ? '' : lang === 'outline' ? ', Outlined' : ', Tinted');

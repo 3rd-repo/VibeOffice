@@ -7,7 +7,7 @@ IntelliArt is Lectern's name for its diagrams; in files they are Office SmartArt
 
 - **In Lectern:**
   - 26 layouts (`public/common/smartart.js`), with a gallery, text pane, Diagram toolbar and IntelliArt Tools;
-  - colours (Colorful, Colorful Range, Gradient Range, per accent) and styles in three families (filled, outlined,
+  - colours (two from the theme, 13 fixed palettes of our own) and styles in three families (filled, outlined,
     tinted), pictured in the IntelliArt pane;
   - a shape's own formatting is kept;
   - the sample deck and four templates use IntelliArt;
@@ -85,7 +85,8 @@ algorithms after Add Shape. Still wrong, fixed for final5:
 
 **Colours and styles (2026-10-11, not yet seen in PowerPoint):** quick styles refer to the theme's style matrix by
 index, so the themes Lectern writes now have one (`L.model.FMT`: solid, soft and rich gradient fills; 0.75, 1.5 and
-2.5 pt lines; three drop shadows). Gradient Range and Colorful Range are `fillClrLst meth="span"` lists; outlined and
+2.5 pt lines; three drop shadows). Ranges are two-colour `fillClrLst` lists without `meth` (span, as Office writes
+Colorful Range); our palettes are `srgbClr`, the theme's choices `schemeClr`; outlined and
 tinted styles get colours of their own, saved under their own id (`…/colors/<id>/outline`, `/tint`), with the
 item's colour in `linClrLst` and in the text. The text sits on the transparent `trAlignAcc1` nodes, so that label
 carries it. LibreOffice without the drawing showed two things: it takes text colour from the style's `fontRef` (so
@@ -123,7 +124,8 @@ Hierarchy made in PowerPoint) is a reference; its Basic Process boxes are 123 ×
    only that count's branch, centre constraints, constraint order, one loop per shape or per item). The user saves
    each in PowerPoint; read the sizes with `ppsaved.py`. Fix from that, then rerun final5's decks.
    Add to the same round: one slide per new style family (filled with gradients and shadows, outlined, tinted) and
-   Colorful Range, to see that PowerPoint draws the theme's gradients and shadows and the span colours.
+   a palette range and a palette cycle, to see that PowerPoint draws the theme's gradients and shadows and steps
+   through a range item by item as Lectern does (Lectern mixes in RGB).
    Already right in final5, to keep an eye on:
 2. **Processes:** box proportions; Chevron, Step Up, Continuous Arrow and Basic Timeline shapes; visible arrows.
 3. **Cycles:** spacing on the ring, and arrows between items.
