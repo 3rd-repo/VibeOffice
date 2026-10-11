@@ -52,7 +52,8 @@ dates and times in the usual short forms, a leading apostrophe for text, formula
 AutoComplete from the column, AutoCorrect, AutoFill by dragging the fill handle (numbers, dates,
 weekdays, months, quarters, custom lists), Ctrl+Enter and Alt+Enter.
 
-**View.** Normal and Page Break Preview (drag the blue page breaks), the task pane, the eight
+**View.** Normal and Page Break Preview (drag the blue page breaks), the task pane (while open it shows
+Chart, Picture or Drawing Tools for a selected object; docs/suite.md), the eight
 toolbars (Standard, Formatting, Borders, Chart, Drawing, Formula Auditing, Reviewing, List), formula
 bar, status bar, Header and Footer, Comments, Full Screen and Zoom (10–400 %, Fit Selection).
 

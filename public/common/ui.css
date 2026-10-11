@@ -136,6 +136,9 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .tp-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .tp-note { color: var(--muted); margin: 4px 0; line-height: 1.4; }
 .tp-box { background: var(--surface); border: 1px solid var(--box-line); padding: 4px 6px; margin: 4px 0; }
+/* a tool set's commands in the task pane (common/ribbon.js RB.toolsPanel): one column of toolbar buttons */
+.tp-tools { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.tp-tools > .tb-btn, .tp-tools > .tb-split { max-width: 100%; }
 .sf-list { background: var(--surface); border: 1px solid var(--box-line); max-height: 340px; overflow: auto; }
 .sf-item { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 3px 4px; border: 1px solid transparent; cursor: default; min-height: 22px; overflow: hidden; }
 .sf-item:hover { border-color: var(--hot-border); background: var(--menu-hot); }

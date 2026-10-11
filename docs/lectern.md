@@ -27,7 +27,7 @@ Open https://vibeoffice.work/lectern/ (to run it locally, see [testing.md](testi
 | `js/editor.js` | Slide editing surface: select, move, resize, rotate, crop, draw, grid |
 | `js/textedit.js` | Rich text editing, bullets, levels, AutoCorrect, tables |
 | `js/dialogs.js` | Font, Bullets, Format AutoShape, Fill Effects, Header & Footer, Options (with Security), etc. |
-| `js/panes.js` | Slides/Outline tab, notes, sorter, notes page, print preview, task panes |
+| `js/panes.js` | Slides/Outline tab, notes, sorter, notes page, print preview, task panes (while open, the selected object's Picture, Drawing, Table or LettersArt Tools; docs/suite.md) |
 | `js/slideshow.js` | Full-screen show, 58 transitions, 50+ entrance/emphasis/exit/motion-path effects, pen, rehearse timings |
 | `js/preserve.js` | Package ownership and settings merges; model-attached media, playback, property invalidation and clipboard dependencies |
 | `js/comments.js` | Legacy/modern comment ownership, author dependencies, copied identities and anchors |
@@ -75,7 +75,7 @@ IntelliArt is Lectern's name for its diagrams; in the file they are Office Smart
 | Pyramid | Basic Pyramid, Inverted Pyramid, Pyramid List |
  The new diagram takes an empty content placeholder, or the middle of the slide.
 
-* **Text pane** (opens in the sidebar on insert and whenever a diagram becomes selected; Text Pane on the Diagram toolbar or IntelliArt Tools ▸ Design): one line per item. Enter adds an item, Tab and Shift+Tab demote and promote it, Alt+Shift+↑/↓ move it, Backspace on an empty line removes it; the diagram follows as you type. Text typed into a shape on the slide goes back to its item too.
+* **Text pane** (opens in the sidebar on insert and whenever a diagram becomes selected, and closes again when the diagram is no longer selected if it opened that way; Text Pane on the Diagram toolbar or IntelliArt Tools ▸ Design): one line per item. Enter adds an item, Tab and Shift+Tab demote and promote it, Alt+Shift+↑/↓ move it, Backspace on an empty line removes it; the diagram follows as you type. Text typed into a shape on the slide goes back to its item too.
 * **Diagram toolbar / IntelliArt Tools:** Add Shape (after, before, above, below), Promote, Demote, Move Up, Move Down, Change Layout (keeps the text), Change Colors (one accent, Colorful, Gradient Range), Styles (Simple Fill, White Outline, Subtle, Moderate, Intense), Reset Graphic, Convert to Shapes. Delete on a shape removes its item.
 * **Formatting one shape** (fill, outline, font colour, bold, italic, through the usual commands) is kept on its item: it survives Add Shape, a new layout or resizing, is saved in the SmartArt data as PowerPoint stores it (the point's shape properties and text run), and comes back on reopening. Reset Graphic removes it.
 * **Layout:** resizing lays the diagram out again. All items show their text at one size, the largest at which every item fits (with room to spare for applications that draw text wider). Colours are theme slots, so a new design recolours the diagram. A new diagram (and Reset Graphic) starts with the design's most vivid accent that stands out from the slide and carries white text, rather than accent 1, which is grey or pale in some designs; it is saved as that accent, so PowerPoint shows the same. Accents too close to the slide background are skipped, and text takes whichever of the theme's two text colours stands out more from the fill.

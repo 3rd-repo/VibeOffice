@@ -21,7 +21,7 @@
   const MAXR = M.MAXR, MAXC = M.MAXC;
 
   const DEFAULT_OPTS = {
-    statusBar: true, formulaBar: true, taskOpen: true, moveAfterEnter: true, enterDir: 'down', autoComplete: true, dragDrop: true,
+    statusBar: true, formulaBar: true, taskOpen: true, paneFollows: true, moveAfterEnter: true, enterDir: 'down', autoComplete: true, dragDrop: true,
     toolbars: { standard: true, formatting: true, drawing: false, chart: 'auto', auditing: false, reviewing: false, picture: 'auto', borders: false, list: 'auto' },
     userName: 'Ledger User', recent: [], defaultFont: 'Arial', defaultSize: 10, sheetsInNew: 3, r1c1: false, calcMode: 'auto', iterate: false, iterateCount: 100, iterateDelta: 0.001, autoCalcFn: 'SUM',
   };
@@ -1419,6 +1419,8 @@
     buildTabNav();
     buildNameBox();
     if (L.panes) L.panes.task.mount(L.$('#taskpane'));
+    /* the open task pane follows the selected object to its tool set (common/ribbon.js) */
+    if (L.panes) L.ribbonUI.follow({ task: L.panes.task, sets: { chart: true, picture: true, drawing: true }, on: () => A.opts.paneFollows !== false });
     A.addBook(w, tpl ? tpl.name.replace(/\s+/g, '') + '1' : 'Book1', { type: 'xlsx', untitled: true });
     setupDrop();
     L.bus.on('selection', () => { updateStatus(); ui.refresh(); A.updateToolbars(); });
