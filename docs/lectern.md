@@ -62,7 +62,7 @@ A chart that is not edited in Lectern is saved exactly as it came: its XML, the 
 
 ## IntelliArt (SmartArt)
 
-IntelliArt is Lectern's name for its diagrams; in the file they are Office SmartArt. Insert ▸ Diagram (IntelliArt on the ribbon, or the diagram icon of a content placeholder) opens a gallery of 26 layouts by category, each pictured in the design's colours:
+IntelliArt is Lectern's name for its diagrams; in the file they are Office SmartArt. Progress with PowerPoint and what is left: [smartart.md](smartart.md). Insert ▸ Diagram (IntelliArt on the ribbon, or the diagram icon of a content placeholder) opens a gallery of 26 layouts by category, each pictured in the design's colours:
 
 | Category | Layouts |
 |---|---|
@@ -75,7 +75,7 @@ IntelliArt is Lectern's name for its diagrams; in the file they are Office Smart
 | Pyramid | Basic Pyramid, Inverted Pyramid, Pyramid List |
  The new diagram takes an empty content placeholder, or the middle of the slide.
 
-* **Text pane** (opens on insert; Text Pane on the Diagram toolbar or IntelliArt Tools ▸ Design): one line per item. Enter adds an item, Tab and Shift+Tab demote and promote it, Alt+Shift+↑/↓ move it, Backspace on an empty line removes it; the diagram follows as you type. Text typed into a shape on the slide goes back to its item too.
+* **Text pane** (opens in the sidebar on insert and whenever a diagram becomes selected; Text Pane on the Diagram toolbar or IntelliArt Tools ▸ Design): one line per item. Enter adds an item, Tab and Shift+Tab demote and promote it, Alt+Shift+↑/↓ move it, Backspace on an empty line removes it; the diagram follows as you type. Text typed into a shape on the slide goes back to its item too.
 * **Diagram toolbar / IntelliArt Tools:** Add Shape (after, before, above, below), Promote, Demote, Move Up, Move Down, Change Layout (keeps the text), Change Colors (one accent, Colorful, Gradient Range), Styles (Simple Fill, White Outline, Subtle, Moderate, Intense), Reset Graphic, Convert to Shapes. Delete on a shape removes its item.
 * **Formatting one shape** (fill, outline, font colour, bold, italic, through the usual commands) is kept on its item: it survives Add Shape, a new layout or resizing, is saved in the SmartArt data as PowerPoint stores it (the point's shape properties and text run), and comes back on reopening. Reset Graphic removes it.
 * **Layout:** resizing lays the diagram out again. All items show their text at one size, the largest at which every item fits (with room to spare for applications that draw text wider). Colours are theme slots, so a new design recolours the diagram; accents too close to the slide background are skipped and light fills get dark text.
@@ -85,7 +85,7 @@ IntelliArt is Lectern's name for its diagrams; in the file they are Office Smart
 * **Other SmartArt** (layouts we do not have) is shown and kept as before (*Opaque frames*); editing its contents converts it to shapes, with a notice.
 * **Measured on the corpus** (2026-10-10, `tools/lectern/test/smartart-office.py`): of the 43 decks with a mapped layout (50 of their 84 diagrams open editable), every unedited save keeps every diagram part byte-identical; editing one diagram in each (42 decks) gives saves with no new `package.py` findings and no Open XML SDK diagnostics, and each reopens with that diagram editable. LibreOffice draws the edited diagrams.
 
-Checked (2026-10-10): a deck with one diagram per layout (26) passes the Open XML SDK validator and `package.py`; LibreOffice 25.2 draws every one from the saved drawing (upside-down layers are drawn as outlines so their text stays upright); reopened in Lectern all 26 are editable, and editing one rewrites only its parts (the other 25 byte-identical). With the first ten, LibreOffice also re-saved them as SmartArt and Lectern reopened that copy with all ten editable. PowerPoint opened our hand-written process diagram with and without the drawing and edited it (text pane, Add Shape, Change Colors); after Add Shape it laid the boxes out taller than our engine does, which a later PowerPoint check of every layout will settle.
+Checked (2026-10-10): a deck with one diagram per layout (26) passes the Open XML SDK validator and `package.py`; LibreOffice 25.2 draws every one from the saved drawing (upside-down layers are drawn as outlines so their text stays upright); reopened in Lectern all 26 are editable, and editing one rewrites only its parts (the other 25 byte-identical). With the first ten, LibreOffice also re-saved them as SmartArt and Lectern reopened that copy with all ten editable. PowerPoint opened our hand-written process diagram with and without the drawing and edited it (text pane, Add Shape, Change Colors); PowerPoint lays SmartArt out from the definition, never from the saved drawing, so each diagram is saved with a definition that places its shapes where Lectern draws them (progress and the PowerPoint rounds: [smartart.md](smartart.md)).
 
 ## Slide size
 

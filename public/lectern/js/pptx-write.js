@@ -371,7 +371,8 @@
     const ctD = 'application/vnd.openxmlformats-officedocument.drawingml.';
     const rel = (name, type) => ctx.rels.add(type, K.relative(ctx.part, name));
     /* each item's shape takes the id of the pres point that shows it, as in PowerPoint's files */
-    IO.dataXML(sh.sa, sh.id, 'rId1');
+    const box = { w: sh.w, h: sh.h, items: sh.sa.items, measure: L.diagram.measurer(design) };
+    IO.dataXML(sh.sa, sh.id, 'rId1', null, box);
     const presOf = IO.lastPres || new Map(), usedPres = new Set();
     const modelId = (k, i) => { const p = k.sa && k.sa.role === 'node' && presOf.get(IO.guid(sh.id + ':' + k.sa.item)); if (p && !usedPres.has(p)) { usedPres.add(p); return p; } return IO.guid(sh.id + ':sp:' + i); };
     const sps = (sh.kids || []).map((k, i) => {
@@ -395,8 +396,8 @@
       spPr: (f.fill ? fillXML(f.fill, ctx, design) : '') + (f.line ? lineXML(f.line, design) : ''),
       rPr: f.color || f.b || f.i ? { attrs: (f.b ? ' b="1"' : '') + (f.i ? ' i="1"' : ''), inner: f.color ? `<a:solidFill>${clr(f.color, 1, design)}</a:solidFill>` : '' } : null,
     });
-    const dm = rel(ctx.addPart('ppt/diagrams', 'data', IO.dataXML(sh.sa, sh.id, dr, fmt), ctD + 'diagramData+xml'), RT('diagramData'));
-    const lo = rel(ctx.addPart('ppt/diagrams', 'layout', IO.layoutXML(sh.sa.layout), ctD + 'diagramLayout+xml'), RT('diagramLayout'));
+    const dm = rel(ctx.addPart('ppt/diagrams', 'data', IO.dataXML(sh.sa, sh.id, dr, fmt, box), ctD + 'diagramData+xml'), RT('diagramData'));
+    const lo = rel(ctx.addPart('ppt/diagrams', 'layout', IO.layoutXML(sh.sa.layout, box), ctD + 'diagramLayout+xml'), RT('diagramLayout'));
     const qs = rel(ctx.addPart('ppt/diagrams', 'quickStyle', IO.styleXML(sh.sa.style), ctD + 'diagramStyle+xml'), RT('diagramQuickStyle'));
     const cs = rel(ctx.addPart('ppt/diagrams', 'colors', IO.colorsXML(sh.sa.colors, L.diagram.palette(design)), ctD + 'diagramColors+xml'), RT('diagramColors'));
     return `<p:graphicFrame><p:nvGraphicFramePr>${cNvPr(id, sh, ctx)}<p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>${xfrm(sh, 'p:xfrm')}<a:graphic><a:graphicData uri="${NS_DGM}"><dgm:relIds xmlns:dgm="${NS_DGM}" r:dm="${dm}" r:lo="${lo}" r:qs="${qs}" r:cs="${cs}"/></a:graphicData></a:graphic></p:graphicFrame>`;

@@ -59,7 +59,7 @@
   /* ---------------------------------------------------------------- items → shapes */
   const design = () => M.design(L.pres, E().slide());
   /* 15% to spare, for applications that draw the text in a wider font or with wider margins (LibreOffice) */
-  const measurer = (d) => { const m = SA.measureWith(L.fontStack(L.style.font('+mn', d))); return (t, sz) => m(t, sz) * 1.15; };
+  const measurer = DG.measurer = (d) => { const m = SA.measureWith(L.fontStack(L.style.font('+mn', d))); return (t, sz) => m(t, sz) * 1.15; };
   DG.isDiagram = (sh) => !!(sh && sh.type === 'group' && sh.sa);
   /** the diagram a shape is, or is part of */
   DG.of = (sh) => { if (!sh) return null; if (DG.isDiagram(sh)) return sh; const top = E().topOf(sh.id); return DG.isDiagram(top) ? top : null; };
@@ -410,9 +410,14 @@
 
   /* a diagram read from a file shows the shapes stored in it; the first time it is selected they are laid out
      here, so that each shape knows its item (clicks, on-slide typing, Delete) */
+  /* selecting a diagram opens the sidebar on its text pane, once each time it becomes selected (closing the pane
+     keeps it closed while the same diagram stays selected) */
+  let selected = null;
   L.bus.on('selection', () => {
     const g = DG.current();
     if (g && !g.sa.office && g.kids.some((k) => !k.sa)) { DG.relayout(g); E().renderShape(g.id); }
+    if (g && g.id !== selected) DG.showPane();
+    selected = g ? g.id : null;
   });
 
   /* ---------------------------------------------------------------- the text pane */

@@ -98,6 +98,23 @@ test('SmartArt drawing caches may repeat shape id 0, as PowerPoint writes them',
   assert.equal(run('check', await pkg('dsp-zero', { 'drawing.xml': `<dsp:drawing xmlns:dsp="${DSP}"><dsp:spTree>${sp}${sp}</dsp:spTree></dsp:drawing>` })).status, 'ok');
   assert.ok(run('check', await pkg('slide-zero', { 'slide.xml': slide(picture(0) + picture(0)) })).issues.some(i => i.code === 'duplicate-shape-id'));
 });
+test('a SmartArt data part names its layout part by uniqueId, or PowerPoint draws its default list', async () => {
+  const DGM = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
+  const frame = `<p:cSld><p:spTree><p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="4" name="Diagram"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr><a:graphic><a:graphicData uri="${DGM}"><dgm:relIds xmlns:dgm="${DGM}" r:dm="d" r:lo="l" r:qs="d" r:cs="d"/></a:graphicData></a:graphic></p:graphicFrame></p:spTree></p:cSld>`;
+  const parts = (lo) => ({
+    'slide.xml': slide(frame), '_rels/slide.xml.rels': rels(rel('d', 'data.xml', 'diagramData') + rel('l', 'layout.xml', 'diagramLayout')),
+    'data.xml': `<dgm:dataModel xmlns:dgm="${DGM}"><dgm:ptLst><dgm:pt modelId="1" type="doc"><dgm:prSet loTypeId="${lo}"/></dgm:pt></dgm:ptLst></dgm:dataModel>`,
+    'layout.xml': `<dgm:layoutDef xmlns:dgm="${DGM}" uniqueId="urn:example/layout/process#1f2e3d4c"/>`,
+  });
+  assert.equal(run('check', await pkg('dgm-same', parts('urn:example/layout/process#1f2e3d4c'))).status, 'ok');
+  assert.ok(run('check', await pkg('dgm-differ', parts('urn:example/layout/process'))).issues.some(i => i.code === 'diagram-layout-id'));
+});
+test('every branch of a SmartArt choice keeps the same algorithm type, or PowerPoint draws its default list', async () => {
+  const DGM = 'http://schemas.openxmlformats.org/drawingml/2006/diagram';
+  const def = (other) => `<dgm:layoutDef xmlns:dgm="${DGM}" uniqueId="urn:example/layout/x"><dgm:layoutNode name="diagram"><dgm:choose name="c"><dgm:if name="i" func="cnt" axis="ch" ptType="node" op="equ" val="3"><dgm:alg type="composite"/></dgm:if><dgm:else name="e"><dgm:alg type="${other}"/></dgm:else></dgm:choose></dgm:layoutNode></dgm:layoutDef>`;
+  assert.equal(run('check', await pkg('dgm-same-alg', { 'layout.xml': def('composite') })).status, 'ok');
+  assert.ok(run('check', await pkg('dgm-mixed-alg', { 'layout.xml': def('lin') })).issues.some(i => i.code === 'diagram-mixed-algorithm'));
+});
 test('diagram, chart and OLE part animations target a graphic frame', async () => {
   const target = '<p:timing><p:tnLst><p:par><p:cTn id="1"><p:childTnLst><p:set><p:cBhvr><p:cTn id="2"/><p:tgtEl><p:spTgt spid="4"><p:graphicEl><a:dgm id="{00000000-0000-0000-0000-000000000001}"/></p:graphicEl></p:spTgt></p:tgtEl></p:cBhvr></p:set></p:childTnLst></p:cTn></p:par></p:tnLst><p:bldLst><p:bldGraphic spid="4" grpId="0"/></p:bldLst></p:timing>';
   const frame = '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="4" name="Diagram"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr></p:graphicFrame>';

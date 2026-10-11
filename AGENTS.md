@@ -20,6 +20,7 @@ Each app is classic `<script>` files (no ES modules) that attach to one global n
 | [docs/suite.md](docs/suite.md) | Start Center, `common/suite.js` (app launch, Recent Files), PWA manifest, service worker |
 | [docs/testing.md](docs/testing.md) | Test workflow and tools |
 | [docs/LOSSLESS_SAVE.md](docs/LOSSLESS_SAVE.md) | Same-format save: design summary, what was done, working rules, to do |
+| [docs/smartart.md](docs/smartart.md) | IntelliArt (SmartArt): how PowerPoint draws our definitions, what was learned, to do |
 
 Keep them current: a change to an app's features, formats or source layout updates its `docs/<app>.md`. No per-app READMEs. User-facing docs (README, `docs/<app>.md`) send people to https://vibeoffice.work; running it locally on 127.0.0.1 belongs in docs/testing.md. Screenshots for public docs show no local recent files or drafts (close the task panes).
 
