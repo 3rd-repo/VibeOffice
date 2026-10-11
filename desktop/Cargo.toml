@@ -13,6 +13,8 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", default-features = false, features = ["wry", "compression", "common-controls-v6"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# The system's Open, Save and folder dialogs (GTK on Linux, which uses the portals inside Flatpak)
+rfd = { version = "0.17", default-features = false, features = ["gtk3", "common-controls-v6"] }
 
 # ShellExecuteW for links (already built for Tauri, so this adds nothing)
 [target.'cfg(windows)'.dependencies]

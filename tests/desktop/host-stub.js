@@ -13,7 +13,9 @@
   const news = { 'v2026.10.10-000000': 'Older.', 'v2026.10.12-000000': 'Twelfth.\nSecond line.', 'v2026.10.11-def456': 'Same day.', 'v2026.10.14-000000': 'Fourteenth.' };
   const json = (o) => 'data:application/json,' + encodeURIComponent(JSON.stringify(o));
   const updates = ask && json({ 'show-update-button': ask ? newer : same, 'show-update-dialog': ask === 'dialog' ? newer : same });
-  window.__VO_HOST__ = Object.freeze({ platform: 'windows', version: 1, appVersion: 'v2026.10.11-abc123',
+  // ?version=v…: the build's version (default v2026.10.11-abc123)
+  const appVersion = (/version=(v[0-9.]+-[0-9a-f]{6})/.exec(location.search) || [])[1] || 'v2026.10.11-abc123';
+  window.__VO_HOST__ = Object.freeze({ platform: 'windows', version: 1, appVersion,
     updates: updates || '/updater/current.json', whatsnew: ask ? json(news) : '/updater/whatsnew.json' });
   window.__TAURI_INTERNALS__ = {
     async invoke(cmd, args) {

@@ -62,6 +62,8 @@ Keep them current: a change to an app's features, formats or source layout updat
 
 Several agents work in this repository at once. Commit only your own files and hunks (stage hunks when a file also holds someone else's edits); never commit, revert or rewrite another session's uncommitted changes. Leave a finding for the owner in the relevant plan's To do (preservation: docs/LOSSLESS_SAVE.md) instead of fixing inside their in-progress files.
 
+Always work in the repository's own working directory: no git worktrees or subtrees, no copies of the repository to work in.
+
 Don't look up this project's GitHub issues (no `gh`, no fetching issue pages) unless the user pastes an issue URL; then read only that issue.
 
 ## Testing

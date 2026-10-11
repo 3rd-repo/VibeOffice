@@ -115,6 +115,14 @@ test('desktop: show-update-dialog asks with a dialog, with what is new', () => {
     news: ['v2026.10.14-000000', 'Fourteenth.', 'v2026.10.12-000000', 'Twelfth.\nSecond line.'] }, 'what is new since this version, newest first');
 });
 
+test('the published updater/current.json: a build from 10-08 gets the button, 10-01 the dialog, today\'s nothing', () => {
+  for (const [version, want] of [['v2026.10.08-000000', { button: true, dialog: false }], ['v2026.10.01-000000', { button: true, dialog: true }],
+    ['v2026.10.11-32d7b2', { button: false, dialog: false }]]) {
+    const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', `nolaunch&version=${version}`);
+    assert.deepEqual({ button: r.button, dialog: r.dialog }, want, version);
+  }
+});
+
 test('web: no update check', () => {
   const { r } = shot('', [{ js: update }]);
   assert.deepEqual(r, { button: false, dialog: false, opened: '' });
