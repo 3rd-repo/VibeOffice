@@ -7,6 +7,7 @@
  *
  *   ui.searchBox() → a new box (each command-bar layout has its own; they share the recent list)
  *   ui.searchCommands(query, layout) → [{ id, label, where, enabled }], best first (tests/search.test.mjs)
+ *   ui.searchInput() → the box of the layout in use, or null (the assistant points at it)
  */
 (function (root) {
   'use strict';
@@ -277,10 +278,13 @@
     return box;
   };
 
+  /** the box of the layout in use (each layout has its own), or null */
+  ui.searchInput = () => L.$$('.cmd-search input').find((x) => x.getClientRects().length) || null;
+
   /* Alt+Q, as in Office: to the box of the layout in use */
   if (typeof document !== 'undefined') document.addEventListener('keydown', (e) => {
     if (!e.altKey || e.ctrlKey || e.shiftKey || e.metaKey || (e.code !== 'KeyQ' && (e.key || '').toLowerCase() !== 'q')) return;
-    const inp = L.$$('.cmd-search input').find((x) => x.getClientRects().length);
+    const inp = ui.searchInput();
     if (!inp) return;
     e.preventDefault();
     e.stopPropagation();

@@ -78,8 +78,8 @@ One copy of everything the three apps share; a change here is a change in every 
 |---|---|---|
 | `looks.css` | the looks: every chrome colour, font and shadow as a named setting, one block per look (see Looks) | all, and the Start Center |
 | `ui.css` | the chrome: layout of menus, toolbars, task panes, dialogs, controls, status bar, from the look's settings; each app's CSS follows and wins | all |
-| `core.js` | DOM helpers, colours, units, events, storage, file saving, PDF writer, media store, fonts and substitutes, symbol bullets | all |
-| `ui.js` | commands, menus, toolbars, combo boxes, dialogs, colour menus, password and prompt boxes | all |
+| `core.js` | DOM helpers, colours, units, events, storage, file saving (`L.saveFile`, which tells `vo-saved`), PDF writer, media store, fonts and substitutes, symbol bullets, platform (`L.isMac`, `L.isMobile`: iOS or Android) | all |
+| `ui.js` | commands, menus, toolbars, combo boxes, dialogs, colour menus, password and prompt boxes; the events `vo-command`, `vo-busy`, `vo-message` (what the user does, followed by the assistant) | all |
 | `search.js` | Search commands, the box at the top right of every app (see Search commands) | all |
 | `ribbon.js` | the ribbon of the Paper 2016 look, drawn from each app's `js/ribbon.js` (see The ribbon) | all |
 | `icons.js` | the 16×16 icon sets (common, document, spreadsheet), `L.icons.add`, `L.icons.kit` | all |
@@ -92,6 +92,7 @@ One copy of everything the three apps share; a change here is a change in every 
 | `spell.js` | spelling engine: word lists (`dict/`), checking, suggestions, custom dictionary, Ignore All | Quire, Ledger |
 | `clipart.js` | built-in clip art | Quire, Lectern |
 | `smartart.js` | the SmartArt layout engine: items → shapes for each layout, one text size per role (`tests/smartart.test.mjs`) | Lectern |
+| `scout/` | the assistant (see The assistant): `scout.js` the character, `assistant.js` the suite's use of him, `scout.css` his balloon | all |
 | `suite.js`, `dict/`, `templates.json` | the suite: Start Center services; word lists; template gallery | — |
 
 What each app provides:
@@ -136,6 +137,37 @@ Every app, in every look, has a Search commands box at the top right (the end of
 - `node --test tests/search.test.mjs` (needs Chromium) checks, in each app and both layouts, that everyday words find the intended command first and that it says where it is.
 
 Script order: `suite.js`, the app config, `core.js`, then the libraries and the app's own scripts as listed in each `index.html` (Ledger's from `tools/ledger/build/make.py`, where `'common/x'` means `public/common/x.js`).
+
+## The assistant: Scout
+
+Scout, a beagle on his mat, is the suite's assistant, and the place where an AI assistant will live later; for now he offers a few things to do. He is in every app, in every look, and comes in when an app starts, except on iOS and Android (`L.isMobile` in `core.js`) and in an automated browser (`navigator.webdriver`: Playwright, and `tools/shot.mjs`, which says so), where he comes in only once the user has shown him. Hiding him lasts the day: he doesn't come in by himself again until the next day.
+
+- **Help ▸ Show the Assistant** (`showAssistant`, defined by `assistant.js`; it reads *Hide the Assistant* while he is shown) brings him in at the bottom right with a wave (Greeting), nothing said, except the first time he is shown each day (from the menu, or when an app starts with him): then he waves, says good morning, afternoon or evening by the clock, introduces himself and asks what the user would like to do: *Good morning! I'm Scout, your soon-to-be-AI assistant. For now, I mostly fetch. What would you like to do?*, with choices: Find a command by name (points at Search commands and puts the cursor in it), Look something up in Help, Get started, See the keyboard shortcuts (each only where the app has that command), Show me a trick, Nothing for now. Coming in by himself once he has greeted today (another app, the next start), he just pops in (Show), with nothing to say. A click on him asks *What would you like to do?* with the same choices (or closes the balloon); he can be dragged anywhere. A click leaves the keyboard focus in the document.
+- **Right-click** (or Shift+F10 on him) opens the app's own menu: Animate! (a random action), Search commands (as the first choice), the app's Help and, last after a separator, Hide. Hide, like Hide the Assistant, plays GoodBye: he waves and drops through his mat (turned off in another window, he goes at once).
+- Kept for the whole suite in `localStorage`, as the look is: `vibeoffice.assistant` (`{ on, r, b }`: whether the user last showed or hid him, and his distance from the window's right and bottom), `scout.lastGreetedDay` (the last day he said good morning) and `scout.lastHiddenDay` (the last day the user hid him; showing him clears it). Days are local dates (`2026-10-11`) and are only compared for equality, so a clock set back never keeps him away or skips a greeting. An app starts with him when it isn't the day he was hidden and either the user last showed him or the platform has him by default. Showing or hiding him in one window does so in the others (the `storage` event).
+- **While the user works** he acts out what they ask for, as they ask (the command, or the dialog it opens), from signals the shared code sends anyway (events on `window`): `vo-command { id, result }` after `ui.exec` runs a command, `vo-message { icon }` when a message box opens (`ui.js`), plus the browser's `beforeprint`; `vo-busy { on, text }` (the busy box coming or going, `ui.js`) keeps him at it. Saving is the exception: he saves once the file is written, on `vo-saved { name }` (`L.saveFile` in `core.js`, once the file is handed over) after a save command (Save, Save As, Save as Web Page, PDF or CSV export); a PDF written after Print is no save. The apps don't call him. The pairings are Office's (`msoAnimationSaving`, …), in `ON_COMMAND` in `assistant.js`:
+
+  | What the user asks for | He plays |
+  |---|---|
+  | Save, Save As, Save as Web Page, PDF and CSV export: once the file is written | Save |
+  | Print, Print Preview; the browser printing | Print |
+  | Open, Slides from Files, Insert File, Import Text | Fetch |
+  | Find, Replace, Go To, Research, Thesaurus | Searching |
+  | Spelling, Error Checking, Word Count, Compare, formula auditing | CheckingSomething |
+  | Send Mail | SendMail |
+  | a comment, footnote or speaker notes | Writing |
+  | deleting a slide or sheet, all comments, Clear All | EmptyTrash |
+  | a picture, clip art, LettersArt, IntelliArt, chart, media, design, background | GetArtsy |
+  | AutoSum, functions, fields, macros, recalculation, Goal Seek, scenarios, PivotTable and other data tools | GetTechy |
+  | Mail Merge, the wizards, AutoFormat, animation schemes | GetWizardy |
+  | a warning or error message box | Alert |
+
+  Work keeps him at it: if the busy box is still up when his act ends (a long save after Save), he carries on (Processing) until it goes; a wait longer than 0.4 s with no act of his (opening from Recent Files) has him work along the same way. Manners: he acts only while he is on screen and the window is in front; never while he is asking something (a balloon is open) or coming and going; what he was doing (an idle, an earlier act) gives way and nothing queues; the same act at most once in 20 s; nothing with reduced motion. A new pairing is a command id added to the table.
+- **Energy:** the frame loop runs only while he is on screen. While the window is in the background (blurred for more than 250 ms) he stands still and nothing is drawn (`scout.freeze(true)`); he carries on when it comes back. A hidden page draws nothing anyway. Once hidden, the loop stops altogether. A frame costs about 0.15 ms of script.
+- **The character** (`scout.js`, `L.Scout`) is an SVG rig posed procedurally every frame, no image files: all 43 actions of the Office assistant agent under their names (Greeting, Searching, GestureUp, …), the 35 Office 2003 `msoAnimation…` constants as aliases, and 15 actions of his own; two views (three-quarter, front). Calls queue: `show`, `hide`, `play(name, { loop, until })`, `speak(text)`, `ask(text, choices)` (resolves with the choice picked, or null), `gestureAt` / `lookAt(x, y)`, `animate`, `moveTo`, `delay`; `stop`, `freeze`, `placeAt`. Options `onclick`, `onmenu(x, y)` and `onmoved(x, y)` hand clicks, the menu and drags to the user of the character (`assistant.js`), so it has no menu or storage of its own.
+- His colours are his own in every look; the balloon is chrome, drawn like a tooltip from the look's settings (`--tip-bg`, `--tip-line`, `--tip-link`, `--ui-font`) in `scout.css`, which `tests/looks.test.mjs` checks with `ui.css`. He sits above the document and task pane (z-index 900), under menus and dialogs.
+- `L.assistant`: `show(welcome)`, `hide()`, `shown()`, `scout()` (the character, for later uses such as answers in the balloon). Office 2016 has no assistant, so he has no place in the ribbon; Search commands finds him ("assistant", "scout").
+- `node --test tests/scout.test.mjs` (needs Chromium) checks each app: the Help menu item, the welcome's choices, the menu, acting out Print, Find and saving (once the file is written, not when asked, not after Print), with manners, and working along with a long wait, no frames in the background or once hidden, and the kept settings; and in Quire when he comes in by himself (a desktop yes; an iPhone, an automated browser, the day he was hidden no).
 
 ## Preservation
 

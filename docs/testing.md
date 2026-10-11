@@ -13,7 +13,7 @@ Drives a page in the Chromium listening on CDP 127.0.0.1:9222 (start one with `c
     node tools/shot.mjs ledger/ '[{"wait":1000,"shot":"ledger.png"}]'
     node tools/shot.mjs quire/ steps.json --w 1440 --h 900 --out /tmp/shots
 
-Each step is `{ "js": "...", "wait": ms, "shot": "name.png|jpg" }`; `js` is an async function body run in the page, and its return value is printed. The app's namespace is `window.L`. At the end the tool lists console errors, exceptions and every request that left 127.0.0.1 (there should be none). It opens and closes its own tab; never close the browser's other tabs.
+Each step is `{ "js": "...", "wait": ms, "shot": "name.png|jpg" }`; `js` is an async function body run in the page, and its return value is printed. The app's namespace is `window.L`. Its pages say they are automated (`navigator.webdriver`), so Scout, the assistant, does not come in by himself; a step that wants him calls `L.assistant.show()` (and sets the setting back at the end, see Looks). At the end the tool lists console errors, exceptions and every request that left 127.0.0.1 (there should be none). It opens and closes its own tab; never close the browser's other tabs.
 
 The install screenshots in the manifest (`public/<app>/preview.jpg`) are 1280×720:
 
@@ -43,6 +43,8 @@ Classic must not change when only the theme machinery changes: compare screensho
 `node --test tests/ribbon.test.mjs` loads each app in the Paper 2016 look (through `tools/shot.mjs`, so Chromium must be running) and checks its ribbon: every command id exists, every button has an icon, and every menu command is reachable from the ribbon or File, apart from the exceptions listed in the test. Run it after adding or renaming a command. A ribbon change is also looked at in a narrow window (`--w 900`, where groups fold) and with KeyTips shown (`L.app.menuBar.openIndex(0)`).
 
 `node --test tests/search.test.mjs` checks Search commands the same way: in each app and both layouts, a table of everyday queries ("image", "margins", "hyperlnk") must find the intended command first, with its location. Add a line there when a query finds the wrong thing.
+
+`node --test tests/scout.test.mjs` checks the assistant in each app (docs/suite.md, The assistant): that he comes in by himself on a desktop (waving the first time each day, popping in after) and not on an iPhone or on a day the user hid him (scripts in `tests/scout/` run before the page's own), Help ▸ Show the Assistant (a wave; the introduction and choices the first time each day), a click on him, acting out Print, Find and saving (once the file is written; the test holds back the download), working along with a long wait, the welcome's choices, the right-click menu, no frames drawn while the window is in the background or once he is hidden. Showing or hiding him writes `localStorage['vibeoffice.assistant']`, which other open app pages follow, `scout.lastGreetedDay` and `scout.lastHiddenDay`; a UI check that shows him sets them back at the end, as the test does.
 
 ## SmartArt
 

@@ -8,7 +8,7 @@ A static web office suite in the style of Office 2003 that opens and saves real 
 | Ledger | `public/ledger/` | Spreadsheet | .xlsx/.xlsm/.xltx/.xltm, CSV/text, XML Spreadsheet 2003, HTML; PDF out |
 | Lectern | `public/lectern/` | Presentations | .pptx/.pptm/.ppsx/.ppsm/.potx/.potm; PDF, PNG, HTML out |
 
-Each app is classic `<script>` files (no ES modules) that attach to one global namespace, `window.L` (also `window.Quire` / `window.Ledger` / `window.Lectern`), loaded in the order listed in its `index.html`. `public/common/` holds what the apps share: the libraries and the stylesheets (one copy each: core, ui, icons, zip, sha, crypto, geometry, metafile, charts, numfmt, dml, spell engine, clipart, SmartArt layouts, ribbon, search, `looks.css`, `ui.css`), `suite.js` (`window.VO`: launching apps, Recent Files, the service worker) and the proofing dictionaries (`common/dict/`). See docs/suite.md.
+Each app is classic `<script>` files (no ES modules) that attach to one global namespace, `window.L` (also `window.Quire` / `window.Ledger` / `window.Lectern`), loaded in the order listed in its `index.html`. `public/common/` holds what the apps share: the libraries and the stylesheets (one copy each: core, ui, icons, zip, sha, crypto, geometry, metafile, charts, numfmt, dml, spell engine, clipart, SmartArt layouts, ribbon, search, `looks.css`, `ui.css`), the assistant (Scout, `common/scout/`), `suite.js` (`window.VO`: launching apps, Recent Files, the service worker) and the proofing dictionaries (`common/dict/`). See docs/suite.md.
 
 ## Docs
 
@@ -54,7 +54,7 @@ Keep them current: a change to an app's features, formats or source layout updat
 - Chromium with CDP at 127.0.0.1:9222. `tools/shot.mjs <page> [steps]` drives a page over CDP, takes screenshots and reports console errors and any request that leaves 127.0.0.1. **Never close the browser's other tabs** (Chromium quits with its last tab).
 - `tools/oss-licenses.py`: regenerates `public/oss-licenses.html` (Open source licenses, linked from About) from the license files in `public/`, the desktop app's direct crates and its DLL; run it after changing a font, a word list or a desktop dependency.
 - `tools/templates.mjs`: regenerates the Start Center's template gallery (`public/common/templates.json` and previews) from the apps; run it after changing a template.
-- Tests live in `tests/`, not in `tools/`: `tests/*.test.mjs` (looks, ribbon, search, SmartArt), `tests/ooxml/`, one folder per app, and `tests/from-issues/N/` for the regression tests of reported issue N.
+- Tests live in `tests/`, not in `tools/`: `tests/*.test.mjs` (looks, ribbon, search, SmartArt, Scout), `tests/ooxml/`, one folder per app, and `tests/from-issues/N/` for the regression tests of reported issue N.
 - `tests/ledger/`: Ledger's Node harnesses (unit tests, `.xlsx` round trip, recalculation, CSV) and Playwright UI checks.
 - `tests/lectern/`: Lectern's real-deck harness (open, render, save, reopen in Chromium), UI checks for passwords and charts, encrypted-save check (see docs/lectern.md).
 

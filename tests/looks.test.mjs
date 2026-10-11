@@ -10,13 +10,14 @@ const looks = read('common/looks.css');
 const styleOf = (html) => [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
 const SHEETS = {
   'common/ui.css': read('common/ui.css'),
+  'common/scout/scout.css': read('common/scout/scout.css'),
   'ledger/index.html': styleOf(read('ledger/index.html')),
   'quire/index.html': styleOf(read('quire/index.html')),
   'lectern/index.html': styleOf(read('lectern/index.html')),
   'index.html': styleOf(read('index.html')),
 };
-/* set per element by the apps for document content, not by a look */
-const DOCUMENT_VARS = new Set(['--tabc', '--olvl', '--bu-c', '--bu-f', '--bu-s', '--bu-w', '--icon-swatch']);
+/* set per element by the apps for document content (and by scout.js for his size and balloon tip), not by a look */
+const DOCUMENT_VARS = new Set(['--tabc', '--olvl', '--bu-c', '--bu-f', '--bu-s', '--bu-w', '--icon-swatch', '--scout-w', '--scout-tip']);
 
 const names = (css) => new Set([...css.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
 /** look id → the settings its blocks set (a block's selector may list several looks) */
@@ -54,9 +55,11 @@ test('every setting the chrome uses is defined', () => {
 test('the shared chrome has no colours of its own', () => {
   /* colour swatches and proofing marks show content colours, not the look */
   const allowed = /^\.(cp-sw|cc-|cpk-sw|sg-bad|sg-gram)/;
-  const bad = SHEETS['common/ui.css'].split('\n')
-    .filter((l) => /#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(l) && !allowed.test(l.trim()));
-  assert.deepEqual(bad, []);
+  for (const file of ['common/ui.css', 'common/scout/scout.css']) {
+    const bad = SHEETS[file].split('\n')
+      .filter((l) => /#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(l) && !allowed.test(l.trim()));
+    assert.deepEqual(bad, [], file);
+  }
 });
 
 test('the pages pick the look before the first paint and load looks.css first', () => {

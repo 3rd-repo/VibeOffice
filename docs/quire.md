@@ -395,6 +395,7 @@ compatibility results are archived with the run history rather than mixed into c
 | `../common/ui.js`, `../common/search.js`, `../common/icons.js`, `../common/looks.css`, `../common/ui.css` | Menus, toolbars, dialogs, colour pickers, Search commands, original 16×16 icon set, the looks (shared) |
 | `js/commands.js`, `js/dialogs*.js`, `js/find.js`, `js/app.js` | Command registry, all dialogs, Find and Replace, application controller |
 | `js/ribbon.js`, `../common/ribbon.js` | The Paper 2016 look's ribbon: Word's tabs and groups over Quire's commands ([suite.md](suite.md#the-ribbon)) |
+| `../common/scout/` | Scout, the assistant: Help ▸ Show the Assistant ([suite.md](suite.md#the-assistant-scout)) |
 
 Quire is an independent program. Microsoft, Word and Office are trademarks of Microsoft Corporation;
 Quire is not affiliated with Microsoft.

@@ -492,7 +492,7 @@
           { label: 'Import External &Data', sub: ['importText'] }, '-', { label: '&List', sub: ['createList', 'totalRow', 'convertToRange'] }, '-', 'refreshData'],
       },
       { label: '&Window', items: () => ['newWindow', 'arrangeWindows', '-', 'splitWindow', 'freezePanes', '-', ...A.books.map((b, i) => ({ label: `&${i + 1} ${b.name.replace(/&/g, '&&')}`, radio: true, checked: () => i === A.cur, run: () => A.switchBook(i) }))] },
-      { label: '&Help', items: ['help', 'keyboardHelp', 'functionsHelp', '-', 'about'] },
+      { label: '&Help', items: ['help', 'showAssistant', '-', 'keyboardHelp', 'functionsHelp', '-', 'about'] },
     ];
     const row = L.$('#menurow');
     A.menuBar = ui.menuBar(row, menus);

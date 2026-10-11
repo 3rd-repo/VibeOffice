@@ -20,15 +20,17 @@ const EXCEPTIONS = {
     gettingStarted: 'Help (F1)',
     keyboardHelp: 'Help (F1)',
     newDrawing: 'the same as Insert ▸ Shapes',
-    showAssistant: 'Help (F1)',
+    showAssistant: 'not in Office 2016; Search commands finds it',
   },
   ledger: {
     customize: 'customizes the classic toolbars',
     keyboardHelp: 'Help (F1)',
+    showAssistant: 'not in Office 2016; Search commands finds it',
   },
   lectern: {
     clear: 'the Delete key',
     gettingStarted: 'Help (F1)',
+    showAssistant: 'not in Office 2016; Search commands finds it',
   },
 };
 

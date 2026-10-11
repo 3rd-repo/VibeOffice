@@ -70,6 +70,8 @@
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '')
     .replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   L.isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  /** iOS or Android (an iPad says it is a Mac, but has a touch screen) */
+  L.isMobile = typeof navigator !== 'undefined' && (/Android|iPhone|iPad|iPod/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
   L.deepMerge = function deepMerge(a, b) {
     if (b == null) return a;
     if (a == null || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(b)) return L.clone(b);
@@ -237,13 +239,15 @@
     push(`trailer\n<< /Size ${total} /Root 1 0 R /Info ${infoId} 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
     return new Blob(chunks, { type: 'application/pdf' });
   };
-  /** Offer a generated file to the user as a download. Returns 'saved'. */
+  /** Offer a generated file to the user as a download. Returns 'saved', and tells vo-saved { name } on window once
+   *  the file is handed over (the assistant acts out Save and Save As then, common/scout/assistant.js). */
   L.saveFile = async function (name, blob) {
     const url = URL.createObjectURL(blob);
     const a = L.h('a', { href: url, download: name, style: 'display:none' });
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 5000);
+    window.dispatchEvent(new CustomEvent('vo-saved', { detail: { name } }));
     return 'saved';
   };
   L.pickFiles = function (accept, multiple) {

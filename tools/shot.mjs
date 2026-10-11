@@ -17,6 +17,7 @@
 //                     app's initialization script; e.g. tests/desktop/host-stub.js)
 // --timeout ms      longest a single step (or CDP call) may take, default 120000. A hung or crashed
 //                   page still gets its tab closed (also on Ctrl-C / SIGTERM).
+// The page says it is automated (navigator.webdriver), so the assistant waits to be asked (L.assistant.show()).
 // Env: CDP (default http://127.0.0.1:9222), BASE (default http://127.0.0.1:8760)
 import fs from 'fs';
 import path from 'path';
@@ -88,6 +89,8 @@ try {
   await send('Network.setCacheDisabled', { cacheDisabled: true });
   // the page keeps focus while the browser window is in the background
   await send('Emulation.setFocusEmulationEnabled', { enabled: true });
+  // an automated browser (navigator.webdriver), so the assistant waits to be asked (common/scout/assistant.js)
+  await send('Emulation.setAutomationOverride', { enabled: true });
   await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
   if (transparent) await send('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
 

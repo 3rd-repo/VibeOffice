@@ -16,6 +16,11 @@
   ui.currentDesign = null;
 
   /* ---------- command registry ---------- */
+  /* what the user is doing, for whoever follows along (the assistant, common/scout/assistant.js), as events on
+   * window: vo-command { id, result } after a command ran, vo-busy { on, text } when work that keeps the user
+   * waiting starts or ends, vo-message { icon } when a message box opens */
+  const tell = (type, detail) => { if (typeof window !== 'undefined' && window.dispatchEvent) window.dispatchEvent(new CustomEvent(type, { detail })); };
+
   ui.cmds = {};
   ui.cmd = (id, def) => { const o = { id }; Object.defineProperties(o, Object.getOwnPropertyDescriptors(def)); ui.cmds[id] = o; return o; };
   ui.exec = (id, arg, ev) => {
@@ -26,6 +31,7 @@
     let r;
     try { r = c.run(arg, ev); } catch (e) { console.error(e); ui.msg('That action could not be completed: ' + (e && e.message ? e.message : e), { icon: 'warn' }); }
     ui.refresh();
+    tell('vo-command', { id, result: r });
     return r;
   };
   ui.enabled = (id) => { const c = ui.cmds[id]; return !!c && (!c.enabled || !!c.enabled()); };
@@ -438,6 +444,7 @@
     const t = body.querySelector('.msg-text');
     String(text).split('\n').forEach((line, i) => { if (i) t.appendChild(h('br')); t.appendChild(document.createTextNode(line)); });
     const labels = o.buttons || ['OK'];
+    tell('vo-message', { icon: o.icon || 'info' });
     const d = ui.dialog({ title: o.title || L.APP, body, width: o.width || 380, buttons: labels.map((l, i) => ({ label: l, primary: i === (o.def || 0), cancel: /cancel|^no$/i.test(stripAmp(l)) })) });
     return d.done;
   };
@@ -682,6 +689,7 @@
   };
   ui.busy = (on, text) => {
     let b = L.$('.busy');
+    if (!!on !== !!(b && !b.hidden)) tell('vo-busy', { on: !!on, text: on ? text || 'Working...' : '' });
     if (on) { if (!b) { b = h('div', { class: 'busy' }, h('div', { class: 'busy-box' }, h('span', { class: 'busy-spin' }), h('span', { class: 'busy-t' }))); document.body.appendChild(b); } b.querySelector('.busy-t').textContent = text || 'Working...'; b.hidden = false; }
     else if (b) b.hidden = true;
   };
