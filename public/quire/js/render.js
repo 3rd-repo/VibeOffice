@@ -462,7 +462,16 @@
       if (it.t === 'text') {
         // Keep one DOM character per model character for caret/selection offsets.
         // Chromium ignores CR in a Text node; LF produces the intended line break.
-        const text = it.text.slice(a - s, b - s).replace(/\r(\n?)/g, (_, lf) => lf ? '\u200b\n' : '\n');
+        const text = it.text.slice(a - s, b - s).replace(/\r/g, (_, at) => {
+          let next = it.text[a - s + at + 1];
+          if (next == null) for (let j = idx + 1; j < items.length; j++) {
+            const other = items[j];
+            if (!D.ilen(other)) continue;
+            const props = other.rPr || {}, visible = !(props.del && markup === 'final' || props.ins && markup === 'original') && (!D.rProps(d, p, other, tctx).hidden || ctx.showHidden);
+            next = other.t === 'text' && visible ? other.text[0] : ''; break;
+          }
+          return next === '\n' ? '\u200b' : '\n';
+        });
         /* Word does not let a run of spaces in a larger font raise the line: draw it at the line's
            text size and keep its width with letter spacing */
         if (/^ +$/.test(text) && r.sz && !r.u && !r.highlight && !r.shd) {
@@ -592,43 +601,57 @@
     }
   };
   /** Paint marks over measured text, without splitting runs or changing shaping. */
-  R.layoutMarks = function (root, show, scale) {
+  R.layoutMarks = function (root, show) {
     for (const old of root.querySelectorAll('.format-marks')) old.remove();
     if (!show && !root.querySelector('.p.mdel')) return;
-    const range = document.createRange();
-    for (const p of root.querySelectorAll('.p')) {
-      if (!show && !p.classList.contains('mdel')) continue;
-      const box = p.getBoundingClientRect(), layer = document.createElement('div');
-      layer.className = 'format-marks'; layer.contentEditable = 'false'; layer.setAttribute('aria-hidden', 'true');
-      const pc = p.firstChild, fontSize = getComputedStyle(pc).fontSize;
-      const mark = (cls, r) => {
-        if (!r || !r.height) return;
-        const span = document.createElement('span'); span.className = cls;
-        span.style.cssText = `left:${(r.right - box.left) / scale - p.clientLeft}px;top:${(r.top - box.top) / scale - p.clientTop}px;font-size:${fontSize}`;
-        layer.appendChild(span);
-      };
-      for (const br of show ? pc.querySelectorAll(':scope > br:not(.fill)') : []) mark('mark-br', br.getBoundingClientRect());
-      if (p.classList.contains('last')) {
-        range.selectNodeContents(pc);
-        mark('mark-p', Array.from(range.getClientRects()).at(-1));
-      }
-      for (const sp of show ? pc.querySelectorAll(':scope > span[data-o]') : []) {
-        const text = sp.firstChild;
-        if (text?.nodeType !== 3) continue;
-        for (let i = text.data.indexOf('\n'); i >= 0; i = text.data.indexOf('\n', i + 1)) {
-          range.setStart(text, i); range.setEnd(text, i + 1); mark('mark-br', range.getClientRects()[0]);
+    // Measure in local, unrotated CSS pixels. Restoring transforms before paint
+    // makes marks follow zoom, rotated text boxes and vertical table cells.
+    const transforms = [];
+    for (const e of [root, ...root.querySelectorAll('[style*="transform"]')]) {
+      const value = e.style.getPropertyValue('transform'), priority = e.style.getPropertyPriority('transform');
+      if (value && value !== 'none') { transforms.push([e, value, priority]); e.style.setProperty('transform', 'none', priority); }
+    }
+    try {
+      const range = document.createRange();
+      for (const p of root.querySelectorAll('.p')) {
+        if (!show && !p.classList.contains('mdel')) continue;
+        const box = p.getBoundingClientRect(), layer = document.createElement('div');
+        layer.className = 'format-marks'; layer.contentEditable = 'false'; layer.setAttribute('aria-hidden', 'true');
+        const pc = p.firstChild, cs = getComputedStyle(pc), rtl = cs.direction === 'rtl', vertical = cs.writingMode !== 'horizontal-tb';
+        layer.style.writingMode = cs.writingMode;
+        const mark = (cls, r) => {
+          if (!r || !r.height) return;
+          const span = document.createElement('span'); span.className = cls;
+          const x = vertical || rtl ? r.left : r.right, y = vertical ? (rtl ? r.top : r.bottom) : r.top;
+          span.style.cssText = `left:${x - box.left - p.clientLeft}px;top:${y - box.top - p.clientTop}px;font-size:${cs.fontSize}`;
+          if (rtl) span.style.transform = vertical ? 'translateY(-100%)' : 'translateX(-100%)';
+          layer.appendChild(span);
+        };
+        for (const br of show ? pc.querySelectorAll(':scope > br:not(.fill)') : []) mark('mark-br', br.getBoundingClientRect());
+        if (p.classList.contains('last')) {
+          range.selectNodeContents(pc);
+          mark('mark-p', Array.from(range.getClientRects()).at(-1));
         }
-        for (let i = text.data.indexOf(' '); i >= 0; i = text.data.indexOf(' ', i + 1)) {
-          range.setStart(text, i); range.setEnd(text, i + 1);
-          const r = range.getBoundingClientRect();
-          if (!r.width || !r.height) continue;
-          const dot = document.createElement('i');
-          dot.style.left = (r.left + r.width / 2 - box.left) / scale - p.clientLeft - 1 + 'px';
-          dot.style.top = (r.top + r.height * 0.55 - box.top) / scale - p.clientTop - 1 + 'px';
-          layer.appendChild(dot);
+        for (const sp of show ? pc.querySelectorAll(':scope > span[data-o]') : []) {
+          const text = sp.firstChild;
+          if (text?.nodeType !== 3) continue;
+          for (let i = text.data.indexOf('\n'); i >= 0; i = text.data.indexOf('\n', i + 1)) {
+            range.setStart(text, i); range.setEnd(text, i + 1); mark('mark-br', range.getClientRects()[0]);
+          }
+          for (let i = text.data.indexOf(' '); i >= 0; i = text.data.indexOf(' ', i + 1)) {
+            range.setStart(text, i); range.setEnd(text, i + 1);
+            const r = range.getBoundingClientRect();
+            if (!r.width || !r.height) continue;
+            const dot = document.createElement('i');
+            dot.style.left = r.left + r.width / 2 - box.left - p.clientLeft - 1 + 'px';
+            dot.style.top = r.top + r.height * 0.55 - box.top - p.clientTop - 1 + 'px';
+            layer.appendChild(dot);
+          }
         }
+        if (layer.childNodes.length) p.appendChild(layer);
       }
-      if (layer.childNodes.length) p.appendChild(layer);
+    } finally {
+      for (const [e, value, priority] of transforms) e.style.setProperty('transform', value, priority);
     }
   };
   function linkStr(l) { return typeof l === 'string' ? l : l.url ? l.url + (l.anchor ? '#' + l.anchor : '') : '#' + (l.anchor || ''); }

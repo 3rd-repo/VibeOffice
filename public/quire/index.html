@@ -265,7 +265,8 @@ td.csel { background-image: linear-gradient(rgba(10,36,106,.3), rgba(10,36,106,.
   .sizer { width: auto !important; height: auto !important; }
   .pages { position: static; transform: none !important; }
   .pg { box-shadow: none !important; margin: 0 !important; break-after: page; }
-  .crop, .obj-handles, .balloons, .format-marks { display: none !important; }
+  .crop, .obj-handles, .balloons, .format-marks, .sectmark, .hbrk { display: none !important; }
+  .tb::before { content: none !important; }
   .pg-hdr, .pg-ftr { opacity: 1 !important; }
   td.csel { background-image: none !important; }
 }

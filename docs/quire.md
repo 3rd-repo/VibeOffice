@@ -46,9 +46,12 @@ Licences for the word lists are in `public/common/dict/LICENSES.txt`.
   when deleting pages reduces the count again.
 - Formatting symbols are drawn over the text without changing run shaping, line wrapping or
   paragraph heights. The symbols are omitted from PDF and print output. Showing hidden text can
-  still reveal additional content and affect layout.
+  still reveal additional content and affect layout. Marks follow rotated text boxes, zoom,
+  right-to-left paragraphs and vertical table text.
 - Encoded carriage returns (`&#13;`) inside DOCX text runs render as line breaks; CRLF pairs render
-  as one break. Their original text characters and editing offsets survive save and reopen.
+  as one break, including pairs split by formatting, bookmarks or inline content controls.
+  Their original text characters and editing offsets survive save and reopen. Forced lines
+  are counted during pagination even when a centered or right-aligned line starts farther right.
   This reproduces the line-break symptom in issue #1 with a synthetic fixture; the reporter's
   original document has not been available to confirm that it uses the same encoding.
 - Equations (Office Math, `m:oMath`) are rendered as MathML: fractions, scripts, radicals, delimiters,
@@ -250,6 +253,14 @@ byte-identical package contents under both writers and add no package/SDK diagno
 LibreOffice opens **8 original/saved pairs** with matching page counts; the remaining original
 fails to load. The generated carriage-return fixtures also pass package/SDK checks and retain
 their separate lines in LibreOffice. Reports: `~/corpora/results/issue-1-2026-10-11/`.
+
+Review of that fix adds **5 edge-case regression groups**, all failing on the first fix and
+passing after correction: protected fill destinations, split CRLF pairs through formatting and
+save/reopen, forced-line pagination, mark placement in rotated, RTL and vertical text at
+three zoom levels, and omission of all formatting symbols from print/PDF rendering.
+The original four groups still pass, as do **79 Ledger and 29 Quire unit
+tests**. Three split-CRLF packages pass package/SDK validation without diagnostics and retain
+their line count in LibreOffice. Reports: `~/corpora/results/issue-1-review-2026-10-11/`.
 
 The convention scan has 193 signatures, unchanged from the preceding full writer. The earlier
 scoped MC rules and Strict list-alignment entries retain their reviewed source properties.

@@ -159,6 +159,8 @@
         for (let i = 0; i < text.length; i++) {
           const c = text.charCodeAt(i);
           const pc0 = i ? text.charCodeAt(i - 1) : 32;
+          // A forced line can start farther right (centered/right-aligned text).
+          if (pc0 === 10) forceNew = true;
           if (i === 0 || pc0 === 10 || pc0 === 32 || pc0 === 45 || pc0 === 47 || pc0 === 0x2014 || pc0 === 0x2013 || c === 32 && false || (i - lastI) >= 24 || i === text.length - 1 || c > 0x2E80) visit(i);
         }
       } else {
@@ -1158,7 +1160,7 @@
     applyVAlign();
     LY.layoutMs = performance.now() - t0;
     LY.fitSizer();
-    R.layoutMarks(LY.root, LY.opts.showMarks, LY.scale());
+    R.layoutMarks(LY.root, LY.opts.showMarks);
     L.bus.emit('layout-done', { pages: LY.pages.length });
   };
   function regionStartState(region, page, blocks) {
@@ -1227,7 +1229,7 @@
     else LY.flow(frame, blocks, { bi: 0, sub: null }, blocks.length, ctx);
     /* section / page break markers are rendered via CSS on .has-sect and .pbrk */
     LY.fitSizer();
-    R.layoutMarks(LY.root, LY.opts.showMarks, LY.scale());
+    R.layoutMarks(LY.root, LY.opts.showMarks);
     L.bus.emit('layout-done', { pages: 0 });
   };
 

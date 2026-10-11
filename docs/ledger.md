@@ -43,6 +43,8 @@ HTML tables.
 Ctrl+D and Ctrl+R fill the entire selected range, including empty destinations beyond the used
 cells, and copy formatting and translated relative formulas. A single destination cell copies
 from above or from the left; whole-row/column selections bound only the selected whole dimension.
+On protected sheets, fill checks every cell in that bounded selection, including blank cells
+and destinations beyond the ordinary selection probe, before making any changes.
 
 **Entering data.** Excel's own input rules: numbers, percentages, currency, fractions (`1 1/2`),
 dates and times in the usual short forms, a leading apostrophe for text, formulas with point mode

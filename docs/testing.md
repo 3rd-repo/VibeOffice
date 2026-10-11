@@ -60,6 +60,13 @@ carriage returns through edits, history and DOCX save/reopen. It writes screensh
 and generated DOCX fixtures for independent package/SDK and LibreOffice comparisons. Set `BASE`
 to an isolated previous checkout to demonstrate the failures before a fix.
 
+`node tools/issue-1-review.mjs OUTPUT [protection|breaks|pagination|marks|print]` covers the follow-up
+review: locked blank and distant fill destinations; CRLF across formatting, bookmarks and
+inline content controls, including history and save/reopen; centered/right-aligned forced-line
+pagination; mark placement in rotated, RTL and vertical text at 75%, 100% and 150% zoom; and
+identical exported page pixels with marks off/on, plus native print styling.
+Its generated DOCX originals, saves and edits can be compared independently in LibreOffice.
+
 | | |
 |---|---|
 | `node tools/quire/test/mdspec.js DIR` | The Markdown reader against the CommonMark spec examples and the GFM extension examples (in Node). DIR holds `spec.json` (https://spec.commonmark.org/0.31.2/spec.json), cmark-gfm's `test/spec.txt` saved as `gfm-spec.txt`, and the WHATWG `entities.json` |
