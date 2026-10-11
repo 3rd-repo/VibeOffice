@@ -20,7 +20,7 @@ mkdir -p "$DIST/VibeOffice"
 cp "$OUT/vibeoffice.exe" "$OUT/WebView2Loader.dll" "$DIST/VibeOffice/"
 cp ../LICENSE "$DIST/VibeOffice/LICENSE.txt"
 
-(cd "$DIST" && zip -q -9 -r "VibeOffice-$VERSION-x64.zip" VibeOffice)
+(cd "$DIST" && zip -q -9 -r "VibeOffice-$VERSION-x64-Portable.zip" VibeOffice)
 wixl -a x64 -D Version="$MSI_VERSION" -D Dist="$DIST/VibeOffice" -D Icon=icons/icon.ico \
   -o "$DIST/VibeOffice-$VERSION-x64.msi" vibeoffice.wxs
 

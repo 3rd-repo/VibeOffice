@@ -13,8 +13,8 @@
 | `desktop/icons/` | `icon.ico` (16–256 px; exe, MSI, file types) and `icon.png` (128 px, Linux window icon; Tauri embeds it as raw RGBA, so keep it small) |
 | `desktop/licenses/` | license texts of what ships with the app but is not a crate (`WebView2Loader.txt`, from the WebView2 SDK package), for `public/oss-licenses.html` |
 | `desktop/vibeoffice.wxs` | the MSI: files, Start menu shortcut, file types, upgrades |
-| `desktop/build.sh` | release build: exe, portable zip and MSI in `desktop/target/dist/` |
-| `.github/workflows/windows.yml` | CI, run by hand: `build.sh` on Ubuntu; the MSI and zip as the run's artifact and a GitHub release |
+| `desktop/build.sh` | release build: exe, the Portable zip and the MSI in `desktop/target/dist/` |
+| `.github/workflows/windows.yml` | CI, run by hand: `build.sh` on Ubuntu; the MSI and the Portable zip as the run's artifact and a GitHub release |
 | `tests/desktop/` | `host.test.mjs` and `host-stub.js` (Host interface, below) |
 
 ## Host interface
@@ -83,11 +83,11 @@ When the Start Center opens, the desktop app reads `https://vibeoffice.work/upda
 
 Needs Rust with the `x86_64-pc-windows-gnu` target, mingw-w64 (`x86_64-w64-mingw32-gcc`, `windres`), `wixl` (msitools) and `zip`; builds on Linux, no Windows SDK.
 
-    desktop/build.sh        # desktop/target/dist/: VibeOffice-v2026.10.11-d2134d-x64.msi and .zip
+    desktop/build.sh        # desktop/target/dist/: VibeOffice-v2026.10.11-d2134d-x64.msi and -x64-Portable.zip
 
-`cd windows && cargo build --release` builds the exe alone (`target/x86_64-pc-windows-gnu/release/`). `cargo build --no-default-features` leaves out the embedded pages and loads `devUrl` (http://127.0.0.1:8760/, `tools/serve.py`), so page edits show on reload without rebuilding.
+`cd desktop && cargo build --release` builds the exe alone (`target/x86_64-pc-windows-gnu/release/`). `cargo build --no-default-features` leaves out the embedded pages and loads `devUrl` (http://127.0.0.1:8760/, `tools/serve.py`), so page edits show on reload without rebuilding.
 
-CI runs only by hand: Actions ▸ Windows ▸ Run workflow (pick the branch; tick *pre-release* if it is one). It runs `build.sh` on Ubuntu, keeps the MSI and zip as the run's artifact (`VibeOffice-<version>-windows-x64`) and publishes them as a GitHub release tagged with the version (`v2026.10.11-d2134d`, at the commit built); running it again on the same commit replaces the release's files. `public/updater/current.json` is not touched: raising the versions there is what makes installed copies offer the update.
+CI runs only by hand: Actions ▸ Windows ▸ Run workflow (pick the branch; tick *pre-release* if it is one). It runs `build.sh` on Ubuntu, keeps the MSI and the Portable zip as the run's artifact (`VibeOffice-<version>-windows-x64`) and publishes them as a GitHub release tagged with the version (`v2026.10.11-d2134d`, at the commit built); running it again on the same commit replaces the release's files. The Portable zip holds a `VibeOffice` folder (exe, WebView2Loader.dll, LICENSE.txt), so the exe never sits loose in Downloads: started from a folder others can write to, it would load a planted `dwmapi.dll` beside it (Windows doesn't protect that DLL, and GNU ld can't set `DependentLoadFlags`). The MSI installs into Program Files, which users can't write. `public/updater/current.json` is not touched: raising the versions there is what makes installed copies offer the update.
 
 ## The installer
 
@@ -112,7 +112,7 @@ Run it with a file to open: `target/x86_64-unknown-linux-gnu/release/vibeoffice 
 | `vibeoffice.exe`, release | 6.9 MB (6.92) |
 | of which `public/` (11 MB, brotli quality 9) | about 4.1 MB |
 | `WebView2Loader.dll`, beside the exe (GNU target) | 160 KB |
-| `VibeOffice-v2026.10.11-d2134d-x64.msi` / `.zip` | 5.6 MB / 5.4 MB |
+| `VibeOffice-v2026.10.11-d2134d-x64.msi` / `-x64-Portable.zip` | 5.6 MB / 5.4 MB |
 | `vibeoffice`, Linux release | 7.2 MB |
 
 Licenses: `tools/oss-licenses.py` lists the crates `desktop/Cargo.toml` depends on directly (`tauri`, `serde`, `serde_json`, `windows`; not their own dependencies, nor `tauri-build`, which only runs at build time) with the license files from each package, and the DLL that ships beside the exe (`WebView2Loader.dll`), in `public/oss-licenses.html`; run it after changing a dependency.

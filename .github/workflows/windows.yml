@@ -1,5 +1,5 @@
-# The Windows desktop app (desktop/, docs/desktop.md): MSI and portable zip, built on Linux with mingw and wixl,
-# published as a GitHub release tagged with the version (tools/current-tree-version.sh, e.g. v2026.10.11-d2134d).
+# The Windows desktop app (desktop/, docs/desktop.md): the MSI and the Portable zip, built on Linux with mingw and
+# wixl, published as a GitHub release tagged with the version (tools/current-tree-version.sh, e.g. v2026.10.11-d2134d).
 # Run by hand only: Actions ▸ Windows ▸ Run workflow (pick the branch). Running it again on the same commit
 # replaces the release's files.
 name: Windows
@@ -56,12 +56,13 @@ jobs:
           VERSION: ${{ steps.build.outputs.version }}
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
-          files="desktop/target/dist/VibeOffice-$VERSION-x64.msi desktop/target/dist/VibeOffice-$VERSION-x64.zip"
+          files="desktop/target/dist/VibeOffice-$VERSION-x64.msi desktop/target/dist/VibeOffice-$VERSION-x64-Portable.zip"
           if gh release view "$VERSION" > /dev/null 2>&1; then
             gh release upload "$VERSION" $files --clobber
+            gh release delete-asset "$VERSION" "VibeOffice-$VERSION-x64.zip" -y 2> /dev/null || true   # the zip's name before Portable
           else
             flag=""
             [ "$PRERELEASE" = "true" ] && flag="--prerelease"
             gh release create "$VERSION" $files --target "$GITHUB_SHA" --title "VibeOffice $VERSION" $flag \
-              --notes "Windows x64: VibeOffice-$VERSION-x64.msi installs for all users (Start menu, Open with for .docx, .xlsx and .pptx); the .zip runs without installing (keep WebView2Loader.dll beside vibeoffice.exe). Needs the Microsoft Edge WebView2 runtime, which Windows 10 and 11 include."
+              --notes "Windows x64: VibeOffice-$VERSION-x64.msi installs for all users (Start menu, Open with for .docx, .xlsx and .pptx). VibeOffice-$VERSION-x64-Portable.zip runs without installing: extract it and start vibeoffice.exe inside its VibeOffice folder (WebView2Loader.dll stays beside it). Both need the Microsoft Edge WebView2 runtime, which Windows 10 and 11 include."
           fi
