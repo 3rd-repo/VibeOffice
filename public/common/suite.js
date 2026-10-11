@@ -90,6 +90,8 @@
     },
     /** close this window if it is an app window the suite opened; false for the Start Center's (and on the web) */
     async closeWindow() { return native ? call('host_close_window') : false; },
+    /** Browse after a save: the Downloads folder, with this window's last saved file selected (desktop) */
+    async showDownloads() { if (native) return call('host_show_downloads'); },
     /** fn(files) for the files the system asks us to open (Open with, a double-click on an associated
      *  file, the installed PWA's file handlers); the page that calls this takes them */
     onFiles(fn) {
@@ -162,6 +164,15 @@
     },
     forget() { localFonts = []; try { localStorage.removeItem(LOCAL_FONTS); } catch (e) { /* storage off */ } },
   };
+
+  /* Saving, for now: in the desktop app a save is a download into the Downloads folder; the native side says
+     which file it wrote (the name only), and the app shows it with Browse (docs/desktop.md, Saving) */
+  if (native) window.addEventListener('vo-download', (e) => {
+    const ui = window.L && window.L.ui, d = e.detail || {};
+    if (!ui) return;
+    if (d.ok) ui.toast(`Saved to Downloads folder: ${d.name}`, 8000, { label: 'Browse', run: () => VO.host.showDownloads().catch((err) => console.error('browse:', err)) });
+    else ui.toast('The file could not be saved to the Downloads folder.', 8000);
+  });
 
   /* ------------------------------------------------------------ service worker */
   if (VO.host.kind === 'web' && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

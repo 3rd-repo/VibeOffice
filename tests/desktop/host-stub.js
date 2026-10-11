@@ -49,6 +49,10 @@
         sessionStorage.closed = location.pathname;
         return true;
       }
+      if (cmd === 'host_show_downloads') {   // takes nothing from the page
+        sessionStorage.browsed = JSON.stringify(args === undefined ? null : args);
+        return null;
+      }
       throw `command ${cmd} not found`;
     },
   };

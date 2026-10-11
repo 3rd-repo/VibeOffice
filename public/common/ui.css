@@ -293,6 +293,7 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .ds-tools { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
 .tooltip { position: fixed; z-index: 3000; background: var(--tip-bg); border: 1px solid var(--tip-line); padding: 1px 4px; pointer-events: none; font-size: 11px; white-space: nowrap; box-shadow: 1px 1px 2px var(--tip-shadow-c); }
 .toast { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); z-index: 2500; background: var(--tip-bg); border: 1px solid var(--tip-line); padding: 6px 12px; box-shadow: 2px 2px 4px var(--toast-shadow-c); }
+.toast .toast-act { margin-left: 8px; padding: 0; border: 0; background: none; color: var(--tip-link); text-decoration: underline; cursor: pointer; font: inherit; }
 .busy { position: fixed; inset: 0; z-index: 2600; background: var(--busy-veil); display: flex; align-items: center; justify-content: center; cursor: progress; }
 .busy-box { background: var(--dlg); border: 1px solid var(--tb-border); padding: 14px 20px; display: flex; gap: 10px; align-items: center; box-shadow: 3px 3px 8px var(--shadow-c); }
 .busy-spin { width: 16px; height: 16px; border: 2px solid var(--pane-line); border-top-color: var(--pane-link); border-radius: 50%; animation: spin .8s linear infinite; }

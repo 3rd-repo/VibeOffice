@@ -4,7 +4,7 @@
 mod host;
 
 use tauri::{
-    webview::{NewWindowResponse, PageLoadEvent},
+    webview::{DownloadEvent, NewWindowResponse, PageLoadEvent},
     AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 
@@ -34,6 +34,30 @@ pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Resu
             let _ = host::open_external(&url);
             NewWindowResponse::Deny
         })
+        // Saving, for now: every save is a download into the Downloads folder (host::download_destination
+        // decides what may be written where); the window is then told the name the file got.
+        .on_download(|webview, event| match event {
+            DownloadEvent::Requested { url, destination } => {
+                let Ok(dir) = webview.path().download_dir() else {
+                    return false;
+                };
+                match host::download_destination(&url, destination, &dir) {
+                    Some(path) => {
+                        *destination = path;
+                        true
+                    }
+                    None => false,
+                }
+            }
+            DownloadEvent::Finished { path, success, .. } => {
+                let js = webview
+                    .state::<host::Host>()
+                    .downloaded(webview.label(), path, success);
+                let _ = webview.eval(js);
+                true
+            }
+            _ => true,
+        })
         // The system title bar shows the page's title, as in the installed PWA.
         .on_document_title_changed(|window, title| {
             let _ = window.set_title(&title);
@@ -58,7 +82,8 @@ fn main() {
             host::host_ui_scale,
             host::host_set_ui_scale,
             host::host_new_window,
-            host::host_close_window
+            host::host_close_window,
+            host::host_show_downloads
         ])
         .setup(|app| {
             app.state::<host::Host>().load_settings(app.handle());

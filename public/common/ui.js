@@ -670,10 +670,12 @@
   };
 
   /* ---------- status bar & misc ---------- */
-  ui.toast = (text, ms) => {
+  /** a short notice at the bottom; action: { label, run } adds a button to it (e.g. Browse) */
+  ui.toast = (text, ms, action) => {
     let t = L.$('.toast');
     if (!t) { t = h('div', { class: 'toast', role: 'status' }); document.body.appendChild(t); }
     t.textContent = text;
+    if (action) t.append(' ', h('button', { class: 'toast-act', type: 'button', text: action.label, onclick: () => { t.hidden = true; action.run(); } }));
     t.hidden = false;
     clearTimeout(t._t);
     t._t = setTimeout(() => { t.hidden = true; }, ms || 2600);

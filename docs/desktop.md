@@ -53,6 +53,17 @@ Planned: `open({ accept })` (the system's Open dialog), `save(handle, blob)` and
 
 `node --test tests/desktop/host.test.mjs` checks the page side in Chromium: `tests/desktop/host-stub.js` plays the desktop host (run before each page with `tools/shot.mjs --pre`; `?nolaunch` and `?update=button|dialog` set the scene): a launch file opens in its app once, with no service worker and the build's version; `openUrl` refuses anything but web and mail addresses; Settings sets the UI size (the web points to the browser's zoom); the update policies; versions compare by date.
 
+## Saving (for now)
+
+Until the app writes real files (todos/DESKTOP_REAL_SAVE.md), a save is a download into the system's Downloads
+folder, decided natively (`on_download` in `main.rs`, `host::download_destination`): only the pages' own `blob:` and
+`data:` files, only the types the apps save (`SAVE_TYPES`: documents, workbooks, presentations, PDF, PNG, CSV, text,
+web pages), always straight in Downloads under the bare file name, never over an existing file (`Budget (1).csv`).
+When it is written, the native side tells that window the name the file got (`vo-download`; never a path), and the
+app shows *Saved to Downloads folder: <name>* with **Browse** (`ui.toast` with an action). Browse is
+`host_show_downloads()`: no arguments; it opens the Downloads folder and, on Windows, selects the file this window
+last saved (`explorer /select`), the one the native side wrote.
+
 ## Versions and updates
 
 A version is `v<yyyy>.<mm>.<dd>-<6 hex>`, the date (UTC) and commit of the tree it was built from, e.g. `v2026.10.11-d2134d`: `tools/current-tree-version.sh [commit]` prints it. `build.sh` stamps it into the app (`VO_VERSION`, shown as `VO.VERSION` on the Start Center and in About) and names the files with it. Windows wants numbers: the exe's file version is `2026.10.11` and the MSI's ProductVersion `26.10.11` (three numbers, the first two below 256), so Windows Installer, like `VO.compareVersions`, compares by date alone. A plain `cargo build` says `dev`.
@@ -117,7 +128,7 @@ No exe packers (UPX): antivirus flags packed exes. The largest pages are the the
 ## Known limits / to do
 
 - GNU builds import `WebView2Loader.dll`, which ships beside the exe (Microsoft's static loader is MSVC-only).
-- Saving goes through the web view's downloads (Downloads folder): needs `VO.host.save` and the Open/Save dialogs (Planned above).
+- Saving goes to the Downloads folder (Saving, above); writing the real file is planned in todos/DESKTOP_REAL_SAVE.md.
 - Opening a file while the app runs starts a second process with its own Start Center (single instance is planned). Closing the Start Center's window leaves the app windows open, with no way back to it but starting the app again.
 - The Start Center's wording is the web's ("Office suite in your browser", "Recent files are kept in this browser only").
 - Each file type uses the app icon; Quire, Ledger and Lectern document icons would match the apps.

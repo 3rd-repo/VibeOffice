@@ -5,6 +5,7 @@
 //! out for paths the user or the system chose (so far the command line), so a page reads only what it was given.
 
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -25,6 +26,8 @@ pub struct Host {
     /// handles of the files this process was started with, until a page takes them
     launch: Mutex<Vec<usize>>,
     settings: Mutex<Settings>,
+    /// window label -> the file its last save went to (downloads, until real saving: todos/DESKTOP_REAL_SAVE.md)
+    downloads: Mutex<HashMap<String, PathBuf>>,
 }
 
 /// What the native side keeps for itself, in settings.json in the app's config folder: what has to apply
@@ -276,6 +279,103 @@ fn system_open(url: &str) -> Result<(), String> {
     Ok(())
 }
 
+/* ------------------------------------------------------------ saving, for now: the Downloads folder */
+
+/// The file types the apps save and export: the only ones a download may write.
+const SAVE_TYPES: &[&str] = &[
+    "docx", "docm", "dotx", "dotm", "rtf", "htm", "html", "txt", "md", "zip", "xlsx", "xlsm",
+    "xltx", "xltm", "csv", "tsv", "prn", "xml", "pptx", "pptm", "ppsx", "ppsm", "potx", "potm",
+    "pdf", "png",
+];
+
+/// Where a download goes, or None to refuse it: only the pages' own files (blob: and data: URLs, made by
+/// L.saveFile), only SAVE_TYPES, always straight in `dir` (the Downloads folder) under the bare file name the web
+/// view suggests (it already numbers a taken name: "name (1).ext"), never over an existing file (then " (n)").
+pub fn download_destination(url: &Url, suggested: &Path, dir: &Path) -> Option<PathBuf> {
+    if !matches!(url.scheme(), "blob" | "data") {
+        return None;
+    }
+    let name = suggested.file_name()?.to_str()?.trim();
+    let (stem, ext) = name.rsplit_once('.')?;
+    let ext = ext.to_ascii_lowercase();
+    if stem.trim().is_empty()
+        || !SAVE_TYPES.contains(&ext.as_str())
+        || name.contains(['/', '\\', ':'])
+    {
+        return None;
+    }
+    let mut path = dir.join(format!("{stem}.{ext}"));
+    let mut n = 2;
+    while path.symlink_metadata().is_ok() {
+        path = dir.join(format!("{stem} ({n}).{ext}"));
+        n += 1;
+    }
+    Some(path)
+}
+
+impl Host {
+    /// A window's save finished: remember the file (for Browse) and tell that window, with the name the file
+    /// really got. Nothing about the file comes from the page.
+    pub fn downloaded(&self, label: &str, path: Option<PathBuf>, ok: bool) -> String {
+        let name = path
+            .as_deref()
+            .and_then(Path::file_name)
+            .map(|n| n.to_string_lossy().into_owned());
+        match (&path, ok) {
+            (Some(p), true) => {
+                self.downloads
+                    .lock()
+                    .unwrap()
+                    .insert(label.to_string(), p.clone());
+            }
+            _ => {
+                self.downloads.lock().unwrap().remove(label);
+            }
+        }
+        let detail = serde_json::json!({ "ok": ok && name.is_some(), "name": name });
+        format!("window.dispatchEvent(new CustomEvent('vo-download', {{ detail: {detail} }}));")
+    }
+}
+
+/// Browse: the Downloads folder, with this window's last saved file selected where the system can (Windows).
+/// Takes nothing from the page: the folder is the system's, the file is the one this app wrote.
+#[tauri::command]
+pub fn host_show_downloads(
+    app: AppHandle,
+    window: WebviewWindow,
+    host: State<Host>,
+) -> Result<(), String> {
+    let dir = app.path().download_dir().map_err(|e| e.to_string())?;
+    let last = host
+        .downloads
+        .lock()
+        .unwrap()
+        .get(window.label())
+        .cloned()
+        .filter(|p| p.parent() == Some(dir.as_path()) && p.is_file());
+    reveal(&dir, last.as_deref())
+}
+
+#[cfg(windows)]
+fn reveal(dir: &Path, file: Option<&Path>) -> Result<(), String> {
+    if let Some(file) = file {
+        use std::os::windows::process::CommandExt;
+        // a file name cannot hold a quote on Windows, so this cannot break out of the argument
+        let mut child = std::process::Command::new("explorer.exe")
+            .raw_arg(format!("/select,\"{}\"", file.display()))
+            .spawn()
+            .map_err(|e| format!("explorer: {e}"))?;
+        std::thread::spawn(move || child.wait());
+        return Ok(());
+    }
+    system_open(&dir.to_string_lossy())
+}
+
+#[cfg(not(windows))]
+fn reveal(dir: &Path, _file: Option<&Path>) -> Result<(), String> {
+    system_open(&dir.to_string_lossy())
+}
+
 /// A file's bytes (an ArrayBuffer in the page).
 #[tauri::command]
 pub fn host_read(host: State<Host>, handle: usize) -> Result<Response, String> {
@@ -287,4 +387,63 @@ pub fn host_read(host: State<Host>, handle: usize) -> Result<Response, String> {
 
 fn describe(path: &Path, e: std::io::Error) -> String {
     format!("{}: {e}", path.display())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn dest(url: &str, name: &str, dir: &Path) -> Option<PathBuf> {
+        download_destination(&Url::parse(url).unwrap(), Path::new(name), dir)
+    }
+
+    #[test]
+    fn downloads_only_the_pages_own_files_of_the_types_we_save() {
+        let dir = std::env::temp_dir().join(format!("vo-dl-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let blob = "blob:http://tauri.localhost/0b6c";
+        assert_eq!(
+            dest(blob, "/x/y/Report.docx", &dir),
+            Some(dir.join("Report.docx"))
+        );
+        assert_eq!(
+            dest("data:application/pdf;base64,AA", "Deck.PDF", &dir),
+            Some(dir.join("Deck.pdf"))
+        );
+        assert_eq!(
+            dest("https://example.com/a.docx", "a.docx", &dir),
+            None,
+            "not a page's own file"
+        );
+        assert_eq!(dest(blob, "run.exe", &dir), None, "not a type we save");
+        assert_eq!(dest(blob, "noext", &dir), None);
+        assert_eq!(dest(blob, ".docx", &dir), None);
+        std::fs::write(dir.join("Book.xlsx"), b"x").unwrap();
+        std::fs::write(dir.join("Book (2).xlsx"), b"x").unwrap();
+        assert_eq!(
+            dest(blob, "Book.xlsx", &dir),
+            Some(dir.join("Book (3).xlsx")),
+            "never over an existing file"
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn the_notice_names_only_the_file_written() {
+        let host = Host::default();
+        let js = host.downloaded(
+            "doc-1",
+            Some(PathBuf::from("/home/u/Downloads/a\"b.docx")),
+            true,
+        );
+        assert!(js.contains(r#""name":"a\"b.docx""#), "{js}");
+        assert!(!js.contains("/home/u"), "no path to the page");
+        assert_eq!(
+            host.downloads.lock().unwrap().get("doc-1"),
+            Some(&PathBuf::from("/home/u/Downloads/a\"b.docx"))
+        );
+        let js = host.downloaded("doc-1", None, false);
+        assert!(js.contains(r#""ok":false"#));
+        assert!(host.downloads.lock().unwrap().get("doc-1").is_none());
+    }
 }

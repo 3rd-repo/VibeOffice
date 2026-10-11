@@ -49,6 +49,20 @@ test('desktop: About > Open source licenses opens the credits page in a window o
   assert.match(r.title, /^Open source licenses/);
 });
 
+test('desktop: a save says where it went, and Browse shows it', () => {
+  const { r } = shot('quire/', [{ js: `
+    const toast = () => { const t = document.querySelector('.toast'); return t && !t.hidden ? t.textContent : ''; };
+    window.dispatchEvent(new CustomEvent('vo-download', { detail: { ok: true, name: 'Report (2).docx' } }));
+    const saved = toast();
+    document.querySelector('.toast .toast-act').click();
+    await new Promise((r) => setTimeout(r, 200));
+    window.dispatchEvent(new CustomEvent('vo-download', { detail: { ok: false, name: null } }));
+    return JSON.stringify({ saved, browsed: sessionStorage.browsed || '', failed: toast(), button: !!document.querySelector('.toast .toast-act') });` }],
+  '--pre', path.join(root, 'tests/desktop/host-stub.js'), '--qs', 'nolaunch');
+  assert.deepEqual(r, { saved: 'Saved to Downloads folder: Report (2).docx Browse', browsed: 'null',
+    failed: 'The file could not be saved to the Downloads folder.', button: false });
+});
+
 test('desktop: openUrl goes to the system', () => {
   const { r } = shot('', [{ js: `await VO.host.openUrl('https://github.com/tcchen2026/VibeOffice');
     let bad = ''; try { await VO.host.openUrl('file:///C:/Windows/notepad.exe'); } catch (e) { bad = String(e); }
