@@ -96,10 +96,13 @@
      *  file, the installed PWA's file handlers); the page that calls this takes them */
     onFiles(fn) {
       if (native) {
-        call('host_launch_files').then(async (list) => {
+        // at start, and again when another start of the app hands this one its files (vo-files: Windows)
+        const take = () => call('host_launch_files').then(async (list) => {
           if (!list.length) return;
           fn(await Promise.all(list.map(async (f) => new File([await call('host_read', { handle: f.handle })], f.name))));
         }).catch((e) => console.error('host:', e));
+        take();
+        window.addEventListener('vo-files', take);
       } else if ('launchQueue' in window) {
         window.launchQueue.setConsumer(async (params) => {
           if (params.files && params.files.length) fn(await Promise.all(params.files.map((h) => h.getFile())));

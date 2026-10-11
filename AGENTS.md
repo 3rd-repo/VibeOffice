@@ -18,7 +18,7 @@ Each app is classic `<script>` files (no ES modules) that attach to one global n
 | [docs/ledger.md](docs/ledger.md) | Ledger: features, formulas and calculation, compatibility results, source layout |
 | [docs/lectern.md](docs/lectern.md) | Lectern: source layout, opening, saving, known limits |
 | [docs/suite.md](docs/suite.md) | Start Center, `common/suite.js` (app launch, Recent Files), PWA manifest, service worker |
-| [docs/desktop.md](docs/desktop.md) | Desktop app (Tauri; Windows with mingw, Linux): host interface (`VO.host`), building, MSI and file types, CI, size, to do |
+| [docs/desktop.md](docs/desktop.md) | Desktop app (Tauri; Windows with mingw, Linux): host interface (`VO.host`), building, installer and file types, CI, size, to do |
 | [docs/testing.md](docs/testing.md) | Test workflow and tools |
 | [docs/LOSSLESS_SAVE.md](docs/LOSSLESS_SAVE.md) | Same-format save: design summary, what was done, working rules, to do |
 | [docs/smartart.md](docs/smartart.md) | IntelliArt (SmartArt): how PowerPoint draws our definitions, what was learned, to do |
