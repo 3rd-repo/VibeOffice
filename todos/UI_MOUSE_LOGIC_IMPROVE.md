@@ -8,9 +8,14 @@ tools, 1 data loss, 2 one shared drag lifecycle, 3 one focus rule, 4 one owner p
 
 ## Tasks
 
-Phase 0: test tools
+Phase 0: test tools (the user, 2026-10-12: automated on the local Chromium, no CI)
 - [ ] `tests/lib/input.mjs`: a tab on an app with real input (click, drag, double-click, right-click, keys, Esc, a lost
-      release, window blur, tab switch), the brush cursor and console checks; `tests/painter.test.mjs` moves onto it
+      release, window blur, tab switch), the brush cursor and console checks; it starts the server, and a headless
+      local Chromium when nothing listens on 9222
+- [ ] `tests/ui/`: the audit as tests, one per defect (its id first in the name), each asserting what Office does and
+      marked `todo` until it is fixed (taking the mark off is part of the fix, so the test becomes its regression
+      test and the todo count is this plan's progress); the painter and Quire mouse tests move here.
+      `node --test --test-concurrency=1 tests/ui/`
 - [ ] The previous-code check as a script: serve `public/` with the fix's files at `HEAD` on another port and run a test
       there with soft assertions (`BASE=http://127.0.0.1:8761`); docs/testing.md
 
@@ -24,7 +29,7 @@ Phase 1: data loss and wrong edits (small separate fixes, each with its test)
 - [ ] P2 Lectern: formatting a selected range of table cells formats the whole table
 
 Phase 2: one drag lifecycle, `ui.drag` in common/ui.js (Design)
-- [ ] `ui.drag` with `tests/drag.test.mjs` (every app: threshold, Esc, right button, lost release, blur, tab switch)
+- [ ] `ui.drag` with `tests/ui/drag.test.mjs` (every app: threshold, Esc, right button, lost release, blur, tab switch)
 - [ ] Quire on it: rulers, table borders, drawing tool, shape move, resize, rotate, inline picture resize, splitter
       (Q13, Q14, Q17c)
 - [ ] Ledger on it: the grid's drags (cells, headers, fill, move, resize, page breaks, paint, point), shapes, sheet
@@ -37,7 +42,7 @@ Phase 3: one focus rule, the keyboard back to the document (Design)
 - [ ] ui.js menus don't take focus; a command chosen from a menu hands it back (Q6 second half)
 - [ ] Chrome without a control of its own keeps the focus where it is (S11)
 - [ ] Each app's `refocus` puts the model selection back into the page (Quire, Ledger, Lectern)
-- [ ] `tests/focus.test.mjs`: dialogs (OK, Cancel, Esc) from a menu, a toolbar and the context menu; menu commands;
+- [ ] `tests/ui/focus.test.mjs`: dialogs (OK, Cancel, Esc) from a menu, a toolbar and the context menu; menu commands;
       chrome backgrounds; in every app and in Classic and Paper 2016
 
 Phase 4: one owner per piece of state
@@ -67,10 +72,14 @@ Phase 5: the rest
 
 ## Decisions
 
-Proposed, to settle with the user before Phase 2:
 - A release we never saw (button let go in another tab or window) cancels the drag, as a lost mouse capture does in
-  Windows and in LibreOffice (vcl ends tracking with Cancel); it doesn't commit at the last point.
-- `ui.drag` and the focus rule live in common/ui.js, so no app's `index.html` changes (Ledger's is generated).
+  Windows and in LibreOffice (vcl ends tracking with Cancel); it doesn't commit at the last point. (The user,
+  2026-10-12)
+
+- `ui.drag` lives in common/ui.js, next to `ui.brush` (the focus rule has to, it changes ui.js's dialogs and menus);
+  no script lists change. (The user, 2026-10-12)
+
+Proposed, to settle with the user before Phase 2:
 - The order of the phases is the one above (data loss first); the user has not confirmed it yet.
 
 ## Root causes
@@ -313,7 +322,7 @@ Ctrl+T never reaches the page in Chrome (the Font dialog is reached from menus).
   sd fu*.cxx) and write down where we follow it and where Office differs.
 - A change in common/ (`ui.drag`, the focus rule) is checked in all three apps and in the Classic and Paper 2016
   looks (`node --test tests/ribbon.test.mjs tests/looks.test.mjs`), with screenshots of what it touches.
-- Each phase ends with the full set: `node --test tests/painter.test.mjs tests/drag.test.mjs tests/focus.test.mjs`,
-  `node tests/quire/mouse-selection.mjs`, the apps' unit tests, and every app loading without console errors.
+- Each phase ends with the full set: `node --test --test-concurrency=1 tests/ui/` (no new failures; the todo count only
+  goes down), the apps' unit tests, and every app loading without console errors.
 - Several sessions work in this repository: commit only these files and hunks; leave findings for other plans in
   their To do.
