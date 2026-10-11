@@ -239,6 +239,7 @@ input, select, textarea { font: inherit; color: var(--ink); }
 .about-name { font-weight: bold; font-size: 16px; }
 .about p { margin: 6px 0; line-height: 1.4; }
 .about .about-marks { color: var(--ink-5); font-size: 11px; line-height: 1.35; }
+.about .about-oss { color: var(--pane-link); }
 .preview-box { border: 1px solid var(--field-border); background: var(--surface); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .font-preview { height: 60px; font-size: 22px; padding: 0 8px; white-space: nowrap; }
 .prev-cap { color: var(--ink-5); text-align: center; font-size: 10px; margin-top: 3px; }

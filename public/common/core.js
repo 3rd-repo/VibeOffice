@@ -500,16 +500,12 @@
     if (more.length) out.push({ heading: 'Fonts on This Computer' }, ...more);
     return out;
   };
-  /* the families queryLocalFonts() found, kept in this browser for every app of the suite */
-  const LOCAL_FONTS = 'vibeoffice.localFonts';
-  let localCache = null;
-  L.localFonts = () => { if (!localCache) { try { localCache = JSON.parse(localStorage.getItem(LOCAL_FONTS)) || []; } catch (e) { localCache = []; } } return localCache; };
+  /* the families queryLocalFonts() found, kept for every app of the suite (VO.localFonts, common/suite.js;
+     the Start Center's Settings can load or forget them) */
+  L.localFonts = () => (root.VO ? root.VO.localFonts.list() : []);
   L.loadLocalFonts = async function () {
     try {
-      const families = Array.from(new Set((await root.queryLocalFonts()).map((f) => f.family))).sort((x, y) => x.localeCompare(y));
-      localCache = families;
-      try { localStorage.setItem(LOCAL_FONTS, JSON.stringify(families)); } catch (e) { /* storage off: kept for this page only */ }
-      return families.length;
+      return await root.VO.localFonts.load();
     } catch (e) {
       L.ui?.msg('The fonts on this computer could not be listed' + (e.name === 'NotAllowedError' || e.name === 'SecurityError' ? ': permission was not given. You can allow it in the site settings of your browser.' : ': ' + (e.message || e)), { icon: 'warn' });
       return 0;

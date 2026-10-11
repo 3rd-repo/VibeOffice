@@ -441,13 +441,17 @@
     const d = ui.dialog({ title: o.title || L.APP, body, width: o.width || 380, buttons: labels.map((l, i) => ({ label: l, primary: i === (o.def || 0), cancel: /cancel|^no$/i.test(stripAmp(l)) })) });
     return d.done;
   };
-  /** Help ▸ About, the same in every app: icon, name and version, the app's own paragraphs, then
-   *  the trademark note naming the Office program it follows (o: { name, text: [paragraphs], office }) */
+  /** Help ▸ About, the same in every app: icon, name and version, the app's own paragraphs, the link to the open
+   *  source licenses, the suite's license note (as in the Start Center's About), then the trademark note naming the
+   *  Office program it follows (o: { name, text: [paragraphs], office }) */
   ui.about = function (o) {
     const body = h('div', { class: 'col about' },
       h('div', { class: 'about-head' }, h('span', { html: L.icons.app ? L.icons.app(48) : '' }),
         h('div', null, h('div', { class: 'about-name', text: o.name + ' 2003 Web Edition' }), h('div', { text: 'Version ' + L.VERSION }))),
       ...o.text.map((t) => h('p', { text: t })),
+      h('p', null, 'Made possible by open source software: ', h('a', { href: root.VO ? root.VO.LICENSES : '../oss-licenses.html', target: '_blank', rel: 'noopener',
+        class: 'about-oss', text: 'Open source licenses', onclick: (e) => { if (root.VO) { e.preventDefault(); root.VO.showLicenses(); } } }), '.'),
+      h('p', { text: 'Open source under the Apache License 2.0, provided as is, without warranty. VibeOffice.work is an independent project. Product names in its documentation are trademarks of their owners; VibeOffice.work is not affiliated with them.' }),
       h('p', { class: 'about-marks', text: `Microsoft, ${o.office} and Office are trademarks of Microsoft Corporation. ${o.name} is an independent work and is not affiliated with Microsoft.` }));
     return ui.dialog({ title: 'About ' + o.name, width: 420, body, buttons: [{ label: 'OK', primary: true }] });
   };
