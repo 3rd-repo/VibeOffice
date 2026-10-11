@@ -18,7 +18,7 @@ IntelliArt is Lectern's name for its diagrams; in files they are Office SmartArt
   - Open XML SDK and `package.py` on every layout;
   - LibreOffice draws every layout from the stored drawing;
   - Lectern reopens every layout editable;
-  - `tools/lectern/test/smartart-office.py`: 43/43 corpus decks;
+  - `tests/lectern/smartart-office.py`: 43/43 corpus decks;
   - `frames.mjs`: 25/25.
 - **PowerPoint:**
   - every test file opened without a repair prompt;

@@ -1144,18 +1144,17 @@
     /* finish: page numbers that depend on the total */
     fieldCounts = { total: LY.pages.length, sections: [] };
     for (const p of LY.pages) fieldCounts.sections[p.si] = (fieldCounts.sections[p.si] || 0) + 1;
-    const totalsChanged = Array.from(LY.root.querySelectorAll('.fdyn[data-fty="NUMPAGES"], .fdyn[data-fty="SECTIONPAGES"]')).some(f => {
-      const pg = LY.pages[+f.closest('.pg').dataset.pg];
-      return f.textContent !== LY.dynField(f.dataset.fty, f.dataset.fmt, pg);
-    });
-    // Measure tabs, header/footer heights and body lines with the resolved values.
-    // A field can itself affect pagination, so converge with a bounded extra pass.
-    if (totalsChanged && fieldPass < 3) {
-      LY.paginate(0, fieldPass + 1);
+    // Fill in the totals. Pages are laid out again only from the first one where a new value
+    // changes a paragraph's height (a line wraps differently, a header grows); a bounded number
+    // of passes, as that can change the total again.
+    const moved = LY.refreshDynamic();
+    if (moved >= 0 && fieldPass < 3) {
+      const resyncOK = LY.resyncOK;
+      LY.resyncOK = null; // later pages were laid out against the old heights
+      try { LY.paginate(moved, fieldPass + 1); } finally { LY.resyncOK = resyncOK; }
       LY.layoutMs = performance.now() - t0;
       return;
     }
-    LY.refreshDynamic();
     for (const p of LY.pages) p.el.classList.toggle('vcenter', false);
     applyVAlign();
     LY.layoutMs = performance.now() - t0;
@@ -1191,20 +1190,29 @@
       for (const r of p.regions) { r.el.style.top = r.y + off + 'px'; fixAbsFrames(r.el); }
     }
   }
-  /** update PAGE/NUMPAGES fields after layout */
+  /** update PAGE/NUMPAGES fields after layout; returns the index of the first page whose
+      layout the new values change (a paragraph's height changed), or -1 */
   LY.refreshDynamic = function () {
-    const changed = new Set();
-    for (const p of LY.pages) {
+    const updates = [];
+    LY.pages.forEach((p, k) => {
       for (const f of p.el.querySelectorAll('.fdyn')) {
         const value = LY.dynField(f.dataset.fty, f.dataset.fmt, p, f.dataset.instr);
-        if (f.textContent !== value) { f.textContent = value; changed.add(f.closest('.p')); }
+        if (f.textContent !== value) updates.push([f, value, k]);
       }
-    }
-    for (const frag of changed) {
-      if (!frag?._tabs) continue;
+    });
+    if (!updates.length) return -1;
+    /* read every height before the first write, so the browser lays out once before and once after */
+    const frags = new Map();
+    for (const [f, , k] of updates) { const frag = f.closest('.p') || f.parentElement; if (!frags.has(frag)) frags.set(frag, { k, h: frag.offsetHeight }); }
+    for (const [f, value] of updates) f.textContent = value;
+    for (const frag of frags.keys()) {
+      if (!frag._tabs) continue;
       const { p, ctx, frame } = frag._tabs;
       R.layoutTabs(frag, p, ctx, frame.el.getBoundingClientRect().left + (frame.leftPad || 0) * LY.scale(), LY.scale(), frame.width || frame.el.offsetWidth);
     }
+    let first = -1;
+    for (const [frag, { k, h }] of frags) if (frag.offsetHeight !== h && (first < 0 || k < first)) first = k;
+    return first;
   };
 
   /* ================= flow views (Normal / Web / Outline) ================= */

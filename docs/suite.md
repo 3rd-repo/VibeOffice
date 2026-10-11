@@ -84,7 +84,7 @@ One copy of everything the three apps share; a change here is a change in every 
 | `dml.js` | DrawingML helpers | Quire, Ledger |
 | `spell.js` | spelling engine: word lists (`dict/`), checking, suggestions, custom dictionary, Ignore All | Quire, Ledger |
 | `clipart.js` | built-in clip art | Quire, Lectern |
-| `smartart.js` | the SmartArt layout engine: items → shapes for each layout, one text size per role (`tools/smartart.test.mjs`) | Lectern |
+| `smartart.js` | the SmartArt layout engine: items → shapes for each layout, one text size per role (`tests/smartart.test.mjs`) | Lectern |
 | `suite.js`, `dict/`, `templates.json` | the suite: Start Center services; word lists; template gallery | — |
 
 What each app provides:
@@ -104,7 +104,7 @@ The chrome (menus, toolbars, task panes, dialogs, status bar, rulers, sheet head
 - Each page's head sets `data-look` from `localStorage['vibeoffice.look']` (default `classic`) and `data-layout` (`ribbon` for Paper 2016, otherwise `bars`) on `<html>` before the stylesheets load, so a page never flashes the wrong look. The key is suite-wide (not `L.store`, which is per app).
 - `VO.look` (`suite.js`): `list()` (`[{ id, name, note, layout }]`), `get()`, `layout()` (`'bars'` or `'ribbon'`), `set(id)`. `set` saves the choice, switches this page, updates `<meta name="theme-color">` from `--theme-color`, posts `'look'` on the `vibeoffice` BroadcastChannel (other windows switch too) and fires `vo-look` on `window`. `ui.lookField()` is the Options dialogs' Theme drop-down.
 - Chrome drawn on canvases reads settings with `L.lookColor(name, fallback)` (cached, cleared on `vo-look`) and redraws through `L.onLook(fn)`: Quire's and Lectern's rulers, Ledger's row and column headers and cell selection (`RD.lookColors`). Ledger's gridlines, frozen-pane lines and page breaks are the sheet's own.
-- To add a look: copy Classic's block, give it a new `data-look` name and values, add it to `LOOKS` in `suite.js` (with `layout: 'ribbon'` for a ribbon look; the head scripts name the ribbon looks too). `node --test tools/looks.test.mjs` checks that every look sets every setting, that every setting the chrome uses exists and that `ui.css` has no colours of its own.
+- To add a look: copy Classic's block, give it a new `data-look` name and values, add it to `LOOKS` in `suite.js` (with `layout: 'ribbon'` for a ribbon look; the head scripts name the ribbon looks too). `node --test tests/looks.test.mjs` checks that every look sets every setting, that every setting the chrome uses exists and that `ui.css` has no colours of its own.
 
 ### The ribbon
 
@@ -116,7 +116,7 @@ In the Paper 2016 look each app shows a ribbon in place of the menu bar, toolbar
 - File opens the app's File menu (`file()`, command ids) as a drop-down, ending with Options, Help, About and Exit, since the ribbon has no Tools or Help menu.
 - Keyboard: Alt or F10 shows KeyTips (numbers on the Quick Access Toolbar, the access letters on the tabs); a tab's letter opens it and shows one or two letters on each command (`ui.barKeys` routes the menu bar's keys here). Esc goes back a level. Ctrl+F1 collapses the ribbon (as does a double-click on a tab or the arrow at the right, remembered per app as `ribbonCollapsed`); a tab then opens over the document. Task Pane, Ctrl+F1 in the other looks, is under View ▸ Show.
 - In a narrow window the groups fold from the right into one button each that opens the group below it.
-- Adding a command to an app: put it in that app's `js/ribbon.js` too, where Office has it. `node --test tools/ribbon.test.mjs` (needs Chromium, as `tools/shot.mjs`) checks in each app that every command id in the ribbon exists, every button has an icon, and every command of the menus can be reached from the ribbon, apart from a short list of exceptions kept in the test.
+- Adding a command to an app: put it in that app's `js/ribbon.js` too, where Office has it. `node --test tests/ribbon.test.mjs` (needs Chromium, as `tools/shot.mjs`) checks in each app that every command id in the ribbon exists, every button has an icon, and every command of the menus can be reached from the ribbon, apart from a short list of exceptions kept in the test.
 
 ### Search commands
 
@@ -125,7 +125,7 @@ Every app, in every look, has a Search commands box at the top right (the end of
 - Typing lists up to ten of the app's commands, best first, each with its icon, its shortcut and where it lives in the current layout (`Format ▸ Font`, `Formatting toolbar`, or with the ribbon `Home ▸ Font`, using the ribbon's own label for the button); commands that cannot run now are greyed. Arrow keys move, Enter or a click runs one, Esc clears the box and then goes back to the document. With nothing typed it shows the commands last run from it (`searchRecent`, per app).
 - A word matches a command's name as a whole word or the start of one (compound names split: AutoSum answers to "sum"), with one typo ("hyperlnk"), or through an everyday word for Office's name (`SYN` in `search.js`: image → Picture, margins → Page Setup, synonym → Thesaurus, pdf → Save As). A command in a submenu also answers to the submenu's name (Insert ▸ Picture ▸ From File for "picture"); the tooltip and location count for less. Every word typed must match.
 - `ui.searchBox()` makes a box; `ui.searchCommands(query, layout)` gives the ranked list. The menu paths come from `ui.menus` (set by `ui.menuBar`), the toolbars from the page, the ribbon places from `L.ribbonSpec`. There is no app-specific code: a new command is found once it has a label, and shows its place once it is in a menu, toolbar or the ribbon.
-- `node --test tools/search.test.mjs` (needs Chromium) checks, in each app and both layouts, that everyday words find the intended command first and that it says where it is.
+- `node --test tests/search.test.mjs` (needs Chromium) checks, in each app and both layouts, that everyday words find the intended command first and that it says where it is.
 
 Script order: `suite.js`, the app config, `core.js`, then the libraries and the app's own scripts as listed in each `index.html` (Ledger's from `tools/ledger/build/make.py`, where `'common/x'` means `public/common/x.js`).
 

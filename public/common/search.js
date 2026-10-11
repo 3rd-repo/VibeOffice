@@ -6,7 +6,7 @@
  * commands last run from it.
  *
  *   ui.searchBox() → a new box (each command-bar layout has its own; they share the recent list)
- *   ui.searchCommands(query, layout) → [{ id, label, where, enabled }], best first (tools/search.test.mjs)
+ *   ui.searchCommands(query, layout) → [{ id, label, where, enabled }], best first (tests/search.test.mjs)
  */
 (function (root) {
   'use strict';

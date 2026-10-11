@@ -38,7 +38,7 @@ Open https://vibeoffice.work/lectern/ (to run it locally, see [testing.md](testi
 | `js/commands.js` | Every menu/toolbar command |
 | `js/app.js` | Application wiring, keyboard shortcuts, clipboard, sample deck |
 | `js/templates.js` | Content templates (Project Status Report, Team Meeting, Lesson, Event Announcement) for the Start Center and File ▸ New |
-| `tools/lectern/test/` | The real-file test harness described below |
+| `tests/lectern/` | The real-file test harness described below |
 
 ## Opening
 
@@ -83,7 +83,7 @@ IntelliArt is Lectern's name for its diagrams; in the file they are Office Smart
 * **In the sample deck and templates:** the sample's "How we choose a city" is a Funnel; the templates use a Basic Chevron Process (Project Status Report), a Vertical Process agenda (Team Meeting), a Basic Radial (Lesson) and a Basic Timeline (Event Announcement). Decks built in code use `L.diagram.make(pres, slide, placeholder or box, layout, lines)`, where a tab before a line makes it a sub-item.
 * **SmartArt PowerPoint made** in a layout we also have (Office's `default`, `orgChart1`, `hierarchy1`/`2`, `vList2`, `hList1`, `process1`/`2`, `chevron1`, `hProcess11`, `cycle2`/`3`, `radial1`, `venn1`/`3`, `target1`, `funnel1`, `matrix1`, `pyramid1`/`2`/`3`; `OFFICE` in `smartart-io.js`) opens as an editable diagram: its items, colours and style are read from the file, and it is shown and saved exactly as PowerPoint made it until its items are edited here (text pane, typing in a shape, Add Shape, a gallery). From then on it is laid out and saved with our layout of the same name (a toast says so when it happens; the save records the change). Changed only as shapes (moved, a shape recoloured, ungrouped), it is kept or converted as other SmartArt is. Diagrams with picture-filled shapes stay as they came. Each item is one paragraph of plain text here, so an item with several paragraphs is joined into one line when the diagram is first edited, and an org chart's assistants become ordinary members.
 * **Other SmartArt** (layouts we do not have) is shown and kept as before (*Opaque frames*); editing its contents converts it to shapes, with a notice.
-* **Measured on the corpus** (2026-10-10, `tools/lectern/test/smartart-office.py`): of the 43 decks with a mapped layout (50 of their 84 diagrams open editable), every unedited save keeps every diagram part byte-identical; editing one diagram in each (42 decks) gives saves with no new `package.py` findings and no Open XML SDK diagnostics, and each reopens with that diagram editable. LibreOffice draws the edited diagrams.
+* **Measured on the corpus** (2026-10-10, `tests/lectern/smartart-office.py`): of the 43 decks with a mapped layout (50 of their 84 diagrams open editable), every unedited save keeps every diagram part byte-identical; editing one diagram in each (42 decks) gives saves with no new `package.py` findings and no Open XML SDK diagnostics, and each reopens with that diagram editable. LibreOffice draws the edited diagrams.
 
 Checked (2026-10-10): a deck with one diagram per layout (26) passes the Open XML SDK validator and `package.py`; LibreOffice 25.2 draws every one from the saved drawing (upside-down layers are drawn as outlines so their text stays upright); reopened in Lectern all 26 are editable, and editing one rewrites only its parts (the other 25 byte-identical). With the first ten, LibreOffice also re-saved them as SmartArt and Lectern reopened that copy with all ten editable. PowerPoint opened our hand-written process diagram with and without the drawing and edited it (text pane, Add Shape, Change Colors); PowerPoint lays SmartArt out from the definition, never from the saved drawing, so each diagram is saved with a definition that places its shapes where Lectern draws them (progress and the PowerPoint rounds: [smartart.md](smartart.md)).
 
@@ -109,13 +109,13 @@ user before the download that it will no longer play.
 ## Testing against real presentations
 
 `tools/corpora.sh` pins the LibreOffice, Apache POI and Open XML SDK files used in the current figures
-below. `tools/lectern/test/corpus.js --lossless` exercises save/reopen, actual history operations and
+below. `tests/lectern/corpus.js --lossless` exercises save/reopen, actual history operations and
 suite draft recovery. The rendering mode also rasterizes slides for comparison with LibreOffice;
 `viscompare.py` and `triptych.py` inspect layout differences. Open XML SDK and independent ZIP/XML
 checks compare each output with its original. Earlier broad-corpus results are archived with the
 run history, rather than presented as measurements of the current writer.
 
-The UI/password/chart harnesses remain in `tools/lectern/test/`. Commands, failure accounting and
+The UI/password/chart harnesses remain in `tests/lectern/`. Commands, failure accounting and
 Office review batches are documented in [testing.md](testing.md).
 
 ## What a save keeps, converts and drops

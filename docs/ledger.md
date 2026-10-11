@@ -328,7 +328,7 @@ an external connection. Excel performs any requested refresh when it opens the s
 | Save, reopen or recover a draft | Write the current pivot state and original identities; drafts retain the same refresh requests and pending notices without showing or acknowledging the checker. |
 
 The pinned inventory contains 105 pivot workbooks, including 14 with shared caches, but no
-defined-name or consolidation source. `tools/ledger/test/pivot-fixtures.py` supplies those two
+defined-name or consolidation source. `tests/ledger/pivot-fixtures.py` supplies those two
 structural fixtures from a pinned range-source workbook. Both have zero package/SDK diagnostics;
 an independent reader confirms their source kinds, and the consolidation's ten input values match
 its cache and output. Twelve focused pivot cases pass, covering all five source kinds, shared caches,
@@ -462,7 +462,7 @@ browser drivers exercise the shipping readers/writers, real undo operations and 
 Independent ZIP/XML checks, Open XML SDK diagnostics and openpyxl comparisons are separate from the
 app's own reopen check. Commands and comparison policies are in [testing.md](testing.md).
 
-Formula recalculation, CSV, XML Spreadsheet 2003 and UI harnesses remain in `tools/ledger/test/`.
+Formula recalculation, CSV, XML Spreadsheet 2003 and UI harnesses remain in `tests/ledger/`.
 Their earlier broad-corpus measurements are archived with the run history, rather than mixed into
 the current OOXML preservation figures. Current preservation does not imply exact print layout or
 support for every formula or external data source.
@@ -510,7 +510,7 @@ support for every formula or external data source.
 | `../common/ui.js`, `../common/search.js`, `../common/icons.js`, `../common/looks.css`, `../common/ui.css`, `js/commands.js`, `js/dialogs*.js`, `js/app.js` | Menus, toolbars and dialogs; Search commands; original 16×16 icons; the command registry; the application controller |
 | `js/ribbon.js`, `../common/ribbon.js` | The Paper 2016 look's ribbon: Excel's tabs and groups over Ledger's commands ([suite.md](suite.md#the-ribbon)) |
 | `../common/dict/` | Spelling word lists (English U.S. and U.K.) and their licences (shared with Quire) |
-| `tools/ledger/test/` | The test harnesses described above (Node.js and Playwright) |
+| `tests/ledger/` | The test harnesses described above (Node.js and Playwright) |
 
 Ledger is an independent program. Microsoft, Excel and Office are trademarks of Microsoft Corporation;
 Ledger is not affiliated with Microsoft.
