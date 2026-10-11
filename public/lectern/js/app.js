@@ -1978,7 +1978,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     /* 6: a SmartArt diagram (js/diagram.js) */
     s = add('text');
     T.setPlain(ph(s, 'title').tx, 'How we choose a city');
-    const fn = L.diagram.make(pres, s, ph(s, 'body'), 'funnel', ['40 markets screened', '12 visited', '5 shortlisted', '4 chosen'], { style: 'subtle' });
+    const fn = L.diagram.make(pres, s, ph(s, 'body'), 'funnel', ['40 markets screened', '12 visited', '5 shortlisted', '4 chosen']);
     s.anims = [{ id: L.uid('a'), sid: fn.id, cls: 'entr', eff: 'fade', start: 'click', dur: 500, delay: 0, by: 'all' }];
     s.trans = { type: 'fade', spd: 'med', click: true, after: null };
     s.notes = 'Each city has to clear foot traffic, rent and a roastery-delivery radius before we visit.';

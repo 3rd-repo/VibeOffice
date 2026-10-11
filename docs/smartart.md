@@ -7,6 +7,8 @@ IntelliArt is Lectern's name for its diagrams; in files they are Office SmartArt
 
 - **In Lectern:**
   - 26 layouts (`public/common/smartart.js`), with a gallery, text pane, Diagram toolbar and IntelliArt Tools;
+  - colours (Colorful, Colorful Range, Gradient Range, per accent) and styles in three families (filled, outlined,
+    tinted), pictured in the IntelliArt pane;
   - a shape's own formatting is kept;
   - the sample deck and four templates use IntelliArt;
   - PowerPoint's SmartArt in 21 layouts we share is editable.
@@ -81,6 +83,16 @@ algorithms after Add Shape. Still wrong, fixed for final5:
 - text larger than Lectern's: each text node now has our size (`primFontSz` per node); Block List lost its bullets,
   left-aligned text gets `parTxLTRAlign`.
 
+**Colours and styles (2026-10-11, not yet seen in PowerPoint):** quick styles refer to the theme's style matrix by
+index, so the themes Lectern writes now have one (`L.model.FMT`: solid, soft and rich gradient fills; 0.75, 1.5 and
+2.5 pt lines; three drop shadows). Gradient Range and Colorful Range are `fillClrLst meth="span"` lists; outlined and
+tinted styles get colours of their own, saved under their own id (`…/colors/<id>/outline`, `/tint`), with the
+item's colour in `linClrLst` and in the text. The text sits on the transparent `trAlignAcc1` nodes, so that label
+carries it. LibreOffice without the drawing showed two things: it takes text colour from the style's `fontRef` (so
+outlined and tinted styles name `tx1` there), and it drops transparency in a span list (so a tint is a colour mix,
+not an alpha). Checked: `package.py`; LibreOffice with and without the drawing; Lectern and LibreOffice re-saves reopen
+with every diagram's colours and style.
+
 ## Method
 
 1. Build a small batch in `./tmp`. Each file must pass the SDK and `package.py`.
@@ -110,6 +122,8 @@ Hierarchy made in PowerPoint) is a reference; its Basic Process boxes are 123 ×
    the 4-item process and the 2-satellite radial, each changing one thing (node names, values, removing the node,
    only that count's branch, centre constraints, constraint order, one loop per shape or per item). The user saves
    each in PowerPoint; read the sizes with `ppsaved.py`. Fix from that, then rerun final5's decks.
+   Add to the same round: one slide per new style family (filled with gradients and shadows, outlined, tinted) and
+   Colorful Range, to see that PowerPoint draws the theme's gradients and shadows and the span colours.
    Already right in final5, to keep an eye on:
 2. **Processes:** box proportions; Chevron, Step Up, Continuous Arrow and Basic Timeline shapes; visible arrows.
 3. **Cycles:** spacing on the ring, and arrows between items.

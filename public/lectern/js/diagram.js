@@ -14,60 +14,100 @@
   const DG = (L.diagram = {});
 
   /* ---------------------------------------------------------------- colours and styles */
-  DG.COLORS = [['accent1', 'Colored Fill - Accent 1'], ['accent2', 'Colored Fill - Accent 2'], ['accent3', 'Colored Fill - Accent 3'], ['accent4', 'Colored Fill - Accent 4'],
-    ['accent5', 'Colored Fill - Accent 5'], ['accent6', 'Colored Fill - Accent 6'], ['colorful', 'Colorful - Accent Colors'], ['range', 'Gradient Range - Accent 1']];
-  DG.STYLES = [['simple', 'Simple Fill'], ['white', 'White Outline'], ['subtle', 'Subtle Effect'], ['moderate', 'Moderate Effect'], ['intense', 'Intense Effect']];
+  const ACC = ['accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6'];
+  /* colours (the colours definition's id): each item its own accent (Colorful), a range from one accent to another
+     item by item ('accent2-accent3', Colorful Range), the dark text colour, every item in one accent, or a range of
+     shades of one accent ('accent1-range', Gradient Range: deep to light) */
+  /** the colours id as [base, kind]: 'accent3-range' → ['accent3', 'range'], 'accent2-accent3' → ['accent2', 'accent3'] (an older file's 'range' is accent 1's) */
+  DG.colorsOf = (id) => { const [b, k] = (id === 'range' ? 'accent1-range' : id || 'accent1').split('-'); return [b, k || 'fill']; };
+  const N = (a) => a.slice(6);
+  DG.colorsName = (id) => { const [ref, kind] = DG.colorsOf(id); return ref === 'colorful' ? 'Colorful - Accent Colors' : ref === 'dark2' ? 'Dark 2 Fill' : ACC.includes(kind) ? `Colorful Range - Accent Colors ${N(ref)} to ${N(kind)}` : `${kind === 'range' ? 'Gradient Range' : 'Colored Fill'} - Accent ${N(ref)}`; };
+  DG.COLORS = ['colorful', 'accent1-accent2', 'accent2-accent3', 'accent3-accent4', 'accent4-accent5', 'accent5-accent6', 'dark2'].concat(...ACC.map((a) => [a, a + '-range'])).map((k) => [k, DG.colorsName(k)]);
+  /* styles: [line, fill, effect] of the theme's style matrix (L.model.FMT; 0 none): a white edge, a flat, soft or
+     rich gradient fill, a drop shadow. PowerPoint draws them from the theme the same way. Three design languages:
+     filled shapes; outlined (the slide's background inside a coloured edge, coloured text); tinted (a pale wash
+     of the colour, coloured text). The last two have colours of their own (smartart-io.js colorsXML) */
+  DG.STYLES = [['simple', 'Simple Fill', [2, 1, 0]], ['flat', 'Flat', [0, 1, 0]], ['white', 'White Outline', [3, 1, 0]], ['subtle', 'Subtle Effect', [2, 1, 1]],
+    ['soft', 'Soft Gradient', [0, 2, 0]], ['moderate', 'Moderate Effect', [0, 2, 2]], ['intense', 'Intense Effect', [0, 3, 3]], ['lifted', 'Lifted', [2, 2, 3]], ['gloss', 'Gloss', [1, 3, 2]],
+    ['outline', 'Outline', [2, 1, 0], 'outline'], ['card', 'Outline Card', [1, 1, 2], 'outline'], ['tint', 'Tinted', [0, 1, 0], 'tint'], ['tintLine', 'Tinted Outline', [2, 1, 0], 'tint']];
+  DG.STYLE_GROUPS = [['fill', 'Filled'], ['outline', 'Outlined'], ['tint', 'Tinted']];
+  const styleOf = (id) => DG.STYLES.find((s) => s[0] === id) || DG.STYLES[0];
+  DG.styleRefs = (id) => styleOf(id)[2];
+  /** the style's design language: 'fill', 'outline' or 'tint' */
+  DG.styleLang = (id) => styleOf(id)[3] || 'fill';
+  /** what a new diagram looks like: a range of the design's liveliest accent, soft gradients and shadows */
+  DG.DEFAULT_STYLE = 'moderate';
   const COLORFUL = ['accent2', 'accent3', 'accent4', 'accent5', 'accent6'];
+  /** the two ends of a gradient range of slot, as colour changes: deep to a little lighter under light text, the
+      colour to light under dark text (so the text reads on every item) */
+  DG.rangeMods = (pal, slot) => (pal.lum(pal.text(slot)) > pal.lum(slot) ? [[['shade', 68000]], [['tint', 90000], ['satMod', 120000]]] : [[], [['tint', 60000]]]);
 
+  /** a tinted shape's wash of a colour, as colour changes: pale on a light slide, deep on a dark one (a mix, not
+      transparency, which applications drop from a range of colours) */
+  DG.washMods = (pal) => (pal.lum('lt1') > 0.5 ? [['tint', 28000]] : [['shade', 38000]]);
+  /** colour changes that make a colour (hex) readable as text on the slide: deeper on a light slide, lighter on
+      a dark one, when it is too close to the background */
+  DG.inkMods = (pal, hex) => {
+    const bg = pal.lum('lt1'), d = L.color.luma(hex) - bg;
+    if (Math.abs(d) >= 0.45) return [];
+    return bg > 0.5 ? [['lumMod', 55000]] : [['lumMod', 45000], ['lumOff', 55000]];
+  };
   /** the theme's usable colours: accents too close to the background are skipped (pale fill colours such as the
       Default Design's accent 1, a white accent), and text is dark on light fills. Instead of a skipped accent the
       diagram takes the mid-toned accent that best carries white text. The saved colours part follows the same
       choice (smartart-io.js) */
   DG.palette = (d) => {
-    const lum = (slot) => L.color.luma(M.resolveColor(slot, d));
-    const ACC = ['accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6'];
+    const hex = (slot) => M.resolveColor(slot, d), lum = (slot) => L.color.luma(hex(slot));
     const bg = lum('lt1'), ok = (slot) => Math.abs(lum(slot) - bg) > 0.3;
     const first = ACC.filter(ok).sort((x, y) => Math.abs(lum(x) - 0.42) - Math.abs(lum(y) - 0.42) || ACC.indexOf(x) - ACC.indexOf(y))[0] || 'accent1';
     const colorful = COLORFUL.filter(ok);
     return { slot: (slot) => (ok(slot) ? slot : first), colorful: colorful.length ? colorful : [first], /* the theme's text colour that stands out more from the fill (dk1 is not always the dark one), light preferred */
-      text: (slot) => (Math.abs(lum(slot) - lum('dk1')) > Math.abs(lum(slot) - lum('lt1')) + 0.15 ? 'dk1' : 'lt1'), ok, lum };
+      text: (slot) => (Math.abs(lum(slot) - lum('dk1')) > Math.abs(lum(slot) - lum('lt1')) + 0.15 ? 'dk1' : 'lt1'), ok, lum, hex };
   };
   /** the colours a new diagram starts with: the design's most vivid accent that stands out from the slide and
-      carries white text well (a grey or pale accent 1 makes a dull diagram); saved as that accent's own choice */
+      carries white text well (a grey or pale accent 1 makes a dull diagram), running item by item into a
+      neighbouring hue of the design (navy into teal); without one, shades of that accent */
   DG.defaultColors = (d) => {
     d = d || design();
     const pal = DG.palette(d);
-    const sat = (slot) => { const [r, g, b] = L.color.hexToRgb(M.resolveColor(slot, d)).map((v) => v / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b); return mx === mn ? 0 : (mx - mn) / (1 - Math.abs(mx + mn - 1)); };
-    const score = (slot) => sat(slot) - 1.2 * Math.abs(pal.lum(slot) - 0.42);
-    const ACC = ['accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6'].filter(pal.ok);
-    return ACC.sort((x, y) => score(y) - score(x) || ACC.indexOf(x) - ACC.indexOf(y))[0] || 'accent1';
+    const hsl = (slot) => L.color.rgbToHsl(...L.color.hexToRgb(pal.hex(slot)));
+    const score = (slot) => hsl(slot)[1] - 1.2 * Math.abs(pal.lum(slot) - 0.42);
+    const ok = ACC.filter(pal.ok), rank = ok.slice().sort((x, y) => score(y) - score(x) || ok.indexOf(x) - ok.indexOf(y));
+    const best = rank[0] || 'accent1';
+    const apart = (x) => { const t = Math.abs(hsl(x)[0] - hsl(best)[0]); return Math.min(t, 1 - t) * 360; };
+    const mate = rank.filter((x) => x !== best && hsl(x)[1] > 0.3 && pal.text(x) === pal.text(best) && apart(x) >= 12 && apart(x) <= 150 && Math.abs(pal.lum(x) - pal.lum(best)) < 0.3)
+      .sort((x, y) => score(y) - Math.abs(apart(y) - 70) / 200 - (score(x) - Math.abs(apart(x) - 70) / 200))[0];
+    return mate ? best + '-' + mate : best + '-range';
   };
   /** fill, line, shadow and text colour of one laid-out shape */
   function paint(s, sa, pal) {
-    const scheme = sa.colors || 'accent1', style = sa.style || 'simple';
-    let c = /^accent[1-6]$/.test(scheme) ? pal.slot(scheme) : scheme === 'colorful' ? pal.colorful[(s.colorIdx || 0) % pal.colorful.length] : pal.slot('accent1');
-    let a = s.alpha == null ? 1 : s.alpha;
-    if (scheme === 'range' && s.colorCnt > 1) a *= 1 - 0.6 * (s.colorIdx || 0) / (s.colorCnt - 1);
-    if (scheme === 'colorful' && s.role === 'conn') c = pal.slot('accent1');
+    const [ref, kind] = DG.colorsOf(sa.colors);
+    const base = ref === 'colorful' ? pal.slot('accent1') : pal.slot(ref === 'dark2' ? 'dk2' : ACC.includes(ref) ? ref : 'accent1');
+    let c = ref === 'colorful' && s.role !== 'conn' ? pal.colorful[(s.colorIdx || 0) % pal.colorful.length] : base;
+    const a = s.alpha == null ? 1 : s.alpha;
     /* sub-item cards: a pale tint of the item's colour, with an outline when the layout asks for one */
     if (s.role === 'child' && s.tint && !s.noFill) return { fill: { t: 'solid', c, a: 0.18 }, line: s.line ? { c, w: 1, dash: 'solid' } : { t: 'none' }, shadow: null, text: 'tx1' };
     if (s.role === 'child' || s.noFill) return { fill: { t: 'none' }, line: { t: 'none' }, shadow: null, text: 'tx1' };
     if (s.role === 'conn') return { fill: { t: 'none' }, line: { c, w: 1.5, dash: 'solid' }, shadow: null };
     if (s.role === 'ring') return { fill: { t: 'none' }, line: { c, a: 0.4, w: 8, dash: 'solid' }, shadow: null };
     if (s.role === 'bg') return { fill: { t: 'solid', c, a: 0.25 }, line: { t: 'none' }, shadow: null };
-    if (s.role === 'marker') return { fill: { t: 'solid', c, a: 1 }, line: { c: 'lt1', w: 1.5, dash: 'solid' }, shadow: null };
     if (s.role === 'arrow') return { fill: { t: 'solid', c, a: a * (s.big ? 0.3 : 0.6) }, line: { t: 'none' }, shadow: null };
-    const solid = { t: 'solid', c, a };
-    const grad = (top) => ({ t: 'grad', stops: [{ p: 0, c, a: a * top }, { p: 1, c, a }], ang: 90, path: 'lin' });
-    const shadow = (o, dy, blur) => ({ c: '#000000', a: o, dx: 0, dy, blur });
-    const text = s.styleLbl === 'vennNode1' ? 'tx1' : pal.text(c);
-    switch (style) {
-      case 'white': return { fill: solid, line: { c: 'lt1', w: 2.5, dash: 'solid' }, shadow: null, text };
-      case 'subtle': return { fill: solid, line: { c: 'lt1', w: 1, dash: 'solid' }, shadow: shadow(0.3, 1.5, 3), text };
-      case 'moderate': return { fill: grad(0.72), line: { t: 'none' }, shadow: shadow(0.35, 2, 4), text };
-      case 'intense': return { fill: grad(0.55), line: { t: 'none' }, shadow: shadow(0.45, 3, 7), text };
-      default: return { fill: solid, line: { c: 'lt1', w: 1, dash: 'solid' }, shadow: null, text };
+    if (kind !== 'fill') {
+      const [m0, m1] = kind === 'range' ? DG.rangeMods(pal, base).map((mods) => L.color.applyMods(pal.hex(base), mods.map(([name, val]) => ({ name, val })))) : [pal.hex(base), pal.hex(pal.slot(kind))];
+      c = L.color.mix(m0, m1, s.colorCnt > 1 ? (s.colorIdx || 0) / (s.colorCnt - 1) : 0);
     }
+    const [ln, fl, fx] = DG.styleRefs(sa.style), lang = DG.styleLang(sa.style);
+    const venn = s.styleLbl === 'vennNode1', e = !venn && M.FMT.effects[fx - 1];
+    const shadow = e ? { c: '#000000', a: e.a, dx: 0, dy: e.dist, blur: e.blur } : null;
+    /* outlined and tinted: the item's colour on its edge and its text (a range of shades writes in its deep end) */
+    const inkOf = (x) => { const hx = pal.hex(x), m = DG.inkMods(pal, hx); return m.length ? L.color.applyMods(hx, m.map(([name, val]) => ({ name, val }))) : x; };
+    const ink = venn ? 'tx1' : inkOf(kind === 'range' ? base : c);
+    if (lang === 'outline') return { fill: { t: 'solid', c: 'lt1', a }, line: { c, w: M.FMT.lines[(ln || 2) - 1], dash: 'solid' }, shadow, text: ink };
+    if (lang === 'tint') return { fill: { t: 'solid', c: L.color.applyMods(pal.hex(c), DG.washMods(pal).map(([name, val]) => ({ name, val }))), a: venn ? 0.7 : a }, line: ln ? { c, w: M.FMT.lines[ln - 1], dash: 'solid' } : { t: 'none' }, shadow, text: ink };
+    return { fill: fl > 1 ? M.fmtFill(fl, pal.hex(c), a) : { t: 'solid', c, a },
+      line: ln ? { c: 'lt1', w: M.FMT.lines[ln - 1], dash: 'solid' } : { t: 'none' },
+      shadow,
+      text: venn ? 'tx1' : pal.text(kind !== 'fill' ? base : c) };
   }
 
   /* ---------------------------------------------------------------- items → shapes */
@@ -178,7 +218,7 @@
     L.hist.push('Insert IntelliArt');
     const lay = SA.get(layout) || SA.LAYOUTS[0];
     const g = { id: L.uid('s'), type: 'group', name: lay.name + ' ' + (slide.shapes.length + 1), rot: 0, x: box.x, y: box.y, w: box.w, h: box.h,
-      sa: { layout: lay.id, colors: DG.defaultColors(), style: 'simple', items: SA.blank(lay.id) }, kids: [] };
+      sa: { layout: lay.id, colors: DG.defaultColors(), style: DG.DEFAULT_STYLE, items: SA.blank(lay.id) }, kids: [] };
     DG.relayout(g);
     if (ph) slide.shapes.splice(slide.shapes.indexOf(ph), 1, g); else slide.shapes.push(g);
     E().select([g.id]);
@@ -204,7 +244,7 @@
     const box = { x: at.x, y: at.y, w: at.w, h: at.h };
     const lay = SA.get(layout) || SA.LAYOUTS[0];
     const g = Object.assign({ id: L.uid('s'), type: 'group', name: lay.name + ' ' + (slide.shapes.length + 1), rot: 0 }, box,
-      { sa: Object.assign({ layout: lay.id, colors: DG.defaultColors(M.design(pres, slide)), style: 'simple', items: DG.itemsFrom(lines) }, opts || {}), kids: [] });
+      { sa: Object.assign({ layout: lay.id, colors: DG.defaultColors(M.design(pres, slide)), style: DG.DEFAULT_STYLE, items: DG.itemsFrom(lines) }, opts || {}), kids: [] });
     DG.relayout(g, M.design(pres, slide));
     const i = slide.shapes.indexOf(at);
     if (i >= 0) slide.shapes.splice(i, 1, g); else slide.shapes.push(g);
@@ -212,25 +252,35 @@
   };
 
   /* ---------------------------------------------------------------- the gallery */
-  /** a small SVG picture of a layout with sample items, in the design's accent colours */
+  /** a small SVG picture of a layout with sample items, in the design's accent colours (opts: colors, style) */
+  let thumbN = 0;
   DG.thumb = (layout, w, hh, opts) => {
     opts = opts || {};
     const d = opts.design || design();
     const items = opts.items || sampleItems(layout);
     const { shapes } = SA.layout(layout, items, { x: 2, y: 2, w: w - 4, h: hh - 4 }, { measure: (t, sz) => t.length * sz * 0.5, maxFont: 9, minFont: 4 });
-    const sa = { colors: opts.colors || DG.defaultColors(d), style: 'simple' };
+    const sa = { colors: opts.colors || DG.defaultColors(d), style: opts.style || DG.DEFAULT_STYLE };
     const col = (c) => M.resolveColor(c, d), pal = DG.palette(d);
-    let out = '';
+    /* shadows and lines at the picture's scale, so a small picture still shows them */
+    const k = Math.max(0.25, Math.min(1, w / 160));
+    let out = '', defs = '';
     for (const s of shapes) {
       const p = paint(s, sa, pal);
-      const fill = p.fill.t === 'solid' ? `fill="${col(p.fill.c)}" fill-opacity="${L.round(p.fill.a, 2)}"` : p.fill.t === 'grad' ? `fill="${col(p.fill.stops[1].c)}"` : 'fill="none"';
-      const stroke = p.line.t === 'none' ? '' : ` stroke="${col(p.line.c)}" stroke-width="${s.role === 'conn' ? 1 : 0.5}"`;
+      let fill = 'fill="none"';
+      if (p.fill.t === 'solid') fill = `fill="${col(p.fill.c)}" fill-opacity="${L.round(p.fill.a, 2)}"`;
+      else if (p.fill.t === 'grad') {
+        const id = 'sag' + ++thumbN;
+        defs += `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">${p.fill.stops.map((st) => `<stop offset="${st.p}" stop-color="${col(st.c)}" stop-opacity="${L.round(st.a == null ? 1 : st.a, 2)}"/>`).join('')}</linearGradient>`;
+        fill = `fill="url(#${id})"`;
+      }
+      const stroke = p.line.t === 'none' ? '' : ` stroke="${col(p.line.c)}" stroke-opacity="${L.round(p.line.a == null ? 1 : p.line.a, 2)}" stroke-width="${L.round(s.role === 'conn' ? 1 : Math.max(0.4, p.line.w * k * 0.6), 2)}"`;
+      const shadow = p.shadow ? ` style="filter:drop-shadow(0 ${L.round(Math.max(0.5, p.shadow.dy * k * 0.5), 2)}px ${L.round(Math.max(0.5, p.shadow.blur * k * 0.4), 2)}px rgba(0,0,0,${L.round(p.shadow.a, 2)}))"` : '';
       const tr = s.rot ? ` transform="rotate(${L.round(s.rot, 1)} ${L.round(s.x + s.w / 2, 1)} ${L.round(s.y + s.h / 2, 1)})"` : '';
       if (s.geom === 'path') out += `<polyline points="${s.path.map((q) => q.map((v) => L.round(v, 1)).join(',')).join(' ')}" fill="none"${stroke}/>`;
       else if (s.noFill) out += s.text ? s.text.lines.map((ln, i) => `<rect x="${L.round(s.text.box.x + 3, 1)}" y="${L.round(s.text.box.y + 2 + i * 4, 1)}" width="${L.round(s.text.box.w * 0.5, 1)}" height="1.6" fill="#999"/>`).join('') : '';
-      else out += `<path d="${shapePath(s)}" ${fill}${stroke}${s.flipV ? ` transform="translate(0 ${L.round(2 * s.y + s.h, 1)}) scale(1 -1)"` : tr}/>`;
+      else out += `<path d="${shapePath(s)}" ${fill}${stroke}${shadow}${s.flipV ? ` transform="translate(0 ${L.round(2 * s.y + s.h, 1)}) scale(1 -1)"` : tr}/>`;
     }
-    return `<svg width="${w}" height="${hh}" viewBox="0 0 ${w} ${hh}" aria-hidden="true">${out}</svg>`;
+    return `<svg width="${w}" height="${hh}" viewBox="0 0 ${w} ${hh}" aria-hidden="true">${defs ? `<defs>${defs}</defs>` : ''}${out}</svg>`;
   };
   function shapePath(s) {
     const { x, y, w, h: hh } = s, a = (s.adj || [])[0], r = (v) => L.round(v, 1);
@@ -363,7 +413,7 @@
     g = g || DG.current();
     if (!g) return;
     change(g, 'Reset Graphic', () => {
-      g.sa.colors = DG.defaultColors(); g.sa.style = 'simple';
+      g.sa.colors = DG.defaultColors(); g.sa.style = DG.DEFAULT_STYLE;
       for (const k of g.kids) if (k.sa) delete k.sa.gen;   // nothing to capture: the shapes start again
       for (const o of SA.outline(g.sa.items)) delete o.item.fmt;
     });
@@ -427,6 +477,13 @@
   /* selecting a diagram opens the sidebar on its text pane, once each time it becomes selected (closing the pane
      keeps it closed while the same diagram stays selected) */
   let selected = null;
+  /* a new design or colour scheme: shades and gradients are worked out from the design's colours */
+  L.bus.on('slides-changed', (e) => {
+    if (!e || !e.design) return;
+    let n = 0;
+    for (const s of L.pres.slides) for (const g of s.shapes) if (DG.isDiagram(g) && !g.sa.office) { DG.relayout(g, M.design(L.pres, s)); n++; }
+    if (n) E().render();
+  });
   L.bus.on('selection', () => {
     const g = DG.current();
     if (g && !g.sa.office && g.kids.some((k) => !k.sa)) { DG.relayout(g); E().renderShape(g.id); }
@@ -443,6 +500,7 @@
     paneG = g ? g.id : null;
     if (!g) { b.append(h('div', { class: 'tp-note', text: 'Select an IntelliArt graphic to type its text here.' }), h('div', { class: 'tp-row' }, ui.button('Insert IntelliArt...', () => ui.exec('insertDiagram'), { class: 'btn' }))); return; }
     b.append(h('div', { class: 'tp-h', text: 'Type your text here' }));
+    b.append(h('div', { class: 'sa-tools' }, ...['diagramAddShape', 'diagramPromote', 'diagramDemote', 'diagramMoveUp', 'diagramMoveDown'].map((id) => ui.tbButton(id))));
     const list = h('div', { class: 'sa-pane', role: 'tree', 'aria-label': 'IntelliArt text' });
     for (const row of rowsOf(g)) {
       const inp = h('input', { type: 'text', class: 'sa-row', value: row.item.text, placeholder: '[Text]', 'aria-label': 'Item, level ' + (row.level + 1), 'data-item': row.item.id, style: `margin-left:${row.level * 16}px` });
@@ -453,7 +511,13 @@
     }
     b.append(list);
     b.append(h('div', { class: 'tp-note', text: 'Enter adds an item, Tab and Shift+Tab move it in and out a level, Alt+Shift+↑/↓ move it.' }));
-    b.append(h('div', { class: 'tp-row' }, ui.button('Change Layout...', () => ui.exec('diagramLayout'), { class: 'btn small' })));
+    /* the layouts of the same kind, the colours and the styles, each drawn as it would look */
+    const lay = SA.get(g.sa.layout) || SA.LAYOUTS[0];
+    b.append(h('div', { class: 'tp-h', text: 'Layout' }), DG.layoutGrid(g, (l) => l.cat === lay.cat, 4),
+      h('div', { class: 'tp-row' }, ui.button('More Layouts...', () => ui.exec('diagramLayout'), { class: 'btn small' })));
+    b.append(h('div', { class: 'tp-h', text: 'Colors' }), DG.colorsGrid(g, 3));
+    b.append(h('div', { class: 'tp-h', text: 'IntelliArt Styles' }), DG.stylesGrid(g, 3));
+    b.append(h('div', { class: 'tp-row' }, ui.button('Reset Graphic', () => DG.reset(), { class: 'btn small' }), ui.button('Convert to Shapes', () => DG.toShapes(), { class: 'btn small' })));
     const want = paneItem && L.$(`.sa-row[data-item="${paneItem}"]`, list);
     if (want && paneFocus) { want.focus(); want.setSelectionRange(want.value.length, want.value.length); }
   }
@@ -488,29 +552,40 @@
     paneFocus = false;
   }
   DG.showPane = (on) => { const TP = L.panes && L.panes.task; if (!TP) return; if (on === false) { if (TP.current === 'diagramText') L.app.toggleTask(false); return; } TP.show('diagramText'); };
-  if (L.panes && L.panes.task) L.panes.task.register({ id: 'diagramText', title: 'IntelliArt Text', render(b) { renderPane(b); }, refresh(b, reason) { if (reason === 'selection') { const g = DG.current(); if (g && g.id === paneG && b.contains(document.activeElement)) return; } renderPane(b); } });
+  if (L.panes && L.panes.task) L.panes.task.register({ id: 'diagramText', title: 'IntelliArt', render(b) { renderPane(b); }, refresh(b, reason) { if (reason === 'selection') { const g = DG.current(); if (g && g.id === paneG && b.contains(document.activeElement)) return; } renderPane(b); } });
 
-  /* ---------------------------------------------------------------- menus for the toolbar and the ribbon */
+  /* ---------------------------------------------------------------- galleries for the pane, the toolbar and the ribbon */
+  /** a grid of pictures, one button per choice; pick(value) on a click */
+  function grid(cols, cells, cls, pick) {
+    const el = h('div', { class: 'sa-pick ' + cls, style: `grid-template-columns:repeat(${cols}, 1fr)` });
+    for (const [value, name, html, on] of cells) {
+      const b = h('button', { type: 'button', class: 'sa-cell' + (on ? ' on' : ''), 'aria-label': name, 'aria-pressed': on ? 'true' : 'false', 'data-tip': name, html });
+      b.addEventListener('pointerdown', (e) => e.preventDefault());
+      b.addEventListener('click', () => pick(value));
+      el.append(b);
+    }
+    return el;
+  }
+  const three = [1, 2, 3].map((i) => ({ id: 'c' + i, text: '', kids: [] }));
+  DG.layoutGrid = (g, which, cols, done) => grid(cols, SA.LAYOUTS.filter(which || (() => true)).map((l) => [l.id, l.name, DG.thumb(l.id, 60, 44, { colors: g && g.sa.colors, style: g && g.sa.style }), !!g && g.sa.layout === l.id]),
+    'sa-lays', (k) => { if (done) done(); DG.set('layout', k, g); });
+  /** the colour choices this design can show (an accent too pale for the slide would repeat another) */
+  DG.colorsGrid = (g, cols, done) => {
+    const pal = DG.palette(design());
+    const shown = DG.COLORS.filter(([k]) => { const [ref, kind] = DG.colorsOf(k); return (g && g.sa.colors === k) || [ref, kind].every((x) => !ACC.includes(x) || pal.ok(x)); });
+    return grid(cols, shown.map(([k, n]) => [k, n, DG.thumb('process', 72, 28, { colors: k, style: g && g.sa.style, items: three }), !!g && g.sa.colors === k]), 'sa-colors', (k) => { if (done) done(); DG.set('colors', k, g); });
+  };
+  /** the styles, a grid for each design language */
+  DG.stylesGrid = (g, cols, done) => h('div', { class: 'sa-styles' }, ...DG.STYLE_GROUPS.flatMap(([lang, title]) => [h('div', { class: 'sa-sub', text: title }),
+    grid(cols, DG.STYLES.filter((st) => DG.styleLang(st[0]) === lang).map(([k, n]) => [k, n, DG.thumb('process', 72, 34, { colors: g && g.sa.colors, style: k, items: three }), !!g && g.sa.style === k]),
+      '', (k) => { if (done) done(); DG.set('style', k, g); })]));
+
   DG.layoutMenu = (r) => {
     const g = DG.current();
-    ui.openMenu([{ custom: (close) => {
-      const grid = h('div', { class: 'sa-menu-grid' });
-      for (const lay of SA.LAYOUTS) {
-        const b = h('button', { type: 'button', class: 'sa-cell' + (g && g.sa.layout === lay.id ? ' on' : ''), 'aria-label': lay.name, 'data-tip': lay.name, html: DG.thumb(lay.id, 64, 50) });
-        b.addEventListener('click', () => { close(); DG.set('layout', lay.id); });
-        grid.append(b);
-      }
-      return grid;
-    } }, '-', 'diagramLayout'], r);
+    ui.openMenu([{ custom: (close) => h('div', { class: 'sa-menu-grid' }, DG.layoutGrid(g, null, 5, close)) }, '-', 'diagramLayout'], r);
   };
-  DG.colorsMenu = (r) => {
-    const g = DG.current();
-    ui.openMenu(DG.COLORS.map(([k, n]) => ({ label: n, html: DG.thumb('process', 22, 12, { colors: k, items: [1, 2, 3].map((i) => ({ id: 'c' + i, text: '', kids: [] })) }), checked: () => !!g && g.sa.colors === k, run: () => DG.set('colors', k) })), r);
-  };
-  DG.styleMenu = (r) => {
-    const g = DG.current();
-    ui.openMenu(DG.STYLES.map(([k, n]) => ({ label: n, checked: () => !!g && g.sa.style === k, run: () => DG.set('style', k) })), r);
-  };
+  DG.colorsMenu = (r) => { const g = DG.current(); ui.openMenu([{ custom: (close) => h('div', { class: 'sa-menu-grid' }, DG.colorsGrid(g, 4, close)) }], r); };
+  DG.styleMenu = (r) => { const g = DG.current(); ui.openMenu([{ custom: (close) => h('div', { class: 'sa-menu-grid' }, DG.stylesGrid(g, 4, close)) }], r); };
 
   /* ---------------------------------------------------------------- commands */
   const C = (id, def) => ui.cmd(id, def);

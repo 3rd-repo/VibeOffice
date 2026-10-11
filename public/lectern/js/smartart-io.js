@@ -37,7 +37,7 @@
     /* loTypeId names the layout part's uniqueId exactly: PowerPoint finds the definition by it, and draws its
        default list when they differ */
     const loXML = IO.layoutXML(lay.id, ctx), loId = /uniqueId="([^"]*)"/.exec(loXML)[1];
-    const pts = [`<dgm:pt modelId="${doc}" type="doc"><dgm:prSet loTypeId="${loId}" loCatId="${CAT[lay.cat] || 'list'}" qsTypeId="${URN}style/${sa.style || 'simple'}" qsCatId="simple" csTypeId="${URN}colors/${sa.colors || 'accent1'}" csCatId="${sa.colors === 'colorful' ? 'colorful' : 'accent1'}" phldr="1"/><dgm:spPr/>${tBody('')}</dgm:pt>`];
+    const pts = [`<dgm:pt modelId="${doc}" type="doc"><dgm:prSet loTypeId="${loId}" loCatId="${CAT[lay.cat] || 'list'}" qsTypeId="${URN}style/${sa.style || 'simple'}" qsCatId="simple" csTypeId="${URN}colors/${colorsId(sa.colors, L.diagram.styleLang(sa.style))}" csCatId="${colorsCat(sa.colors)}" phldr="1"/><dgm:spPr/>${tBody('')}</dgm:pt>`];
     const cxns = [];
     const walk = (list, parent) => list.forEach((it, i) => {
       const id = IO.guid(key + ':' + it.id), cx = IO.guid(key + ':' + it.id + ':cxn'), par = IO.guid(key + ':' + it.id + ':par'), sib = IO.guid(key + ':' + it.id + ':sib');
@@ -367,43 +367,69 @@
 
   /* ---------------------------------------------------------------- quick styles */
   const LABELS = ['node0', 'node1', 'lnNode1', 'vennNode1', 'alignNode1', 'alignAcc1', 'trAlignAcc1', 'revTx', 'sibTrans2D1', 'parChTrans1D2', 'bgShp'];
-  const STYLE = { simple: [2, 0], white: [3, 0], subtle: [2, 1], moderate: [0, 2], intense: [0, 3] };   // [line ref, effect ref]
+  /** the style's [line, fill, effect] references (L.diagram.STYLES) on each label: shapes take all three; a Venn
+      circle no shadow (it shows through), arrows and text boxes a plain fill, lines a 1.5 pt line */
   IO.styleXML = (id) => {
-    const [ln, fx] = STYLE[id] || STYLE.simple;
+    const [ln, fl, fx] = L.diagram.styleRefs(id), lang = L.diagram.styleLang(id);
     const lbl = (n) => {
-      const line = n === 'revTx' || n === 'trAlignAcc1' || n === 'sibTrans2D1' ? 0 : n === 'parChTrans1D2' ? 2 : ln;
-      const fill = n === 'revTx' || n === 'trAlignAcc1' || n === 'parChTrans1D2' ? 0 : 1;
-      const font = `<a:fontRef idx="minor"><a:schemeClr val="${['revTx', 'vennNode1', 'alignAcc1', 'bgShp'].includes(n) ? 'tx1' : 'lt1'}"/></a:fontRef>`;
-      return `<dgm:styleLbl name="${n}"><dgm:scene3d><a:camera prst="orthographicFront"/><a:lightRig rig="threePt" dir="t"/></dgm:scene3d><dgm:sp3d/><dgm:txPr/><dgm:style><a:lnRef idx="${line}"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="${fill}"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef><a:effectRef idx="${n === 'revTx' || n === 'trAlignAcc1' ? 0 : fx}"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef>${font}</dgm:style></dgm:styleLbl>`;
+      const shape = ['node0', 'node1', 'lnNode1', 'vennNode1'].includes(n), text = n === 'revTx' || n === 'trAlignAcc1';
+      const line = text || n === 'sibTrans2D1' ? 0 : n === 'parChTrans1D2' ? 2 : ln;
+      const fill = text || n === 'parChTrans1D2' ? 0 : shape ? fl : 1;
+      const effect = shape && n !== 'vennNode1' ? fx : 0;
+      /* outlined and tinted shapes and the text over them: dark text (the colours give each item's own;
+         LibreOffice takes this one) */
+      const font = `<a:fontRef idx="minor"><a:schemeClr val="${['revTx', 'vennNode1', 'alignAcc1', 'bgShp'].includes(n) || ((shape || n === 'trAlignAcc1') && lang !== 'fill') ? 'tx1' : 'lt1'}"/></a:fontRef>`;
+      return `<dgm:styleLbl name="${n}"><dgm:scene3d><a:camera prst="orthographicFront"/><a:lightRig rig="threePt" dir="t"/></dgm:scene3d><dgm:sp3d/><dgm:txPr/><dgm:style><a:lnRef idx="${line}"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="${fill}"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef><a:effectRef idx="${effect}"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef>${font}</dgm:style></dgm:styleLbl>`;
     };
-    const name = (window.L.diagram && L.diagram.STYLES.find((s) => s[0] === id) || [0, 'Simple Fill'])[1];
-    return HEAD + `<dgm:styleDef xmlns:dgm="${NS_DGM}" xmlns:a="${NS_A}" uniqueId="${URN}style/${X(id || 'simple')}"><dgm:title val="${X(name)}"/><dgm:desc val=""/><dgm:catLst><dgm:cat type="simple" pri="10000"/></dgm:catLst><dgm:scene3d><a:camera prst="orthographicFront"/><a:lightRig rig="threePt" dir="t"/></dgm:scene3d><dgm:styleLbl name="node0"><dgm:scene3d><a:camera prst="orthographicFront"/><a:lightRig rig="threePt" dir="t"/></dgm:scene3d><dgm:sp3d/><dgm:txPr/><dgm:style><a:lnRef idx="${ln}"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="1"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef><a:effectRef idx="${fx}"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef></dgm:style></dgm:styleLbl>${LABELS.slice(1).map(lbl).join('')}</dgm:styleDef>`;
+    const name = (L.diagram.STYLES.find((s) => s[0] === id) || L.diagram.STYLES[0])[1];
+    return HEAD + `<dgm:styleDef xmlns:dgm="${NS_DGM}" xmlns:a="${NS_A}" uniqueId="${URN}style/${X(id || 'simple')}"><dgm:title val="${X(name)}"/><dgm:desc val=""/><dgm:catLst><dgm:cat type="simple" pri="10000"/></dgm:catLst><dgm:scene3d><a:camera prst="orthographicFront"/><a:lightRig rig="threePt" dir="t"/></dgm:scene3d>${LABELS.map(lbl).join('')}</dgm:styleDef>`;
   };
 
   /* ---------------------------------------------------------------- colours */
-  /** pal: the theme's usable colours (L.diagram.palette), so PowerPoint colours the diagram as it was drawn here */
-  IO.colorsXML = (id, pal) => {
-    pal = pal || { slot: (x) => x, colorful: ['accent2', 'accent3', 'accent4', 'accent5', 'accent6'], text: () => 'lt1' };
-    const clr = (vals, meth) => `<dgm:fillClrLst meth="${meth || 'repeat'}">${vals.join('')}</dgm:fillClrLst>`;
+  /** the colours id as saved (an older 'range' is accent 1's), and its category as Office files them */
+  const colorsKey = (id) => (id === 'range' ? 'accent1-range' : id || 'accent1');
+  /** the saved id of the colours with the style's design language */
+  const colorsId = (id, lang) => colorsKey(id) + (lang && lang !== 'fill' ? '/' + lang : '');
+  const colorsCat = (id) => { const [ref, kind] = L.diagram.colorsOf(id); return ref === 'colorful' || /^accent/.test(kind) ? 'colorful' : ref === 'dark2' ? 'mainScheme' : ref; };
+  /** pal: the theme's usable colours (L.diagram.palette); lang: the style's design language (L.diagram.styleLang):
+      outlined and tinted shapes have colours of their own, saved under their own id ('accent2-accent3/outline') */
+  IO.colorsXML = (id, pal, lang) => {
+    id = colorsKey(id);
+    lang = lang || 'fill';
+    const clr = (vals, meth, tag) => `<dgm:${tag || 'fillClrLst'} meth="${meth || 'repeat'}">${vals.join('')}</dgm:${tag || 'fillClrLst'}>`;
     const sc = (v, mods) => `<a:schemeClr val="${v}">${mods || ''}</a:schemeClr>`;
-    let fills;
-    const base = pal.slot(/^accent[1-6]$/.test(id) ? id : 'accent1');
-    if (id === 'colorful') fills = clr(pal.colorful.map((v) => sc(v)), 'cycle');
-    else if (id === 'range') fills = clr([sc(base), sc(base, '<a:alpha val="40000"/>')], 'span');
-    else fills = clr([sc(base)]);
+    const [ref, kind] = L.diagram.colorsOf(id);
+    const base = pal.slot(ref === 'dark2' ? 'dk2' : /^accent[1-6]$/.test(ref) ? ref : 'accent1');
+    const mods = (list) => list.map(([n, v]) => `<a:${n} val="${v}"/>`).join('');
+    /* the items' colours: [slot, colour changes] each, and how they spread over the items */
+    const [cols, meth] = ref === 'colorful' ? [pal.colorful.map((v) => [v, []]), 'cycle'] : kind === 'range' ? [L.diagram.rangeMods(pal, base).map((m) => [base, m]), 'span']
+      : kind !== 'fill' ? [[[base, []], [pal.slot(kind), []]], 'span'] : [[[base, []]], 'repeat'];
+    /* extra: more colour changes, a string or (slot, changes) → string */
+    const list = (extra, tag, only) => clr((only || cols).map(([v, m]) => sc(v, mods(m) + (typeof extra === 'function' ? extra(v, m) : extra || ''))), only ? 'repeat' : meth, tag);
+    const fills = list();
+    /* outlined and tinted: the colour on the edge and in the text (a range of shades writes in its deep end), the
+       text deeper or lighter where it would be faint on the slide */
+    const ink = (tag) => list((v, m) => mods(L.diagram.inkMods(pal, L.color.applyMods(pal.hex(v), m.map(([name, val]) => ({ name, val }))))), tag, kind === 'range' ? [[base, []]] : null);
     const lbl = (n) => {
-      let f = fills, line = `<dgm:linClrLst meth="repeat">${sc('lt1')}</dgm:linClrLst>`, tx = sc(pal.text(id === 'colorful' ? pal.colorful[0] : base));
-      if (n === 'vennNode1') { f = fills.replace(/<\/a:schemeClr>/g, '<a:alpha val="50000"/></a:schemeClr>'); tx = sc('tx1'); }
+      let f = fills, line = `<dgm:linClrLst meth="repeat">${sc('lt1')}</dgm:linClrLst>`, tx = sc(pal.text(ref === 'colorful' ? pal.colorful[0] : base)), txl = '';
+      if (n === 'vennNode1') { f = list('<a:alpha val="50000"/>'); tx = sc('tx1'); }
+      if (lang !== 'fill' && ['node0', 'node1', 'lnNode1', 'vennNode1'].includes(n)) {
+        const venn = n === 'vennNode1';
+        f = lang === 'outline' ? clr([sc('lt1', venn ? '<a:alpha val="50000"/>' : '')]) : list(mods(L.diagram.washMods(pal)) + (venn ? '<a:alpha val="70000"/>' : ''));
+        line = list('', 'linClrLst');
+        if (!venn) txl = ink('txFillClrLst');
+      }
       if (n === 'sibTrans2D1') { f = clr([sc(base, '<a:alpha val="60000"/>')]); line = `<dgm:linClrLst meth="repeat">${sc(base, '<a:alpha val="60000"/>')}</dgm:linClrLst>`; }
       if (n === 'parChTrans1D2') { f = clr([sc(base)]); line = `<dgm:linClrLst meth="repeat">${sc(base)}</dgm:linClrLst>`; }
       /* the sub-item cards and the pyramid behind cards: a pale tint of the colour, dark text (as diagram.js paints them) */
       if (n === 'alignAcc1' || n === 'bgShp') { f = clr([sc(base, `<a:alpha val="${n === 'bgShp' ? 25000 : 18000}"/>`)]); line = `<dgm:linClrLst meth="repeat">${sc(base)}</dgm:linClrLst>`; tx = sc('tx1'); }
-      if (n === 'trAlignAcc1') { f = clr([sc('lt1', '<a:alpha val="0"/>')]); line = `<dgm:linClrLst meth="repeat">${sc('lt1', '<a:alpha val="0"/>')}</dgm:linClrLst>`; tx = sc(pal.text(id === 'colorful' ? pal.colorful[0] : base)); }
+      /* the text over each shape: its colour, or each item's own on outlined and tinted shapes */
+      if (n === 'trAlignAcc1') { f = clr([sc('lt1', '<a:alpha val="0"/>')]); line = `<dgm:linClrLst meth="repeat">${sc('lt1', '<a:alpha val="0"/>')}</dgm:linClrLst>`; tx = sc(pal.text(ref === 'colorful' ? pal.colorful[0] : base)); if (lang !== 'fill') txl = ink('txFillClrLst'); }
       if (n === 'revTx') { f = clr([sc('lt1', '<a:alpha val="0"/>')]); line = `<dgm:linClrLst meth="repeat">${sc('dk1', '<a:alpha val="0"/>')}</dgm:linClrLst>`; tx = sc('tx1'); }
-      return `<dgm:styleLbl name="${n}">${f}${line}<dgm:effectClrLst/><dgm:txLinClrLst/><dgm:txFillClrLst meth="repeat">${tx}</dgm:txFillClrLst><dgm:txEffectClrLst/></dgm:styleLbl>`;
+      return `<dgm:styleLbl name="${n}">${f}${line}<dgm:effectClrLst/><dgm:txLinClrLst/>${txl || `<dgm:txFillClrLst meth="repeat">${tx}</dgm:txFillClrLst>`}<dgm:txEffectClrLst/></dgm:styleLbl>`;
     };
-    const name = (window.L.diagram && L.diagram.COLORS.find((c) => c[0] === id) || [0, 'Colored Fill - Accent 1'])[1];
-    return HEAD + `<dgm:colorsDef xmlns:dgm="${NS_DGM}" xmlns:a="${NS_A}" uniqueId="${URN}colors/${X(id || 'accent1')}"><dgm:title val="${X(name)}"/><dgm:desc val=""/><dgm:catLst><dgm:cat type="${id === 'colorful' ? 'colorful' : 'accent1'}" pri="10000"/></dgm:catLst>${LABELS.map(lbl).join('')}</dgm:colorsDef>`;
+    const name = L.diagram.colorsName(id) + (lang === 'fill' ? '' : lang === 'outline' ? ', Outlined' : ', Tinted');
+    return HEAD + `<dgm:colorsDef xmlns:dgm="${NS_DGM}" xmlns:a="${NS_A}" uniqueId="${URN}colors/${X(colorsId(id, lang))}"><dgm:title val="${X(name)}"/><dgm:desc val=""/><dgm:catLst><dgm:cat type="${colorsCat(id)}" pri="10000"/></dgm:catLst>${LABELS.map(lbl).join('')}</dgm:colorsDef>`;
   };
 
   /* ---------------------------------------------------------------- reading */
@@ -425,7 +451,7 @@
     if (!layout || !L.smartart.get(layout)) return null;
     const suffix = (attr, kind) => {
       const v = pr.getAttribute(attr) || '';
-      if (v.startsWith(URN + kind + '/')) return v.slice((URN + kind + '/').length);
+      if (v.startsWith(URN + kind + '/')) { const k = v.slice((URN + kind + '/').length); return kind === 'colors' ? colorsKey(k.replace(/\/.*$/, '')) : k; }
       const o = v.startsWith(OFFICE_URN + kind + '/') ? v.slice((OFFICE_URN + kind + '/').length) : '';
       if (kind === 'colors') return /colorful/i.test(o) ? 'colorful' : /^accent([1-6])/.test(o) ? 'accent' + o[6] : null;
       if (kind === 'quickstyle') return /intense|3d|polished|cartoon/i.test(o) ? 'intense' : /moderate|simple[45]/i.test(o) ? 'moderate' : /simple[23]/i.test(o) ? 'subtle' : null;
