@@ -604,10 +604,12 @@
   });
 
   /* --- Slide Layout --- */
+  /** a layout's picture, in the presentation's shape */
   function layoutSVG(key, w) {
-    const d = L.model.buildDesign('default', 720, 540);
+    const W = L.pres ? L.pres.W : M.DEFAULT_SIZE.w, H = L.pres ? L.pres.H : M.DEFAULT_SIZE.h;
+    const d = L.model.buildDesign('default', W, H);
     const frames = M.layoutFrames(key, d);
-    const k = w / 720, hh = 540 * k;
+    const k = w / W, hh = H * k;
     let body = '';
     for (const f of frames) {
       const x = f.x * k, y = f.y * k, fw = f.w * k, fh = f.h * k;

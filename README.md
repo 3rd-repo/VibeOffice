@@ -20,7 +20,7 @@
       <b><a href="https://vibeoffice.work/ledger/">Ledger</a></b><br>Spreadsheet
     </td>
     <td align="center" width="33%">
-      <a href="https://vibeoffice.work/lectern/"><img src="docs/images/lectern.png" alt="Lectern, the presentation editor, with a cycle diagram, LettersArt and a chart on a slide"></a><br>
+      <a href="https://vibeoffice.work/lectern/"><img src="docs/images/lectern.png" alt="Lectern, the presentation editor, with the sample deck: a drawn title slide, then a chart, a table, a timeline and a funnel diagram"></a><br>
       <b><a href="https://vibeoffice.work/lectern/">Lectern</a></b><br>Presentations
     </td>
   </tr>
