@@ -46,9 +46,27 @@ Classic must not change when only the theme machinery changes: compare screensho
 
 `node --test tests/scout.test.mjs` checks the assistant in each app (docs/suite.md, The assistant): that he comes in by himself on a desktop (waving the first time each day, popping in after) and not on an iPhone or on a day the user hid him (scripts in `tests/scout/` run before the page's own), Help ▸ Show the Assistant (a wave; the introduction and choices the first time each day), a click on him, acting out Print, Find and saving (once the file is written; the test holds back the download), working along with a long wait, the welcome's choices, the right-click menu, no frames drawn while the window is in the background or once he is hidden. Showing or hiding him writes `localStorage['vibeoffice.assistant']`, which other open app pages follow, `scout.lastGreetedDay` and `scout.lastHiddenDay`; a UI check that shows him sets them back at the end, as the test does.
 
-## SmartArt
+## Mouse, selection, drag and focus: tests/ui/
 
-`node --test tests/painter.test.mjs` checks the Format Painter (docs/suite.md, Brushes) in each app with real mouse input, CDP Input events paced like a hand (synthetic DOM events hide when an app acts mid-drag): it paints the dragged text, cells or object once the mouse is let go, a clicked word, keeps a double-clicked painter on until Esc, keeps links, and in Lectern keeps the text being edited and paints text in another box. It observes what the user sees (the brush cursor, the formatting), so it also runs against an older copy of `public/` served on another port (`BASE=…`).
+`node --test --test-concurrency=1 tests/ui/*.test.mjs` drives each app in the local Chromium with real input: CDP Input events
+paced like a hand (`tests/lib/input.mjs`), because synthetic DOM events hide what an app does in the middle of a drag.
+The helper starts the static server, and a headless Chromium (profile `tmp/chromium-profile`, left running) when
+nothing listens on CDP 127.0.0.1:9222. One file at a time (`--test-concurrency=1`): some tests move the focus to
+another tab and back.
+
+- `painter.test.mjs`: the Format Painter in each app (docs/suite.md, Brushes): it paints the dragged text, cells or
+  object once the mouse is let go, a clicked word; a double-clicked painter stays on until Esc; links stay; in Lectern
+  the text being edited stays edited, and text in another box can be painted.
+- `quire.test.mjs`, `ledger.test.mjs`, `lectern.test.mjs`: each app's mouse, selection, drag and focus behaviour. A
+  test named after an item of todos/UI_MOUSE_LOGIC_IMPROVE.md (Q1…, S1…, P1…) checks what Office does there and is
+  marked `todo` until the item is fixed: it runs and is reported, but doesn't fail the run. The fix takes the mark off,
+  so the test becomes its regression test, and the todo count in the summary is what is left of the plan.
+
+The tests assert what the user sees (the cursor, the text and its formatting, the selection, where typing goes), so
+they also run against older code: serve a copy of `public/` with the fix's files at `HEAD` on another port
+(`python3 tools/serve.py 8761 tmp/prev-public`) and run with `BASE=http://127.0.0.1:8761`; a fix's test must fail there.
+
+## SmartArt
 
 `node --test tests/sw.test.mjs` checks the service worker (docs/suite.md, Service worker) in the Chromium at :9222, on copies of `public/` staged in `./tmp/sw-test` by `tools/web-release.sh` and served on 127.0.0.1 by a server of the test's own (it redirects `index.html` to its folder, like the published site): the first install and its progress (bytes too), the cached files' `Content-Type`, the Start Center's bar with its megabytes and its *Update done, reload* button (which reloads the open page in the new version), the Start Center and Quire offline, an update that fetches the new version's zip and nothing else while an open page keeps its version and a new page gets the new one, the old cache going once its page has closed, a damaged zip (one byte changed) failing the install, and no worker on any other origin (the same server as `localhost`). It clears the test origin's storage at the end. `SW_TEST_LOG=1` prints the tabs it opens and the pages it loads.
 
@@ -70,7 +88,6 @@ and open http://127.0.0.1:8770/. For an update, stop the server, stage again wit
 | `node tests/quire/mdspec.js DIR` | The Markdown reader against the CommonMark spec examples and the GFM extension examples (in Node). DIR holds `spec.json` (https://spec.commonmark.org/0.31.2/spec.json), cmark-gfm's `test/spec.txt` saved as `gfm-spec.txt`, and the WHATWG `entities.json` |
 | `node tests/quire/mdroundtrip.mjs DIR` | Markdown round trips in Quire (through `shot.mjs`): every `.md` in DIR saved unchanged (must be byte for byte the same), with one paragraph edited (only that block may change), and fully rewritten (same HTML). `--spec spec.json` runs the rewrite check on the spec examples |
 | `python3 tests/quire/loss-audit.py originals/ saved/ out.json` | What a save loses: each original `.docx` against Quire's saved copy, feature by feature and word by word (standard library only); results in docs/quire.md |
-| `node tests/quire/mouse-selection.mjs` | Real mouse input (CDP, paced like a hand): the highlighter applies when the mouse is let go, to the whole dragged selection, as one undo step, and a drawn shape's handles go when the user clicks into text or presses Esc (the Format Painter: `tests/painter.test.mjs`) |
 
 Run both after a change to `markdown.js` or `mdio.js`; the numbers are in docs/quire.md.
 

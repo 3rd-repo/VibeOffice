@@ -48,6 +48,8 @@ export async function openPage(app, options = {}) {
   try {
     for (const domain of ['Page', 'Runtime', 'Network']) await send(domain + '.enable');
     await send('Network.setCacheDisabled', { cacheDisabled: true });
+    // the page says it is automated (navigator.webdriver), so the assistant waits to be asked instead of walking in
+    if (options.automated) await send('Emulation.setAutomationOverride', { enabled: true });
     // Capture the actual app snapshot/recovery hooks, without touching the user's IndexedDB.
     await send('Page.addScriptToEvaluateOnNewDocument', { source: `
       let vo;

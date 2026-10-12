@@ -54,7 +54,7 @@ Keep them current: a change to an app's features, formats or source layout updat
 - Chromium with CDP at 127.0.0.1:9222. `tools/shot.mjs <page> [steps]` drives a page over CDP, takes screenshots and reports console errors and any request that leaves 127.0.0.1. **Never close the browser's other tabs** (Chromium quits with its last tab).
 - `tools/oss-licenses.py`: regenerates `public/oss-licenses.html` (Open source licenses, linked from About) from the license files in `public/`, the desktop app's direct crates and its DLL; run it after changing a font, a word list or a desktop dependency.
 - `tools/templates.mjs`: regenerates the Start Center's template gallery (`public/common/templates.json` and previews) from the apps; run it after changing a template.
-- Tests live in `tests/`, not in `tools/`: `tests/*.test.mjs` (looks, ribbon, search, SmartArt, Scout, the service worker, the Format Painter), `tests/ooxml/`, one folder per app, and `tests/from-issues/N/` for the regression tests of reported issue N.
+- Tests live in `tests/`, not in `tools/`: `tests/*.test.mjs` (looks, ribbon, search, SmartArt, Scout, the service worker), `tests/ui/` (real mouse and keyboard input in each app; the open items of todos/UI_MOUSE_LOGIC_IMPROVE.md as `todo` tests), `tests/ooxml/`, one folder per app, and `tests/from-issues/N/` for the regression tests of reported issue N.
 - `tests/ledger/`: Ledger's Node harnesses (unit tests, `.xlsx` round trip, recalculation, CSV) and Playwright UI checks.
 - `tests/lectern/`: Lectern's real-deck harness (open, render, save, reopen in Chromium), UI checks for passwords and charts, encrypted-save check (see docs/lectern.md).
 
@@ -70,6 +70,6 @@ Don't look up this project's GitHub issues (no `gh`, no fetching issue pages) un
 
 1. Ledger engine changes: `node --test tests/ledger/*.test.js`.
 2. File-format changes: round-trip real files (`node tests/ledger/roundtrip.js file.xlsx`) and open the saved file in LibreOffice.
-3. Look: `node tools/shot.mjs <app>/` with steps for the change; check every app still loads without console errors or external requests. UI checks pause between steps so the page repaints, as with real input: bursts of synthetic events hid a Ledger scroll bug.
+3. Look: `node tools/shot.mjs <app>/` with steps for the change; check every app still loads without console errors or external requests. UI checks pause between steps so the page repaints, as with real input: bursts of synthetic events hid a Ledger scroll bug. Mouse, selection, drag and focus: `node --test --test-concurrency=1 tests/ui/*.test.mjs` (real input; no new failures, and the `todo` count only goes down).
 4. Shared save code (`public/common/opc.js` and the writers) runs on every part of every file: time a change on a large file (a 30 MB sheet) as well as on the corpus. A regex pre-scan or a full parse there costs seconds and gigabytes.
 5. Prefer a focused regression test per fix; run the full corpus once per feature group and before each Office batch, not after every fix.

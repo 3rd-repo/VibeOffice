@@ -1,6 +1,6 @@
 # UI: mouse, selection, drag and focus logic in Quire, Ledger and Lectern
 
-Status: planned 2026-10-12, not started (the Format Painter part is done, see What was done). Read docs/suite.md
+Status: planned 2026-10-12; Phase 0 under way: the audit is in tests/ui/ as 85 `todo` tests (the Format Painter part is done, see What was done). Read docs/suite.md
 (Shared code, Brushes) first. An audit of all three apps with real mouse and keyboard input (CDP, paced like a hand)
 confirmed 45 defects; most come from the same few missing mechanisms (Root causes). Six phases, in order: 0 test
 tools, 1 data loss, 2 one shared drag lifecycle, 3 one focus rule, 4 one owner per piece of state in each app,
@@ -9,13 +9,13 @@ tools, 1 data loss, 2 one shared drag lifecycle, 3 one focus rule, 4 one owner p
 ## Tasks
 
 Phase 0: test tools (the user, 2026-10-12: automated on the local Chromium, no CI)
-- [ ] `tests/lib/input.mjs`: a tab on an app with real input (click, drag, double-click, right-click, keys, Esc, a lost
+- [x] `tests/lib/input.mjs`: a tab on an app with real input (click, drag, double-click, right-click, keys, Esc, a lost
       release, window blur, tab switch), the brush cursor and console checks; it starts the server, and a headless
       local Chromium when nothing listens on 9222
-- [ ] `tests/ui/`: the audit as tests, one per defect (its id first in the name), each asserting what Office does and
+- [x] `tests/ui/`: the audit as tests, one per defect (its id first in the name), each asserting what Office does and
       marked `todo` until it is fixed (taking the mark off is part of the fix, so the test becomes its regression
       test and the todo count is this plan's progress); the painter and Quire mouse tests move here.
-      `node --test --test-concurrency=1 tests/ui/`
+      `node --test --test-concurrency=1 tests/ui/*.test.mjs`
 - [ ] The previous-code check as a script: serve `public/` with the fix's files at `HEAD` on another port and run a test
       there with soft assertions (`BASE=http://127.0.0.1:8761`); docs/testing.md
 
@@ -68,7 +68,7 @@ Phase 5: the rest
 - 2026-10-12 (1035247), the Format Painter: `ui.brush` (common/ui.js) is the mode every painter and Quire's highlighter
   uses, and applies once when the mouse is let go; Quire's editor says when a gesture is over (`'sel-done'`) and ends
   an object selection one way (`E.clearObjSel`, which drawing.js follows); Lectern's painter keeps the text being
-  edited. `tests/painter.test.mjs`, `tests/quire/mouse-selection.mjs`. This plan follows the same pattern.
+  edited. `tests/ui/painter.test.mjs`, `tests/ui/quire.test.mjs`. This plan follows the same pattern.
 
 ## Decisions
 
@@ -322,7 +322,7 @@ Ctrl+T never reaches the page in Chrome (the Font dialog is reached from menus).
   sd fu*.cxx) and write down where we follow it and where Office differs.
 - A change in common/ (`ui.drag`, the focus rule) is checked in all three apps and in the Classic and Paper 2016
   looks (`node --test tests/ribbon.test.mjs tests/looks.test.mjs`), with screenshots of what it touches.
-- Each phase ends with the full set: `node --test --test-concurrency=1 tests/ui/` (no new failures; the todo count only
+- Each phase ends with the full set: `node --test --test-concurrency=1 tests/ui/*.test.mjs` (no new failures; the todo count only
   goes down), the apps' unit tests, and every app loading without console errors.
 - Several sessions work in this repository: commit only these files and hunks; leave findings for other plans in
   their To do.
