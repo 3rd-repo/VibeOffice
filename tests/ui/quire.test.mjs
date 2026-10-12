@@ -2,56 +2,9 @@
 // Word does there and stays `todo` until the item is fixed (todos/UI_MOUSE_LOGIC_IMPROVE.md); the rest must pass.
 //
 //   node --test --test-concurrency=1 tests/ui/*.test.mjs
-import { test, before, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { open, pause } from '../lib/input.mjs';
-
-let t;
-before(async () => { t = await open('quire'); });
-after(async () => { await t?.close(); });
-
-/** screen point just inside the character at offset o of block b of the body */
-const at = (b, o) => t.evaluate(`(() => { const p = L.D.doc.main.blocks[${b}], m = L.layout.posToDom(L.D.pos(p, ${o})), r = document.createRange();
-  r.setStart(m.node, m.offset); r.collapse(true); const box = r.getClientRects()[0] || r.getBoundingClientRect(); return { x: box.left + 1, y: box.top + box.height / 2 }; })()`);
-/** [text, has prop] for each run of block b */
-const runs = (b, prop) => t.evaluate(`L.D.doc.main.blocks[${b}].runs.map((r) => [r.text, !!(r.rPr && r.rPr.${prop})])`);
-/** a new document of plain paragraphs (strings) or runs ([[text, rPr], …]); the caret at the start, no brush on */
-const load = (paras) => t.evaluate(`(async () => {
-  const { D } = L, d = D.newDoc();
-  d.main.blocks = ${JSON.stringify(paras)}.map((p) => D.para(typeof p === 'string' ? [D.text(p)] : p.map(([s, r]) => D.text(s, r || {}))));
-  L.app.loadDoc(d, 'UI test');
-  L.ui.brushOn?.()?.stop(); /* no brush left on (older code has no brushes: nothing to do) */
-  await new Promise((r) => setTimeout(r, 500));
-  const p = d.main.blocks[0]; L.ed.setSel(D.pos(p, 0)); L.ed.focus();
-})()`);
-const TEXT = [[['Source', { b: true }], [' plain target words follow here']], 'Second paragraph of ordinary text for clicking',
-  'Third paragraph with more words to paint'];
-
-test('the highlighter marks the whole drag, as one undo step', async () => {
-  await load(TEXT);
-  await t.evaluate(`L.app.applyHighlight('yellow')`);
-  const undo0 = await t.evaluate('L.D.histState().undo.length');
-  await t.drag(await at(0, 7), await at(0, 25));
-  assert.deepEqual(await runs(0, 'hl'), [['Source', false], [' ', false], ['plain target words', true], [' follow here', false]]);
-  assert.equal(await t.evaluate('L.D.histState().undo.length') - undo0, 1, 'one undo step');
-  await t.esc();
-  assert.equal(await t.painting(), false, 'Esc puts the highlighter down');
-});
-
-for (const leave of ['a click into text', 'Esc']) {
-  test(`a drawn shape's handles go after ${leave}, and a click selects it again`, async () => {
-    const handles = () => t.evaluate(`({ handles: document.querySelectorAll('.obj-handles').length, outlined: document.querySelectorAll('.sel-obj').length, selected: !!L.ed.objSel })`);
-    await load(TEXT);
-    await t.evaluate(`L.ui.exec('drawRect')`);
-    const corner = await at(1, 10);
-    await t.drag({ x: corner.x + 300, y: corner.y + 40 }, { x: corner.x + 400, y: corner.y + 120 }, 4);
-    assert.deepEqual(await handles(), { handles: 1, outlined: 1, selected: true }, 'the drawn shape is selected');
-    if (leave === 'Esc') await t.esc(); else await t.click(await at(1, 5));
-    assert.deepEqual(await handles(), { handles: 0, outlined: 0, selected: false }, 'no handles');
-    await t.click({ x: corner.x + 350, y: corner.y + 80 });
-    assert.deepEqual(await handles(), { handles: 1, outlined: 1, selected: true }, 'selected again');
-  });
-}
 
 /* ---------- the audit (todos/UI_MOUSE_LOGIC_IMPROVE.md, Audit › Quire): one test per item, each in a tab of its own,
    so a failing one leaves no dialog, menu or focus behind ---------- */
@@ -105,6 +58,39 @@ const undoSteps = (u) => u.evaluate('L.D.histState().undo.length');
 const shapes = (u) => u.evaluate(`document.querySelectorAll('#pages .flt').length`);
 const editingHeader = (u) => u.evaluate(`L.layout.root.classList.contains('hfmode')`);
 const near = (a, b) => Math.abs(a.l - b.l) < 1 && Math.abs(a.t - b.t) < 1 && Math.abs(a.r - b.r) < 1 && Math.abs(a.b - b.b) < 1;
+/* ---------- what works today (these must pass) ---------- */
+
+/** [text, has prop] for each run of body block b */
+const runs = (u, b, prop) => u.evaluate(`L.D.doc.main.blocks[${b}].runs.map((r) => [r.text, !!(r.rPr && r.rPr.${prop})])`);
+const objectState = (u) => u.evaluate(`({ handles: document.querySelectorAll('.obj-handles').length, outlined: document.querySelectorAll('.sel-obj').length, selected: !!L.ed.objSel })`);
+const TEXT = ['Source plain target words follow here', 'Second paragraph of ordinary text for clicking', 'Third paragraph with more words to paint'];
+
+test('the highlighter marks the whole drag, as one undo step', () => inQuire(PARAS(TEXT), async (u) => {
+  await u.click(await u.button('highlightBtn'));
+  assert.equal(await u.painting(), true, 'the Highlight button with no selection arms the highlighter');
+  const undo0 = await undoSteps(u);
+  await u.drag(await atB(u, 0, 7), await atB(u, 0, 25));
+  assert.deepEqual(await runs(u, 0, 'hl'), [['Source ', false], ['plain target words', true], [' follow here', false]]);
+  assert.equal(await undoSteps(u) - undo0, 1, 'one undo step');
+  await u.esc();
+  assert.equal(await u.painting(), false, 'Esc puts the highlighter down');
+}, { look: 'classic' }));
+
+for (const leave of ['a click into text', 'Esc']) {
+  test(`a drawn shape's handles go after ${leave}, and a click selects it again`, () => inQuire(PARAS(TEXT), async (u) => {
+    await u.click(await u.button('drawRect'));
+    const corner = await atB(u, 1, 10);
+    await u.drag({ x: corner.x + 300, y: corner.y + 40 }, { x: corner.x + 400, y: corner.y + 120 }, 4);
+    assert.deepEqual(await objectState(u), { handles: 1, outlined: 1, selected: true }, 'the drawn shape is selected');
+    if (leave === 'Esc') await u.esc(); else await u.click(await atB(u, 1, 5));
+    assert.deepEqual(await objectState(u), { handles: 0, outlined: 0, selected: false }, 'no handles');
+    await u.click({ x: corner.x + 350, y: corner.y + 80 });
+    assert.deepEqual(await objectState(u), { handles: 1, outlined: 1, selected: true }, 'selected again');
+  }, { look: 'classic' }));
+}
+
+/* ---------- the audit items ---------- */
+
 const FIND = ['Alpha beta gamma.', 'Second beta paragraph.', 'Third beta paragraph.'];
 test('Q1 Find Next keeps the keyboard in the Find box: a second Enter finds the next match and never edits the text', { todo: 'Phase 1' }, () => inQuire(PARAS(FIND), async (u) => {
   await u.key('f', { ctrl: true }); await pause(300);
@@ -381,4 +367,3 @@ test('Q17c a right-click during a shape move cancels the move, and no menu opens
   assert.equal(await undoSteps(u), undo0, 'nothing to undo');
 }));
 
-test('no browser errors, no external requests', () => t.clean());

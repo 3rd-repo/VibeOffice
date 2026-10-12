@@ -52,6 +52,7 @@ Keep them current: a change to an app's features, formats or source layout updat
 
 - `tools/serve.py`: no-cache server for `public/` on 127.0.0.1:8760.
 - Chromium with CDP at 127.0.0.1:9222. `tools/shot.mjs <page> [steps]` drives a page over CDP, takes screenshots and reports console errors and any request that leaves 127.0.0.1. **Never close the browser's other tabs** (Chromium quits with its last tab).
+- `tools/older.mjs [REV] -- <tests>`: runs today's tests against `public/` as it was at REV (default: before the uncommitted or last change), so a fix's regression test can be seen failing there.
 - `tools/oss-licenses.py`: regenerates `public/oss-licenses.html` (Open source licenses, linked from About) from the license files in `public/`, the desktop app's direct crates and its DLL; run it after changing a font, a word list or a desktop dependency.
 - `tools/templates.mjs`: regenerates the Start Center's template gallery (`public/common/templates.json` and previews) from the apps; run it after changing a template.
 - Tests live in `tests/`, not in `tools/`: `tests/*.test.mjs` (looks, ribbon, search, SmartArt, Scout, the service worker), `tests/ui/` (real mouse and keyboard input in each app; the open items of todos/UI_MOUSE_LOGIC_IMPROVE.md as `todo` tests), `tests/ooxml/`, one folder per app, and `tests/from-issues/N/` for the regression tests of reported issue N.

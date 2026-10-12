@@ -1,6 +1,7 @@
 # UI: mouse, selection, drag and focus logic in Quire, Ledger and Lectern
 
-Status: planned 2026-10-12; Phase 0 under way: the audit is in tests/ui/ as 85 `todo` tests (the Format Painter part is done, see What was done). Read docs/suite.md
+Status: planned 2026-10-12; Phase 0 done: the audit is in tests/ui/ as 85 `todo` tests, `tools/older.mjs` runs them
+against older code (the Format Painter part is done too, see What was done). Next: Phase 1. Read docs/suite.md
 (Shared code, Brushes) first. An audit of all three apps with real mouse and keyboard input (CDP, paced like a hand)
 confirmed 45 defects; most come from the same few missing mechanisms (Root causes). Six phases, in order: 0 test
 tools, 1 data loss, 2 one shared drag lifecycle, 3 one focus rule, 4 one owner per piece of state in each app,
@@ -16,8 +17,8 @@ Phase 0: test tools (the user, 2026-10-12: automated on the local Chromium, no C
       marked `todo` until it is fixed (taking the mark off is part of the fix, so the test becomes its regression
       test and the todo count is this plan's progress); the painter and Quire mouse tests move here.
       `node --test --test-concurrency=1 tests/ui/*.test.mjs`
-- [ ] The previous-code check as a script: serve `public/` with the fix's files at `HEAD` on another port and run a test
-      there with soft assertions (`BASE=http://127.0.0.1:8761`); docs/testing.md
+- [x] The previous-code check as a script: `tools/older.mjs [REV] -- <tests>` runs today's tests against `public/` as at
+      REV (default HEAD with uncommitted changes, else HEAD~1); docs/testing.md
 
 Phase 1: data loss and wrong edits (small separate fixes, each with its test)
 - [ ] Q1 Quire: Find Next takes the keyboard from the Find box, the next Enter replaces the found text
@@ -78,6 +79,11 @@ Phase 5: the rest
 
 - `ui.drag` lives in common/ui.js, next to `ui.brush` (the focus rule has to, it changes ui.js's dialogs and menus);
   no script lists change. (The user, 2026-10-12)
+
+- Office is the guide, not a spec to match exactly: the aim is a fluent experience, the same in all three apps.
+  Where Office's exact behaviour is unknown or awkward, choose what feels fluent and consistent (the tests P5f, Q17c
+  and S14d, a right-click during a drag cancels it and opens no menu; Q8b, Esc out of the header puts the caret back
+  in the body; S5a, a right-click on another cell commits the typing first, are such choices). (The user, 2026-10-12)
 
 Proposed, to settle with the user before Phase 2:
 - The order of the phases is the one above (data loss first); the user has not confirmed it yet.
@@ -316,10 +322,11 @@ Ctrl+T never reaches the page in Chrome (the Font dialog is reached from menus).
 - Real input only: CDP `Input` events paced like a hand (40-60 ms between moves, ~300 ms after a release); synthetic
   DOM events hide exactly these bugs. Assert what the user sees (the cursor, the text, the formatting, where typing
   goes), so a test also runs against the previous code.
-- A fix's regression test fails on the previous commit (serve the fix's files at `HEAD` on another port); say how
-  many checks fail there in the commit message.
-- Behave as Office does; when unsure, read how LibreOffice does it (vcl tracking and focus, sw edtwin, sc gridwin,
-  sd fu*.cxx) and write down where we follow it and where Office differs.
+- A fix's regression test fails on the previous commit (`node tools/older.mjs -- <its test>`); say so in the commit
+  message.
+- Fluent first, Office as the guide (Decisions): behave as Office does where it is known and good; when unsure, read
+  how LibreOffice does it (vcl tracking and focus, sw edtwin, sc gridwin, sd fu*.cxx), and otherwise choose what
+  feels fluent and is the same in all three apps.
 - A change in common/ (`ui.drag`, the focus rule) is checked in all three apps and in the Classic and Paper 2016
   looks (`node --test tests/ribbon.test.mjs tests/looks.test.mjs`), with screenshots of what it touches.
 - Each phase ends with the full set: `node --test --test-concurrency=1 tests/ui/*.test.mjs` (no new failures; the todo count only

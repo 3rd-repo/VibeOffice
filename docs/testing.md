@@ -63,8 +63,11 @@ another tab and back.
   so the test becomes its regression test, and the todo count in the summary is what is left of the plan.
 
 The tests assert what the user sees (the cursor, the text and its formatting, the selection, where typing goes), so
-they also run against older code: serve a copy of `public/` with the fix's files at `HEAD` on another port
-(`python3 tools/serve.py 8761 tmp/prev-public`) and run with `BASE=http://127.0.0.1:8761`; a fix's test must fail there.
+they also run against older code, and a fix's test must fail there. `node tools/older.mjs [REV] [-- <node --test
+arguments>]` extracts `public/` as it was at REV into `tmp/older/<commit>/`, serves it on a port of its own and runs
+today's tests against it (`BASE`); REV is `HEAD` while `public/` has uncommitted changes, else `HEAD~1`. For example
+`node tools/older.mjs 1035247~1 -- tests/ui/painter.test.mjs` (the Format Painter before its fix: all three fail), or
+`node tools/older.mjs -- --test-name-pattern '^Q1 ' tests/ui/quire.test.mjs` for a fix not committed yet.
 
 ## SmartArt
 
