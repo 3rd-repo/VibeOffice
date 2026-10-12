@@ -312,34 +312,33 @@
       t.addEventListener('pointerdown', (e) => {
         if (e.button === 2) { if (!selSet.has(i)) A.activateSheet(i); return; }
         e.preventDefault();
+        if (e.button !== 0) return;
         if (e.ctrlKey || e.metaKey) { A.toggleSheetSel(i); return; }
         if (e.shiftKey) { A.rangeSheetSel(i); return; }
         A.activateSheet(i);
-        /* drag to reorder (Ctrl copies) */
-        const x0 = e.clientX;
-        let moved = false, target = null;
-        const mv = (ev) => {
-          if (Math.abs(ev.clientX - x0) > 6) moved = true;
-          if (!moved) return;
-          L.$$('.stab', tabs).forEach((x) => x.classList.remove('drop-before'));
-          const els = L.$$('.stab', tabs);
-          target = null;
-          for (const el of els) { const r = el.getBoundingClientRect(); if (ev.clientX < r.left + r.width / 2) { el.classList.add('drop-before'); target = el; break; } }
-        };
-        const up = (ev) => {
-          document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up);
-          L.$$('.stab', tabs).forEach((x) => x.classList.remove('drop-before'));
-          if (!moved) return;
-          const names = L.$$('.stab', tabs).map((x) => x.textContent);
-          let to = target ? w.sheets.findIndex((s2) => s2.name === target.textContent) : w.sheets.length;
-          try {
-            if (ev.ctrlKey || ev.metaKey) { const c = O.copySheet(w, w.sheets[i], to); w.active = w.sheets.indexOf(c); }
-            else O.moveSheet(w, w.sheets[i], to);
-          } catch (err) { A.error(err); }
-          void names;
-          renderTabs(); G().paint(); ui.refresh();
-        };
-        document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+        /* drag to reorder (Ctrl copies): a mark shows where it goes; a cancel moves nothing */
+        let target = null;
+        const unmark = () => L.$$('.stab', tabs).forEach((x) => x.classList.remove('drop-before'));
+        ui.drag(e, {
+          capture: tabs,
+          threshold: 6,
+          move(ev) {
+            unmark();
+            target = null;
+            for (const el of L.$$('.stab', tabs)) { const r = el.getBoundingClientRect(); if (ev.clientX < r.left + r.width / 2) { el.classList.add('drop-before'); target = el; break; } }
+          },
+          up(ev, d) {
+            unmark();
+            if (!d.moved) return;
+            const to = target ? w.sheets.findIndex((s2) => s2.name === target.textContent) : w.sheets.length;
+            try {
+              if (ev.ctrlKey || ev.metaKey) { const c = O.copySheet(w, w.sheets[i], to); w.active = w.sheets.indexOf(c); }
+              else O.moveSheet(w, w.sheets[i], to);
+            } catch (err) { A.error(err); }
+            renderTabs(); G().paint(); ui.refresh();
+          },
+          cancel: unmark,
+        });
       });
       t.addEventListener('dblclick', () => A.renameSheetInline(i));
       t.addEventListener('contextmenu', (e) => { e.preventDefault(); tabMenu(e, i); });
@@ -421,11 +420,14 @@
     /* the split bar between tabs and the horizontal scroll bar */
     const sp = L.$('#tabsplit');
     sp.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); sp.setPointerCapture(e.pointerId);
-      const x0 = e.clientX, w0 = tabs.offsetWidth;
-      const mv = (ev) => { tabs.style.width = L.clamp(w0 + ev.clientX - x0, 40, L.$('#tabrow').offsetWidth - 120) + 'px'; G().paint(); };
-      const up = () => { sp.removeEventListener('pointermove', mv); sp.removeEventListener('pointerup', up); };
-      sp.addEventListener('pointermove', mv); sp.addEventListener('pointerup', up);
+      e.preventDefault();
+      if (e.button !== 0) return;
+      const x0 = e.clientX, w0 = tabs.offsetWidth, before = tabs.style.width;
+      ui.drag(e, {
+        capture: sp,
+        move(ev) { tabs.style.width = L.clamp(w0 + ev.clientX - x0, 40, L.$('#tabrow').offsetWidth - 120) + 'px'; G().paint(); },
+        cancel() { tabs.style.width = before; G().paint(); },
+      });
     });
   }
   A.insertSheet = function () {

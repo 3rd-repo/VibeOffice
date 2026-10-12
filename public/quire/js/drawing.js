@@ -575,32 +575,28 @@
     else f.posV.off = L.round((f.posV.off || 0) + dyPt, 2);
     delete f.posH.pct; delete f.posV.pct;
   }
+  /** a press on a floating object: dragging it moves it (an outline follows the pointer; the object moves on release) */
   function startMove(e, wrap, a) {
     const z = L.layout.zoom;
-    const sx = e.clientX, sy = e.clientY;
-    let moved = false;
     const ghost = el('div', 'resize-ghost');
-    const mv = (ev) => {
-      const dx = ev.clientX - sx, dy = ev.clientY - sy;
-      if (!moved && Math.hypot(dx, dy) < 3) return;
-      if (!moved) { moved = true; handles && handles.appendChild(ghost); ghost.style.width = '100%'; ghost.style.height = '100%'; }
-      ghost.style.transform = `translate(${dx}px,${dy}px)`;
-    };
-    const up = (ev) => {
-      window.removeEventListener('pointermove', mv);
-      window.removeEventListener('pointerup', up);
-      ghost.remove();
-      if (!moved) return;
-      const dxPt = (ev.clientX - sx) / z / PX, dyPt = (ev.clientY - sy) / z / PX;
-      L.ed.edit('Move Object', () => {
-        D.touch(a.p);
-        const it = D.itemAfter(a.p, a.o);
-        if (it && it.float) moveFloat(it, dxPt, dyPt, wrap);
-        return { a: D.pos(a.p, a.o), f: D.pos(a.p, a.o + 1) };
-      });
-    };
-    window.addEventListener('pointermove', mv);
-    window.addEventListener('pointerup', up);
+    L.ui.drag(e, {
+      move(ev, d) {
+        if (!ghost.parentNode) { if (!handles) return; handles.appendChild(ghost); ghost.style.width = '100%'; ghost.style.height = '100%'; }
+        ghost.style.transform = `translate(${d.dx}px,${d.dy}px)`;
+      },
+      up(ev, d) {
+        ghost.remove();
+        if (!d.moved) return;
+        const dxPt = (ev.clientX - d.x0) / z / PX, dyPt = (ev.clientY - d.y0) / z / PX;
+        L.ed.edit('Move Object', () => {
+          D.touch(a.p);
+          const it = D.itemAfter(a.p, a.o);
+          if (it && it.float) moveFloat(it, dxPt, dyPt, wrap);
+          return { a: D.pos(a.p, a.o), f: D.pos(a.p, a.o + 1) };
+        });
+      },
+      cancel: () => ghost.remove(),
+    });
   }
   DR.nudge = function (key, pt) {
     const os = L.ed.objSel;
@@ -611,60 +607,63 @@
   function startResize(ev, hn, target) {
     ev.preventDefault(); ev.stopPropagation();
     const os = L.ed.objSel;
-    if (!os) return;
+    if (ev.button !== 0 || !os) return;
     const z = L.layout.zoom;
     const it = os.it;
     const w0 = it.w || 72, h0 = it.h || 72;
-    const sx = ev.clientX, sy = ev.clientY;
     const corner = hn.length === 2;
     const ghost = el('div', 'resize-ghost');
-    handles.appendChild(ghost);
     let nw = w0, nh = h0, dxl = 0, dyt = 0;
     const lockAspect = it.t === 'img' || it.t === 'chart';
-    const mv = (e2) => {
-      const dx = (e2.clientX - sx) / z / PX, dy = (e2.clientY - sy) / z / PX;
-      nw = w0 + (hn.includes('e') ? dx : hn.includes('w') ? -dx : 0);
-      nh = h0 + (hn.includes('s') ? dy : hn.includes('n') ? -dy : 0);
-      if (corner && (lockAspect ? !e2.shiftKey : e2.shiftKey)) { const k = Math.max(nw / w0, nh / h0); nw = w0 * k; nh = h0 * k; }
-      nw = Math.max(2, nw); nh = Math.max(2, nh);
-      dxl = hn.includes('w') ? w0 - nw : 0; dyt = hn.includes('n') ? h0 - nh : 0;
-      ghost.style.cssText = `left:${dxl * PX * z}px;top:${dyt * PX * z}px;width:${nw * PX * z}px;height:${nh * PX * z}px`;
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', mv);
-      window.removeEventListener('pointerup', up);
-      ghost.remove();
-      if (Math.abs(nw - w0) < 0.3 && Math.abs(nh - h0) < 0.3) return;
-      L.ed.edit('Resize Object', () => {
-        D.touch(os.p);
-        const item = D.itemAfter(os.p, os.o);
-        if (item) {
-          if (item.t === 'group') scaleGroup(item, nw / (item.w || 1), nh / (item.h || 1));
-          item.w = L.round(nw, 2); item.h = L.round(nh, 2);
-          if (item.float && (dxl || dyt)) moveFloat(item, dxl, dyt, target);
-        }
-        return { a: D.pos(os.p, os.o), f: D.pos(os.p, os.o + 1) };
-      });
-    };
-    window.addEventListener('pointermove', mv);
-    window.addEventListener('pointerup', up);
+    L.ui.drag(ev, {
+      move(e2, d) {
+        if (!ghost.parentNode && handles) handles.appendChild(ghost);
+        const dx = d.dx / z / PX, dy = d.dy / z / PX;
+        nw = w0 + (hn.includes('e') ? dx : hn.includes('w') ? -dx : 0);
+        nh = h0 + (hn.includes('s') ? dy : hn.includes('n') ? -dy : 0);
+        if (corner && (lockAspect ? !e2.shiftKey : e2.shiftKey)) { const k = Math.max(nw / w0, nh / h0); nw = w0 * k; nh = h0 * k; }
+        nw = Math.max(2, nw); nh = Math.max(2, nh);
+        dxl = hn.includes('w') ? w0 - nw : 0; dyt = hn.includes('n') ? h0 - nh : 0;
+        ghost.style.cssText = `left:${dxl * PX * z}px;top:${dyt * PX * z}px;width:${nw * PX * z}px;height:${nh * PX * z}px`;
+      },
+      up(e2, d) {
+        ghost.remove();
+        if (!d.moved || (Math.abs(nw - w0) < 0.3 && Math.abs(nh - h0) < 0.3)) return;
+        L.ed.edit('Resize Object', () => {
+          D.touch(os.p);
+          const item = D.itemAfter(os.p, os.o);
+          if (item) {
+            if (item.t === 'group') scaleGroup(item, nw / (item.w || 1), nh / (item.h || 1));
+            item.w = L.round(nw, 2); item.h = L.round(nh, 2);
+            if (item.float && (dxl || dyt)) moveFloat(item, dxl, dyt, target);
+          }
+          return { a: D.pos(os.p, os.o), f: D.pos(os.p, os.o + 1) };
+        });
+      },
+      cancel: () => ghost.remove(),
+      capture: L.layout.scroller,
+    });
   }
   function scaleGroup(g, kx, ky) { for (const k of g.kids || []) { k.x = (k.x || 0) * kx; k.y = (k.y || 0) * ky; k.w *= kx; k.h *= ky; if (k.t === 'group') scaleGroup(k, kx, ky); } }
   function startRotate(ev, target) {
     ev.preventDefault(); ev.stopPropagation();
     const os = L.ed.objSel;
-    if (!os) return;
-    const r = target.firstChild.getBoundingClientRect();
+    if (ev.button !== 0 || !os) return;
+    const shape = target.firstChild;
+    const r = shape.getBoundingClientRect();
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const transform0 = shape.style.transform;
     let ang = os.it.rot || 0;
-    const mv = (e2) => { ang = (Math.atan2(e2.clientY - cy, e2.clientX - cx) * 180) / Math.PI + 90; if (!e2.shiftKey) ang = Math.round(ang / 15) * 15; target.firstChild.style.transform = `rotate(${ang}deg)`; };
-    const up = () => {
-      window.removeEventListener('pointermove', mv);
-      window.removeEventListener('pointerup', up);
-      L.ed.edit('Rotate', () => { D.touch(os.p); const it = D.itemAfter(os.p, os.o); if (it) it.rot = L.round(((ang % 360) + 360) % 360, 1) || undefined; return { a: D.pos(os.p, os.o), f: D.pos(os.p, os.o + 1) }; });
-    };
-    window.addEventListener('pointermove', mv);
-    window.addEventListener('pointerup', up);
+    L.ui.drag(ev, {
+      move(e2) { ang = (Math.atan2(e2.clientY - cy, e2.clientX - cx) * 180) / Math.PI + 90; if (!e2.shiftKey) ang = Math.round(ang / 15) * 15; shape.style.transform = `rotate(${ang}deg)`; },
+      /* a click on the handle that never moved changes nothing */
+      up(e2, d) {
+        if (!d.moved) return;
+        L.ed.edit('Rotate', () => { D.touch(os.p); const it = D.itemAfter(os.p, os.o); if (it) it.rot = L.round(((ang % 360) + 360) % 360, 1) || undefined; return { a: D.pos(os.p, os.o), f: D.pos(os.p, os.o + 1) }; });
+      },
+      cancel: () => { shape.style.transform = transform0; },
+      capture: L.layout.scroller,
+    });
   }
   /** modify the selected object (inline or floating) */
   DR.modifySelected = function (label, fn) {

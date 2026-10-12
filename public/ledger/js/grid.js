@@ -434,6 +434,7 @@
     }
     if (e.button !== 0) return;
     e.preventDefault();
+    if (drag) L.ui.dragCancel();   // a drag whose release never came ends before this press changes anything
     L.ui.closeMenus();
     G.deselectObject();
     const p = pt(e);
@@ -452,6 +453,7 @@
     G.focus();
     const s = G.sel();
     const sh = G.sheet();
+    const before = snapSel(sh);   // what a cancelled selection drag puts back
     switch (z.kind) {
       case 'corner': G.selectAll(); return;
       case 'colres': beginDrag(e, { kind: 'colres', c: z.c, x0: p.x, w0: LY.geo(sh).cols.size(z.c) * G.zoomOf(sh) }); return;
@@ -462,7 +464,7 @@
         else if (e.ctrlKey || e.metaKey) { s.ranges.push({ r1: 0, c1: z.c, r2: MAXR - 1, c2: z.c }); s.active = s.ranges.length - 1; s.r = top; s.c = z.c; s.anchor = { r: top, c: z.c }; }
         else { s.ranges = [{ r1: 0, c1: z.c, r2: MAXR - 1, c2: z.c }]; s.active = 0; s.r = top; s.c = z.c; s.anchor = { r: top, c: z.c }; }
         G.changed();
-        beginDrag(e, { kind: 'cols' });
+        beginDrag(e, { kind: 'cols', before });
         return;
       }
       case 'rowhdr': {
@@ -471,18 +473,18 @@
         else if (e.ctrlKey || e.metaKey) { s.ranges.push({ r1: z.r, c1: 0, r2: z.r, c2: MAXC - 1 }); s.active = s.ranges.length - 1; s.r = z.r; s.c = left; s.anchor = { r: z.r, c: left }; }
         else { s.ranges = [{ r1: z.r, c1: 0, r2: z.r, c2: MAXC - 1 }]; s.active = 0; s.r = z.r; s.c = left; s.anchor = { r: z.r, c: left }; }
         G.changed();
-        beginDrag(e, { kind: 'rows' });
+        beginDrag(e, { kind: 'rows', before });
         return;
       }
       case 'pbreak': beginDrag(e, { kind: 'pbreak', axis: z.axis, at: z.at }); return;
       case 'fill': beginDrag(e, { kind: 'fill', src: Object.assign({}, s.ranges[0]) }); return;
       case 'border': beginDrag(e, { kind: 'move', src: Object.assign({}, s.ranges[0]), grab: { r: z.r, c: z.c } }); return;
       case 'cell': {
-        if (L.app.painter.on()) { beginDrag(e, { kind: 'paint' }); G.select(z.r, z.c, { noScroll: true }); return; }
+        if (L.app.painter.on()) { G.select(z.r, z.c, { noScroll: true }); beginDrag(e, { kind: 'paint', before }); return; }
         if (e.shiftKey) G.extendTo(z.r, z.c, { noScroll: true });
         else G.select(z.r, z.c, { add: e.ctrlKey || e.metaKey, noScroll: true });
         const link = !e.shiftKey && !e.ctrlKey && sh.links.find((l) => M.rangeContains(l.ref, z.r, z.c));
-        beginDrag(e, { kind: 'cells', link, start: z });
+        beginDrag(e, { kind: 'cells', link, start: z, before });
         /* data validation drop-down button */
         G.syncObjects();
         return;
@@ -490,15 +492,57 @@
       default:
     }
   }
+  /** a drag of the grid on the shared lifecycle (common/ui.js, ui.drag): onDragMove once the pointer has gone 3 px,
+      onDragEnd on the release, onDragCancel instead on Esc, a second button, a lost release or capture, a blur */
   function beginDrag(e, d) {
+    d.moved = false;
+    d.x0 = d.x0 != null ? d.x0 : pt(e).x; d.y0 = d.y0 != null ? d.y0 : pt(e).y;
+    L.ui.drag(e, {
+      capture: wrap,
+      threshold: 3,
+      move: (ev) => { if (drag === d) onDragMove(ev); },
+      up: (ev) => { if (drag === d) onDragEnd(ev); },
+      cancel: () => { if (drag === d) onDragCancel(); },
+    });
     drag = d;
-    drag.pid = e.pointerId;
-    try { wrap.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-    drag.moved = false;
-    drag.x0 = drag.x0 != null ? drag.x0 : pt(e).x; drag.y0 = drag.y0 != null ? drag.y0 : pt(e).y;
-    wrap.addEventListener('pointermove', onDragMove);
-    wrap.addEventListener('pointerup', onDragEnd);
-    wrap.addEventListener('pointercancel', onDragEnd);
+  }
+  /** the selection as it is, to put back */
+  function snapSel(sh) {
+    const s = G.sel();
+    return { sh, s: { r: s.r, c: s.c, active: s.active, ranges: s.ranges.map((x) => Object.assign({}, x)), anchor: s.anchor && Object.assign({}, s.anchor), extent: s.extent && Object.assign({}, s.extent) } };
+  }
+  function restoreSel(snap) {
+    if (!snap || snap.sh !== G.sheet()) return;
+    const s = G.sel(), b = snap.s;
+    s.r = b.r; s.c = b.c; s.active = b.active; s.ranges = b.ranges.map((x) => Object.assign({}, x));
+    s.anchor = b.anchor && Object.assign({}, b.anchor);
+    if (b.extent) s.extent = Object.assign({}, b.extent); else delete s.extent;
+    G.changed();
+  }
+  /** what every end of a drag clears: the auto-scroll timer, the guide line, the tip */
+  function stopDrag() {
+    clearInterval(autoTimer);
+    if (guide) guide.hidden = true;
+    if (tipEl) tipEl.hidden = true;
+    const d = drag;
+    drag = null;
+    return d;
+  }
+  /** a cancelled drag commits nothing and puts back what it changed (the selection as before the press) */
+  function onDragCancel() {
+    const d = stopDrag();
+    if (!d) return;
+    try {
+      switch (d.kind) {
+        case 'fill': G.state.fillTo = null; break;
+        case 'move': G.state.dragTo = null; break;
+        case 'point': L.editor.pointCancel(); break;
+        case 'cells': case 'paint': case 'cols': case 'rows': restoreSel(d.before); break;
+        default:
+      }
+    } catch (err) { L.app.error(err); }
+    G.paint();
+    if (d.kind !== 'point') G.focus();
   }
   let autoTimer = null;
   function autoScroll(p, fn) {
@@ -521,7 +565,6 @@
   function onDragMove(e) {
     if (!drag) return;
     const p = pt(e);
-    if (!drag.moved && Math.abs(p.x - drag.x0) < 3 && Math.abs(p.y - drag.y0) < 3) return;
     drag.moved = true;
     const sh = G.sheet(), s = G.sel(), fr = G.frame();
     const step = () => {
@@ -616,14 +659,7 @@
     tipEl.style.left = (q.x + 14) + 'px'; tipEl.style.top = (q.y + 18) + 'px';
   }
   function onDragEnd(e) {
-    clearInterval(autoTimer);
-    wrap.removeEventListener('pointermove', onDragMove);
-    wrap.removeEventListener('pointerup', onDragEnd);
-    wrap.removeEventListener('pointercancel', onDragEnd);
-    if (guide) guide.hidden = true;
-    if (tipEl) tipEl.hidden = true;
-    const d = drag;
-    drag = null;
+    const d = stopDrag();
     if (!d) return;
     const sh = G.sheet();
     try {

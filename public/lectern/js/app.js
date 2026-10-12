@@ -1886,21 +1886,30 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
   /* ================= splitters ================= */
   function setupSplitters() {
     const sl = L.$('#split-left'), sn = L.$('#split-notes');
+    /* splitter drags (common/ui.js ui.drag): they follow the pointer at once; Esc or a lost release puts the pane back */
     sl.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
       e.preventDefault();
-      sl.setPointerCapture(e.pointerId);
-      const x0 = e.clientX, w0 = L.$('#leftpane').offsetWidth;
-      const mv = (ev) => { const w = L.clamp(w0 + ev.clientX - x0, 110, 420); L.$('#leftpane').style.width = w + 'px'; A.opts.leftW = w; };
-      const up = () => { sl.removeEventListener('pointermove', mv); sl.removeEventListener('pointerup', up); L.panes.left.render(); E.layout(); A.saveOpts(); };
-      sl.addEventListener('pointermove', mv); sl.addEventListener('pointerup', up);
+      const w0 = L.$('#leftpane').offsetWidth, was = A.opts.leftW;
+      const size = (w) => { L.$('#leftpane').style.width = w + 'px'; };
+      ui.drag(e, {
+        threshold: 0,
+        move: (ev, d) => { const w = L.clamp(w0 + d.dx, 110, 420); size(w); A.opts.leftW = w; },
+        up: (ev, d) => { if (!d.moved) return; L.panes.left.render(); E.layout(); A.saveOpts(); },
+        cancel: () => { size(w0); A.opts.leftW = was; E.layout(); },
+      });
     });
     sn.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
       e.preventDefault();
-      sn.setPointerCapture(e.pointerId);
-      const y0 = e.clientY, h0 = L.$('#notes').offsetHeight;
-      const mv = (ev) => { const hh = L.clamp(h0 - (ev.clientY - y0), 24, 420); L.$('#notes').style.height = hh + 'px'; A.opts.notesH = hh; };
-      const up = () => { sn.removeEventListener('pointermove', mv); sn.removeEventListener('pointerup', up); E.layout(); A.saveOpts(); };
-      sn.addEventListener('pointermove', mv); sn.addEventListener('pointerup', up);
+      const h0 = L.$('#notes').offsetHeight, was = A.opts.notesH;
+      const size = (hh) => { L.$('#notes').style.height = hh + 'px'; };
+      ui.drag(e, {
+        threshold: 0,
+        move: (ev, d) => { const hh = L.clamp(h0 - d.dy, 24, 420); size(hh); A.opts.notesH = hh; },
+        up: (ev, d) => { if (!d.moved) return; E.layout(); A.saveOpts(); },
+        cancel: () => { size(h0); A.opts.notesH = was; E.layout(); },
+      });
     });
   }
 

@@ -79,7 +79,7 @@ One copy of everything the three apps share; a change here is a change in every 
 | `looks.css` | the looks: every chrome colour, font and shadow as a named setting, one block per look (see Looks) | all, and the Start Center |
 | `ui.css` | the chrome: layout of menus, toolbars, task panes, dialogs, controls, status bar, from the look's settings; each app's CSS follows and wins | all |
 | `core.js` | DOM helpers, colours, units, events, storage, file saving (`L.saveFile`, which tells `vo-saved`), PDF writer, media store, fonts and substitutes, symbol bullets, platform (`L.isMac`, `L.isMobile`: iOS or Android) | all |
-| `ui.js` | commands, menus, toolbars, combo boxes, dialogs, colour menus, password and prompt boxes, brushes (`ui.brush`, below); the events `vo-command`, `vo-busy`, `vo-message` (what the user does, followed by the assistant) | all |
+| `ui.js` | commands, menus, toolbars, combo boxes, dialogs, colour menus, password and prompt boxes, drags and brushes (`ui.drag`, `ui.brush`, below); the events `vo-command`, `vo-busy`, `vo-message` (what the user does, followed by the assistant) | all |
 | `search.js` | Search commands, the box at the top right of every app (see Search commands) | all |
 | `ribbon.js` | the ribbon of the Paper 2016 look, drawn from each app's `js/ribbon.js` (see The ribbon) | all |
 | `icons.js` | the 16×16 icon sets (common, document, spreadsheet), `L.icons.add`, `L.icons.kit` | all |
@@ -100,6 +100,13 @@ What each app provides:
 - before `core.js`: `<script>window.L = { APP_ID: 'quire', APP_NAME: 'Quire', APP: 'Quire 2003' };</script>`. `APP_ID` prefixes the app's settings in localStorage (`quire.…`), so it must never change.
 - in its `app.js`, at load: `L.icons.app` (its icon), `ui.hooks = { beforeExec, refocus, commitEdit }` (its editor around commands, toolbar boxes and dialogs); Lectern also `ui.schemeColors` / `ui.currentDesign` (theme colours in colour menus) and PowerPoint's `L.SIZE_LIST`.
 - a spelling UI sets `L.spell.refreshSoon` if it draws underlines (Quire).
+
+**Drags.** Every press-and-drag of the apps (moving a shape, a ruler marker, a cell range, drawing a shape, a
+splitter) is a `ui.drag(e, { move, up, cancel, threshold, capture })` from `ui.js`: one at a time; `move` only after
+4 px, so a click that never moved changes nothing; `up` on the release; `cancel` instead, with nothing committed, on
+Esc, a second button (its menu doesn't open), a release the page never saw, a lost capture, the window losing focus
+or `ui.dragCancel()` (a tool or view switch). The browser's own text-selection drags stay its own
+(`tests/ui/drag.test.mjs`; todos/UI_MOUSE_LOGIC_IMPROVE.md).
 
 **Brushes.** The Format Painter of each app, and Quire's highlighter, is a `ui.brush({ el, pick, apply, hint, status })`: a click on its button arms it for one use or puts it down, a double-click keeps it on, Esc puts it down, and one brush is on at a time. Arming it changes nothing else: the selection and the text being edited stay. It paints once, when the mouse is let go, never while a selection is still being dragged out: the app calls `brush.release()` then (Quire on the editor's `sel-done`, Ledger at the end of a cell drag, Lectern at pointer up in the slide editor) and its `apply` paints what was marked. What the apps paint follows Office and LibreOffice's Clone Formatting (Writer, Calc, Impress): a click inside a word paints the word; Ledger tiles the source range over a larger target; Lectern carries the text's formatting from text being edited and the whole object's otherwise, paints the text dragged over in any box and the whole object when the press is beside its text, and a click beside the objects puts even a kept-on painter down. The painted formatting replaces the target's own; links, fields and revision marks stay (`tests/ui/painter.test.mjs`).
 

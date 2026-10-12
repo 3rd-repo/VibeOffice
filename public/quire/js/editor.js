@@ -1008,47 +1008,46 @@
     ev.preventDefault();
     ev.stopPropagation();
     const os = E.objSel;
-    if (!os || !os.it) return;
+    if (ev.button !== 0 || !os || !os.it) return;
     const z = LY.zoom;
     const it = os.it;
     const w0 = it.w || 72, h0 = it.h || 72;
-    const sx = ev.clientX, sy = ev.clientY;
     const corner = hname.length === 2;
     const ghost = document.createElement('div');
     ghost.className = 'resize-ghost';
-    box.appendChild(ghost);
     let nw = w0, nh = h0;
-    const mv = (e2) => {
-      const dx = (e2.clientX - sx) / z / D.PX, dy = (e2.clientY - sy) / z / D.PX;
-      nw = w0 + (hname.includes('e') ? dx : hname.includes('w') ? -dx : 0);
-      nh = h0 + (hname.includes('s') ? dy : hname.includes('n') ? -dy : 0);
-      if (corner && !e2.shiftKey) { const k = Math.max(nw / w0, nh / h0); nw = w0 * k; nh = h0 * k; }
-      nw = Math.max(4, nw); nh = Math.max(4, nh);
-      ghost.style.width = nw * D.PX * z + 'px';
-      ghost.style.height = nh * D.PX * z + 'px';
-      if (hname.includes('w')) ghost.style.left = (w0 - nw) * D.PX * z + 'px';
-      if (hname.includes('n')) ghost.style.top = (h0 - nh) * D.PX * z + 'px';
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', mv);
-      window.removeEventListener('pointerup', up);
-      ghost.remove();
-      if (Math.abs(nw - w0) < 0.5 && Math.abs(nh - h0) < 0.5) return;
-      const pos = { p: os.p, o: os.o };
-      E.edit('Resize Picture', () => {
-        D.touch(pos.p);
-        const item = D.itemAfter(pos.p, pos.o);
-        if (item) { item.w = L.round(nw, 2); item.h = L.round(nh, 2); }
-        return { a: D.pos(pos.p, pos.o), f: D.pos(pos.p, pos.o + 1) };
-      });
-      setTimeout(() => {
-        const f = LY.fragFor(pos.p, pos.o);
-        const elx = f && f.querySelector(`[data-o="${pos.o}"]`);
-        if (elx) selectInlineObject(pos, elx);
-      }, 0);
-    };
-    window.addEventListener('pointermove', mv);
-    window.addEventListener('pointerup', up);
+    L.ui.drag(ev, {
+      move(e2, d) {
+        if (!ghost.parentNode) box.appendChild(ghost);
+        const dx = d.dx / z / D.PX, dy = d.dy / z / D.PX;
+        nw = w0 + (hname.includes('e') ? dx : hname.includes('w') ? -dx : 0);
+        nh = h0 + (hname.includes('s') ? dy : hname.includes('n') ? -dy : 0);
+        if (corner && !e2.shiftKey) { const k = Math.max(nw / w0, nh / h0); nw = w0 * k; nh = h0 * k; }
+        nw = Math.max(4, nw); nh = Math.max(4, nh);
+        ghost.style.width = nw * D.PX * z + 'px';
+        ghost.style.height = nh * D.PX * z + 'px';
+        if (hname.includes('w')) ghost.style.left = (w0 - nw) * D.PX * z + 'px';
+        if (hname.includes('n')) ghost.style.top = (h0 - nh) * D.PX * z + 'px';
+      },
+      up(e2, d) {
+        ghost.remove();
+        if (!d.moved || (Math.abs(nw - w0) < 0.5 && Math.abs(nh - h0) < 0.5)) return;
+        const pos = { p: os.p, o: os.o };
+        E.edit('Resize Picture', () => {
+          D.touch(pos.p);
+          const item = D.itemAfter(pos.p, pos.o);
+          if (item) { item.w = L.round(nw, 2); item.h = L.round(nh, 2); }
+          return { a: D.pos(pos.p, pos.o), f: D.pos(pos.p, pos.o + 1) };
+        });
+        setTimeout(() => {
+          const f = LY.fragFor(pos.p, pos.o);
+          const elx = f && f.querySelector(`[data-o="${pos.o}"]`);
+          if (elx) selectInlineObject(pos, elx);
+        }, 0);
+      },
+      cancel: () => ghost.remove(),
+      capture: LY.scroller,   /* the handles are drawn again with the selection */
+    });
   }
   E.selectInlineObject = selectInlineObject;
 })();

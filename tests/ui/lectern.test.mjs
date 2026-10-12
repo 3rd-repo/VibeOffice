@@ -98,7 +98,7 @@ test('a range of table cells stays selected after formatting: a second command f
 
 /* ---------- Phase 2: one drag lifecycle ---------- */
 
-test('P5a Esc during a move cancels it: the shape stays where it was', { todo: 'Phase 2' }, () => lectern(async (u) => {
+test('P5a Esc during a move cancels it: the shape stays where it was', () => lectern(async (u) => {
   await setup(u, RECT);
   const c = await shapeBox(u, 'rectR');
   await u.press(c); await u.glide(c, { x: c.x + 80, y: c.y + 40 }, 6);
@@ -108,7 +108,7 @@ test('P5a Esc during a move cancels it: the shape stays where it was', { todo: '
   u.clean();
 }));
 
-test('P5b Esc during a resize cancels it: the shape keeps its size', { todo: 'Phase 2' }, () => lectern(async (u) => {
+test('P5b Esc during a resize cancels it: the shape keeps its size', () => lectern(async (u) => {
   await setup(u, RECT);
   const c = await shapeBox(u, 'rectR');
   await u.click(c);
@@ -120,7 +120,7 @@ test('P5b Esc during a resize cancels it: the shape keeps its size', { todo: 'Ph
   u.clean();
 }));
 
-test('P5c Esc while dragging out a rectangle draws nothing', { todo: 'Phase 2' }, () => lectern(async (u) => {
+test('P5c Esc while dragging out a rectangle draws nothing', () => lectern(async (u) => {
   await setup(u, RECT);
   await u.click(await u.button('drawRect'));
   const a = await slidePt(u, 500, 100), b = await slidePt(u, 650, 200);
@@ -131,7 +131,7 @@ test('P5c Esc while dragging out a rectangle draws nothing', { todo: 'Phase 2' }
   u.clean();
 }));
 
-test('P5d Esc during a scribble draws nothing, without an error', { todo: 'Phase 2' }, () => lectern(async (u) => {
+test('P5d Esc during a scribble draws nothing, without an error', () => lectern(async (u) => {
   await setup(u, RECT);
   await lineTool(u, 'Scribble');
   const a = await slidePt(u, 400, 300), b = await slidePt(u, 520, 380);
@@ -143,7 +143,7 @@ test('P5d Esc during a scribble draws nothing, without an error', { todo: 'Phase
   u.clean();
 }));
 
-test('P5e Esc while dragging a thumbnail cancels the reorder', { todo: 'Phase 2' }, () => lectern(async (u) => {
+test('P5e Esc while dragging a thumbnail cancels the reorder', () => lectern(async (u) => {
   await setup(u, '', 3);
   const a = await thumb(u, 0), c = await thumb(u, 2);
   await u.press(a); await u.glide(a, { x: a.x, y: c.b + 10 }, 10);
@@ -153,7 +153,7 @@ test('P5e Esc while dragging a thumbnail cancels the reorder', { todo: 'Phase 2'
   u.clean();
 }));
 
-test('P5f A right-click during a move cancels it, as Esc does', { todo: 'Phase 2' }, () => lectern(async (u) => {
+test('P5f A right-click during a move cancels it, as Esc does, and opens no menu', () => lectern(async (u) => {
   await setup(u, RECT);
   const c = await shapeBox(u, 'rectR'), b = { x: c.x + 70, y: c.y + 50 };
   await u.press(c); await u.glide(c, b, 6);
@@ -161,10 +161,11 @@ test('P5f A right-click during a move cancels it, as Esc does', { todo: 'Phase 2
   await u.mouse('mouseReleased', b, { button: 'right' }); await pause(100);
   await u.glide(b, { x: b.x + 20, y: b.y + 20 }, 3); await u.release({ x: b.x + 20, y: b.y + 20 });
   assert.deepEqual(await geo(u, 'rectR'), [200, 150, 120, 80], 'not moved');
+  assert.equal(await u.evaluate('L.ui.menuOpen()'), false, 'and opens no menu');
   u.clean();
 }));
 
-test('P10 Another drawing tool abandons an unfinished freeform: the next freeform has only its own points', { todo: 'Phase 2' }, () => lectern(async (u) => {
+test('P10 Another drawing tool abandons an unfinished freeform: the next freeform has only its own points', () => lectern(async (u) => {
   await setup(u, '');
   await lineTool(u, 'Freeform');
   await u.click(await slidePt(u, 100, 100));
@@ -182,7 +183,7 @@ test('P10 Another drawing tool abandons an unfinished freeform: the next freefor
   u.clean();
 }));
 
-test('P14 A move whose release is lost (let go in another tab) does not follow the pointer afterwards', { todo: 'Phase 2' }, () => lectern(async (u) => {
+test('P14 A move whose release is lost (let go in another tab) does not follow the pointer afterwards', () => lectern(async (u) => {
   await setup(u, RECT);
   const c = await shapeBox(u, 'rectR'), b = { x: c.x + 70, y: c.y + 40 };
   await u.press(c); await u.glide(c, b, 6);

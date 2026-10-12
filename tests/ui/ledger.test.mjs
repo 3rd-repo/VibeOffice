@@ -338,7 +338,7 @@ for (const [id, what, where0] of [
 }
 
 /* ---------------------------------------------------------------- S12: a release the page never saw */
-test('S12a A cell drag whose release was lost does not follow the pointer any more', { todo: 'Phase 2' }, async () => {
+test('S12a A cell drag whose release was lost does not follow the pointer any more', async () => {
   const u = await ledger();
   try {
     const b3 = await pt(u, 'B3'), d6 = await pt(u, 'D6'), f12 = await pt(u, 'F12');
@@ -352,7 +352,7 @@ test('S12a A cell drag whose release was lost does not follow the pointer any mo
   } finally { await u.close(); }
 });
 
-test('S12b A fill-handle drag whose release was lost leaves nothing behind', { todo: 'Phase 2' }, async () => {
+test('S12b A fill-handle drag whose release was lost leaves nothing behind', async () => {
   const u = await ledger();
   try {
     await enter(u, 'A1', '1');
@@ -369,7 +369,7 @@ test('S12b A fill-handle drag whose release was lost leaves nothing behind', { t
   } finally { await u.close(); }
 });
 
-test('S12c A shape move whose release was lost is cancelled, not dropped by the next click', { todo: 'Phase 2' }, async () => {
+test('S12c A shape move whose release was lost is cancelled, not dropped by the next click', async () => {
   const u = await ledger();
   try {
     await drawRect(u, 'E5', 'G10');
@@ -458,7 +458,7 @@ test('S14b Shift+click while pointing in a formula extends the reference to a ra
   } finally { await u.close(); }
 });
 
-test('S14c Esc during a fill-handle drag cancels the fill', { todo: 'Phase 2' }, async () => {
+test('S14c Esc during a fill-handle drag cancels the fill', async () => {
   const u = await ledger();
   try {
     await enter(u, 'A4', '1');
@@ -473,7 +473,7 @@ test('S14c Esc during a fill-handle drag cancels the fill', { todo: 'Phase 2' },
   } finally { await u.close(); }
 });
 
-test('S14d The right button pressed during a left-button drag opens no shortcut menu', { todo: 'Phase 2' }, async () => {
+test('S14d The right button pressed during a left-button drag opens no shortcut menu', async () => {
   const u = await ledger();
   try {
     const b10 = await pt(u, 'B10'), d14 = await pt(u, 'D14'), e16 = await pt(u, 'E16');

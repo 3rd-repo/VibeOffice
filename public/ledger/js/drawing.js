@@ -235,49 +235,50 @@
     /* a shape whose text is being edited: the press places the caret and a drag selects text */
     if (el.classList.contains('editing')) return;
     e.preventDefault();
+    if (e.button !== 0) return;
     if (L.editor && L.editor.active && !L.editor.commit()) return;
     const d = el._d;
     if (G().selectedObject() !== d) G().selectObject(d);
     G().focus();
     const handle = e.target.closest('.gobj-h');
     if ((d.locked || (sh().protection && !d.unlocked)) && guard()) return;
-    const x0 = e.clientX, y0 = e.clientY;
     const r0 = { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
     const ratio = r0.w / Math.max(1, r0.h);
-    let moved = false, cur = Object.assign({}, r0);
+    let cur = Object.assign({}, r0);
     const ghost = h('div', { class: 'gobj-ghost' });
-    const mv = (ev) => {
-      const dx = ev.clientX - x0, dy = ev.clientY - y0;
-      if (!moved && Math.abs(dx) + Math.abs(dy) < 3) return;
-      if (!moved) { moved = true; el.parentNode.appendChild(ghost); }
-      cur = Object.assign({}, r0);
-      if (!handle) { cur.x += dx; cur.y += dy; if (ev.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) cur.y = r0.y; else cur.x = r0.x; } }
-      else {
-        const k = handle.dataset.h;
-        if (/e/.test(k)) cur.w = Math.max(4, r0.w + dx);
-        if (/s/.test(k)) cur.h = Math.max(4, r0.h + dy);
-        if (/w/.test(k)) { cur.w = Math.max(4, r0.w - dx); cur.x = r0.x + r0.w - cur.w; }
-        if (/n/.test(k)) { cur.h = Math.max(4, r0.h - dy); cur.y = r0.y + r0.h - cur.h; }
-        if ((ev.shiftKey || d.kind === 'image') && k.length === 2) { /* corners keep the aspect ratio (pictures always) */
-          const wv = cur.w, hv = cur.h;
-          if (wv / hv > ratio) cur.w = hv * ratio; else cur.h = wv / ratio;
-          if (/w/.test(k)) cur.x = r0.x + r0.w - cur.w;
-          if (/n/.test(k)) cur.y = r0.y + r0.h - cur.h;
+    /* the outline follows the drag; the release moves or resizes the object, a cancel leaves it as it was */
+    ui.drag(e, {
+      capture: el,
+      threshold: 3,
+      move(ev, g) {
+        if (!ghost.parentNode) el.parentNode.appendChild(ghost);
+        const dx = g.dx, dy = g.dy;
+        cur = Object.assign({}, r0);
+        if (!handle) { cur.x += dx; cur.y += dy; if (ev.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) cur.y = r0.y; else cur.x = r0.x; } }
+        else {
+          const k = handle.dataset.h;
+          if (/e/.test(k)) cur.w = Math.max(4, r0.w + dx);
+          if (/s/.test(k)) cur.h = Math.max(4, r0.h + dy);
+          if (/w/.test(k)) { cur.w = Math.max(4, r0.w - dx); cur.x = r0.x + r0.w - cur.w; }
+          if (/n/.test(k)) { cur.h = Math.max(4, r0.h - dy); cur.y = r0.y + r0.h - cur.h; }
+          if ((ev.shiftKey || d.kind === 'image') && k.length === 2) { /* corners keep the aspect ratio (pictures always) */
+            const wv = cur.w, hv = cur.h;
+            if (wv / hv > ratio) cur.w = hv * ratio; else cur.h = wv / ratio;
+            if (/w/.test(k)) cur.x = r0.x + r0.w - cur.w;
+            if (/n/.test(k)) cur.y = r0.y + r0.h - cur.h;
+          }
         }
-      }
-      Object.assign(ghost.style, { left: cur.x + 'px', top: cur.y + 'px', width: cur.w + 'px', height: cur.h + 'px' });
-    };
-    const up = () => {
-      document.removeEventListener('pointermove', mv);
-      document.removeEventListener('pointerup', up);
-      ghost.remove();
-      if (!moved) return;
-      const fr = G().frame();
-      if (d.anchor && d.anchor.type !== 'abs') { cur.x = Math.max(fr.hdrW, cur.x); cur.y = Math.max(fr.hdrH, cur.y); }
-      replace(d, { anchor: anchorFor(d, cur.x, cur.y, cur.w, cur.h) }, handle ? 'Resize Object' : 'Move Object');
-    };
-    document.addEventListener('pointermove', mv);
-    document.addEventListener('pointerup', up);
+        Object.assign(ghost.style, { left: cur.x + 'px', top: cur.y + 'px', width: cur.w + 'px', height: cur.h + 'px' });
+      },
+      up(ev, g) {
+        ghost.remove();
+        if (!g.moved) return;
+        const fr = G().frame();
+        if (d.anchor && d.anchor.type !== 'abs') { cur.x = Math.max(fr.hdrW, cur.x); cur.y = Math.max(fr.hdrH, cur.y); }
+        replace(d, { anchor: anchorFor(d, cur.x, cur.y, cur.w, cur.h) }, handle ? 'Resize Object' : 'Move Object');
+      },
+      cancel() { ghost.remove(); },
+    });
   }
   /** keys while an object is selected; true when handled */
   DR.key = function (e, d) {
@@ -457,28 +458,33 @@
     tool.esc = esc;
     ov.addEventListener('pointerdown', (e) => {
       e.preventDefault();
+      e.stopPropagation();   // the grid under the overlay starts no selection of its own
+      if (e.button !== 0) return;
       const r = wrap.getBoundingClientRect();
       const x0 = e.clientX - r.left, y0 = e.clientY - r.top;
       const band = h('div', { class: 'gobj-ghost' });
       ov.appendChild(band);
       let cur = { x: x0, y: y0, w: 0, h: 0 };
-      const mv = (ev) => {
-        const x1 = ev.clientX - r.left, y1 = ev.clientY - r.top;
-        cur = { x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.abs(x1 - x0), h: Math.abs(y1 - y0) };
-        if (ev.shiftKey) { const m = Math.max(cur.w, cur.h); cur.w = cur.h = m; }
-        Object.assign(band.style, { left: cur.x + 'px', top: cur.y + 'px', width: cur.w + 'px', height: cur.h + 'px' });
-      };
-      const up = () => {
-        document.removeEventListener('pointermove', mv);
-        document.removeEventListener('pointerup', up);
-        const k = tool.kind;
-        DR.cancelTool();
-        const z = (sh().view.zoom || 100) / 100;
-        if (cur.w < 6 && cur.h < 6) { cur.w = (k === 'textbox' ? 96 : 72) * z * (96 / 72); cur.h = (k === 'textbox' ? 48 : 72) * z * (96 / 72); }
-        DR.insertShape(k, cur);
-      };
-      document.addEventListener('pointermove', mv);
-      document.addEventListener('pointerup', up);
+      /* the release inserts the shape (a click: at its default size); a cancel inserts nothing and ends the tool */
+      ui.drag(e, {
+        capture: ov,
+        threshold: 0,
+        move(ev) {
+          const x1 = ev.clientX - r.left, y1 = ev.clientY - r.top;
+          cur = { x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.abs(x1 - x0), h: Math.abs(y1 - y0) };
+          if (ev.shiftKey) { const m = Math.max(cur.w, cur.h); cur.w = cur.h = m; }
+          Object.assign(band.style, { left: cur.x + 'px', top: cur.y + 'px', width: cur.w + 'px', height: cur.h + 'px' });
+        },
+        up() {
+          if (!tool) return;
+          const k = tool.kind;
+          DR.cancelTool();
+          const z = (sh().view.zoom || 100) / 100;
+          if (cur.w < 6 && cur.h < 6) { cur.w = (k === 'textbox' ? 96 : 72) * z * (96 / 72); cur.h = (k === 'textbox' ? 48 : 72) * z * (96 / 72); }
+          DR.insertShape(k, cur);
+        },
+        cancel() { band.remove(); DR.cancelTool(); },
+      });
     });
   };
   DR.cancelTool = function () {

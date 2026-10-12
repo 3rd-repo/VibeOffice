@@ -419,14 +419,23 @@
     L.bus.emit('mode');
   }
   /* mouse pointing (grid calls these) */
+  let pointBefore = null;   // the text, caret and reference before a pointing press, for a cancelled drag
   E.pointStart = function (rg, add) {
+    pointBefore = { text: surface.value, caret: surface.selectionStart, point: point && Object.assign({}, point), mode: E.mode };
     if (!point || add) point = { start: surface.selectionStart, len: 0 };
     if (add && !/[,(=]$/.test(surface.value.slice(0, surface.selectionStart))) { E.insertText(','); point = { start: surface.selectionStart, len: 0 }; }
     point.cur = { r: rg.r1, c: rg.c1 }; point.ext = null;
     putRef(rg);
   };
   E.pointMove = function (rg) { if (point) putRef(rg); };
-  E.pointEnd = function () { surface.focus(); };
+  E.pointEnd = function () { pointBefore = null; surface.focus(); };
+  /** a pointing drag cancelled (Esc, a second button, a lost release): the formula as it was before the press */
+  E.pointCancel = function () {
+    const b = pointBefore;
+    pointBefore = null;
+    if (b && E.active) { point = b.point; setText(b.text, b.caret); E.mode = b.mode; L.bus.emit('mode'); }
+    if (E.active) surface.focus();
+  };
   /** the user switched sheets while pointing: references gain the sheet name */
   E.sheetChanged = function () { if (E.active) { E.place(); E.highlight(); } };
 

@@ -528,6 +528,7 @@
 
   /* ================= views ================= */
   A.setView = function (v) {
+    ui.dragCancel();   /* a view switch ends a drag in progress */
     const app = L.$('#app');
     if (A.view === 'preview' && v !== 'preview' && L.panes && L.panes.preview) L.panes.preview.exit();
     if (A.view === 'reading' && v !== 'reading') { app.classList.remove('reading'); LY.setMultiPage(0); }
@@ -633,6 +634,7 @@
   const pristine = () => !!D.doc && !D.doc.dirty && !A.saved && !D.canUndo() && /^Document\d+$/.test(A.fileName);
   A.switchTo = function (i) {
     if (i === A.cur || !A.docs[i]) return;
+    ui.dragCancel();
     stash();
     const w = A.docs[i];
     A.cur = i;
@@ -653,6 +655,7 @@
   A.windowItems = () => A.docs.map((w, i) => ({ label: `&${i + 1} ${(i === A.cur ? A.fileName : w.fileName).replace(/&/g, '&&')}`, checked: () => i === A.cur, run: () => A.switchTo(i) }));
   A.loadDoc = function (d, name, opts) {
     opts = opts || {};
+    ui.dragCancel();
     if (opts.newWindow || A.cur < 0) { stash(); A.docs.push(null); A.cur = A.docs.length - 1; }
     if (LY.hfEdit) { LY.hfEdit = null; LY.root.classList.remove('hfmode'); }
     E.clearObjSel();
@@ -1161,12 +1164,14 @@
   function setupSplitters() {
     const sp = L.$('#split-map');
     sp.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
       e.preventDefault();
-      sp.setPointerCapture(e.pointerId);
-      const x0 = e.clientX, w0 = L.$('#docmap').offsetWidth;
-      const mv = (ev) => { L.$('#docmap').style.width = L.clamp(w0 + ev.clientX - x0, 100, 480) + 'px'; };
-      const up = () => { sp.removeEventListener('pointermove', mv); sp.removeEventListener('pointerup', up); LY.fitSizer(); };
-      sp.addEventListener('pointermove', mv); sp.addEventListener('pointerup', up);
+      const map = L.$('#docmap'), w0 = map.offsetWidth, style0 = map.style.width;
+      ui.drag(e, {
+        move: (ev, d) => { map.style.width = L.clamp(w0 + d.dx, 100, 480) + 'px'; },
+        up: (ev, d) => { if (d.moved) LY.fitSizer(); },
+        cancel: () => { map.style.width = style0; },
+      });
     });
   }
 

@@ -1332,6 +1332,7 @@
     r.style.left = Math.max(10, (sw - w * z) / 2) + 'px';
   };
   LY.setZoom = function (z) {
+    if (L.ui && L.ui.dragCancel) L.ui.dragCancel();   /* what a drag measured is at the old zoom */
     LY.zoom = L.clamp(z, 0.1, 5);
     if (LY.view === 'web') return LY.render();
     LY.fitSizer();

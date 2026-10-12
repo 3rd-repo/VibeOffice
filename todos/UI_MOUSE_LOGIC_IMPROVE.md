@@ -1,7 +1,8 @@
 # UI: mouse, selection, drag and focus logic in Quire, Ledger and Lectern
 
-Status: Phases 0 and 1 done (2026-10-12): the audit is in tests/ui/ (77 `todo` left of 85), `tools/older.mjs` runs the
-tests against older code; the seven data-loss items are fixed. Next: Phase 2, `ui.drag`. Read docs/suite.md
+Status: Phases 0, 1 and 2 done (2026-10-12): the audit is in tests/ui/ (59 `todo` left of 85), `tools/older.mjs` runs
+the tests against older code; the data-loss items are fixed; every mouse drag goes through `ui.drag`. Next: Phase 3,
+the focus rule. Read docs/suite.md
 (Shared code, Brushes) first. An audit of all three apps with real mouse and keyboard input (CDP, paced like a hand)
 confirmed 45 defects; most come from the same few missing mechanisms (Root causes). Six phases, in order: 0 test
 tools, 1 data loss, 2 one shared drag lifecycle, 3 one focus rule, 4 one owner per piece of state in each app,
@@ -30,12 +31,12 @@ Phase 1: data loss and wrong edits (small separate fixes, each with its test)
 - [x] P2 Lectern: formatting a selected range of table cells formats the whole table
 
 Phase 2: one drag lifecycle, `ui.drag` in common/ui.js (Design)
-- [ ] `ui.drag` with `tests/ui/drag.test.mjs` (every app: threshold, Esc, right button, lost release, blur, tab switch)
-- [ ] Quire on it: rulers, table borders, drawing tool, shape move, resize, rotate, inline picture resize, splitter
+- [x] `ui.drag` with `tests/ui/drag.test.mjs` (every app: threshold, Esc, right button, lost release, blur, tab switch)
+- [x] Quire on it: rulers, table borders, drawing tool, shape move, resize, rotate, inline picture resize, splitter
       (Q13, Q14, Q17c)
-- [ ] Ledger on it: the grid's drags (cells, headers, fill, move, resize, page breaks, paint, point), shapes, sheet
+- [x] Ledger on it: the grid's drags (cells, headers, fill, move, resize, page breaks, paint, point), shapes, sheet
       tabs (S12, S14c, S14d)
-- [ ] Lectern on it: move, handles, marquee, drawing tools, scribble, freeform and curve, text and cell selection,
+- [x] Lectern on it: move, handles, marquee, drawing tools, scribble, freeform and curve, text and cell selection,
       thumbnail reorder (P5, P14, P10)
 
 Phase 3: one focus rule, the keyboard back to the document (Design)
@@ -85,6 +86,18 @@ Phase 5: the rest
   Tests added beside them: Replace one match at a time, a click on a placeholder, a drop onto empty cells, a second
   command on the same cells.
 
+- 2026-10-12, Phase 2: `ui.drag` (common/ui.js, `tests/ui/drag.test.mjs`): `cancel(d, why)` says why ('esc',
+  'button', 'lost', 'blur', 'new', 'api'); `capture: false` for drags over CSS-scaled text the browser selects; the
+  held pointer sends the click and dblclick that follow to the capture element. Every mouse drag of the three apps is
+  on it: Quire's shape move, resize and rotate, inline picture resize, the drawing tool, table borders and the pencil,
+  the rulers, the splitters; Ledger's grid drags (cells, headers, fill, move, sizes, page breaks, paint, point; a
+  cancel puts the selection or the formula back), shapes, the AutoShapes draw, sheet-tab reorder, the splitter;
+  Lectern's move, handles, crop, marquee, drawing tools, scribble, freeform and curve, text and cell selection,
+  thumbnail and sorter reorder, splitters. A tool, view, slide or zoom switch ends a live drag (`ui.dragCancel`), and
+  an unfinished freeform goes with a tool switch. Left as they are: Ledger's touch gestures, Lectern's slide-show pen.
+  Q13, Q14a–c, Q17c, S12a–c, S14c–d, P5a–f, P10, P14 off todo, each failing before; tests added for drags that must
+  still commit (Quire's shapes, pictures, drawing tool, ruler, table border).
+
 ## Decisions
 
 - A release we never saw (button let go in another tab or window) cancels the drag, as a lost mouse capture does in
@@ -132,9 +145,13 @@ returns the drag `d` (`d.x0`, `d.y0`, `d.moved`, `d.data` for the app):
   view switch (`ui.dragCancel()`).
 - Text selection drags stay native (the browser's); apps keep their own "gesture over" signal (Quire `'sel-done'`).
 - Auto-scroll stays with the app, but its timer re-reads the current frame on every tick (S9).
-- Reference: LibreOffice's vcl tracking (`Window::StartTracking`, `Tracking(const TrackingEvent&)`,
-  `EndTracking(TrackingEventFlags::Cancel)`; Esc and focus loss end tracking with Cancel in vcl/source/window) is
-  this lifecycle; read it before writing, and note any difference here.
+- Reference: LibreOffice's vcl tracking (`Window::StartTracking`, `EndTracking(TrackingEventFlags::Cancel)`), read
+  in vcl/source/window/winproc.cxx: Esc ends tracking with `Cancel | Key` and goes no further, losing the focus
+  (`ImplHandleLoseFocus`) cancels it, the release of any button ends it. The difference: a second button cancels here,
+  so no menu opens in the middle of a drag (fluent first). The drag threshold is MouseSettings' StartDragWidth/Height
+  there, 4 px here.
+- Pointer events report a second button as a move (`buttons` changes), before its mouse events: ui.drag cancels on
+  that move and swallows the button's mousedown, mouseup and contextmenu for a moment.
 
 ### The keyboard back to the document (common/ui.js)
 

@@ -94,11 +94,9 @@
     if (!sel.has(i)) L.app.slideSel = new Set([i]);
     if (E().idx !== i || L.app.view !== 'normal') E().goto(i);
     LP.markCurrent();
-    /* drag to reorder */
-    const y0 = e.clientY;
+    /* drag to reorder (common/ui.js ui.drag: Esc, a second button or a release the page never saw cancel it) */
     let line = null, target = null;
     const mv = (ev) => {
-      if (!line && Math.abs(ev.clientY - y0) < 6) return;
       if (!line) { line = h('div', { class: 'drop-line' }); LP.body.appendChild(line); }
       const items = L.$$('.th', LP.list);
       const br = LP.body.getBoundingClientRect();
@@ -109,11 +107,12 @@
       line.style.top = (target < items.length ? rr.top - 5 : rr.bottom + 4) - br.top + LP.body.scrollTop + 'px';
       if (ev.clientY < br.top + 20) LP.body.scrollTop -= 8; else if (ev.clientY > br.bottom - 20) LP.body.scrollTop += 8;
     };
-    const up = () => {
-      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
-      if (line) { line.remove(); if (target != null) L.app.moveSlides(Array.from(L.app.slideSel).sort((a, b) => a - b), target); }
-    };
-    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+    L.ui.drag(e, {
+      threshold: 6,
+      move: mv,
+      up() { if (line) { line.remove(); if (target != null) L.app.moveSlides(Array.from(L.app.slideSel).sort((a, b) => a - b), target); } },
+      cancel() { if (line) line.remove(); },
+    });
   }
   function renderMasterThumbs() {
     const box = h('div', { class: 'thumbs' });
@@ -336,10 +335,9 @@
     if (!sel.has(i)) L.app.slideSel = new Set([i]);
     E().idx = i;
     SO.mark();
-    const x0 = e.clientX, y0 = e.clientY;
+    /* drag to reorder (common/ui.js ui.drag) */
     let marker = null, target = null;
     const mv = (ev) => {
-      if (!marker && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return;
       if (!marker) { marker = h('div', { style: 'position:absolute;width:3px;background:#000;pointer-events:none;z-index:5' }); SO.el.appendChild(marker); }
       const items = L.$$('.so-it', SO.el);
       target = items.length;
@@ -355,11 +353,12 @@
       marker.style.top = rr.top - br.top + SO.el.scrollTop + 'px';
       marker.style.height = rr.height + 'px';
     };
-    const up = () => {
-      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up);
-      if (marker) { marker.remove(); if (target != null) L.app.moveSlides(Array.from(L.app.slideSel).sort((a, b) => a - b), target); }
-    };
-    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+    L.ui.drag(e, {
+      threshold: 6,
+      move: mv,
+      up() { if (marker) { marker.remove(); if (target != null) L.app.moveSlides(Array.from(L.app.slideSel).sort((a, b) => a - b), target); } },
+      cancel() { if (marker) marker.remove(); },
+    });
     void it;
   }
 

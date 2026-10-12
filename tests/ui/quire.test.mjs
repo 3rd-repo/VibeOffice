@@ -311,7 +311,7 @@ test('Q12c a triple-click in the selection bar selects the whole document', { to
   assert.ok(s.startsWith('Alpha beta') && s.includes('Third paragraph text.'), `selected: "${s.slice(0, 30)}…${s.slice(-30)}"`);
 }));
 
-test('Q13 a click that doesn\'t move on an indent marker, a tab stop or the rotate handle changes nothing', { todo: 'Phase 2' },
+test('Q13 a click that doesn\'t move on an indent marker, a tab stop or the rotate handle changes nothing',
   () => inQuire(PARAS(SHAPE_DOC) + `d.main.blocks[0].pPr = { ind: { l: 25, fl: 0 }, tabs: [{ pos: 100, al: 'left' }] };` + SHAPE(1), async (u) => {
     await u.click(await atB(u, 0, 5));
     const pPr = () => u.evaluate(`JSON.stringify(L.D.doc.main.blocks[0].pPr)`);
@@ -325,7 +325,7 @@ test('Q13 a click that doesn\'t move on an indent marker, a tab stop or the rota
     assert.equal(await undoSteps(u), undo0, 'nothing to undo after the rotate handle click');
   }));
 
-test('Q14a Esc while a shape is being drawn (button still down) cancels it: nothing is inserted', { todo: 'Phase 2' }, () => inQuire(PARAS(SHAPE_DOC), async (u) => {
+test('Q14a Esc while a shape is being drawn (button still down) cancels it: nothing is inserted', () => inQuire(PARAS(SHAPE_DOC), async (u) => {
   await u.click(await u.button('drawRect'));
   const a = await atB(u, 1, 10), from = { x: a.x + 300, y: a.y + 40 }, to = { x: a.x + 400, y: a.y + 120 };
   await u.press(from); await u.glide(from, to, 5);
@@ -334,7 +334,7 @@ test('Q14a Esc while a shape is being drawn (button still down) cancels it: noth
   assert.equal(await shapes(u), 0, 'no shape');
   assert.equal(await u.evaluate(`document.querySelectorAll('.draw-ghost').length`), 0, 'no outline left');
 }, { look: 'classic' }));
-test('Q14b Esc while a shape is being moved cancels the move', { todo: 'Phase 2' }, () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
+test('Q14b Esc while a shape is being moved cancels the move', () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
   const b0 = await u.el('#pages .flt > *'), to = { x: b0.x + 80, y: b0.y + 60 }, undo0 = await undoSteps(u);
   await u.press(b0); await u.glide(b0, to, 6);
   await u.esc();
@@ -342,7 +342,7 @@ test('Q14b Esc while a shape is being moved cancels the move', { todo: 'Phase 2'
   assert.ok(near(await u.el('#pages .flt > *'), b0), 'the shape is where it was');
   assert.equal(await undoSteps(u), undo0, 'nothing to undo');
 }));
-test('Q14c Esc while a picture is being resized cancels the resize', { todo: 'Phase 2' }, () => inQuire(PARAS(PIC) + PICTURE(1, 5), async (u) => {
+test('Q14c Esc while a picture is being resized cancels the resize', () => inQuire(PARAS(PIC) + PICTURE(1, 5), async (u) => {
   await u.click(await u.el('#pages .img'));
   const p0 = await u.el('#pages .img'), h = await u.el('.obj-handles .oh-se'), to = { x: h.x + 40, y: h.y + 30 };
   await u.press(h); await u.glide(h, to, 6);
@@ -380,7 +380,7 @@ test('Q17b an inline picture dragged to another place in the text moves there', 
   await u.drag(pic, await atB(u, 2, 6), 10);
   assert.equal(await u.evaluate(`L.D.doc.main.blocks.findIndex((b) => b.runs.some((r) => r.t === 'img'))`), 2, 'the picture is in the third paragraph');
 }));
-test('Q17c a right-click during a shape move cancels the move, and no menu opens', { todo: 'Phase 2' }, () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
+test('Q17c a right-click during a shape move cancels the move, and no menu opens', () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
   const b0 = await u.el('#pages .flt > *'), to = { x: b0.x + 80, y: b0.y + 60 }, undo0 = await undoSteps(u);
   await u.press(b0); await u.glide(b0, to, 6);
   await u.press(to, { button: 'right' }); await u.release(to, { button: 'right' });
@@ -388,5 +388,85 @@ test('Q17c a right-click during a shape move cancels the move, and no menu opens
   assert.equal(await u.evaluate(`document.querySelectorAll('.menu').length`), 0, 'no menu');
   assert.ok(near(await u.el('#pages .flt > *'), b0), 'the shape is where it was');
   assert.equal(await undoSteps(u), undo0, 'nothing to undo');
+}));
+
+/* what Quire's drags still do on the shared drag lifecycle (ui.drag): each commits on release, as one undo step */
+const undoLabels = (u) => u.evaluate('L.D.histState().undo.map((x) => x.label)');
+test('drags on a shape move, resize and rotate it; a picture\'s handle resizes it', () => inQuire(PARAS(PIC) + PICTURE(1, 5) + SHAPE(2), async (u) => {
+  const box = () => u.el('#pages .flt > *');
+  const b0 = await box();
+  await u.drag(b0, { x: b0.x + 60, y: b0.y + 40 });
+  const b1 = await box();
+  assert.ok(Math.abs(b1.l - b0.l - 60) < 2 && Math.abs(b1.t - b0.t - 40) < 2, `moved with the pointer (${Math.round(b1.l - b0.l)}, ${Math.round(b1.t - b0.t)})`);
+  await u.click(b1);
+  let h = await u.el('.obj-handles .oh-se');
+  await u.drag(h, { x: h.x + 30, y: h.y + 20 });
+  const b2 = await box();
+  assert.ok(b2.r - b2.l > b1.r - b1.l + 20 && b2.b - b2.t > b1.b - b1.t + 10, 'bigger');
+  await u.click(b2);
+  h = await u.el('.obj-handles .oh-rot');
+  await u.drag(h, { x: b2.r + 60, y: b2.y }, 10);
+  assert.match(await u.evaluate(`document.querySelector('#pages .flt > *').style.transform`), /rotate\(90deg\)/, 'turned a quarter to the right');
+  await u.click(await u.el('#pages .img'));
+  const p0 = await u.el('#pages .img');
+  h = await u.el('.obj-handles .oh-se');
+  await u.drag(h, { x: h.x + 40, y: h.y + 30 });
+  const p1 = await u.el('#pages .img');
+  assert.ok(p1.r - p1.l > p0.r - p0.l + 30, 'the picture is wider');
+  assert.deepEqual(await undoLabels(u), ['Move Object', 'Resize Object', 'Rotate', 'Resize Picture']);
+}));
+
+test('the drawing tool: a drag draws the shape that size, a click puts one of the default size', () => inQuire(PARAS(SHAPE_DOC), async (u) => {
+  const a = await atB(u, 1, 10);
+  await u.click(await u.button('drawRect'));
+  await u.drag({ x: a.x + 300, y: a.y + 40 }, { x: a.x + 400, y: a.y + 120 }, 5);
+  const s = await u.el('#pages .flt > *');
+  assert.ok(Math.abs(s.r - s.l - 100) < 2 && Math.abs(s.b - s.t - 80) < 2, `the size dragged out (${Math.round(s.r - s.l)} × ${Math.round(s.b - s.t)})`);
+  await u.click(await atB(u, 0, 3));
+  await u.click(await u.button('drawRect'));
+  await u.click({ x: a.x + 50, y: a.y + 160 });
+  assert.equal(await shapes(u), 2, 'a click draws one too');
+  assert.deepEqual(await undoLabels(u), ['Insert AutoShape', 'Insert AutoShape']);
+}, { look: 'classic' }));
+
+test('the ruler: a drag moves the left indent or a tab stop, a click sets a tab stop, a tab stop dragged off goes; Esc puts a marker back', () => inQuire(PARAS(SHAPE_DOC) + `d.main.blocks[0].pPr = { ind: { l: 18 }, tabs: [{ pos: 108, al: 'left' }] };`, async (u) => {
+  await u.click(await atB(u, 0, 5));
+  const pPr = () => u.evaluate(`L.D.doc.main.blocks[0].pPr`);
+  let m = await u.el('.rmark.ind-left');
+  await u.drag(m, { x: m.x + 30, y: m.y });
+  const l1 = (await pPr()).ind.l;
+  assert.ok(l1 > 36, `the left indent follows the drag (${l1} pt)`);
+  m = await u.el('.rmark.ind-left');
+  await u.press(m); await u.glide(m, { x: m.x + 30, y: m.y }); await u.esc(); await u.release({ x: m.x + 30, y: m.y });
+  assert.equal((await pPr()).ind.l, l1, 'Esc: the indent stays');
+  assert.ok(Math.abs((await u.el('.rmark.ind-left')).x - m.x) < 1, 'and its marker goes back');
+  assert.equal(await u.evaluate(`document.querySelectorAll('.r-guide').length`), 0, 'no guide line left');
+  m = await u.el('.rmark.tabstop');
+  await u.drag(m, { x: m.x + 40, y: m.y });
+  const tab = (await pPr()).tabs.map((t) => t.pos);
+  assert.ok(tab.length === 1 && tab[0] > 130, `the tab stop follows the drag (${tab})`);
+  m = await u.el('.rmark.tabstop');
+  await u.drag(m, { x: m.x, y: m.y + 60 });
+  assert.deepEqual((await pPr()).tabs, [], 'dragged off the ruler, it goes');
+  const r = await u.el('#hruler');
+  await u.click({ x: m.x + 60, y: r.y });
+  assert.equal((await pPr()).tabs.length, 1, 'a click on the ruler sets a tab stop');
+  assert.deepEqual(await undoLabels(u), ['Left Indent', 'Move Tab', 'Clear Tab', 'Set Tab']);
+}));
+
+test('a table\'s column border: a drag sets the widths; a click or Esc leaves them', () => inQuire(PARAS(['First paragraph of text.', 'Second paragraph.']) + TABLE(1), async (u) => {
+  const grid = () => u.evaluate(`L.D.doc.main.blocks[1].grid`);
+  const g0 = await grid();
+  let td = await u.el('#pages td[data-cid]');
+  await u.click({ x: td.r, y: td.y });
+  assert.deepEqual(await grid(), g0, 'a click changes nothing');
+  await u.press({ x: td.r, y: td.y }); await u.glide({ x: td.r, y: td.y }, { x: td.r + 40, y: td.y }); await u.esc(); await u.release({ x: td.r + 40, y: td.y });
+  assert.deepEqual(await grid(), g0, 'Esc: no change');
+  assert.equal(await u.evaluate(`document.querySelectorAll('.r-guide').length`), 0, 'no guide line left');
+  td = await u.el('#pages td[data-cid]');
+  await u.drag({ x: td.r, y: td.y }, { x: td.r + 40, y: td.y });
+  const g1 = await grid();
+  assert.ok(g1[0] > g0[0] + 20 && Math.abs(g1[0] + g1[1] - g0[0] - g0[1]) < 0.1, `the first column is wider, the table as wide (${g1})`);
+  assert.deepEqual(await undoLabels(u), ['Column Width']);
 }));
 

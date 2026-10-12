@@ -737,6 +737,75 @@
     liveBrush.stop();
   }, true);
 
+  /* ---------- drags ---------- */
+  /* A drag is what a press with the primary button starts and its release ends: moving a shape, a ruler marker or a
+   * cell range, drawing a shape. One at a time, the same in every app (LibreOffice's vcl tracking does the same):
+   *   ui.drag(e, { move(ev, d), up(ev, d), cancel(d), threshold = 4, capture })
+   * on the press event e (a pointerdown, or a mousedown: no pointer capture then, the window listeners follow) returns
+   * the drag d ({ x0, y0, x, y, dx, dy, moved, data: {} for the app }); null for a press of another button.
+   * - move runs only once the pointer is `threshold` px from the press (Windows' drag rectangle), so a click that
+   *   never moved changes nothing: up gets d.moved false.
+   * - up runs on the release of the primary button. The pointer is held by `capture` (by default e.target; false: not
+   *   held, the window listeners follow), so the click and dblclick that follow go to that element; if it is drawn
+   *   again in the middle of the drag, the drag goes on. Don't hold it on a CSS-scaled ancestor of text the browser
+   *   selects: its selection then stops short of the pointer.
+   * - cancel(d, why) runs instead, and nothing may commit (the app puts back what it moved), on: Esc ('esc', which
+   *   goes no further), a second button ('button', its context menu doesn't open), a move that reports the button no
+   *   longer held ('lost': it was let go where the page couldn't see), a lost capture or pointercancel ('lost'), the
+   *   window losing focus or the page hidden ('blur'), a new drag ('new'), ui.dragCancel() ('api': a tool or view
+   *   switch). A tool may stay armed unless why is 'esc'.
+   * Text selection drags are the browser's own and don't go through here. */
+  let liveDrag = null, swallowMenu = 0;
+  ui.drag = function (e, o) {
+    if (e.button != null && e.button !== 0) return null;
+    if (liveDrag) liveDrag.end(false, null, 'new');
+    const d = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false, data: {} };
+    const id = e.pointerId, threshold = o.threshold == null ? 4 : o.threshold;
+    const cap = o.capture === false ? null : o.capture || e.target;
+    try { if (cap && id != null && cap.setPointerCapture) cap.setPointerCapture(id); } catch (err) { /* window listeners still follow */ }
+    const on = (t, type, fn, capture) => { t.addEventListener(type, fn, capture); return () => t.removeEventListener(type, fn, capture); };
+    const second = () => { swallowMenu = Date.now(); end(false, null, 'button'); };
+    const offs = [
+      on(window, 'pointermove', (ev) => {
+        if (id != null && ev.pointerId !== id) return;
+        if (ev.buttons & 6) { second(); return; }
+        if (!(ev.buttons & 1)) { end(false, null, 'lost'); return; }
+        d.x = ev.clientX; d.y = ev.clientY; d.dx = d.x - d.x0; d.dy = d.y - d.y0;
+        if (!d.moved && Math.hypot(d.dx, d.dy) < threshold) return;
+        d.moved = true;
+        if (o.move) o.move(ev, d);
+      }, true),
+      on(window, 'pointerup', (ev) => { if ((id == null || ev.pointerId === id) && ev.button === 0) end(true, ev); }, true),
+      on(window, 'keydown', (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); end(false, null, 'esc'); } }, true),
+      on(window, 'pointercancel', () => end(false, null, 'lost'), true),
+      on(window, 'blur', () => end(false, null, 'blur')),
+      on(document, 'visibilitychange', () => { if (document.hidden) end(false, null, 'blur'); }),
+    ];
+    if (cap) offs.push(on(cap, 'lostpointercapture', () => { if (cap.isConnected) end(false, null, 'lost'); }));
+    function end(ok, ev, why) {
+      if (liveDrag !== live) return;
+      liveDrag = null;
+      offs.forEach((off) => off());
+      try { if (cap && id != null && cap.hasPointerCapture && cap.hasPointerCapture(id)) cap.releasePointerCapture(id); } catch (err) { /* ignore */ }
+      if (ok) { if (o.up) o.up(ev, d); } else if (o.cancel) o.cancel(d, why);
+    }
+    const live = { end, d };
+    liveDrag = live;
+    return d;
+  };
+  ui.dragging = () => !!liveDrag;
+  ui.dragCancel = () => { if (liveDrag) liveDrag.end(false, null, 'api'); };
+  /* a second button cancels the drag; its own press, release and context menu then go no further (the pointer events
+     report it as a move, before the mouse events come) */
+  if (typeof window !== 'undefined') for (const type of ['mousedown', 'mouseup', 'auxclick', 'contextmenu']) window.addEventListener(type, (e) => {
+    if (e.button === 0) return;
+    if (liveDrag) { swallowMenu = Date.now(); liveDrag.end(false, null, 'button'); }
+    if (swallowMenu && Date.now() - swallowMenu < 1500) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (type === 'contextmenu') swallowMenu = 0;
+    }
+  }, true);
+
   /* ---------- status bar & misc ---------- */
   /** a short notice at the bottom; action: { label, run } adds a button to it (e.g. Browse) */
   ui.toast = (text, ms, action) => {

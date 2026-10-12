@@ -1089,6 +1089,7 @@
   /* ================= Draw Table pencil, eraser, and border dragging ================= */
   T.tool = null;
   T.setTool = function (kind) {
+    L.ui.dragCancel();   /* a tool switch ends a drag in progress */
     T.tool = kind;
     const sc = L.$('#scroller');
     sc.classList.toggle('tool-pen', kind === 'draw');
@@ -1148,12 +1149,12 @@
     place(e.clientX, e.clientY);
     const x0 = e.clientX, y0 = e.clientY;
     drag = { hb };
-    const mv = (ev) => place(ev.clientX, ev.clientY);
-    const up = (ev) => {
-      window.removeEventListener('pointermove', mv, true);
-      window.removeEventListener('pointerup', up, true);
+    L.ui.drag(e, { move: (ev) => place(ev.clientX, ev.clientY), up, cancel: () => { guide.remove(); drag = null; }, capture: sc });
+    /* the release sets the width or height the guide shows; a click on the border changes nothing */
+    function up(ev, dr) {
       guide.remove();
       drag = null;
+      if (!dr.moved) return;
       const dxPt = (ev.clientX - x0) * ptPerPx(), dyPt = (ev.clientY - y0) * ptPerPx();
       if (hb.kind === 'col' && Math.abs(dxPt) > 0.5) {
         const k = m.c0 + m.span - 1;
@@ -1174,9 +1175,7 @@
         const ri = c.ri + (m.rowspan || 1) - 1;
         E.edit('Row Height', () => { D.touchTbl(t); t.rows[ri].trPr.h = L.round(Math.max(6, cur + dyPt), 2); if (t.rows[ri].trPr.hRule !== 'exact') t.rows[ri].trPr.hRule = 'atLeast'; return E.sel; });
       }
-    };
-    window.addEventListener('pointermove', mv, true);
-    window.addEventListener('pointerup', up, true);
+    }
   }
   /* pencil & eraser */
   function toolDown(e) {
@@ -1212,13 +1211,12 @@
       ghost.style.cssText = `left:${l - sr.left + sc.scrollLeft}px;top:${t0 - sr.top + sc.scrollTop}px;width:${Math.abs(ev.clientX - x0)}px;height:${Math.abs(ev.clientY - y0)}px`;
     };
     upd(e);
-    const mv = (ev) => upd(ev);
-    const up = (ev) => {
-      window.removeEventListener('pointermove', mv, true);
-      window.removeEventListener('pointerup', up, true);
+    L.ui.drag(e, { move: (ev) => upd(ev), up, cancel: () => ghost.remove(), capture: sc });
+    /* the release draws the table or the line the outline shows */
+    function up(ev, dr) {
       ghost.remove();
       const w = Math.abs(ev.clientX - x0) * ptPerPx(), hh = Math.abs(ev.clientY - y0) * ptPerPx();
-      if (w < 4 && hh < 4) return;
+      if (!dr.moved || (w < 4 && hh < 4)) return;
       if (startTd) {
         const t = findTable(+startTd.closest('table.tbl').dataset.tid);
         const c = t && cellById(t, +startTd.dataset.cid);
@@ -1257,9 +1255,7 @@
       T.insert(1, 1, { width: Math.max(18, w), colWidth: Math.max(18, w) });
       const ci = T.cur();
       if (ci && hh > 14) E.edit('Draw Table', () => { D.touchTbl(ci.tbl); ci.tbl.rows[0].trPr.h = L.round(hh, 2); ci.tbl.rows[0].trPr.hRule = 'atLeast'; return E.sel; });
-    };
-    window.addEventListener('pointermove', mv, true);
-    window.addEventListener('pointerup', up, true);
+    }
   }
   void tableOf;
   T.mount = function () {

@@ -54,6 +54,9 @@ The helper starts the static server, and a headless Chromium (profile `tmp/chrom
 nothing listens on CDP 127.0.0.1:9222. One file at a time (`--test-concurrency=1`): some tests move the focus to
 another tab and back.
 
+- `drag.test.mjs`: `ui.drag` itself, on a pad in each app's page: a click and a wobble move nothing, Esc, a second
+  button, a release the page never saw, a release in another tab and `ui.dragCancel()` cancel, and the key, the button
+  and its menu go no further.
 - `painter.test.mjs`: the Format Painter in each app (docs/suite.md, Brushes): it paints the dragged text, cells or
   object once the mouse is let go, a clicked word; a double-clicked painter stays on until Esc; links stay; in Lectern
   the text being edited stays edited, and text in another box can be painted.
