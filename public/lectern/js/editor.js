@@ -360,6 +360,9 @@
   function onDown(e) {
     if (e.button === 1) return;
     L.ui.closeMenus();
+    /* a press on the slide takes the keyboard from the Slides pane: Delete, the arrows and the clipboard keys work on
+       the slide again (the presses below prevent the browser's own focus change) */
+    if (L.app && L.app.focusArea === 'slides') { L.app.focusArea = null; try { E.scroller.focus({ preventScroll: true }); } catch (err) { /* ignore */ } }
     const tgt = e.target;
     /* content placeholder icons */
     const act = tgt.closest && tgt.closest('[data-content-act]');

@@ -680,8 +680,14 @@
           if (G.guardProtect()) break;
           const to = d.to;
           if (to.r1 === d.src.r1 && to.c1 === d.src.c1) { G.paint(); break; }
-          L.clip.moveRange(sh, d.src, to, e.ctrlKey || e.metaKey);
-          G.selectRange(to);
+          const copy = e.ctrlKey || e.metaKey;
+          const drop = () => { L.clip.moveRange(sh, d.src, to, copy); G.selectRange(to); };
+          /* dropped on cells that hold something (outside what moves): ask first, as Excel does */
+          if (L.clip.holdsData(sh, to, d.src)) {
+            G.paint();
+            L.ui.msg('Do you want to replace the contents of the destination cells?', { icon: 'question', buttons: ['OK', 'Cancel'] })
+              .then((i) => { if (i === 0) drop(); G.paint(); G.focus(); });
+          } else drop();
           break;
         }
         case 'point': L.editor.pointEnd(); break;

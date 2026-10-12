@@ -29,7 +29,9 @@
     L.$('#fb-enter').innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13"><path d="M1.5 7l3.5 3.5L11.5 2.5" fill="none" stroke="#1b8a2a" stroke-width="2.2"/></svg>';
     L.$('#fb-fx').innerHTML = '<svg width="18" height="14" viewBox="0 0 18 14"><text x="1" y="11" font-family="Times New Roman,Tinos,serif" font-style="italic" font-size="13" fill="#1a3f8a">f</text><text x="6" y="11" font-family="Times New Roman,Tinos,serif" font-style="italic" font-size="11" fill="#1a3f8a">x</text></svg>';
     L.$('#fb-fx').addEventListener('pointerdown', (e) => { e.preventDefault(); L.ui.exec('insertFunction'); });
-    cell.addEventListener('pointerdown', (e) => { if (E.active) e.stopPropagation(); });
+    /* the cell and the bar are two views of one edit: the one with the keyboard is what the edit reads (it copies to the other) */
+    cell.addEventListener('pointerdown', (e) => { if (E.active) { e.stopPropagation(); surface = cell; } });
+    cell.addEventListener('focus', () => { if (E.active) surface = cell; });
     cell.addEventListener('blur', () => {
       /* clicking elsewhere in the page (not the grid or formula bar) keeps editing alive; menus commit first */
     });

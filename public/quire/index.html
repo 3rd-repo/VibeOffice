@@ -310,6 +310,8 @@ body.bluebg .pages .pg { background: #0000a8 !important; }
 body.bluebg .pages .pc, body.bluebg .pages .pc span { color: #fff !important; }
 /* ---- find & replace "highlight all items" ---- */
 ::highlight(quire-find) { background-color: #ffe476; color: inherit; }
+/* ---- the selection while Find and Replace has the keyboard (editor.js, E.drawSel) ---- */
+::highlight(quire-sel) { background-color: Highlight; color: HighlightText; }
 
 /* ---- proofing underlines (Word: red wavy for spelling, green wavy for grammar) ---- */
 ::highlight(quire-spell) { text-decoration: underline wavy #e01b1b; text-decoration-thickness: 1px; text-underline-offset: 2px; text-decoration-skip-ink: none; }

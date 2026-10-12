@@ -969,7 +969,17 @@
   };
 
   /* ================= misc helpers used by commands ================= */
-  A.gotoPos = function (pos, sel2) {
+  /** select pos (to sel2) and show it; opts.focus false: a modeless dialog (Find and Replace) keeps the keyboard */
+  A.gotoPos = function (pos, sel2, opts) {
+    if (opts && opts.focus === false) {
+      E.setSel(pos, sel2 || pos, { noDom: true });
+      /* an edit just before (Replace) left the page's own selection behind: it would show, and typing would go there */
+      const s = window.getSelection();
+      if (s.rangeCount && LY.root && LY.root.contains(s.anchorNode)) s.removeAllRanges();
+      E.scrollToCaret(true);
+      E.drawSel(true);
+      return;
+    }
     E.setSel(pos, sel2 || pos);
     E.focus();
   };

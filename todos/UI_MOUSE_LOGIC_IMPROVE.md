@@ -1,7 +1,7 @@
 # UI: mouse, selection, drag and focus logic in Quire, Ledger and Lectern
 
-Status: planned 2026-10-12; Phase 0 done: the audit is in tests/ui/ as 85 `todo` tests, `tools/older.mjs` runs them
-against older code (the Format Painter part is done too, see What was done). Next: Phase 1. Read docs/suite.md
+Status: Phases 0 and 1 done (2026-10-12): the audit is in tests/ui/ (77 `todo` left of 85), `tools/older.mjs` runs the
+tests against older code; the seven data-loss items are fixed. Next: Phase 2, `ui.drag`. Read docs/suite.md
 (Shared code, Brushes) first. An audit of all three apps with real mouse and keyboard input (CDP, paced like a hand)
 confirmed 45 defects; most come from the same few missing mechanisms (Root causes). Six phases, in order: 0 test
 tools, 1 data loss, 2 one shared drag lifecycle, 3 one focus rule, 4 one owner per piece of state in each app,
@@ -21,13 +21,13 @@ Phase 0: test tools (the user, 2026-10-12: automated on the local Chromium, no C
       REV (default HEAD with uncommitted changes, else HEAD~1); docs/testing.md
 
 Phase 1: data loss and wrong edits (small separate fixes, each with its test)
-- [ ] Q1 Quire: Find Next takes the keyboard from the Find box, the next Enter replaces the found text
-- [ ] Q2 Quire: Enter or Tab on a selected floating shape deletes it
-- [ ] Q3 Quire: dragging inside a template placeholder moves the placeholder's text
-- [ ] S3 Ledger: typing after going from the formula bar back into the cell is undone keystroke by keystroke
-- [ ] S7 Ledger: dragging a cell by its border onto data replaces it without asking
-- [ ] P1 Lectern: after a thumbnail click, a click on a shape and Delete delete the slide (arrows change slides)
-- [ ] P2 Lectern: formatting a selected range of table cells formats the whole table
+- [x] Q1 Quire: Find Next takes the keyboard from the Find box, the next Enter replaces the found text
+- [x] Q2 Quire: Enter or Tab on a selected floating shape deletes it
+- [x] Q3 Quire: dragging inside a template placeholder moves the placeholder's text
+- [x] S3 Ledger: typing after going from the formula bar back into the cell is undone keystroke by keystroke
+- [x] S7 Ledger: dragging a cell by its border onto data replaces it without asking
+- [x] P1 Lectern: after a thumbnail click, a click on a shape and Delete delete the slide (arrows change slides)
+- [x] P2 Lectern: formatting a selected range of table cells formats the whole table
 
 Phase 2: one drag lifecycle, `ui.drag` in common/ui.js (Design)
 - [ ] `ui.drag` with `tests/ui/drag.test.mjs` (every app: threshold, Esc, right button, lost release, blur, tab switch)
@@ -70,6 +70,20 @@ Phase 5: the rest
   uses, and applies once when the mouse is let go; Quire's editor says when a gesture is over (`'sel-done'`) and ends
   an object selection one way (`E.clearObjSel`, which drawing.js follows); Lectern's painter keeps the text being
   edited. `tests/ui/painter.test.mjs`, `tests/ui/quire.test.mjs`. This plan follows the same pattern.
+
+- 2026-10-12, Phase 1, each test passing now and failing on the code before:
+  - Q1 Find and Replace keeps the keyboard: `A.gotoPos(…, { focus: false })` sets the model's selection only and draws it
+    (`E.drawSel`, the `quire-sel` highlight), because Chrome focuses the editable page a selection lands in; Replace
+    keeps the keyboard on its button; closing the dialog puts the found text back as the page's selection.
+  - Q2 Enter and Tab do nothing while a floating object is selected (its anchor is the text selection).
+  - Q3 a template placeholder is selected when the mouse is let go (`'sel-done'`) or the caret is moved into it, not
+    while the button is down (`E.pressing()`).
+  - S3 the cell editor's input takes the edit back from the formula bar on press and focus.
+  - S7 a dragged range dropped on cells holding data asks first (`L.clip.holdsData`); onto empty cells it just moves.
+  - P1 a press on the slide takes the keyboard from the Slides pane.
+  - P2 formatting keeps the selected range of table cells through the edit's detach, and the range stays selected.
+  Tests added beside them: Replace one match at a time, a click on a placeholder, a drop onto empty cells, a second
+  command on the same cells.
 
 ## Decisions
 

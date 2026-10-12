@@ -92,7 +92,7 @@ for (const leave of ['a click into text', 'Esc']) {
 /* ---------- the audit items ---------- */
 
 const FIND = ['Alpha beta gamma.', 'Second beta paragraph.', 'Third beta paragraph.'];
-test('Q1 Find Next keeps the keyboard in the Find box: a second Enter finds the next match and never edits the text', { todo: 'Phase 1' }, () => inQuire(PARAS(FIND), async (u) => {
+test('Q1 Find Next keeps the keyboard in the Find box: a second Enter finds the next match and never edits the text', () => inQuire(PARAS(FIND), async (u) => {
   await u.key('f', { ctrl: true }); await pause(300);
   await u.type('beta');
   await u.key('Enter'); await u.key('Enter');
@@ -100,28 +100,51 @@ test('Q1 Find Next keeps the keyboard in the Find box: a second Enter finds the 
   assert.equal(await u.focused(), 'fr-find', 'the Find box has the keyboard');
   assert.deepEqual([await selBlock(u), await selected(u)], [1, 'beta'], 'the second "beta" is selected');
   await u.esc();
+  await u.type('X');
+  assert.equal((await body(u))[1], 'Second X paragraph.', 'after the box closes, typing replaces the found text');
+}));
+
+test('Find and Replace: Replace goes one match at a time and keeps the keyboard; typing after Esc replaces the next match', () => inQuire(PARAS(FIND), async (u) => {
+  await u.key('h', { ctrl: true }); await pause(300);
+  await u.type('beta');
+  await u.click(await u.el('#fr-repl')); await u.type('X');
+  const replace = await u.evaluate(`(() => { const b = [...document.querySelectorAll('.dlg button.btn')].find((b) => b.textContent === 'Replace'); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+  for (let i = 0; i < 3; i++) await u.click(replace);
+  assert.deepEqual(await body(u), ['Alpha X gamma.', 'Second X paragraph.', 'Third beta paragraph.'], 'the first click finds, then each replaces one');
+  assert.notEqual(await u.focused(), 'pages', 'the dialog keeps the keyboard');
+  await u.esc();
+  await u.type('Y');
+  assert.equal((await body(u))[2], 'Third Y paragraph.', 'typing replaces the match found next');
 }));
 
 const SHAPE_DOC = ['First paragraph of ordinary text for clicking.', 'Second paragraph of ordinary text.', 'Third paragraph.'];
-test('Q2 Enter or Tab on a selected floating shape keeps the shape and leaves the text alone', { todo: 'Phase 1' }, () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
+test('Q2 Enter or Tab on a selected floating shape keeps the shape and leaves the text alone', () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
+  const text = await body(u);   // the shape's anchor is a character of block 1
   for (const k of ['Enter', 'Tab']) {
     await u.click(await atB(u, 0, 5));
     await u.click(await u.el('#pages .flt'));
     await u.key(k);
     assert.equal(await shapes(u), 1, `the shape is still there after ${k}`);
-    assert.deepEqual(await body(u), SHAPE_DOC, `${k} puts no paragraph or tab into the text`);
+    assert.deepEqual(await body(u), text, `${k} puts no paragraph or tab into the text`);
   }
 }));
 
 const PLACEHOLDER = `d.main.blocks = [D.para([D.text('Dear '), D.item('fb', { fid: 'f1', instr: ' MACROBUTTON  DoFieldClick [Click here and type name] ' }), D.item('fs', { fid: 'f1' }),
   D.text('[Click here and type name]'), D.item('fe', { fid: 'f1' }), D.text(', thank you for the long letter you sent.')]), D.para([D.text('Second paragraph.')])];`;
-test('Q3 a drag that starts inside a template placeholder selects from there, and never moves the placeholder', { todo: 'Phase 1' }, () => inQuire(PLACEHOLDER, async (u) => {
+test('Q3 a drag that starts inside a template placeholder selects from there, and never moves the placeholder', () => inQuire(PLACEHOLDER, async (u) => {
   const before = await body(u), undo0 = await undoSteps(u);
   await u.click(await atB(u, 1, 3));
   await u.drag(await atB(u, 0, 15), await atB(u, 0, 45));   // from "[Click he|re" to "thank you fo|r"
   assert.deepEqual(await body(u), before, 'the text is where it was');
   assert.equal(await undoSteps(u), undo0, 'nothing to undo');
   assert.match(await selected(u), /, thank you/, 'the selection runs from the placeholder to where the mouse was let go');
+}));
+
+test('a click on a template placeholder selects all of it, and typing replaces it', () => inQuire(PLACEHOLDER, async (u) => {
+  await u.click(await atB(u, 0, 12));
+  assert.equal(await selected(u), '[Click here and type name]', 'the whole placeholder is selected');
+  await u.type('Ann');
+  assert.match((await body(u))[0], /^Dear Ann, thank you/);
 }));
 
 const DND = ['Alpha beta gamma delta.', 'Second paragraph of ordinary text.', 'Third paragraph.'];

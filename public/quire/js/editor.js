@@ -63,6 +63,7 @@
   const domIsOurs = () => { const s = window.getSelection(); return !!lastDom && s.anchorNode === lastDom.an && s.anchorOffset === lastDom.ao && s.focusNode === lastDom.fn && s.focusOffset === lastDom.fo; };
   E.restoreDom = function (noScroll) {
     if (!E.sel || !LY.root) return;
+    E.drawSel(false);
     const s = window.getSelection();
     const a = LY.posToDom(E.sel.a), f = LY.posToDom(E.sel.f);
     if (!a || !f) return;
@@ -109,9 +110,25 @@
     E.pending = null; D.breakMerge();
     E.sel = m;
     E.clearObjSel();
+    E.drawSel(false);
     E.selChanged();
     E.markCells();
   };
+  /* The model's selection drawn while the keyboard is elsewhere (Find and Replace keeps it): putting it into the
+     page would take the focus with it, as Chrome focuses the editable page a selection lands in. Drawn again after
+     each layout, gone when the page's own selection is set. */
+  let selDrawn = false;
+  E.drawSel = function (on) {
+    const can = typeof CSS !== 'undefined' && CSS.highlights && typeof Highlight === 'function';
+    selDrawn = !!on && can;
+    if (!can) return;
+    const [a, b] = on && E.sel ? E.range().map((p) => LY.posToDom(p)) : [];
+    if (!a || !b) { CSS.highlights.delete('quire-sel'); return; }
+    const r = document.createRange();
+    try { r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset); } catch (e) { CSS.highlights.delete('quire-sel'); return; }
+    CSS.highlights.set('quire-sel', new Highlight(r));
+  };
+  L.bus.on('layout-done', () => { if (selDrawn) E.drawSel(true); });
   /** pull a pending DOM selection into the model before acting on a key (selectionchange is asynchronous) */
   E.syncSel = function () {
     if (E.composing || !LY.root || domIsOurs()) return;
@@ -134,6 +151,8 @@
   document.addEventListener('pointerup', () => { pointer = null; textDrag = false; if (pressed) { pressed = false; setTimeout(selDone, 0); } }, true);
   /** the user let go of the mouse in the document: 'sel' fires all through a drag, 'sel-done' once, when
       the text selection (or caret) is made; the Format Painter and the highlighter act on it */
+  /** a mouse button is down in the document (a selection may still be dragged out) */
+  E.pressing = () => pressed;
   function selDone() {
     if (E.objSel) return; /* a press on a shape or picture selected it, not text */
     E.syncSel();
@@ -187,16 +206,18 @@
   /** notify UI (debounced through rAF) */
   E.selChanged = L.rafThrottle(() => { L.bus.emit('sel', E.sel); });
 
-  E.scrollToCaret = function () {
+  /** bring the caret into view: the page's selection, or (fromModel) the model's, when the page's isn't moved */
+  E.scrollToCaret = function (fromModel) {
     const sc = LY.scroller;
     if (!sc || !E.sel) return;
     const s = window.getSelection();
-    if (!s.rangeCount) return;
+    const at = fromModel ? LY.posToDom(E.sel.f) : s.rangeCount ? { node: s.focusNode, offset: s.focusOffset } : null;
+    if (!at) return;
     const rng = document.createRange();
-    try { rng.setStart(s.focusNode, s.focusOffset); rng.collapse(true); } catch (e) { return; }
+    try { rng.setStart(at.node, at.offset); rng.collapse(true); } catch (e) { return; }
     let r = rng.getClientRects()[0] || rng.getBoundingClientRect();
     if (!r || (!r.height && !r.top)) {
-      const n = s.focusNode && (s.focusNode.nodeType === 3 ? s.focusNode.parentNode : s.focusNode);
+      const n = at.node && (at.node.nodeType === 3 ? at.node.parentNode : at.node);
       if (n && n.getBoundingClientRect) r = n.getBoundingClientRect();
     }
     if (!r) return;
@@ -684,6 +705,9 @@
     const ctrl = e.ctrlKey || e.metaKey, shift = e.shiftKey, alt = e.altKey;
     if (!E.objSel && !/^(Shift|Control|Alt|Meta)$/.test(k)) E.syncSel();
     if (L.app && L.app.shortcut && L.app.shortcut(e)) { e.preventDefault(); return; }
+    /* a selected floating object: the selection is its anchor, so Enter and Tab would type over it and delete it
+       (Delete and Backspace below do delete it, as they should) */
+    if (E.objSel && E.objSel.float && (k === 'Enter' || k === 'Tab')) { e.preventDefault(); return; }
     if (k === 'Enter' && !alt) {
       e.preventDefault();
       if (ctrl && shift) E.enter('column');

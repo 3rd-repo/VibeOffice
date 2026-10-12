@@ -61,7 +61,7 @@ const OK_TEXT = 'Alpha Q gamma delta epsilon';
 
 /* ---------- Phase 1: data loss and wrong edits ---------- */
 
-test('P1 After a thumbnail click, a click on a shape takes the keyboard: Delete deletes the shape', { todo: 'Phase 1' }, () => lectern(async (u) => {
+test('P1 After a thumbnail click, a click on a shape takes the keyboard: Delete deletes the shape', () => lectern(async (u) => {
   await setup(u, RECT, 2);
   await u.click(await thumb(u, 0));
   await u.click(await shapeBox(u, 'rectR'));
@@ -73,7 +73,7 @@ test('P1 After a thumbnail click, a click on a shape takes the keyboard: Delete 
 }));
 
 for (const [id, cmd, prop, value] of [['P2a', 'bold', 'b', true], ['P2b', 'alignCenter', 'algn', 'ctr']]) {
-  test(`${id} ${cmd === 'bold' ? 'Bold' : 'Center'} on a dragged range of table cells formats those cells only`, { todo: 'Phase 1' }, () => lectern(async (u) => {
+  test(`${id} ${cmd === 'bold' ? 'Bold' : 'Center'} on a dragged range of table cells formats those cells only`, () => lectern(async (u) => {
     await setup(u, `table('tbl', 100, 150)`);
     await u.click(await cell(u, 'tbl', 0, 0));
     await u.drag(await cell(u, 'tbl', 0, 0), await cell(u, 'tbl', 1, 1), 10);
@@ -84,6 +84,17 @@ for (const [id, cmd, prop, value] of [['P2a', 'bold', 'b', true], ['P2b', 'align
     u.clean();
   }));
 }
+
+test('a range of table cells stays selected after formatting: a second command formats the same cells', () => lectern(async (u) => {
+  await setup(u, `table('tbl', 100, 150)`);
+  await u.click(await cell(u, 'tbl', 0, 0));
+  await u.drag(await cell(u, 'tbl', 0, 0), await cell(u, 'tbl', 1, 1), 10);
+  await u.click(await u.button('bold'));
+  await u.click(await u.button('italic'));
+  const got = await u.evaluate(`L.ed.shape('tbl').tbl.rows.map((r) => r.cells.map((c) => { const x = c.tx.ps[0].rs[0] || {}; return (x.b ? 'B' : '-') + (x.i ? 'I' : '-'); }))`);
+  assert.deepEqual(got, [['BI', 'BI', '--'], ['BI', 'BI', '--'], ['--', '--', '--']]);
+  u.clean();
+}));
 
 /* ---------- Phase 2: one drag lifecycle ---------- */
 

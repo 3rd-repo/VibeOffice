@@ -810,7 +810,9 @@
     const shapes = TE.active() ? [TE.target().sh] : F.textShapes();
     if (!shapes.length) return;
     const editSnap = TE.active() ? TE.snapshot() : null;
+    const cells = E.cellSel;   /* a range of table cells: detaching ends it, but it is what gets formatted */
     if (editSnap) TE.detach();
+    E.cellSel = cells;
     L.hist.push(label || 'Format');
     for (const sh of shapes) {
       if (sh.type === 'wordart') { if (waFn) waFn(sh.wa); continue; }
@@ -819,6 +821,7 @@
     if (E.view === 'master') E.syncMaster();
     E.render({ keepEdit: false });
     if (editSnap) TE.resume(editSnap);
+    if (cells && editSnap) { E.cellSel = cells; E.drawOverlay(); }   /* the range stays selected */
     E.touched();
   };
   F.para = function (fn, label) {
@@ -826,12 +829,15 @@
     const shapes = TE.active() ? [TE.target().sh] : F.textShapes().filter((s) => s.type !== 'wordart');
     if (!shapes.length) return;
     const editSnap = TE.active() ? TE.snapshot() : null;
+    const cells = E.cellSel;   /* a range of table cells: detaching ends it, but it is what gets formatted */
     if (editSnap) TE.detach();
+    E.cellSel = cells;
     L.hist.push(label || 'Format Paragraph');
     for (const sh of shapes) forEachTx(sh, (tx) => tx.ps.forEach((p, i) => fn(p, i, { sh, tx })));
     if (E.view === 'master') E.syncMaster();
     E.render({ keepEdit: false });
     if (editSnap) TE.resume(editSnap);
+    if (cells && editSnap) { E.cellSel = cells; E.drawOverlay(); }   /* the range stays selected */
     E.touched();
   };
   /** Effective run & paragraph state for toolbar display */

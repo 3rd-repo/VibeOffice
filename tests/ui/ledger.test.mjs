@@ -131,7 +131,7 @@ test('S2c Shift+Right after a click on a column header adds the next column', { 
 });
 
 /* ---------------------------------------------------------------- S3: formula bar, then back into the cell */
-test('S3 Typing in the cell after a visit to the formula bar is kept', { todo: 'Phase 1' }, async () => {
+test('S3 Typing in the cell after a visit to the formula bar is kept', async () => {
   const u = await ledger();
   try {
     await enter(u, 'A5', 'abc');
@@ -213,7 +213,7 @@ test('S6 Enter after pointing at another sheet goes back to the formula\'s sheet
 });
 
 /* ---------------------------------------------------------------- S7: drag-and-drop onto data */
-test('S7 Dropping a cell onto a cell with data asks before replacing it', { todo: 'Phase 1' }, async () => {
+test('S7 Dropping a cell onto a cell with data asks before replacing it', async () => {
   const u = await ledger();
   try {
     await enter(u, 'A1', 'src');
@@ -225,6 +225,22 @@ test('S7 Dropping a cell onto a cell with data asks before replacing it', { todo
     assert.equal(await text(u, 'C1'), 'keep me', 'nothing is replaced while it asks');
     await u.esc();
     assert.deepEqual([await text(u, 'A1'), await text(u, 'C1')], ['src', 'keep me'], 'Cancel keeps both');
+    await u.drag({ x: Math.round(a1.r - 1), y: a1.y }, { x: Math.round(c1.r - 1), y: c1.y }, 8);
+    await u.key('Enter');
+    assert.deepEqual([await text(u, 'A1'), await text(u, 'C1')], ['', 'src'], 'OK moves the cell there');
+    u.clean();
+  } finally { await u.close(); }
+});
+
+test('Dropping a cell onto empty cells moves it without asking', async () => {
+  const u = await ledger();
+  try {
+    await enter(u, 'A1', 'src');
+    await u.click(await pt(u, 'A1'));
+    const a1 = await pt(u, 'A1'), c1 = await pt(u, 'C1');
+    await u.drag({ x: Math.round(a1.r - 1), y: a1.y }, { x: Math.round(c1.r - 1), y: c1.y }, 8);
+    assert.equal(await dialog(u), null, 'no message');
+    assert.deepEqual([await text(u, 'A1'), await text(u, 'C1')], ['', 'src']);
     u.clean();
   } finally { await u.close(); }
 });
