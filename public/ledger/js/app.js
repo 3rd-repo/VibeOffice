@@ -354,6 +354,7 @@
   A.toggleSheetSel = (i) => { if (!sheetSel) sheetSel = new Set([wb().active]); if (sheetSel.has(i) && i !== wb().active) sheetSel.delete(i); else sheetSel.add(i); renderTabs(); updateTitle(); };
   A.rangeSheetSel = (i) => { const a = wb().active; sheetSel = new Set(); for (let k = Math.min(a, i); k <= Math.max(a, i); k++) if (wb().sheets[k].state === 'visible') sheetSel.add(k); renderTabs(); };
   A.activateSheet = function (i) {
+    L.ui.dragCancel();   /* another sheet: a drag on this one ends */
     const w = wb();
     if (L.editor.active) {
       if (L.editor.canPoint()) { w.active = i; sheetSel = null; renderTabs(); G().paint(true); G().syncObjects(true); L.editor.sheetChanged(); return; }

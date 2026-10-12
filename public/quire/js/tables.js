@@ -1211,7 +1211,7 @@
       ghost.style.cssText = `left:${l - sr.left + sc.scrollLeft}px;top:${t0 - sr.top + sc.scrollTop}px;width:${Math.abs(ev.clientX - x0)}px;height:${Math.abs(ev.clientY - y0)}px`;
     };
     upd(e);
-    L.ui.drag(e, { move: (ev) => upd(ev), up, cancel: () => ghost.remove(), capture: sc });
+    L.ui.drag(e, { move: (ev) => upd(ev), up, cancel: (d, why) => { ghost.remove(); if (why === 'esc') T.setTool(null); }, capture: sc });
     /* the release draws the table or the line the outline shows */
     function up(ev, dr) {
       ghost.remove();

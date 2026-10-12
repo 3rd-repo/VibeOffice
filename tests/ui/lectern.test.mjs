@@ -128,6 +128,23 @@ test('P5c Esc while dragging out a rectangle draws nothing', () => lectern(async
   await u.esc();
   await u.glide(b, { x: b.x + 10, y: b.y + 10 }, 2); await u.release({ x: b.x + 10, y: b.y + 10 });
   assert.equal(await count(u), 1, 'no rectangle added');
+  assert.equal(await u.evaluate(`L.ed.scroller.classList.contains('drawing')`), false, 'Esc also ends the tool');
+  u.clean();
+}));
+
+test('Ctrl+Z in the middle of a resize undoes the resize, not the move before it; Ctrl+Y brings back nothing uncommitted', () => lectern(async (u) => {
+  await setup(u, RECT);
+  const c = await shapeBox(u, 'rectR');
+  await u.drag(c, { x: c.x + 40, y: c.y }, 6);
+  const moved = await geo(u, 'rectR');
+  await u.click(await shapeBox(u, 'rectR'));
+  const se = await u.el('.ed-overlay [data-h="se"]'), to = { x: se.x + 60, y: se.y + 40 };
+  await u.press(se); await u.glide(se, to, 6);
+  await u.key('z', { ctrl: true });
+  await u.release(to);
+  assert.deepEqual(await geo(u, 'rectR'), moved, 'the shape is as it was moved: the resize is undone, the move kept');
+  await u.key('y', { ctrl: true });
+  assert.deepEqual(await geo(u, 'rectR'), moved, 'nothing to redo');
   u.clean();
 }));
 

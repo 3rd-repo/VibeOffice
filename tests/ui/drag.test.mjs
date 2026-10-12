@@ -68,6 +68,28 @@ for (const app of ['quire', 'ledger', 'lectern']) {
       await s.test('ui.dragCancel() cancels it (a tool or view switch)', async () => {
         assert.deepEqual(await gesture(async () => { await t.press(A); await t.glide(A, B); await t.evaluate('L.ui.dragCancel()'); await t.release(B); }), ['move', 'cancel:api']);
       });
+      await s.test('Ctrl+Z cancels it (the drag is what gets undone), and goes no further', async () => {
+        await t.evaluate(`document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.key === 'z') __drag.push('ctrl-z'); })`);
+        assert.deepEqual(await gesture(async () => { await t.press(A); await t.glide(A, B); await t.key('z', { ctrl: true }); await t.release(B); }), ['move', 'cancel:undo']);
+      });
+      await s.test('after a middle-button cancel, a right-click opens its menu at once', async () => {
+        assert.deepEqual(await gesture(async () => {
+          await t.press(A); await t.glide(A, B);
+          await t.mouse('mousePressed', B, { button: 'middle' }); await pause(60); await t.mouse('mouseReleased', B, { button: 'middle' }); await pause(100);
+          await t.release(B); await pause(100);
+          await t.rightClick(A);
+        }), ['move', 'cancel:button', 'rdown', 'menu']);
+      });
+      await s.test('the cursor of the press stays while the pointer moves, over anything', async () => {
+        await t.evaluate(`document.getElementById('drag-pad').style.cursor = 'col-resize'`);
+        await t.press(A); await t.glide(A, { x: 900, y: 650 }, 6);
+        const during = await t.evaluate(`getComputedStyle(document.elementFromPoint(900, 650)).cursor`);
+        await t.release({ x: 900, y: 650 });
+        const after = await t.evaluate(`getComputedStyle(document.elementFromPoint(900, 650)).cursor`);
+        await t.evaluate(`document.getElementById('drag-pad').style.cursor = ''`);
+        assert.equal(during, 'col-resize');
+        assert.notEqual(after, 'col-resize');
+      });
       await s.test('the pad drawn again in the middle of the drag: the drag goes on', async () => {
         assert.deepEqual(await gesture(async () => {
           await t.press(A); await t.glide(A, B, 4);

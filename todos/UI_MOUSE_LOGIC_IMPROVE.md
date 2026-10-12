@@ -63,6 +63,7 @@ Phase 5: the rest
 - [ ] Quire selection bar (Q12); a drag from a table out to text (Q16)
 - [ ] Ledger auto-scroll (S9, S13); holding the button on a hyperlink (S14a)
 - [ ] Lectern: check the two open questions against PowerPoint (Audit, Lectern, Open)
+- [ ] P15 Lectern: "Click to add first slide" does nothing
 - [ ] docs: docs/suite.md (Drags, Focus), docs/quire.md, docs/ledger.md, docs/lectern.md, docs/testing.md
 
 ## What was done
@@ -97,6 +98,14 @@ Phase 5: the rest
   an unfinished freeform goes with a tool switch. Left as they are: Ledger's touch gestures, Lectern's slide-show pen.
   Q13, Q14a–c, Q17c, S12a–c, S14c–d, P5a–f, P10, P14 off todo, each failing before; tests added for drags that must
   still commit (Quire's shapes, pictures, drawing tool, ruler, table border).
+- 2026-10-12, an outside review of Phase 2 (09f1839), each finding reproduced, fixed and tested (the tests fail on
+  09f1839): Esc in the middle of a drag left the Format Painter on (Ledger, Lectern) and Lectern's drawing tool armed;
+  now Esc also puts a brush down and ends the tool in every app, the other cancels keep a tool armed. Ctrl+Z in the
+  middle of a Lectern resize undid the move before it and Ctrl+Y brought back the uncommitted resize; now Ctrl+Z or
+  Ctrl+Y in the middle of any drag cancels the drag only. A right-click within 1.5 s of a middle-button cancel opened
+  no menu; the swallowing is for the cancelling button's own click only. Also: the press's cursor stays during a drag
+  (the held pointer showed the cursor of the element holding it); Ledger's sheet switch, zoom and a new workbook end a
+  live drag. Not changed: a drag under 4 px does nothing (the threshold, on purpose).
 
 ## Decisions
 
@@ -341,6 +350,9 @@ bars (headless Chrome's don't behave like real ones).
 - P14 Start a move, switch tabs and let go there, come back: the shape follows the pointer with no button held.
   `editor.js:730` calls `drag.move` without looking at `e.buttons`; nothing ends it on blur or a lost capture.
   (p19-drag-tab-switch)
+
+- P15 (found by the Phase 2 review, there before it) "Click to add first slide" in an empty presentation does
+  nothing: the click goes to the element holding the pointer (`E.scroller`).
 
 Working as PowerPoint does: text drag-select out of the box and the window and back, margin drags, Shift+click in
 text, the marquee (also released outside the window), Bold, the size, font and zoom boxes and their lists, menus

@@ -65,6 +65,7 @@
     G.focus();
   };
   G.setWorkbook = function (wb) {
+    L.ui.dragCancel();
     G.wb = wb;
     G.state.marquee = null;
     if (!wb.graph) C.rebuild(wb);
@@ -791,6 +792,7 @@
     if (cols) { G._wx -= cols; G.scrollBy(0, cols); }
   }
   G.setZoom = function (z) {
+    L.ui.dragCancel();   /* what a drag measured is at the old zoom */
     const sh = G.sheet();
     sh.view.zoom = Math.max(10, Math.min(400, Math.round(z)));
     G.paint();

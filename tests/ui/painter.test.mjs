@@ -151,3 +151,36 @@ test('Lectern: keeps text editing; paints dragged text, a clicked word, another 
     s.clean();
   } finally { await s.close(); }
 });
+
+test('Esc in the middle of a painting drag cancels it and puts the painter down (Ledger, Lectern)', async () => {
+  const g = await open('ledger');
+  try {
+    const cell = (r, c) => g.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), b = L.grid.cellRect(${r}, ${c}); return { x: w.left + b.x + b.w / 2, y: w.top + b.y + b.h / 2 }; })()`);
+    const painted = () => g.evaluate(`(() => { const sh = L.grid.sheet(), s = sh.get(0, 0).s; let n = 0; for (let r = 1; r < 12; r++) for (let c = 0; c < 6; c++) { const cl = sh.get(r, c); if (cl && cl.s === s) n++; } return n; })()`);
+    await g.evaluate(`L.grid.select(0, 0); L.ui.exec('bold')`);
+    await g.click(await g.button('formatPainter'));
+    const a = await cell(3, 3), b = await cell(6, 5);
+    await g.press(a); await g.glide(a, b, 5); await g.esc(); await g.release(b);
+    assert.equal(await g.painting(), false, 'Ledger: the painter is down');
+    await g.click(await cell(9, 1));
+    assert.equal(await painted(), 0, 'Ledger: nothing painted, not even by the next click');
+    g.clean();
+  } finally { await g.close(); }
+  const s = await open('lectern');
+  try {
+    await s.evaluate(`(async () => {
+      const E = L.ed, M = L.model, slide = L.pres.slides[E.idx];
+      const rect = (id, x, v) => { const r = M.newShape(L.pres, slide, 'rect', x, 300, 150, 80); r.id = id; r.fill = { t: 'solid', c: v, a: 1 }; return r; };
+      slide.shapes = [rect('red', 60, '#FF0000'), rect('blue', 300, '#0000FF')]; E.sel = []; E.render();
+      await new Promise((r) => setTimeout(r, 300));
+    })()`);
+    const centre = (id) => s.evaluate(`(() => { const r = L.ed.elOf('${id}').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+    await s.click(await centre('red'));
+    await s.click(await s.button('painter'));
+    const c = await centre('blue'), to = { x: c.x + 30, y: c.y + 20 };
+    await s.press(c); await s.glide(c, to, 5); await s.esc(); await s.release(to);
+    assert.equal(await s.painting(), false, 'Lectern: the painter is down');
+    assert.equal(await s.evaluate(`L.ed.shape('blue').fill.c`), '#0000FF', 'Lectern: the shape is not painted');
+    s.clean();
+  } finally { await s.close(); }
+});

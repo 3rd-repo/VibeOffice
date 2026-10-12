@@ -55,7 +55,7 @@
       } else ghost.style.cssText = `left:${Math.min(x0, x1) - sr.left + sc.scrollLeft}px;top:${Math.min(y0, y1) - sr.top + sc.scrollTop}px;width:${Math.abs(x1 - x0)}px;height:${Math.abs(y1 - y0)}px;${opts.geom === 'ellipse' ? 'border-radius:50%' : ''}`;
     };
     upd(e);
-    L.ui.drag(e, { move: (ev) => upd(ev), up, cancel: () => { ghost.remove(); DT.stop(); }, capture: sc });
+    L.ui.drag(e, { move: (ev) => upd(ev), up, cancel: (d, why) => { ghost.remove(); if (why === 'esc') DT.stop(); }, capture: sc });
     /* the release draws the shape; a click that never moved puts one of the default size there */
     function up(ev, d) {
       ghost.remove();

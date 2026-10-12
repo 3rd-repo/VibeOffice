@@ -245,6 +245,20 @@ test('Dropping a cell onto empty cells moves it without asking', async () => {
   } finally { await u.close(); }
 });
 
+test('Esc while an AutoShape is dragged out draws nothing and ends the tool; the next drag selects cells', async () => {
+  const u = await ledger();
+  try {
+    await u.evaluate(`L.ui.exec('insertShape')`);
+    const a = await pt(u, 'C3'), b = await pt(u, 'E8');
+    await u.press(a); await u.glide(a, b, 6); await u.esc(); await u.release(b);
+    assert.equal(await u.evaluate('L.grid.sheet().drawings.length'), 0, 'no shape');
+    await u.drag(await pt(u, 'B2'), await pt(u, 'C3'), 6);
+    assert.equal((await selection(u)).ranges, 'B2:C3', 'the drag selects cells');
+    assert.equal(await u.evaluate('L.grid.sheet().drawings.length'), 0, 'still no shape');
+    u.clean();
+  } finally { await u.close(); }
+});
+
 /* ---------------------------------------------------------------- S8: rename a sheet in its tab */
 test('S8 A double-click on a sheet tab renames it in place', { todo: 'Phase 4' }, async () => {
   const u = await ledger();

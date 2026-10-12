@@ -103,9 +103,11 @@ What each app provides:
 
 **Drags.** Every press-and-drag of the apps (moving a shape, a ruler marker, a cell range, drawing a shape, a
 splitter) is a `ui.drag(e, { move, up, cancel, threshold, capture })` from `ui.js`: one at a time; `move` only after
-4 px, so a click that never moved changes nothing; `up` on the release; `cancel` instead, with nothing committed, on
-Esc, a second button (its menu doesn't open), a release the page never saw, a lost capture, the window losing focus
-or `ui.dragCancel()` (a tool or view switch). The browser's own text-selection drags stay its own
+4 px, so a click that never moved changes nothing; `up` on the release; `cancel(d, why)` instead, with nothing
+committed, on Esc (which also ends the tool and puts a brush down), Ctrl+Z or Ctrl+Y (the drag is what gets undone), a
+second button (its menu doesn't open), a release the page never saw, a lost capture, the window losing focus or
+`ui.dragCancel()` (a tool, view, sheet, slide or zoom switch); a tool stays armed after the other cancels. The cursor
+of the press stays while the pointer moves. The browser's own text-selection drags stay its own
 (`tests/ui/drag.test.mjs`; todos/UI_MOUSE_LOGIC_IMPROVE.md).
 
 **Brushes.** The Format Painter of each app, and Quire's highlighter, is a `ui.brush({ el, pick, apply, hint, status })`: a click on its button arms it for one use or puts it down, a double-click keeps it on, Esc puts it down, and one brush is on at a time. Arming it changes nothing else: the selection and the text being edited stay. It paints once, when the mouse is let go, never while a selection is still being dragged out: the app calls `brush.release()` then (Quire on the editor's `sel-done`, Ledger at the end of a cell drag, Lectern at pointer up in the slide editor) and its `apply` paints what was marked. What the apps paint follows Office and LibreOffice's Clone Formatting (Writer, Calc, Impress): a click inside a word paints the word; Ledger tiles the source range over a larger target; Lectern carries the text's formatting from text being edited and the whole object's otherwise, paints the text dragged over in any box and the whole object when the press is beside its text, and a click beside the objects puts even a kept-on painter down. The painted formatting replaces the target's own; links, fields and revision marks stay (`tests/ui/painter.test.mjs`).

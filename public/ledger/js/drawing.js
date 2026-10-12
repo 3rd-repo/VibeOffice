@@ -465,7 +465,7 @@
       const band = h('div', { class: 'gobj-ghost' });
       ov.appendChild(band);
       let cur = { x: x0, y: y0, w: 0, h: 0 };
-      /* the release inserts the shape (a click: at its default size); a cancel inserts nothing and ends the tool */
+      /* the release inserts the shape (a click: at its default size); a cancel inserts nothing (Esc also ends the tool) */
       ui.drag(e, {
         capture: ov,
         threshold: 0,
@@ -483,7 +483,7 @@
           if (cur.w < 6 && cur.h < 6) { cur.w = (k === 'textbox' ? 96 : 72) * z * (96 / 72); cur.h = (k === 'textbox' ? 48 : 72) * z * (96 / 72); }
           DR.insertShape(k, cur);
         },
-        cancel() { band.remove(); DR.cancelTool(); },
+        cancel(d, why) { band.remove(); if (why === 'esc') DR.cancelTool(); },   /* Esc ends the tool; other cancels keep it */
       });
     });
   };

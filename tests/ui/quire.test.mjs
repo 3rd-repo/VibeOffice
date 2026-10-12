@@ -333,6 +333,7 @@ test('Q14a Esc while a shape is being drawn (button still down) cancels it: noth
   await u.release(to);
   assert.equal(await shapes(u), 0, 'no shape');
   assert.equal(await u.evaluate(`document.querySelectorAll('.draw-ghost').length`), 0, 'no outline left');
+  assert.equal(await u.evaluate(`L.$('#scroller').classList.contains('drawing-mode')`), false, 'Esc also ends the tool');
 }, { look: 'classic' }));
 test('Q14b Esc while a shape is being moved cancels the move', () => inQuire(PARAS(SHAPE_DOC) + SHAPE(1), async (u) => {
   const b0 = await u.el('#pages .flt > *'), to = { x: b0.x + 80, y: b0.y + 60 }, undo0 = await undoSteps(u);

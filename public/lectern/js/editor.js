@@ -851,7 +851,7 @@
         E.touched();
         if (t.kind === 'text') L.te.begin(sh.id, { atEnd: true });
       },
-      cancel() { ghost.remove(); },
+      cancel(d, why) { ghost.remove(); if (why === 'esc') E.setTool(null); },   /* Esc ends the tool; other cancels keep it */
     });
   }
   function startScribble(e, p0) {
@@ -869,7 +869,7 @@
         pl.setAttribute('points', pts.map((q) => q[0] * E.scale + ',' + q[1] * E.scale).join(' '));
       },
       up() { svg.remove(); if (pts.length > 2) E.addFreeform(pts, false, true); if (!(E.tool && E.tool.sticky)) E.setTool(null); },
-      cancel() { svg.remove(); },
+      cancel(d, why) { svg.remove(); if (why === 'esc') E.setTool(null); },
     });
   }
   let ff = null;
@@ -905,7 +905,8 @@
         if (E.tool && E.tool.kind === 'freeform') { const last = ff.pts[ff.pts.length - 1]; if (Math.hypot(q.x - last[0], q.y - last[1]) * E.scale > 3) ff.pts.push([q.x, q.y]); }
         draw([q.x, q.y]);
       },
-      cancel() {
+      cancel(d, why) {
+        if (why === 'esc') { E.setTool(null); return; }   /* Esc ends the tool and drops the shape, as when no button is down */
         if (ff !== mine) return;
         if (!had) { ff.el.remove(); ff = null; return; }
         ff.pts.length = had;

@@ -752,31 +752,49 @@
    * - cancel(d, why) runs instead, and nothing may commit (the app puts back what it moved), on: Esc ('esc', which
    *   goes no further), a second button ('button', its context menu doesn't open), a move that reports the button no
    *   longer held ('lost': it was let go where the page couldn't see), a lost capture or pointercancel ('lost'), the
-   *   window losing focus or the page hidden ('blur'), a new drag ('new'), ui.dragCancel() ('api': a tool or view
-   *   switch). A tool may stay armed unless why is 'esc'.
+   *   window losing focus or the page hidden ('blur'), Ctrl+Z or Ctrl+Y ('undo': the drag is what gets undone), a new
+   *   drag ('new'), ui.dragCancel() ('api': a tool or view switch). A tool stays armed unless why is 'esc'; Esc also
+   *   puts a brush down (ui.brush).
+   * - While it moves, the cursor shown at the press stays wherever the pointer goes (`cursor` sets another one).
    * Text selection drags are the browser's own and don't go through here. */
-  let liveDrag = null, swallowMenu = 0;
+  let liveDrag = null, swallow = null, cursorStyle = null;
+  /** the events of the button that cancelled a drag go no further: its press, release, auxclick and context menu */
+  const swallowButton = (button) => { swallow = { button, until: Date.now() + 1500, seen: new Set() }; };
+  const holdCursor = (c) => {
+    if (!cursorStyle) { cursorStyle = document.createElement('style'); document.head.appendChild(cursorStyle); }
+    cursorStyle.textContent = c ? `*, *::before, *::after { cursor: ${c} !important; }` : '';
+  };
   ui.drag = function (e, o) {
     if (e.button != null && e.button !== 0) return null;
     if (liveDrag) liveDrag.end(false, null, 'new');
     const d = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false, data: {} };
     const id = e.pointerId, threshold = o.threshold == null ? 4 : o.threshold;
     const cap = o.capture === false ? null : o.capture || e.target;
+    let cursor = o.cursor || null;
+    if (!cursor) { try { const c = getComputedStyle(e.target).cursor; if (c && c !== 'auto') cursor = c; } catch (err) { /* no cursor kept */ } }
     try { if (cap && id != null && cap.setPointerCapture) cap.setPointerCapture(id); } catch (err) { /* window listeners still follow */ }
     const on = (t, type, fn, capture) => { t.addEventListener(type, fn, capture); return () => t.removeEventListener(type, fn, capture); };
-    const second = () => { swallowMenu = Date.now(); end(false, null, 'button'); };
+    const second = (button) => { swallowButton(button); end(false, null, 'button'); };
     const offs = [
       on(window, 'pointermove', (ev) => {
         if (id != null && ev.pointerId !== id) return;
-        if (ev.buttons & 6) { second(); return; }
+        if (ev.buttons & 6) { second(ev.buttons & 2 ? 2 : 1); return; }
         if (!(ev.buttons & 1)) { end(false, null, 'lost'); return; }
         d.x = ev.clientX; d.y = ev.clientY; d.dx = d.x - d.x0; d.dy = d.y - d.y0;
         if (!d.moved && Math.hypot(d.dx, d.dy) < threshold) return;
+        if (!d.moved && cursor) holdCursor(cursor);
         d.moved = true;
         if (o.move) o.move(ev, d);
       }, true),
       on(window, 'pointerup', (ev) => { if ((id == null || ev.pointerId === id) && ev.button === 0) end(true, ev); }, true),
-      on(window, 'keydown', (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); end(false, null, 'esc'); } }, true),
+      on(window, 'keydown', (ev) => {
+        /* Ctrl+Z (or Y) in the middle of a drag undoes the drag, not what came before it */
+        if ((ev.ctrlKey || ev.metaKey) && /^[zy]$/i.test(ev.key)) { ev.preventDefault(); ev.stopImmediatePropagation(); end(false, null, 'undo'); return; }
+        if (ev.key !== 'Escape') return;
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        end(false, null, 'esc');
+        if (liveBrush) liveBrush.stop();
+      }, true),
       on(window, 'pointercancel', () => end(false, null, 'lost'), true),
       on(window, 'blur', () => end(false, null, 'blur')),
       on(document, 'visibilitychange', () => { if (document.hidden) end(false, null, 'blur'); }),
@@ -786,6 +804,7 @@
       if (liveDrag !== live) return;
       liveDrag = null;
       offs.forEach((off) => off());
+      if (cursorStyle) holdCursor(null);
       try { if (cap && id != null && cap.hasPointerCapture && cap.hasPointerCapture(id)) cap.releasePointerCapture(id); } catch (err) { /* ignore */ }
       if (ok) { if (o.up) o.up(ev, d); } else if (o.cancel) o.cancel(d, why);
     }
@@ -795,15 +814,17 @@
   };
   ui.dragging = () => !!liveDrag;
   ui.dragCancel = () => { if (liveDrag) liveDrag.end(false, null, 'api'); };
-  /* a second button cancels the drag; its own press, release and context menu then go no further (the pointer events
-     report it as a move, before the mouse events come) */
+  /* a second button cancels the drag; its own events then go no further (the pointer events report it as a move,
+     before the mouse events come): its press, its release, and its auxclick or context menu, whichever ends that
+     click, in whatever order the system sends them (or for 1.5 s at most) */
   if (typeof window !== 'undefined') for (const type of ['mousedown', 'mouseup', 'auxclick', 'contextmenu']) window.addEventListener(type, (e) => {
     if (e.button === 0) return;
-    if (liveDrag) { swallowMenu = Date.now(); liveDrag.end(false, null, 'button'); }
-    if (swallowMenu && Date.now() - swallowMenu < 1500) {
-      e.preventDefault(); e.stopImmediatePropagation();
-      if (type === 'contextmenu') swallowMenu = 0;
-    }
+    if (liveDrag) { swallowButton(e.button); liveDrag.end(false, null, 'button'); }
+    if (!swallow || e.button !== swallow.button) return;
+    if (Date.now() > swallow.until) { swallow = null; return; }
+    e.preventDefault(); e.stopImmediatePropagation();
+    swallow.seen.add(type);
+    if (swallow.seen.has('mouseup') && swallow.seen.has(swallow.button === 2 ? 'contextmenu' : 'auxclick')) swallow = null;
   }, true);
 
   /* ---------- status bar & misc ---------- */
