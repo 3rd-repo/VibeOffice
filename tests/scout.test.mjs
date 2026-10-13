@@ -5,9 +5,11 @@
 // things while they work, more once they are quiet, a nap after five minutes that they wake him from); at rest
 // nothing is drawn but a blink and now and then the tail's sway, a window in the background draws nothing (he stands
 // still), and once hidden the frame loop stops. Then, in Quire: he comes in by himself on a desktop, not on an
-// iPhone, in an automated browser (tools/shot.mjs) or on a day the user hid him. Leaves the settings as it found them.
+// iPhone, in an automated browser (tools/shot.mjs) or on a day the user hid him; and nothing of his own covers his face
+// in any action. Leaves the settings as it found them.
 //
-//   node --test tests/scout.test.mjs   (needs Chromium with CDP at 127.0.0.1:9222, as tools/shot.mjs; serves on :8775)
+//   node --test tests/scout.test.mjs   (needs Chromium with CDP at 127.0.0.1:9222, as tools/shot.mjs, or CDP=… for one of
+//   its own: the frame checks need the test tab in front; serves on :8775)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -273,6 +275,63 @@ for (const app of ['quire', 'ledger', 'lectern']) {
     assert.match(out, /no errors, no external requests/);
   });
 }
+
+/* his face, in every action but coming and going, in both views, every 0.1 s: his ears, the head's outline and his
+   body never cover his eyes, nose, muzzle or tongue (hit-tested at points in each part's own drawing); a paw or a prop
+   in front of his face may, and a wet-dog shake flings his ears across it */
+const FACE = `
+const host = document.createElement('div');
+host.style.cssText = 'position:fixed;left:0;top:0;z-index:99999;background:#fff;padding:20px';
+document.body.appendChild(host);
+const s = new L.Scout({ mode: 'still', parent: host, size: 400 });
+const bad = {};
+let checks = 0;
+const inside = (el, name) => !!el && !!el.closest('[data-p="' + name + '"]');
+const by = (el) => { const g = el && el.closest('[data-p]'); return g ? g.getAttribute('data-p') : el ? el.tagName : 'nothing'; };
+const centre = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+for (const view of ['tq', 'front']) {
+  s.setView(view);
+  for (const n of L.Scout.all) {
+    const info = L.Scout.info(n);
+    if (info.cat === 'entrance') continue;
+    for (let i = 0; i * .1 <= info.dur + 1e-9; i++) {
+      const t = i * .1;
+      s.pose(n, t);
+      const p = s._last, P = s.P, want = [];
+      /* points in the part's own drawing, so they turn and tilt with it */
+      const at = (el, x, y) => { const m = el.getScreenCTM(), q = new DOMPoint(x, y).matrixTransform(m); return [q.x, q.y]; };
+      if (p.happy < .3) for (const S of ['L', 'R']) if (Math.max(p['lid' + S], p['low' + S]) < .5) {
+        const cx = S === 'L' ? 88 : 112;
+        for (const dx of [-4.5, 0, 4.5]) want.push(['eye' + S, at(P['rim' + S], cx + dx, 66)]);
+      }
+      want.push(['nose', at(P.nose, 100, 80)]);
+      if (p.tongue > .3) { const b = P.tongueP.getBBox(), cx = b.x + b.width / 2; for (const k of [.5, .75]) want.push(['tongueOut', at(P.tongueP, cx, b.y + b.height * k)]); want.push(['tongueOut', at(P.tongueP, cx, b.y + b.height - 1.5)]); }
+      for (const [x, y] of [[100, 100.5], [84, 96], [116, 96]]) want.push(['face', at(P.muzzle, x, y)]);
+      want.push(['face', at(P.blaze, 100, 42)]);
+      for (const [name, [x, y]] of want) {
+        checks++;
+        const hit = document.elementFromPoint(x, y);
+        if (inside(hit, name)) continue;
+        const who = by(hit);
+        if (!/^(ear[LR]|head|body|root|nothing|DIV|svg)$/.test(who)) continue;   // a paw or a prop in front of his face: by design
+        if (n === 'Shake' && /^ear/.test(who)) continue;   // a wet-dog shake flings his ears across his face
+        const k = view + ' ' + n + ': ' + name + ' under ' + who;
+        (bad[k] = bad[k] || []).push(+t.toFixed(1));
+      }
+    }
+  }
+}
+s.destroy(); host.remove();
+return JSON.stringify({ checks, bad: Object.entries(bad).map(([k, ts]) => k + ' (' + ts.length + ' poses, ' + ts[0] + '-' + ts[ts.length - 1] + ' s)') });
+`;
+test('Scout: nothing of his own covers his eyes, nose, muzzle or tongue (every action, both views)', () => {
+  const out = execFileSync('node', [path.join(root, 'tools/shot.mjs'), 'quire/', JSON.stringify([{ js: FACE, wait: 100 }]), '--timeout', '280000'], { encoding: 'utf8', env, timeout: 300000 });
+  const line = out.split('\n').find((l) => l.startsWith('js -> '));
+  assert.ok(line, out);
+  const r = JSON.parse(JSON.parse(line.slice(6)));
+  assert.ok(r.checks > 30000, `points checked: ${r.checks}`);
+  assert.deepEqual(r.bad, [], r.bad.join('\n'));
+});
 
 /* comes in by himself in a person's desktop browser; not on iOS or Android, nor on a day the user hid him
    (tools/shot.mjs is automated, so scripts before the page's own make it a person's browser and set the day) */

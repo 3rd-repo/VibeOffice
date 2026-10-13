@@ -96,6 +96,15 @@
   };
   const stageOf = p => STAGE[p.view] || STAGE.front;
 
+  /** The head's outline, its chin moved by (dx, down) and its crown by up (<= 0), from 'M100 37C123 37 135 52 134 70C133 88 121 104
+   *  100 104C79 104 67 88 66 70C65 52 77 37 100 37Z' at rest; map (x, y) => [x, y] puts it in another space. */
+  function skullPath(dx, down, up, map) {
+    const P = (x, y) => { const q = map ? map(x, y) : [x, y]; return f(q[0]) + ' ' + f(q[1]); }, tx = dx * .5;
+    return `M${P(100 + tx, 37 + up)}C${P(123 + tx, 37 + up)} ${P(135, 52 + up * .5)} ${P(134, 70)}` +
+      `C${P(133 + dx * .5, 88 + down * .5)} ${P(121 + dx, 104 + down)} ${P(100 + dx, 104 + down)}` +
+      `C${P(79 + dx, 104 + down)} ${P(67 + dx * .5, 88 + down * .5)} ${P(66, 70)}C${P(65, 52 + up * .5)} ${P(77 + tx, 37 + up)} ${P(100 + tx, 37 + up)}Z`;
+  }
+
   /* ------------------------------------------------------------ the pose */
   function rest() {
     return {
@@ -1958,7 +1967,7 @@
     const armM = S => `<g data-p="arm${S}">${legShape('arm' + S, tq && S === 'L' ? FAR : C.white)}${paw(S, tq && S === 'L' ? FAR : C.white)}</g>`;
     const bodyFront = `<g data-p="slotFront">${tq ? hindLeg('R') : ''}</g>
           <g data-p="handL"></g><g data-p="handR"></g><g data-p="heldB"></g>
-          ${tq ? armM('L') + armM('R') + tag(80, 118.6) : armM('L') + armM('R')}
+          ${armM('L') + armM('R')}${tq ? `<g clip-path="url(#${id('tagC')})">${tag(80, 118.6)}</g>` : ''}
           <g data-p="heldF"></g>
           <g data-p="handLF"></g><g data-p="handRF"></g>`;
 
@@ -1969,6 +1978,8 @@
         <clipPath id="${id('clipL')}"><ellipse cx="88" cy="66" rx="7.4" ry="8.2"/></clipPath>
         <clipPath id="${id('clipR')}"><ellipse cx="112" cy="66" rx="7.4" ry="8.2"/></clipPath>
         <clipPath id="${id('mouth')}"><path data-p="mclip"/></clipPath>
+        <!-- the tag hangs in front of the legs but behind the head (his chin, nose down): the head's shape is cut out of it -->
+        <clipPath id="${id('tagC')}"><path data-p="tagClip" clip-rule="evenodd"/></clipPath>
         <clipPath id="${id('floor')}"><rect x="-100" y="-200" width="400" height="382"/></clipPath>
       </defs>
       <g data-p="mat">
@@ -1991,10 +2002,10 @@
         <g data-p="body">
           ${bodyBack}
           <g data-p="head">
-            <path d="${skull}" fill="url(#${id('crown')})"/>
+            <path data-p="skull" d="${skull}" fill="url(#${id('crown')})"/>
             <g data-p="face">
-              <path d="M97 40C98.2 38.6 101.8 38.6 103 40C103.6 52 104.6 62 108 75L92 75C95.4 62 96.4 52 97 40Z" fill="${C.white}"/>
-              <path d="M100 71C113 71 121 79 121.5 88C121.5 98 112 103.2 100 103.2C88 103.2 78.5 98 78.5 88C79 79 87 71 100 71Z" fill="${C.white}"/>
+              <path data-p="blaze" d="M97 40C98.2 38.6 101.8 38.6 103 40C103.6 52 104.6 62 108 75L92 75C95.4 62 96.4 52 97 40Z" fill="${C.white}"/>
+              <path data-p="muzzle" d="M100 71C113 71 121 79 121.5 88C121.5 98 112 103.2 100 103.2C88 103.2 78.5 98 78.5 88C79 79 87 71 100 71Z" fill="${C.white}"/>
               <path d="M82 95C86 100 93 102.5 100 102.5C107 102.5 114 100 118 95" fill="none" stroke="${C.whiteD}" stroke-width="2.4" stroke-linecap="round"/>
               <g fill="#cdbfae"><circle cx="85.5" cy="88.5" r=".9"/><circle cx="83.5" cy="91.6" r=".9"/><circle cx="87.6" cy="92.6" r=".9"/><circle cx="114.5" cy="88.5" r=".9"/><circle cx="116.5" cy="91.6" r=".9"/><circle cx="112.4" cy="92.6" r=".9"/></g>
               <ellipse data-p="browL" cx="87" cy="55.5" rx="4.8" ry="2.7" fill="${C.pip}"/>
@@ -2002,7 +2013,6 @@
               ${eye('L', 88)}${eye('R', 112)}
               <path data-p="mopen" fill="${C.mouth}" ${OL} stroke-width="1.6" opacity="0"/>
               <ellipse data-p="tongueIn" cx="100" cy="98" rx="6" ry="3" fill="${C.tongue}" clip-path="url(#${id('mouth')})" opacity="0"/>
-              <g data-p="tongueOut" opacity="0"><path data-p="tongueP" fill="${C.tongue}" ${OL} stroke-width="1.5"/><path data-p="tongueL" fill="none" stroke="${C.tongueD}" stroke-width="1.2" stroke-linecap="round"/></g>
               <path data-p="mline" fill="none" stroke="${LINE}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M100 87.4V93.4" stroke="${LINE}" stroke-width="1.8" stroke-linecap="round"/>
               <g data-p="nose">
@@ -2010,7 +2020,8 @@
                 <ellipse cx="96.4" cy="78.6" rx="3.3" ry="1.4" fill="#fff" opacity=".5"/>
               </g>
             </g>
-            <path d="${skull}" fill="none" ${OL}/>
+            <path data-p="skullO" d="${skull}" fill="none" ${OL}/>
+            <g data-p="faceF"><g data-p="tongueOut" opacity="0"><path data-p="tongueP" fill="${C.tongue}" ${OL} stroke-width="1.5"/><path data-p="tongueL" fill="none" stroke="${C.tongueD}" stroke-width="1.2" stroke-linecap="round"/></g></g>
             <g data-p="earL">${ear}</g>
             <g transform="${MIR}"><g data-p="earR">${ear}</g></g>
             <g data-p="headL"></g>
@@ -2175,6 +2186,7 @@
   }
 
   const BLEND = .2;
+  const EAR_IN = 2;   // the most an ear swings in over the face (degrees), however far an action turns it
   const SWAY = { dur: 3.2, deg: 7, hz: .45 };   // the tail's slow sway at rest, now and then
   let UID = 0;
   const reduceMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2551,10 +2563,23 @@
       /* head */
       const hr = p.hr + V.hr, turn = clamp(p.turn + V.turn, -1.15, 1.15);
       attr(P.head, 'transform', `translate(${f(p.hx + V.head)} ${f(p.hy)}) rotate(${f(hr)} 100 104)`);
-      attr(P.face, 'transform', `translate(${f(turn * 7)} ${f(p.faceY)})`);
+      const faceT = `translate(${f(turn * 7)} ${f(p.faceY)})`;
+      attr(P.face, 'transform', faceT); attr(P.faceF, 'transform', faceT);
+      /* the head's outline follows the face from rest: the chin when it looks down or turns, the crown when it looks up,
+         so the face never slides under the outline */
+      const rel = turn - V.turn, sk = skullPath(rel * 7, Math.max(0, p.faceY), Math.min(0, p.faceY));
+      attr(P.skull, 'd', sk); attr(P.skullO, 'd', sk);
+      if (P.tagClip) {
+        const a = hr * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a), ox = p.hx + V.head, oy = p.hy;
+        const toBody = (x, y) => [100 + (x - 100) * c - (y - 104) * sn + ox, 104 + (x - 100) * sn + (y - 104) * c + oy];
+        attr(P.tagClip, 'd', 'M-100 -100H300V300H-100Z' + skullPath(rel * 7, Math.max(0, p.faceY), Math.min(0, p.faceY), toBody));
+      }
       const grav = -hr * .55 - p.rot * .5 - p.lean * .5;
-      attr(P.earL, 'transform', `translate(${f(turn * 3.5)} 0) rotate(${f(p.earL + grav)} 76 48)`);
-      attr(P.earR, 'transform', `translate(${f(-turn * 3.5)} 0) rotate(${f(p.earR - grav)} 76 48)`);
+      /* an ear keeps pace with the face turning its way, so it doesn't cover the eye */
+      /* and hangs from the side of the head: it swings out freely, in hardly at all (not over the eye) */
+      const earIn = (a) => (a >= 0 ? a : -EAR_IN * (1 - Math.exp(a / EAR_IN)));
+      attr(P.earL, 'transform', `translate(${f(turn * 3.5 + Math.min(0, rel) * 3.5)} 0) rotate(${f(earIn(p.earL + grav))} 76 48)`);
+      attr(P.earR, 'transform', `translate(${f(-turn * 3.5 - Math.max(0, rel) * 3.5)} 0) rotate(${f(earIn(p.earR - grav))} 76 48)`);
       attr(P.browL, 'transform', `translate(0 ${f(-p.browL * 5.4)}) rotate(${f(-p.browTL * 20)} 87 55.5)`);
       attr(P.browR, 'transform', `translate(0 ${f(-p.browR * 5.4)}) rotate(${f(p.browTR * 20)} 113 55.5)`);
       const lx = clamp(p.lookX, -1, 1), ly = clamp(p.lookY, -1, 1), happy = clamp(p.happy);
