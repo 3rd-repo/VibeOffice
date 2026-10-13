@@ -291,7 +291,7 @@
       fr.style.cssText = `left:${vis.x * s}px;top:${vis.y * s}px;width:${Math.max(vis.w * s, 1)}px;height:${Math.max(vis.h * s, 1)}px;${vis.rot ? `transform:rotate(${vis.rot}deg)` : ''}`;
       if (editId === id) {
         fr.appendChild(h('div', { class: 'edit-ring', 'data-h': 'move', 'data-sid': id }));
-      }
+      } else if (sh.type === 'group') fr.appendChild(h('div', { class: 'grp-ring', 'data-h': 'move', 'data-sid': id }));
       const locked = !!f.parent && !!f.parent.rot;
       if (!locked) {
         if (E.cropMode && sh.type === 'image' && E.sel.length === 1) {

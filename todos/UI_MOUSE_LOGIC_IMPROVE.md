@@ -3,8 +3,7 @@
 Status (2026-10-13): all six phases and two review rounds are done: the audit is in tests/ui/ with no `todo` left,
 `tools/older.mjs` runs the tests against older code; the data-loss items are fixed; every mouse drag goes through
 `ui.drag`; each app has one owner per piece of state; the keyboard stays with the document (the focus rule); gestures
-and focus are tested in each app's modes. Not finished until: the mode-test review's To do below (Lectern's starting
-states), a full passing run after it, and a check by hand in a real (headed) browser. Read docs/suite.md
+and focus are tested in each app's modes. Not finished until a check by hand in a real (headed) browser. Read docs/suite.md
 (Shared code, Brushes) first. An audit of all three apps with real mouse and keyboard input (CDP, paced like a hand)
 confirmed 45 defects; most come from the same few missing mechanisms (Root causes). Six phases, in order: 0 test
 tools, 1 data loss, 2 one shared drag lifecycle, 3 one focus rule, 4 one owner per piece of state in each app,
@@ -111,13 +110,15 @@ Phase 5: the rest
 
 ## To do from the mode-test review (2026-10-13)
 
-- [ ] P2: Lectern's new 150 % gesture mode does not reset "nothing selected" between cases.
+- [x] P2: Lectern's new 150 % gesture mode does not reset "nothing selected" between cases.
       `tests/ui/gestures.test.mjs` uses `slideBlank`, which returns (356, 1121) in the 1280 × 800 test viewport;
       the click is outside the viewport and hits nothing. After the first release and Undo, `L.ed.sel` still
       contains `rectR`, so the subsequent cancellation cases pass from a selected shape instead of their named
       starting state. Use a visible, hit-tested background point and assert the selection/editing state after
       each start. Reproduced against `1900bd3` plus the pending mode tests with
       `/tmp/vibeoffice-review-mode-start.test.mjs`: the second case fails the starting-selection assertion.
+      Done: `slideBlank` hit-tests a point of the slide's background where the slide area shows it; every starting
+      state has a `check` the case asserts before its drag, and the drag's points must be on screen.
 
 ## What was done
 
@@ -220,6 +221,15 @@ Phase 5: the rest
   Track Changes on without its command (the Reviewing toolbar then came with the first edit). Checked: Ctrl+PageUp and
   Ctrl+PageDown never reach a page in a Chrome tab (Chrome switches tabs), so they can't work after the tab's menu
   either; the arrow keys do (test).
+
+- 2026-10-13, found by the user in a headed Chromium: (1) Quire's diagrams (and any group's shapes) could not take
+  a caret: a click on "Level 2" put it at the start of the paragraph the diagram is in, and typing went there (there
+  since before this plan). The document index skipped groups' text boxes (`D.reindex` asked for the group's own `tb`,
+  which a group never has); now each shape's text in a group is a story, edited and saved. (2) The move cursor where a
+  drag moves: Quire's pictures, shapes and diagrams (their text keeps the text cursor; none in the part of the page
+  not being edited), and a selected Lectern group's or diagram's frame, whose edge (`.grp-ring`) now moves it as
+  the edit ring does. Tests: a diagram's labels take a caret (and save), the move cursor in Quire, a diagram's frame
+  in Lectern; each fails at `bec8055`.
 
 ## Decisions
 

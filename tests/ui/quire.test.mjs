@@ -417,6 +417,36 @@ test('Q16 tracked: Delete over the rows and the text below marks them deleted, a
   assert.deepEqual(await body(u), before);
 }));
 
+/** insert the Diagram Gallery's pyramid (Level 1, 2, 3) at the caret; its shapes on screen */
+const insertDiagram = async (u) => {
+  await u.evaluate(`L.ui.exec('insertDiagram')`); await pause(400);
+  await u.click(await u.evaluate(`(() => { const b = document.querySelector('.dlg [aria-label="Pyramid Diagram"]'); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`));
+  await u.click(await u.el('.dlg .dlg-foot .btn.primary')); await pause(700);
+  return u.evaluate(`[...document.querySelectorAll('#pages .shp.sgrp .shp')].map((e) => { const r = e.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2), l: Math.round(r.left), t: Math.round(r.top), text: e.textContent.trim() }; })`);
+};
+test('A diagram\'s labels take a caret: a click on "Level 2" and typing edit that label, and the edit is saved', () => inQuire(PARAS(['First paragraph.', 'Second paragraph.']), async (u) => {
+  await u.click(await atB(u, 0, 5));
+  const kids = await insertDiagram(u);
+  assert.deepEqual(kids.map((k) => k.text), ['Level 1', 'Level 2', 'Level 3'], 'setup: the pyramid');
+  const label = await u.evaluate(`(() => { const t = [...document.querySelectorAll('#pages .shp.sgrp .tbx .pc')].find((e) => e.textContent.includes('Level 2')); const r = t.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+  await u.click(label); await pause(200);
+  await u.key('End'); await u.type('Z');
+  const labels = () => u.evaluate(`[...document.querySelectorAll('#pages .shp.sgrp .shp')].map((e) => e.textContent.trim())`);
+  assert.deepEqual(await labels(), ['Level 1', 'Level 2Z', 'Level 3'], 'typing goes into the label');
+  assert.equal((await body(u))[0], 'First\ufffc paragraph.', 'and not into the paragraph the diagram is in');
+  const saved = await u.evaluate(`(async () => { const blob = await L.docx.write(L.D.doc); const d = await L.docx.read(await blob.arrayBuffer()); const g = (d.doc || d).main.blocks[0].runs.find((r) => r.t === 'group'); return L.D.groupTextboxes(g).map((tb) => tb.blocks.map((p) => L.D.ptext(p)).join('/')); })()`);
+  assert.deepEqual(saved, ['Level 1', 'Level 2Z', 'Level 3'], 'saved and read back');
+}));
+
+test('The move cursor over a picture, shape or diagram (a drag moves it), the text cursor over its text', () => inQuire(PARAS(['First paragraph.', 'Second paragraph.']), async (u) => {
+  await u.click(await atB(u, 0, 5));
+  const kids = await insertDiagram(u);
+  const cursorAt = (p) => u.evaluate(`getComputedStyle(document.elementFromPoint(${p.x}, ${p.y})).cursor`);
+  assert.equal(await cursorAt({ x: kids[2].l + 30, y: kids[2].t + 4 }), 'move', 'on a shape of the diagram');
+  const label = await u.evaluate(`(() => { const t = [...document.querySelectorAll('#pages .shp.sgrp .tbx .pc')].find((e) => e.textContent.includes('Level 3')); const r = t.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+  assert.equal(await cursorAt(label), 'text', 'on its text');
+}));
+
 test('Q17a with "Drag-and-drop text editing" off, a drag from selected text selects instead of moving', () => inQuire(PARAS(DND) + 'L.app.opts.dragDrop = false;', async (u) => {
   await u.drag(await atB(u, 0, 6), await atB(u, 0, 10), 4);    // "beta"
   await u.drag(await atB(u, 0, 7), await atB(u, 2, 6), 10);    // from inside it to "Third |paragraph."

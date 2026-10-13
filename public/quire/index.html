@@ -103,7 +103,7 @@
 .tb.lead-middleDot { background: radial-gradient(circle, currentColor 0.7px, transparent 1px) 0 -3px / 4px 4px repeat-x; height: 4px; }
 .lsp { display: inline; }
 .zw { display: inline; }
-.img { display: inline-block; position: relative; overflow: hidden; vertical-align: baseline; text-indent: 0; line-height: 0; cursor: default; }
+.img { display: inline-block; position: relative; overflow: hidden; vertical-align: baseline; text-indent: 0; line-height: 0; cursor: move; }
 .img img { display: block; user-select: none; -webkit-user-drag: none; }
 .img.missing { border: 1px solid #999; background: repeating-linear-gradient(45deg, #eee 0 6px, #ddd 6px 12px); font: 10px Arial, Arimo, sans-serif; color: #555; line-height: 1.2; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
 .nref { cursor: default; }
@@ -182,8 +182,11 @@ td.csel { background-image: linear-gradient(rgba(10,36,106,.3), rgba(10,36,106,.
 .shp svg.geo { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 .shp .tbx { position: absolute; overflow: hidden; }
 .shp .tbx.nowrap .pc { white-space: pre; }
-.shp { cursor: default; }
+/* a drag on a picture, shape or diagram moves it: the move cursor says so; its text takes a caret; in the part of the
+   page not being edited (the body while a header is, a header while the body is) a press does nothing */
+.shp { cursor: move; }
 .shp .tbx .pc { cursor: text; }
+#pages:not(.hfmode) :is(.pg-hdr, .pg-ftr) :is(.img, .shp), #pages.hfmode .pg-body :is(.img, .shp) { cursor: default; }
 .wa svg { overflow: visible; }
 .marquee, .draw-ghost { position: absolute; border: 1px dashed #000; pointer-events: none; z-index: 40; }
 /* comment balloons */

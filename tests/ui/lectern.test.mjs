@@ -303,6 +303,24 @@ test('After an edit on the slide, the thumbnail\'s star previews the transition 
   u.clean();
 }));
 
+test('A selected diagram\'s frame: its edge shows the move cursor, a click there keeps it selected and a drag moves it', () => lectern(async (u) => {
+  await setup(u, '');
+  await u.evaluate(`L.diagram.insert(L.smartart.LAYOUTS[0].id)`); await pause(400);
+  const id = await u.evaluate(`L.ed.slide().shapes[0].id`);
+  assert.equal(await u.evaluate(`L.ed.slide().shapes[0].type`), 'group', 'setup: the diagram, selected');
+  const geo0 = await geo(u, id);
+  const fr = await u.evaluate(`(() => { const r = document.querySelector('.sel-frame[data-sid="${id}"]').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 3), y: Math.round(r.top + 1), b: Math.round(r.bottom - 1) }; })()`);
+  assert.equal(await u.evaluate(`getComputedStyle(document.elementFromPoint(${fr.x}, ${fr.y})).cursor`), 'move', 'the top edge');
+  assert.equal(await u.evaluate(`getComputedStyle(document.elementFromPoint(${fr.x}, ${fr.b})).cursor`), 'move', 'the bottom edge');
+  await u.click({ x: fr.x, y: fr.y });
+  assert.deepEqual(await u.evaluate('L.ed.sel'), [id], 'a click on the edge keeps the diagram selected');
+  await u.drag({ x: fr.x, y: fr.y }, { x: fr.x + 60, y: fr.y + 30 }, 6);
+  const geo1 = await geo(u, id);
+  assert.ok(geo1[0] > geo0[0] && geo1[1] > geo0[1], 'a drag on the edge moves it');
+  assert.deepEqual(geo1.slice(2), geo0.slice(2), 'without resizing it');
+  u.clean();
+}));
+
 test('P4a In the Slides pane, Delete twice deletes two slides', () => lectern(async (u) => {
   await setup(u, '', 4);
   await u.click(await thumb(u, 0));

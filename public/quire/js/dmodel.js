@@ -640,7 +640,8 @@
     const tbStories = [];
     for (const st of allStories) {
       D.walk(st, (b) => {
-        if (b.t === 'p') for (const it of b.runs) if ((it.t === 'shape' || it.t === 'group') && it.tb) {
+        /* a shape's text box, or each of a group's (a diagram's shapes): a group has none of its own */
+        if (b.t === 'p') for (const it of b.runs) if ((it.t === 'shape' && it.tb) || it.t === 'group') {
           for (const tb of it.t === 'group' ? D.groupTextboxes(it) : [it.tb]) {
             tb.kind = 'tb';
             // Runtime back-reference, rebuilt on indexing. Keep it out of JSON
