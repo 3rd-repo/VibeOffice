@@ -100,7 +100,7 @@
       case 'upperLetter': return n > 0 ? String.fromCharCode(65 + ((n - 1) % 26)).repeat(Math.floor((n - 1) / 26) + 1) : '';
       case 'lowerLetter': return n > 0 ? String.fromCharCode(97 + ((n - 1) % 26)).repeat(Math.floor((n - 1) / 26) + 1) : '';
       case 'decimalZero': return n < 10 ? '0' + n : String(n);
-      case 'ordinal': { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+      case 'ordinal': return n + D.ordinalSuffix(n);
       case 'cardinalText': return D.numWords(n, false);
       case 'ordinalText': return D.numWords(n, true);
       case 'chicago': { const sy = ['*', '†', '‡', '§']; return sy[(n - 1) % 4].repeat(Math.floor((n - 1) / 4) + 1); }
@@ -115,6 +115,11 @@
   const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
   const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
   const ORD = { one: 'first', two: 'second', three: 'third', five: 'fifth', eight: 'eighth', nine: 'ninth', twelve: 'twelfth' };
+  /** English ordinal suffix: 1st, 2nd, 3rd, 4th, but 11th, 12th, 13th (and 111th …); th for 0 and below */
+  D.ordinalSuffix = (n) => {
+    if (!(n > 0) || [11, 12, 13].includes(n % 100)) return 'th';
+    return { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th';
+  };
   D.numWords = function (n, ordinal) {
     const w = (x) => {
       if (x < 20) return ONES[x];

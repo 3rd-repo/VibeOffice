@@ -609,3 +609,8 @@ test('PDF export draws a table as on screen: one line between cells, the columns
   assert.equal(r.lines.length, 3, `three lines across two cells (${r.lines}), not a box round each cell`);
   assert.ok(Math.abs(r.lines[1] - r.w[0]) <= 2 && Math.abs(r.lines[2] - r.w[0] - r.w[1]) <= 2, `the lines where the screen has them (${r.lines}; cells ${r.w})`);
 }));
+
+test('AutoCorrect while typing: a typo, a contraction without its apostrophe, i, a loanword and (c)', () => inQuire(PARAS(['']), async (u) => {
+  await u.type('so i dont think teh cafe is (c) ');
+  assert.equal(await u.evaluate('L.D.ptext(L.D.doc.main.blocks[0])'), "So I don't think the café is © ");
+}));

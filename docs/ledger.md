@@ -518,4 +518,4 @@ support for every formula or external data source.
 | `tests/ledger/` | The test harnesses described above (Node.js and Playwright) |
 
 Ledger is an independent program. Microsoft, Excel and Office are trademarks of Microsoft Corporation;
-Ledger is not affiliated with Microsoft.
+Ledger is not affiliated with Microsoft. More in the README (Legal).

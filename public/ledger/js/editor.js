@@ -253,7 +253,7 @@
           });
           return false;
         }
-        L.ui.msg('The formula you typed contains an error.\n\n• For information about fixing common formula problems, click Help.\n• To get assistance in entering a function, click OK, and then click Function on the Insert menu.\n• If you are not trying to enter a formula, avoid using an equal sign (=) or minus sign (-), or precede it with a single quotation mark (\').', { icon: 'warn', width: 440 }).then(() => {
+        L.ui.msg('The formula you typed contains an error.\n\n• To get assistance in entering a function, click OK, and then click Function on the Insert menu.\n• If you are not trying to enter a formula, avoid using an equal sign (=) or minus sign (-), or precede it with a single quotation mark (\').', { icon: 'warn', width: 440 }).then(() => {
           surface.focus();
           if (chk.pos != null) { const p = Math.min(surface.value.length, chk.pos + 1); try { surface.setSelectionRange(p, p); } catch (e) { /* ignore */ } }
         });

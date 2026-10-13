@@ -398,4 +398,4 @@ compatibility results are archived with the run history rather than mixed into c
 | `../common/scout/` | Scout, the assistant: Help ▸ Show the Assistant ([suite.md](suite.md#the-assistant-scout)) |
 
 Quire is an independent program. Microsoft, Word and Office are trademarks of Microsoft Corporation;
-Quire is not affiliated with Microsoft.
+Quire is not affiliated with Microsoft. More in the README (Legal).

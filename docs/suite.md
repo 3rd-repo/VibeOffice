@@ -60,7 +60,7 @@ Each app owns its templates; the Start Center only shows them.
 |---|---|---|
 | Quire | `quire/js/templates.js` (`L.templates`, also File ▸ New) | Contemporary Letter, Professional Memo, Elegant Fax, Contemporary Résumé, Professional Report, Meeting Agenda, Meeting Minutes, To-Do Checklist, Event Flyer, Recipe |
 | Ledger | `ledger/js/panes.js` (`TPL`, also the New Workbook task pane) | Loan Amortization, Expense Statement, Sales Invoice, Timecard, Personal Monthly Budget, Task Tracker, Shopping List, Weekly Schedule |
-| Lectern | `lectern/js/templates.js` (`L.templates`): content decks, each on one of the 14 designs | Project Status Report, Team Meeting, Lesson, Event Announcement |
+| Lectern | `lectern/js/templates.js` (`L.templates`): content decks, each on one of the 15 designs | Project Status Report, Team Meeting, Lesson, Event Announcement |
 
 Inside the apps, File ▸ New… (and Ctrl+N) shows the same gallery, Blank first, with the same previews: `VO.newDialog(app, create)` builds it in the app's own dialog (`L.ui.dialog`) from `common/templates.json`, and `create(id)` makes the document in that app (`''` is Blank). The New toolbar button still makes a blank document straight away, as in Office.
 

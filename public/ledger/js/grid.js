@@ -108,7 +108,8 @@
     const rowsVis = Math.max(1, fr.panes.length ? fr.panes[fr.panes.length - 1].rEnd - fr.sR : 1);
     const colsVis = Math.max(1, fr.panes.length ? fr.panes[fr.panes.length - 1].cEnd - fr.sC : 1);
     const vs = G.vs(sh);
-    /* the range of LibreOffice Calc (lcl_GetScrollRange in sc/source/ui/view/tabview4.cxx), which is Excel's too:
+    /* Derived from Apache OpenOffice main/sc/source/ui/view/tabview4.cxx, lcl_GetScrollRange (Apache License 2.0;
+       OpenOffice.org's from before LibreOffice's fork, unchanged there but for types), which is Excel's range too:
        the used area or the window's bottom, whichever is further, plus one window (a part-shown row counts),
        starting at the first row (column) below (right of) frozen panes; a blank sheet gets a half-size box */
     const range = (used, pos, vis, max) => Math.min(max, Math.max(used, pos + vis) + vis);
