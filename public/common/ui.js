@@ -142,6 +142,7 @@
       ui.closeMenus();
       if (it.run) it.run();
       else if (it.cmd) ui.exec(it.cmd, it.arg);
+      if (!ui.dialogOpen() && keyboardLost()) ui.hooks.refocus();
     }
     el._keys = (e) => {
       const idx = rows.indexOf(active);
@@ -183,7 +184,20 @@
     }, true);
     window.addEventListener('blur', () => ui.closeMenus());
     window.addEventListener('resize', () => ui.closeMenus());
+    /* The keyboard stays with the document when chrome is pressed: a toolbar's, the ribbon's or a pane's background, a
+       grip, the status bar, a tab strip, a menu, the menu bar or a button outside a dialog. The browser would give it
+       to <body> or to what was pressed, and the arrows, Delete and typing would stop working on the document until it
+       is clicked. A control of its own (a box, a list, the document itself, anything in a dialog) still takes it. */
+    document.addEventListener('mousedown', (e) => {
+      const t = e.target;
+      if (!t || !t.closest || t.closest('.dlg')) return;
+      const f = t.closest('input, select, textarea, [contenteditable=""], [contenteditable="true"], a[href], label, [tabindex], button');
+      if (f && !f.matches('button, .menu, .mb-item')) return;
+      e.preventDefault();
+    }, true);
   }
+  /** after chrome that took the keyboard is done with it (a menu command, a dialog), the document gets it back */
+  const keyboardLost = () => !document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected;
   ui.menuOpen = () => openStack.length > 0;
   /* menu keyboard routing; returns true if handled */
   ui.menuKey = (e) => {
@@ -419,7 +433,11 @@
       overlay.remove();
       if (opts.onClose) opts.onClose(i);
       result(i);
-      if (prevFocus && prevFocus.focus && document.contains(prevFocus)) { try { prevFocus.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+      /* the keyboard goes back to what had it (a box, a pane's list, the dialog under this one, the grid), except text
+         being edited, which the app gives back with its selection (the page's own moved into the dialog), and nothing
+         (<body>, a menu gone), which goes to the document */
+      const back = prevFocus && prevFocus.isConnected && prevFocus !== document.body && !prevFocus.isContentEditable;
+      if (back) { try { prevFocus.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
       else ui.hooks.refocus();
     }
     setTimeout(() => {
@@ -754,9 +772,11 @@
    *   longer held ('lost': it was let go where the page couldn't see), a lost capture or pointercancel ('lost'), the
    *   window losing focus or the page hidden ('blur'), Ctrl+Z or Ctrl+Y ('undo': the drag is what gets undone), a new
    *   drag ('new'), ui.dragCancel() ('api': a tool or view switch). A tool stays armed unless why is 'esc'; Esc also
-   *   puts a brush down (ui.brush).
-   * - While it moves, the cursor shown at the press stays wherever the pointer goes (`cursor` sets another one).
-   * Text selection drags are the browser's own and don't go through here. */
+   *   puts a brush down (ui.brush). Other keys go nowhere while the button is held, except the modifiers.
+   * - While it moves, the cursor shown at the press stays wherever the pointer goes (`cursor` sets another one;
+   *   false: none is held).
+   * A text selection is the browser's own drag; an app may watch it with { capture: false, cursor: false } (Quire
+   * does, so its release, or how it ended otherwise, is known the same way). */
   let liveDrag = null, swallow = null, cursorStyle = null;
   /** the events of the button that cancelled a drag go no further: its press, release, auxclick and context menu */
   const swallowButton = (button) => { swallow = { button, until: Date.now() + 1500, seen: new Set() }; };
@@ -771,7 +791,7 @@
     const id = e.pointerId, threshold = o.threshold == null ? 4 : o.threshold;
     const cap = o.capture === false ? null : o.capture || e.target;
     let cursor = o.cursor || null;
-    if (!cursor) { try { const c = getComputedStyle(e.target).cursor; if (c && c !== 'auto') cursor = c; } catch (err) { /* no cursor kept */ } }
+    if (!cursor && o.cursor !== false) { try { const c = getComputedStyle(e.target).cursor; if (c && c !== 'auto') cursor = c; } catch (err) { /* no cursor kept */ } }
     try { if (cap && id != null && cap.setPointerCapture) cap.setPointerCapture(id); } catch (err) { /* window listeners still follow */ }
     const on = (t, type, fn, capture) => { t.addEventListener(type, fn, capture); return () => t.removeEventListener(type, fn, capture); };
     const second = (button) => { swallowButton(button); end(false, null, 'button'); };
@@ -788,12 +808,14 @@
       }, true),
       on(window, 'pointerup', (ev) => { if ((id == null || ev.pointerId === id) && ev.button === 0) end(true, ev); }, true),
       on(window, 'keydown', (ev) => {
-        /* Ctrl+Z (or Y) in the middle of a drag undoes the drag, not what came before it */
-        if ((ev.ctrlKey || ev.metaKey) && /^[zy]$/i.test(ev.key)) { ev.preventDefault(); ev.stopImmediatePropagation(); end(false, null, 'undo'); return; }
-        if (ev.key !== 'Escape') return;
+        /* the modifiers shape the drag (Shift constrains it, Ctrl copies, Alt doesn't snap) */
+        if (/^(Shift|Control|Alt|Meta|AltGraph|CapsLock)$/.test(ev.key)) return;
         ev.preventDefault(); ev.stopImmediatePropagation();
-        end(false, null, 'esc');
-        if (liveBrush) liveBrush.stop();
+        /* Ctrl+Z (or Y) in the middle of a drag undoes the drag, not what came before it */
+        if ((ev.ctrlKey || ev.metaKey) && /^[zy]$/i.test(ev.key)) { end(false, null, 'undo'); return; }
+        if (ev.key === 'Escape') { end(false, null, 'esc'); if (liveBrush) liveBrush.stop(); }
+        /* any other key waits for the release: an edit in the middle of a drag would come between its start and the
+           step it records */
       }, true),
       on(window, 'pointercancel', () => end(false, null, 'lost'), true),
       on(window, 'blur', () => end(false, null, 'blur')),

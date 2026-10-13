@@ -909,8 +909,17 @@
   };
 
   /* ================= headers & footers ================= */
-  A.editHeaderFooter = function (kind, pageIdx) {
+  /** the caret at a point of the page, when that point is in story (or, without a story, in the body) */
+  const caretAt = (ev, story) => {
+    const pos = ev && E.posAtPoint(ev.clientX, ev.clientY);
+    return pos && D.storyOf(doc(), pos.p) === (story || doc().main) ? pos : null;
+  };
+  /** open the header or footer of kind on page pageIdx (the caret's page); ev, the double-click that opened it:
+      the view stays, and the caret goes where it was double-clicked. The body's selection is kept for the way back. */
+  A.editHeaderFooter = function (kind, pageIdx, ev) {
     if (A.view !== 'print') A.setView('print');
+    if (!LY.hfEdit && E.sel && D.storyOf(doc(), E.sel.f.p) === doc().main) hfReturn = { a: E.sel.a, f: E.sel.f };
+    const top = LY.scroller.scrollTop;
     const pg = LY.pages[pageIdx == null ? Math.max(0, LY.pageOf(E.sel.f)) : pageIdx] || LY.pages[0];
     const d = doc();
     const secs = D.sections(d);
@@ -939,8 +948,10 @@
     LY.render();
     labelHF();
     D.reindex(d);
+    if (ev) LY.scroller.scrollTop = top;
     const p = story && story.paras && story.paras[0] ? story.paras[0] : story && D.firstPara(story.blocks);
-    if (p) E.setSel(D.pos(p, 0));
+    const at = caretAt(ev, story);
+    if (at) E.setSel(at); else if (p) E.setSel(D.pos(p, 0));
     A.updateToolbars();
     ui.refresh();
   };
@@ -958,22 +969,29 @@
     }
   }
   L.bus.on('layout-done', () => { if (LY.hfEdit) labelHF(); });
-  A.closeHeaderFooter = function (silent) {
+  /** back to the body: the caret where ev (a double-click on the body) was, else where it was before the header */
+  let hfReturn = null;
+  A.closeHeaderFooter = function (silent, ev) {
     LY.hfEdit = null;
     LY.root.classList.remove('hfmode');
     if (!silent) {
+      const top = LY.scroller.scrollTop;
       LY.render();
-      const p = D.firstPara(doc().main.blocks);
-      const pg = LY.pages[0];
-      void pg;
-      E.setSel(D.pos(p, 0));
+      LY.scroller.scrollTop = top;
+      const back = hfReturn && D.byId(doc(), hfReturn.a.p.id) === hfReturn.a.p && D.byId(doc(), hfReturn.f.p.id) === hfReturn.f.p ? hfReturn : null;
+      const at = caretAt(ev);
+      if (at) E.setSel(at);
+      else if (back) E.setSel(back.a, back.f);
+      else E.setSel(D.pos(D.firstPara(doc().main.blocks), 0));
     }
+    hfReturn = null;
     A.updateToolbars();
   };
 
   /* ================= misc helpers used by commands ================= */
   /** select pos (to sel2) and show it; opts.focus false: a modeless dialog (Find and Replace) keeps the keyboard */
   A.gotoPos = function (pos, sel2, opts) {
+    E.clearObjSel();   /* the text found or gone to is the selection now, not a shape selected before */
     if (opts && opts.focus === false) {
       E.setSel(pos, sel2 || pos, { noDom: true });
       /* an edit just before (Replace) left the page's own selection behind: it would show, and typing would go there */
@@ -1014,6 +1032,7 @@
   };
   A.contextMenu = function (e) {
     e.preventDefault();
+    if (!E.objSel) E.syncSel();   /* the press moved the caret, but 'selectionchange' comes after this */
     const inTable = L.tables && L.tables.inTable();
     const items = ['cut', 'copy', 'paste', '-'];
     if (E.objSel) items.push({ label: 'Text W&rapping', sub: () => A.wrapItems() }, 'formatObject', '-');

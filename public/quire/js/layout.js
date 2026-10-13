@@ -1414,7 +1414,9 @@
   };
   /** choose the fragment for (p,o): prefer one where from <= o < to, else the one ending at o */
   LY.fragFor = function (p, o, scope) {
-    const fr = LY.frags(p.id, scope);
+    let fr = LY.frags(p.id, scope);
+    /* a header or footer is drawn on every page: while one is edited, the page it is edited on */
+    if (!scope && fr.length > 1 && LY.hfEdit) { const pg = LY.pages[LY.hfEdit.page], mine = pg ? fr.filter((f) => pg.el.contains(f)) : []; if (mine.length) fr = mine; }
     if (!fr.length) return null;
     let best = null;
     for (const f of fr) {

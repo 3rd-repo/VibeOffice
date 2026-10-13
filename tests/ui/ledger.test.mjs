@@ -49,7 +49,7 @@ const wheel = async (u, p, dx, dy) => { await u.send('Input.dispatchMouseEvent',
 const where = async (u, ref) => { const p = await pt(u, ref); return { x: p.x, y: p.y }; };
 
 /* ---------------------------------------------------------------- S1: point mode in Edit mode */
-test('S1a After F2, a click on a cell where the formula expects an operand inserts its reference', { todo: 'Phase 4' }, async () => {
+test('S1a After F2, a click on a cell where the formula expects an operand inserts its reference', async () => {
   const u = await ledger();
   try {
     await enter(u, 'A1', '=1');
@@ -64,7 +64,7 @@ test('S1a After F2, a click on a cell where the formula expects an operand inser
   } finally { await u.close(); }
 });
 
-test('S1b After a double-click, dragging over cells in a formula inserts the range', { todo: 'Phase 4' }, async () => {
+test('S1b After a double-click, dragging over cells in a formula inserts the range', async () => {
   const u = await ledger();
   try {
     await u.dblclick(await pt(u, 'B5'));
@@ -78,7 +78,7 @@ test('S1b After a double-click, dragging over cells in a formula inserts the ran
   } finally { await u.close(); }
 });
 
-test('S1c Typing = in the formula bar and clicking a cell inserts its reference', { todo: 'Phase 4' }, async () => {
+test('S1c Typing = in the formula bar and clicking a cell inserts its reference', async () => {
   const u = await ledger();
   try {
     await u.click(await pt(u, 'D6'));
@@ -94,7 +94,7 @@ test('S1c Typing = in the formula bar and clicking a cell inserts its reference'
 });
 
 /* ---------------------------------------------------------------- S2: Shift+Arrow grows from the active cell */
-test('S2a Shift+Arrow extends from the active cell after the keyboard moved it', { todo: 'Phase 4' }, async () => {
+test('S2a Shift+Arrow extends from the active cell after the keyboard moved it', async () => {
   const u = await ledger();
   try {
     await u.click(await pt(u, 'A1'));
@@ -108,7 +108,7 @@ test('S2a Shift+Arrow extends from the active cell after the keyboard moved it',
   } finally { await u.close(); }
 });
 
-test('S2b Shift+Arrow extends from a clicked cell, not from where an earlier drag ended', { todo: 'Phase 4' }, async () => {
+test('S2b Shift+Arrow extends from a clicked cell, not from where an earlier drag ended', async () => {
   const u = await ledger();
   try {
     await u.drag(await pt(u, 'B2'), await pt(u, 'D5'), 6);
@@ -119,7 +119,7 @@ test('S2b Shift+Arrow extends from a clicked cell, not from where an earlier dra
   } finally { await u.close(); }
 });
 
-test('S2c Shift+Right after a click on a column header adds the next column', { todo: 'Phase 4' }, async () => {
+test('S2c Shift+Right after a click on a column header adds the next column', async () => {
   const u = await ledger();
   try {
     await u.drag(await pt(u, 'B2'), await pt(u, 'D5'), 6);
@@ -129,6 +129,29 @@ test('S2c Shift+Right after a click on a column header adds the next column', { 
     u.clean();
   } finally { await u.close(); }
 });
+
+/* ---------------------------------------------------------------- R4: a cell selected while a shape is */
+for (const [id, how, go] of [
+  ['R4a', 'Go To', async (u) => { await u.key('g', { ctrl: true }); await pause(300); await u.type('D5'); await u.key('Enter'); }],
+  ['R4b', 'Find Next', async (u) => { await u.key('f', { ctrl: true }); await pause(300); await u.type('needle'); await u.key('Enter'); await pause(200); await u.esc(); }],
+]) {
+  test(`${id} With a shape selected, ${how} selects the cell, and Delete clears the cell, not the shape`, async () => {
+    const u = await ledger();
+    try {
+      await enter(u, 'D5', 'needle');
+      await drawRect(u, 'G3', 'I8');
+      assert.equal((await shape(u)).selected, true, 'the new shape is selected');
+      await go(u);
+      await pause(300);
+      assert.equal((await selection(u)).active, 'D5');
+      assert.equal((await shape(u)).selected, false, 'the shape is no longer selected');
+      await u.key('Delete');
+      assert.equal(await text(u, 'D5'), '', 'Delete cleared D5');
+      assert.equal(await u.evaluate('L.grid.sheet().drawings.length'), 1, 'the shape is still there');
+      u.clean();
+    } finally { await u.close(); }
+  });
+}
 
 /* ---------------------------------------------------------------- S3: formula bar, then back into the cell */
 test('S3 Typing in the cell after a visit to the formula bar is kept', async () => {
@@ -150,7 +173,7 @@ test('S3 Typing in the cell after a visit to the formula bar is kept', async () 
 });
 
 /* ---------------------------------------------------------------- S4: a shape's text, then a cell */
-test('S4 After editing a shape\'s text, a click on a cell selects the cell and typing goes there', { todo: 'Phase 4' }, async () => {
+test('S4 After editing a shape\'s text, a click on a cell selects the cell and typing goes there', async () => {
   const u = await ledger();
   try {
     await drawRect(u, 'E5', 'G10');
@@ -167,7 +190,7 @@ test('S4 After editing a shape\'s text, a click on a cell selects the cell and t
 });
 
 /* ---------------------------------------------------------------- S5: the selection never leaves the cell being edited */
-test('S5a A right-click on another cell while typing enters the typing first, as a click does', { todo: 'Phase 4' }, async () => {
+test('S5a A right-click on another cell while typing enters the typing first, as a click does', async () => {
   const u = await ledger();
   try {
     await u.click(await pt(u, 'A1'));
@@ -181,7 +204,7 @@ test('S5a A right-click on another cell while typing enters the typing first, as
   } finally { await u.close(); }
 });
 
-test('S5b Going to a cell with the Name Box while typing enters the typing first', { todo: 'Phase 4' }, async () => {
+test('S5b Going to a cell with the Name Box while typing enters the typing first', async () => {
   const u = await ledger();
   try {
     await u.click(await pt(u, 'A2'));
@@ -197,7 +220,7 @@ test('S5b Going to a cell with the Name Box while typing enters the typing first
 });
 
 /* ---------------------------------------------------------------- S6: a reference to another sheet */
-test('S6 Enter after pointing at another sheet goes back to the formula\'s sheet', { todo: 'Phase 4' }, async () => {
+test('S6 Enter after pointing at another sheet goes back to the formula\'s sheet', async () => {
   const u = await ledger();
   try {
     await u.click(await pt(u, 'A1'));
@@ -260,7 +283,7 @@ test('Esc while an AutoShape is dragged out draws nothing and ends the tool; the
 });
 
 /* ---------------------------------------------------------------- S8: rename a sheet in its tab */
-test('S8 A double-click on a sheet tab renames it in place', { todo: 'Phase 4' }, async () => {
+test('S8 A double-click on a sheet tab renames it in place', async () => {
   const u = await ledger();
   try {
     await u.dblclick(await tab(u, 'Sheet2'));
@@ -274,7 +297,7 @@ test('S8 A double-click on a sheet tab renames it in place', { todo: 'Phase 4' }
 
 /* ---------------------------------------------------------------- S9: header drags that auto-scroll */
 for (const [id, what, from, edge, axis] of [['S9a', 'column', 'C1', 'right', 'c'], ['S9b', 'row', 'A3', 'bottom', 'r']]) {
-  test(`${id} Holding a ${what}-header drag past the ${edge} edge selects the ${what}s it scrolls to`, { todo: 'Phase 5' }, async () => {
+  test(`${id} Holding a ${what}-header drag past the ${edge} edge selects the ${what}s it scrolls to`, async () => {
     const u = await ledger();
     try {
       const geo = await u.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), f = L.grid.frame(), m = f.panes[f.panes.length - 1];
@@ -298,7 +321,7 @@ for (const [id, what, from, edge, axis] of [['S9a', 'column', 'C1', 'right', 'c'
 }
 
 /* ---------------------------------------------------------------- S10: Pick From List with the keyboard */
-test('S10a Alt+Down, then the arrow keys and Enter, enter an entry from the list', { todo: 'Phase 4' }, async () => {
+test('S10a Alt+Down, then the arrow keys and Enter, enter an entry from the list', async () => {
   const u = await ledger();
   try {
     for (const [ref, v] of [['A1', 'apple'], ['A2', 'banana'], ['A3', 'cherry']]) await enter(u, ref, v);
@@ -314,7 +337,7 @@ test('S10a Alt+Down, then the arrow keys and Enter, enter an entry from the list
   } finally { await u.close(); }
 });
 
-test('S10b Esc closes the Alt+Down list and leaves the cell as it was', { todo: 'Phase 4' }, async () => {
+test('S10b Esc closes the Alt+Down list and leaves the cell as it was', async () => {
   const u = await ledger();
   try {
     for (const [ref, v] of [['A1', 'apple'], ['A2', 'banana']]) await enter(u, ref, v);
@@ -334,7 +357,7 @@ for (const [id, what, where0] of [
   ['S11c', 'a toolbar\'s background', (u) => blank(u, '#tb-formatting')],
   ['S11d', 'a sheet-tab scroll arrow', (u) => u.el('#tabnav button')],
 ]) {
-  test(`${id} After a click on ${what}, the arrow keys and Delete still work on the sheet`, { todo: 'Phase 3' }, async () => {
+  test(`${id} After a click on ${what}, the arrow keys and Delete still work on the sheet`, async () => {
     const u = await ledger();
     try {
       await enter(u, 'C4', 'data');
@@ -400,8 +423,28 @@ test('S12c A shape move whose release was lost is cancelled, not dropped by the 
   } finally { await u.close(); }
 });
 
+test('An edit recorded in the middle of a shape move ends the move first: the move records nothing', async () => {
+  const u = await ledger();
+  try {
+    await drawRect(u, 'E5', 'G10');
+    const s0 = await shape(u), to = { x: s0.x + 60, y: s0.y + 40 };
+    await u.press(s0);
+    await u.glide(s0, to, 4);
+    await u.evaluate(`L.ops.tx(L.grid.wb, 'Typing', () => L.ops.enter(L.grid.sheet(), 0, 0, 'x'))`);   // an edit from outside the drag
+    await u.glide(to, { x: to.x + 20, y: to.y }, 2);
+    await u.release({ x: to.x + 20, y: to.y });
+    const s1 = await shape(u);
+    assert.deepEqual([s1.l, s1.t], [s0.l, s0.t], 'the shape stays where it was');
+    await u.key('z', { ctrl: true });
+    assert.equal(await text(u, 'A1'), '', 'one Undo takes back the edit');
+    const s2 = await shape(u);
+    assert.deepEqual([s2.l, s2.t], [s0.l, s0.t], 'and the shape is still where it was');
+    u.clean();
+  } finally { await u.close(); }
+});
+
 /* ---------------------------------------------------------------- S13: frozen panes */
-test('S13a A drag within the frozen rows does not scroll the rows below them', { todo: 'Phase 5' }, async () => {
+test('S13a A drag within the frozen rows does not scroll the rows below them', async () => {
   const u = await ledger();
   try {
     await u.click(await pt(u, 'C3'));
@@ -421,7 +464,7 @@ test('S13a A drag within the frozen rows does not scroll the rows below them', {
   } finally { await u.close(); }
 });
 
-test('S13b A drag within the frozen columns does not scroll the columns beside them', { todo: 'Phase 5' }, async () => {
+test('S13b A drag within the frozen columns does not scroll the columns beside them', async () => {
   const u = await ledger();
   try {
     await u.click(await pt(u, 'C3'));
@@ -443,7 +486,7 @@ test('S13b A drag within the frozen columns does not scroll the columns beside t
 });
 
 /* ---------------------------------------------------------------- S14 */
-test('S14a Holding the button down on a hyperlink selects the cell without following the link', { todo: 'Phase 5' }, async () => {
+test('S14a Holding the button down on a hyperlink selects the cell without following the link', async () => {
   const u = await ledger();
   try {
     // a link from A1 to Sheet3!B2 (Insert ▸ Hyperlink, Place in This Document)
@@ -459,7 +502,7 @@ test('S14a Holding the button down on a hyperlink selects the cell without follo
   } finally { await u.close(); }
 });
 
-test('S14b Shift+click while pointing in a formula extends the reference to a range', { todo: 'Phase 4' }, async () => {
+test('S14b Shift+click while pointing in a formula extends the reference to a range', async () => {
   const u = await ledger();
   try {
     await u.click(await pt(u, 'A10'));

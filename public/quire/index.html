@@ -176,6 +176,7 @@ td.csel { background-image: linear-gradient(rgba(10,36,106,.3), rgba(10,36,106,.
 .oh-sw { left: 0; top: 100%; cursor: nesw-resize; } .oh-w { left: 0; top: 50%; cursor: ew-resize; }
 .oh-rot { left: 50%; top: -18px; background: #3dd13d; border-color: #1a6b1a; border-radius: 50%; cursor: grab; }
 .resize-ghost { position: absolute; left: 0; top: 0; border: 1px dashed #000; pointer-events: none; }
+.drop-caret { position: absolute; width: 0; border-left: 2px dotted #000; pointer-events: none; z-index: 31; }
 .flt { position: absolute; }
 .flt.sel-obj { outline: 1px solid rgba(0,0,0,.6); }
 .shp svg.geo { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
@@ -299,6 +300,7 @@ td.csel { background-image: linear-gradient(rgba(10,36,106,.3), rgba(10,36,106,.
 .scroller.selobj .pg-body, .scroller.selobj .pc { cursor: default !important; }
 .scroller.painting .pages, .scroller.painting .pc { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='20'%3E%3Cpath d='M6 1v12' stroke='%23000'/%3E%3Cpath d='M4 1h4M4 13h4' stroke='%23000'/%3E%3Crect x='9' y='12' width='6' height='3' fill='%23f5c842' stroke='%23000'/%3E%3Crect x='11' y='15' width='2' height='4' fill='%238b5a2b'/%3E%3C/svg%3E") 6 8, text !important; }
 .pages.readonly .pc { caret-color: transparent; }
+.pages.objsel, .pages.objsel .pc { caret-color: transparent; } /* a floating object selected: the caret at its anchor is not shown */
 .pages.hidebody .pg-body { visibility: hidden; }
 .pages.hyphens .pc { hyphens: auto; -webkit-hyphens: auto; }
 .pages.with-balloons { padding-right: 230px; }

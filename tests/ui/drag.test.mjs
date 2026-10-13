@@ -72,6 +72,10 @@ for (const app of ['quire', 'ledger', 'lectern']) {
         await t.evaluate(`document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.key === 'z') __drag.push('ctrl-z'); })`);
         assert.deepEqual(await gesture(async () => { await t.press(A); await t.glide(A, B); await t.key('z', { ctrl: true }); await t.release(B); }), ['move', 'cancel:undo']);
       });
+      await s.test('other keys wait while the button is held: an arrow key goes no further, the drag goes on', async () => {
+        await t.evaluate(`document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') __drag.push('arrow'); })`);
+        assert.deepEqual(await gesture(async () => { await t.press(A); await t.glide(A, B); await t.key('ArrowRight'); await t.glide(B, A, 3); await t.release(A); }), ['move', 'up:true']);
+      });
       await s.test('after a middle-button cancel, a right-click opens its menu at once', async () => {
         assert.deepEqual(await gesture(async () => {
           await t.press(A); await t.glide(A, B);

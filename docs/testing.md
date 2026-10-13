@@ -52,12 +52,23 @@ Classic must not change when only the theme machinery changes: compare screensho
 paced like a hand (`tests/lib/input.mjs`), because synthetic DOM events hide what an app does in the middle of a drag.
 The helper starts the static server, and a headless Chromium (profile `tmp/chromium-profile`, left running) when
 nothing listens on CDP 127.0.0.1:9222. One file at a time (`--test-concurrency=1`): some tests move the focus to
-another tab and back.
+another tab and back. Two runs at once each need a Chromium of their own: `CDP=http://127.0.0.1:9223` starts one there
+(profile `tmp/chromium-profile-9223`), so neither takes the other's focus.
 
 - `drag.test.mjs`: `ui.drag` itself, on a pad in each app's page: a click and a wobble move nothing, Esc, Ctrl+Z, a
   second button, a release the page never saw, a release in another tab and `ui.dragCancel()` cancel, and the key, the
   button and its menu go no further (a right-click right after a middle-button cancel still opens its menu); the
   press's cursor stays.
+- `gestures.test.mjs`: drags in each app (a floating shape in Quire, a shape and the fill handle in Ledger, moving and
+  resizing a shape in Lectern) run through the lists in `tests/lib/gestures.mjs`: each state it starts from (nothing,
+  text or a range selected, the shape selected, text being edited), each key in the middle (an arrow, a letter,
+  Delete, Ctrl+Z) and each way out (the release, Esc, a right-click, a release the page never saw, a release in
+  another tab). After any of them no drag is left and no cursor held; the release made one undo step that brings back
+  exactly what was there, any other ending changed and recorded nothing. A new drag adds its `matrix(…)` there.
+- `focus.test.mjs`: the keyboard back to the document, in each app and in the Classic and Paper 2016 looks: dialogs
+  from a shortcut, a toolbar or ribbon button and the context menu, closed with Esc, Cancel and OK; menu-bar commands;
+  the ribbon's tabs; presses on chrome without a control (toolbars, grips, the status bar, the ribbon's tab strip).
+  After each, the element that had the keyboard has it again, with the same selection.
 - `painter.test.mjs`: the Format Painter in each app (docs/suite.md, Brushes): it paints the dragged text, cells or
   object once the mouse is let go, a clicked word; a double-clicked painter stays on until Esc; links stay; in Lectern
   the text being edited stays edited, and text in another box can be painted.

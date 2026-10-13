@@ -733,6 +733,9 @@
   H.restore = (snap) => { Object.assign(L.pres, JSON.parse(snap)); };
   /** Record state before a mutation. coalesceKey merges rapid repeats (typing). */
   H.push = (label, coalesceKey) => {
+    /* an edit made while a drag is live (one the keys held back didn't stop) ends that drag first: the drag put back
+       what it moved, so this step's snapshot and the drag's own never interleave */
+    if (L.ui && L.ui.dragging && L.ui.dragging()) L.ui.dragCancel();
     const now = Date.now();
     if (coalesceKey && H._key === coalesceKey && now - H._t < 1200) { H._t = now; H.dirty = true; return; }
     H._key = coalesceKey || null; H._t = now;

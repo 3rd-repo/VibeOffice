@@ -106,9 +106,26 @@ splitter) is a `ui.drag(e, { move, up, cancel, threshold, capture })` from `ui.j
 4 px, so a click that never moved changes nothing; `up` on the release; `cancel(d, why)` instead, with nothing
 committed, on Esc (which also ends the tool and puts a brush down), Ctrl+Z or Ctrl+Y (the drag is what gets undone), a
 second button (its menu doesn't open), a release the page never saw, a lost capture, the window losing focus or
-`ui.dragCancel()` (a tool, view, sheet, slide or zoom switch); a tool stays armed after the other cancels. The cursor
-of the press stays while the pointer moves. The browser's own text-selection drags stay its own
-(`tests/ui/drag.test.mjs`; todos/UI_MOUSE_LOGIC_IMPROVE.md).
+`ui.dragCancel()` (a tool, view, sheet, slide or zoom switch); a tool stays armed after the other cancels. Other keys
+go nowhere while the button is held (the modifiers still shape the drag), and each app's history push (Quire `D.tx`,
+Ledger `O.tx`, Lectern `L.hist.push`) cancels a live drag before it records, so no edit comes between a drag's start
+and its step. The cursor of the press stays while the pointer moves (`cursor: false` holds none). The browser's own
+text-selection drags stay its own; Quire watches its text selections with a `ui.drag` that holds nothing
+(`{ capture: false, cursor: false }`), so a selection let go in another window or cut short by Esc or a second button
+ends without `'sel-done'` (`tests/ui/drag.test.mjs`, `tests/ui/gestures.test.mjs`; todos/UI_MOUSE_LOGIC_IMPROVE.md).
+
+**Selections.** Each app has one setter for its selection, and it ends the other kinds: Quire's `E.setSel` ends an
+object selection (`E.selectObject` is the one way into one, `E.clearObjSel` the one way out), Ledger's `G.select`,
+`G.selectRange` and `G.selectAll` end a drawing object's, Lectern's `E.select` ends text editing and a range of table
+cells. Lectern's `E.endInteraction()` ends what is under way on the slide (a drag, a freeform, a cell range) on a tool
+switch, another slide and undo.
+
+**Focus.** The keyboard stays with the document unless the user picks a control of its own. A press on chrome with
+none (a toolbar's, the ribbon's or a pane's background, a grip, the status bar, a tab strip), on a menu, the menu bar
+or a button outside a dialog keeps it where it is (one `mousedown` listener in `ui.js`). A dialog closing gives it back
+to what had it, except text being edited, which the app's `ui.hooks.refocus()` gives back with its selection (Quire
+`E.refocus`, Lectern the text at `L.te.lastSel`, the slide or the Slides pane); a menu command that leaves it nowhere
+calls `refocus()` too (`tests/ui/focus.test.mjs`).
 
 **Brushes.** The Format Painter of each app, and Quire's highlighter, is a `ui.brush({ el, pick, apply, hint, status })`: a click on its button arms it for one use or puts it down, a double-click keeps it on, Esc puts it down, and one brush is on at a time. Arming it changes nothing else: the selection and the text being edited stay. It paints once, when the mouse is let go, never while a selection is still being dragged out: the app calls `brush.release()` then (Quire on the editor's `sel-done`, Ledger at the end of a cell drag, Lectern at pointer up in the slide editor) and its `apply` paints what was marked. What the apps paint follows Office and LibreOffice's Clone Formatting (Writer, Calc, Impress): a click inside a word paints the word; Ledger tiles the source range over a larger target; Lectern carries the text's formatting from text being edited and the whole object's otherwise, paints the text dragged over in any box and the whole object when the press is beside its text, and a click beside the objects puts even a kept-on painter down. The painted formatting replaces the target's own; links, fields and revision marks stay (`tests/ui/painter.test.mjs`).
 

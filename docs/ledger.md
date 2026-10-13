@@ -48,7 +48,8 @@ and destinations beyond the ordinary selection probe, before making any changes.
 
 **Entering data.** Excel's own input rules: numbers, percentages, currency, fractions (`1 1/2`),
 dates and times in the usual short forms, a leading apostrophe for text, formulas with point mode
-(click or use the arrow keys to insert references, F4 to cycle `$`), colour-coded reference highlights,
+(click or use the arrow keys to insert references, also after F2 wherever the formula expects one; Shift+click
+extends the last one; F4 to cycle `$`), colour-coded reference highlights,
 AutoComplete from the column, AutoCorrect, AutoFill by dragging the fill handle (numbers, dates,
 weekdays, months, quarters, custom lists), Ctrl+Enter and Alt+Enter.
 

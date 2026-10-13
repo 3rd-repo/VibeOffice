@@ -898,6 +898,9 @@
   D.tx = function (label, fn, opts) {
     opts = opts || {};
     if (H.cur) { H.depth++; try { return fn(); } finally { H.depth--; } }
+    /* an edit in the middle of a drag (a moved shape, a ruler marker…) comes before the drag's own step: the drag ends
+       first, as if Esc. A text selection being made (Quire's press watcher) is no edit of its own and goes on. */
+    if (L.ui && L.ui.dragging && L.ui.dragging() && !(L.ed && L.ed.pressing && L.ed.pressing())) L.ui.dragCancel();
     const t = { label, objs: new Map(), keys: new Map(), paras: new Set(), tbls: new Set(), struct: false, global: false, full: null, selBefore: D.getSel ? D.getSel() : null, merge: opts.merge || null, time: Date.now() };
     H.cur = t;
     let res, err = null;

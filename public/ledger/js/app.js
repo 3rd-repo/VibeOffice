@@ -303,14 +303,30 @@
   function renderTabs() {
     const tabs = L.$('#tabs');
     const w = wb();
-    tabs.textContent = '';
     const selSet = new Set(A.selectedSheetsIdx());
+    /* the same sheets: only which tab is on changes, so a press that activates a tab keeps the element under the
+       pointer, and its click and double-click (Rename) still reach it */
+    const key = w.sheets.map((s) => s.state + '|' + s.name + '|' + JSON.stringify(s.tabColor || null)).join('\n');
+    if (tabs._w === w && tabs._key === key && !tabs.querySelector('input')) {
+      for (const t of L.$$('.stab', tabs)) {
+        const i = t._i;
+        t.classList.toggle('on', i === w.active);
+        t.classList.toggle('sel', selSet.has(i) && i !== w.active);
+        t.setAttribute('aria-selected', i === w.active ? 'true' : 'false');
+      }
+      scrollToActive(tabs);
+      return;
+    }
+    tabs._w = w; tabs._key = key;
+    tabs.textContent = '';
     w.sheets.forEach((s, i) => {
       if (s.state !== 'visible') return;
       const t = h('div', { class: 'stab' + (i === w.active ? ' on' : '') + (selSet.has(i) && i !== w.active ? ' sel' : '') + (s.tabColor ? ' colored' : ''), role: 'tab', 'aria-selected': i === w.active ? 'true' : 'false', draggable: 'false' }, h('span', { text: s.name }));
+      t._i = i;
       if (s.tabColor) t.style.setProperty('--tabc', M.colorHex(w, s.tabColor, '#ECE9D8'));
       t.addEventListener('pointerdown', (e) => {
-        if (e.button === 2) { if (!selSet.has(i)) A.activateSheet(i); return; }
+        if (e.target.closest('input')) return;   // the name being edited in place
+        if (e.button === 2) { if (!A.selectedSheetsIdx().includes(i)) A.activateSheet(i); return; }
         e.preventDefault();
         if (e.button !== 0) return;
         if (e.ctrlKey || e.metaKey) { A.toggleSheetSel(i); return; }
@@ -320,7 +336,7 @@
         let target = null;
         const unmark = () => L.$$('.stab', tabs).forEach((x) => x.classList.remove('drop-before'));
         ui.drag(e, {
-          capture: tabs,
+          capture: t,   // the tab itself, so its click and double-click (Rename) come to it
           threshold: 6,
           move(ev) {
             unmark();
@@ -344,6 +360,9 @@
       t.addEventListener('contextmenu', (e) => { e.preventDefault(); tabMenu(e, i); });
       tabs.appendChild(t);
     });
+    scrollToActive(tabs);
+  }
+  function scrollToActive(tabs) {
     const at = tabs.querySelector('.stab.on');
     if (at) { const r = at.getBoundingClientRect(), pr = tabs.getBoundingClientRect(); if (r.right > pr.right || r.left < pr.left) tabs.scrollLeft += r.left - pr.left - 20; }
   }
@@ -664,7 +683,8 @@
     };
     const sameRange = (a, rg) => { if (a.sheet && a.sheet.toLowerCase() !== sh().name.toLowerCase()) return false; if (a.t === 'ref') return rg.r1 === a.r && rg.r2 === a.r && rg.c1 === a.c && rg.c2 === a.c; return rg.r1 === Math.min(a.r1, a.r2) && rg.r2 === Math.max(a.r1, a.r2) && rg.c1 === Math.min(a.c1, a.c2) && rg.c2 === Math.max(a.c1, a.c2); };
     L.bus.on('selection', show); L.bus.on('sheet', show); L.bus.on('book', show); L.bus.on('changed', show);
-    nb.addEventListener('focus', () => nb.select());
+    /* the Name Box takes the keyboard: what is being typed in a cell is entered first, as a click elsewhere does */
+    nb.addEventListener('focus', () => { if (L.editor.active && !L.editor.commit({ keepFocus: true })) { nb.blur(); return; } nb.select(); });
     nb.addEventListener('keydown', (e) => {
       e.stopPropagation();
       if (e.key === 'Escape') { nb.blur(); show(); G().focus(); return; }

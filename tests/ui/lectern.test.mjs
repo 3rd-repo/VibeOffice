@@ -132,6 +132,24 @@ test('P5c Esc while dragging out a rectangle draws nothing', () => lectern(async
   u.clean();
 }));
 
+test('R1 a key pressed in the middle of a resize waits: the resize is one undo step, and two Undos bring back the original', () => lectern(async (u) => {
+  await setup(u, RECT);
+  const before = await geo(u, 'rectR');
+  await u.click(await shapeBox(u, 'rectR'));
+  const se = await u.el('.ed-overlay [data-h="se"]'), to = { x: se.x + 60, y: se.y + 40 };
+  await u.press(se); await u.glide(se, to, 6);
+  await u.key('ArrowRight');
+  await u.release(to);
+  const resized = await geo(u, 'rectR');
+  assert.deepEqual(resized.slice(0, 2), before.slice(0, 2), 'the arrow key moved nothing');
+  assert.ok(resized[2] > before[2] && resized[3] > before[3], 'the release resized it');
+  await u.key('z', { ctrl: true });
+  assert.deepEqual(await geo(u, 'rectR'), before, 'one Undo brings back the original');
+  await u.key('z', { ctrl: true });
+  assert.deepEqual(await geo(u, 'rectR'), before, 'and a second changes nothing');
+  u.clean();
+}));
+
 test('Ctrl+Z in the middle of a resize undoes the resize, not the move before it; Ctrl+Y brings back nothing uncommitted', () => lectern(async (u) => {
   await setup(u, RECT);
   const c = await shapeBox(u, 'rectR');
@@ -220,7 +238,7 @@ for (const [id, how, show] of [
   ['P7c', 'the context menu\'s Font…, Cancel', async (u) => { await u.rightClick(await at(u, 'boxA', 8)); await u.pick('Font'); return 'cancel'; }],
   ['P7d', 'the Hyperlink button, Cancel', async (u) => { await u.click(await u.button('hyperlink')); return 'cancel'; }],
 ]) {
-  test(`${id} After ${how}, the text selection is kept and typing replaces it`, { todo: 'Phase 3' }, () => lectern(async (u) => {
+  test(`${id} After ${how}, the text selection is kept and typing replaces it`, () => lectern(async (u) => {
     await setup(u, BOXES);
     await editBeta(u);
     const close = await show(u);
@@ -234,9 +252,20 @@ for (const [id, how, show] of [
   }));
 }
 
+test('With the Slides pane holding the keyboard, Format ▸ Background… closed with Esc gives it back: Delete deletes the slide', () => lectern(async (u) => {
+  await setup(u, '', 3);
+  await u.click(await thumb(u, 0));
+  await u.menu('Format', 'Background');
+  assert.equal(await u.evaluate('L.ui.dialogOpen()'), true, 'setup: the dialog is open');
+  await u.esc(); await pause(200);
+  await u.key('Delete');
+  assert.equal(await order(u), 'S2,S3', 'Delete deletes the slide');
+  u.clean();
+}));
+
 /* ---------- Phase 4: one owner per piece of state ---------- */
 
-test('P3 Editing text, a click on the current slide\'s thumbnail ends the edit: Delete then deletes the slide', { todo: 'Phase 4' }, () => lectern(async (u) => {
+test('P3 Editing text, a click on the current slide\'s thumbnail ends the edit: Delete then deletes the slide', () => lectern(async (u) => {
   await setup(u, BOXES, 2);
   await editBeta(u);
   await u.click(await thumb(u, 0));
@@ -246,7 +275,7 @@ test('P3 Editing text, a click on the current slide\'s thumbnail ends the edit: 
   u.clean();
 }));
 
-test('P4a In the Slides pane, Delete twice deletes two slides', { todo: 'Phase 4' }, () => lectern(async (u) => {
+test('P4a In the Slides pane, Delete twice deletes two slides', () => lectern(async (u) => {
   await setup(u, '', 4);
   await u.click(await thumb(u, 0));
   await u.key('Delete');
@@ -256,7 +285,7 @@ test('P4a In the Slides pane, Delete twice deletes two slides', { todo: 'Phase 4
   u.clean();
 }));
 
-test('P4b After dragging a thumbnail to another place, Delete deletes the moved slide', { todo: 'Phase 4' }, () => lectern(async (u) => {
+test('P4b After dragging a thumbnail to another place, Delete deletes the moved slide', () => lectern(async (u) => {
   await setup(u, '', 3);
   const a = await thumb(u, 0), c = await thumb(u, 2);
   await u.drag(a, { x: a.x, y: c.b + 10 }, 10);
@@ -266,7 +295,7 @@ test('P4b After dragging a thumbnail to another place, Delete deletes the moved 
   u.clean();
 }));
 
-test('P6a Shift+click on a text box adds it to the selection, without editing it', { todo: 'Phase 4' }, () => lectern(async (u) => {
+test('P6a Shift+click on a text box adds it to the selection, without editing it', () => lectern(async (u) => {
   await setup(u, BOXES);
   await u.click(await at(u, 'boxA', 3));
   await u.esc();
@@ -276,7 +305,7 @@ test('P6a Shift+click on a text box adds it to the selection, without editing it
   u.clean();
 }));
 
-test('P6b Ctrl+click on a text box adds it to the selection, without editing it', { todo: 'Phase 4' }, () => lectern(async (u) => {
+test('P6b Ctrl+click on a text box adds it to the selection, without editing it', () => lectern(async (u) => {
   await setup(u, `${BOXES}, ${RECT}`);
   await u.click(await shapeBox(u, 'rectR'));
   assert.deepEqual(await state(u), { editing: null, sel: ['rectR'] }, 'setup: the rectangle selected');
@@ -285,14 +314,17 @@ test('P6b Ctrl+click on a text box adds it to the selection, without editing it'
   u.clean();
 }));
 
-test('P8 Dragging across the cells of a table selects cells; the table does not move', { todo: 'Phase 4' }, () => lectern(async (u) => {
+test('P8 Dragging across the cells of a table selects cells; the table does not move', () => lectern(async (u) => {
   await setup(u, `table('tbl', 100, 150)`);
   await u.drag(await cell(u, 'tbl', 0, 0), await cell(u, 'tbl', 1, 2), 10);
   assert.deepEqual((await geo(u, 'tbl')).slice(0, 2), [100, 150], 'the table stays where it was');
+  assert.deepEqual(await u.evaluate('L.ed.cellSel'), { r0: 0, c0: 0, r1: 1, c1: 2 }, 'the cells are selected (the Tables and Borders toolbar waited for the release, so the cells stayed under the pointer)');
+  await pause(600);
+  assert.equal(await u.evaluate('L.app.toolbarsEl.tables.hidden'), false, 'the Tables and Borders toolbar shows after the release');
   u.clean();
 }));
 
-test('P9 A click into one cell clears the highlight of a selected range of cells', { todo: 'Phase 4' }, () => lectern(async (u) => {
+test('P9 A click into one cell clears the highlight of a selected range of cells', () => lectern(async (u) => {
   await setup(u, `table('tbl', 100, 150)`);
   const highlights = () => u.evaluate(`document.querySelectorAll('.cell-sel').length`);
   await u.click(await cell(u, 'tbl', 0, 0));
@@ -303,7 +335,7 @@ test('P9 A click into one cell clears the highlight of a selected range of cells
   u.clean();
 }));
 
-test('P11 Editing text, a click on the hatched border selects the box as an object: Delete deletes it', { todo: 'Phase 4' }, () => lectern(async (u) => {
+test('P11 Editing text, a click on the hatched border selects the box as an object: Delete deletes it', () => lectern(async (u) => {
   await setup(u, BOXES);
   await u.click(await at(u, 'boxA', 3));
   const ring = await u.el('.edit-ring');
@@ -325,7 +357,7 @@ async function zoomAndScroll(u) {
   };
 }
 
-test('P12a Dragging the scroll bar keeps the selection', { todo: 'Phase 4' }, () => lectern(async (u) => {
+test('P12a Dragging the scroll bar keeps the selection', () => lectern(async (u) => {
   await setup(u, `rect('rectR', 30, 30, 100, 60)`);
   const scroll = await zoomAndScroll(u);
   await u.click(await shapeBox(u, 'rectR'));
@@ -335,7 +367,7 @@ test('P12a Dragging the scroll bar keeps the selection', { todo: 'Phase 4' }, ()
   u.clean();
 }));
 
-test('P12b Dragging the scroll bar keeps text editing', { todo: 'Phase 4' }, () => lectern(async (u) => {
+test('P12b Dragging the scroll bar keeps text editing', () => lectern(async (u) => {
   await setup(u, `box('boxA', 30, 30, 'Alpha beta gamma delta epsilon')`);
   const scroll = await zoomAndScroll(u);
   await u.click(await at(u, 'boxA', 3));
@@ -345,10 +377,97 @@ test('P12b Dragging the scroll bar keeps text editing', { todo: 'Phase 4' }, () 
   u.clean();
 }));
 
-test('P13 A double-click on a word in an unselected AutoShape selects the word', { todo: 'Phase 4' }, () => lectern(async (u) => {
+test('P13 A double-click on a word in an unselected AutoShape selects the word', () => lectern(async (u) => {
   await setup(u, `rect('rectT', 80, 120, 420, 100, 'Alpha beta gamma delta')`);
   await u.dblclick(await at(u, 'rectT', 8));
   assert.equal((await state(u)).editing, 'rectT', 'its text is edited');
   assert.equal(await u.evaluate('String(window.getSelection())'), 'beta', 'the word is selected');
+  u.clean();
+}));
+
+test('P4c A thumbnail drawn again after an edit keeps its elements, so a press on it in the meantime keeps its click', () => lectern(async (u) => {
+  await setup(u, BOXES, 2);
+  await u.evaluate(`window.__frame = document.querySelector('.th[data-i="0"] .th-frame')`);
+  await u.click(await at(u, 'boxA', 3));
+  await u.type('xyz');
+  await u.esc();
+  await pause(700);
+  assert.equal(await u.evaluate('__frame.isConnected'), true, 'the thumbnail\'s frame is the same element');
+  u.clean();
+}));
+
+test('A history step recorded in the middle of a drag cancels the drag first: the shape is back, one step to undo', () => lectern(async (u) => {
+  await setup(u, RECT);
+  await u.click(await shapeBox(u, 'rectR'));
+  const b = await shapeBox(u, 'rectR');
+  await u.press(b); await u.glide(b, { x: b.x + 80, y: b.y + 40 }, 6);
+  await u.evaluate(`(() => { L.hist.push('Other'); L.ed.shape('rectR').fill = '#FF0000'; })()`);
+  await u.release({ x: b.x + 80, y: b.y + 40 });
+  assert.deepEqual(await geo(u, 'rectR'), [200, 150, 120, 80], 'the move was cancelled');
+  assert.equal(await u.evaluate('L.ui.dragging()'), false, 'no drag is live');
+  await u.key('z', { ctrl: true });
+  assert.deepEqual(await geo(u, 'rectR'), [200, 150, 120, 80], 'Undo puts back the other edit, in the right place');
+  assert.notEqual(await u.evaluate(`L.ed.shape('rectR').fill`), '#FF0000', 'the other edit is undone');
+  u.clean();
+}));
+
+/* ---------- Phase 5: the rest ---------- */
+
+test('P15 "Click to add first slide" in an empty presentation adds a slide', () => lectern(async (u) => {
+  await u.evaluate(`(() => { L.pres.slides.length = 0; L.ed.goto(0); L.panes.left.render(); })()`);
+  await pause(300);
+  await u.click(await u.el('.ed-empty'));
+  assert.equal(await u.evaluate('L.pres.slides.length'), 1, 'one slide');
+  u.clean();
+}));
+
+test('A thumbnail dragged and let go over the slide moves no slide', () => lectern(async (u) => {
+  await setup(u, '', 3);
+  const a = await thumb(u, 0), mid = await slidePt(u, 480, 270);
+  await u.drag(a, mid, 10);
+  assert.equal(await order(u), 'S1,S2,S3', 'the order is kept');
+  assert.equal(await u.evaluate(`document.querySelectorAll('.drop-line').length`), 0, 'no drop line left');
+  u.clean();
+}));
+
+test('Typing over a range of table cells goes into the first cell and ends the range; Delete empties the range, one Undo brings it back', () => lectern(async (u) => {
+  await setup(u, `table('tbl', 100, 150)`);
+  const cellText = (r, c) => u.evaluate(`L.txt.paraText(L.ed.shape('tbl').tbl.rows[${r}].cells[${c}].tx.ps[0])`);
+  await u.click(await cell(u, 'tbl', 0, 0));
+  await u.drag(await cell(u, 'tbl', 0, 0), await cell(u, 'tbl', 1, 1), 10);
+  assert.equal(await u.evaluate(`document.querySelectorAll('.cell-sel').length`), 1, 'setup: the range is highlighted');
+  await u.type('Z');
+  assert.equal(await u.evaluate(`document.querySelectorAll('.cell-sel').length`), 0, 'the highlight is gone');
+  assert.equal(await u.evaluate('L.ed.cellSel'), null, 'the range ended');
+  await u.key('Escape'); await pause(200);
+  assert.match(await cellText(0, 0), /Z/, 'Z went into the first cell');
+  assert.equal(await cellText(1, 1), 'r1c1', 'the other cells are as they were');
+
+  await u.click(await cell(u, 'tbl', 1, 1));
+  await u.drag(await cell(u, 'tbl', 1, 1), await cell(u, 'tbl', 2, 2), 10);
+  await u.key('Delete');
+  assert.deepEqual([await cellText(1, 1), await cellText(1, 2), await cellText(2, 1), await cellText(2, 2)], ['', '', '', ''], 'the range is empty');
+  assert.equal(await cellText(1, 0), 'r1c0', 'a cell outside the range is kept');
+  assert.equal(await u.evaluate('L.ed.cellSel'), null, 'the range ended');
+  await u.key('z', { ctrl: true });
+  assert.equal(await cellText(2, 2), 'r2c2', 'one Undo brings the cells back');
+  u.clean();
+}));
+
+test('Slide show: the pen let go in another tab draws nothing after it', () => lectern(async (u) => {
+  await setup(u, '', 2);
+  await u.key('F5'); await pause(800);
+  await u.key('p', { ctrl: true }); await pause(200);
+  /** how many ink pixels lie on a horizontal line at client y between x0 and x1 */
+  const inked = (y, x0, x1) => u.evaluate(`(() => { const c = document.querySelector('.show canvas.ink'), r = c.getBoundingClientRect(), k = c.width / r.width;
+    const d = c.getContext('2d').getImageData(Math.round((${x0} - r.left) * k), Math.round((${y} - r.top) * k), Math.round((${x1} - ${x0}) * k), 1).data;
+    let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n; })()`);
+  await u.press({ x: 300, y: 300 }); await u.glide({ x: 300, y: 300 }, { x: 500, y: 300 }, 6);
+  assert.ok(await inked(300, 320, 480) > 0, 'setup: the pen draws');
+  await u.releaseInOtherTab();
+  await u.move({ x: 300, y: 500 }); await u.glide({ x: 300, y: 500 }, { x: 600, y: 500 }, 8);
+  assert.equal(await inked(500, 320, 580), 0, 'nothing drawn after the button was let go');
+  assert.equal(await u.evaluate('L.show.active'), true, 'setup: still in the show');
+  await u.esc(); await u.esc();
   u.clean();
 }));

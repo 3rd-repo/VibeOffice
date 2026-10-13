@@ -1,7 +1,8 @@
 // Real mouse and keyboard input for the UI tests (tests/ui/), in the local Chromium over CDP (127.0.0.1:9222):
 // CDP Input events paced like a hand, never synthetic DOM events, which hide what an app does in the middle of a
 // drag. Starts the static server (tools/serve.py), and a headless Chromium (profile tmp/chromium-profile) when
-// nothing listens on CDP; that Chromium stays for the next run.
+// nothing listens on CDP; that Chromium stays for the next run. CDP=http://127.0.0.1:9223 runs on a Chromium of its
+// own (profile tmp/chromium-profile-9223), so two runs at once don't take each other's focus.
 //
 //   const t = await open('quire');            // a new tab on the app, 1280×800, the assistant waiting to be asked
 //   await t.drag(a, b); await t.key('b', { ctrl: true }); assert.equal(await t.painting(), false);
@@ -26,9 +27,9 @@ export async function ensureChromium() {
     try { execFileSync('which', [b], { stdio: 'ignore' }); return true; } catch { return false; }
   });
   if (!bin) throw new Error(`No Chromium on CDP ${CDP} and none found to start (set CHROMIUM)`);
-  const profile = path.join(root, 'tmp', 'chromium-profile');
+  const port = new URL(CDP).port, profile = path.join(root, 'tmp', port === '9222' ? 'chromium-profile' : 'chromium-profile-' + port);
   fs.mkdirSync(profile, { recursive: true });
-  spawn(bin, ['--headless=new', '--remote-debugging-port=' + new URL(CDP).port, '--remote-allow-origins=*', '--no-first-run',
+  spawn(bin, ['--headless=new', '--remote-debugging-port=' + port, '--remote-allow-origins=*', '--no-first-run',
     '--user-data-dir=' + profile, 'about:blank'], { detached: true, stdio: 'ignore' }).unref();
   for (let i = 0; i < 100; i++) { if (await up()) return; await pause(100); }
   throw new Error(`Started ${bin}, but nothing answers on ${CDP}`);

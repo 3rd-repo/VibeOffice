@@ -37,6 +37,7 @@
 .th-meta { display: flex; flex-direction: column; align-items: flex-end; width: 18px; flex: none; gap: 3px; }
 .th-star { width: 12px; height: 12px; cursor: pointer; }
 .th-frame { flex: 0 0 auto; min-width: 0; border: 1px solid var(--thumb-line); background: var(--surface); padding: 0; position: relative; cursor: default; }
+.th-frame > * { pointer-events: none; }   /* the press is the frame's, which stays when the picture is drawn again */
 .th.cur .th-frame { outline: 3px solid var(--thumb-on); outline-offset: 0; border-color: var(--thumb-on); }
 .th.sel:not(.cur) .th-frame { outline: 2px solid var(--thumb-sel); }
 .th.hiddenslide .th-frame { opacity: .45; }

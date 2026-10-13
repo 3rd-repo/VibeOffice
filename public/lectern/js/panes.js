@@ -47,9 +47,16 @@
     const box = h('div', { class: 'thumbs', role: 'listbox', 'aria-label': 'Slides' });
     const w = thumbWidth();
     pres.slides.forEach((s, i) => box.appendChild(thumbItem(s, i, w)));
-    L.clear(LP.body).appendChild(box);
+    keepFocus(() => L.clear(LP.body).appendChild(box));
     LP.list = box;
     scrollCur();
+  }
+  /** the pane drawn again (a slide deleted, moved, added) keeps the keyboard when it had it: the focused thumbnail
+      goes with the old list, and the next Delete or arrow must still work on slides (P4) */
+  function keepFocus(fn) {
+    const had = LP.body.contains(document.activeElement) || (L.app && L.app.focusArea === 'slides');
+    fn();
+    if (had && !LP.body.contains(document.activeElement)) { try { LP.body.focus({ preventScroll: true }); } catch (e) { /* ignore */ } L.app.focusArea = 'slides'; }
   }
   function thumbItem(s, i, w) {
     const sel = L.app.slideSel;
@@ -77,7 +84,11 @@
     const s = L.pres.slides[i];
     const old = LP.list.querySelector(`.th[data-i="${i}"]`);
     if (!s || !old) { renderThumbs(); return; }
-    old.replaceWith(thumbItem(s, i, thumbWidth()));
+    /* in place: the thumbnail's elements stay, so a press on it in the meantime still gets its click (P4) */
+    const fresh = thumbItem(s, i, thumbWidth());
+    old.className = fresh.className;
+    old.querySelector('.th-meta').replaceWith(fresh.querySelector('.th-meta'));
+    old.querySelector('.th-frame').replaceChildren(...fresh.querySelector('.th-frame').childNodes);
   };
   LP.markCurrent = function () {
     if (!LP.list) return;
@@ -86,6 +97,8 @@
   };
   function onThumbDown(e, i) {
     if (e.button !== 0) return;
+    /* the Slides pane takes the keyboard: text editing on the slide ends, even on the current slide's thumbnail (P3) */
+    if (E().editing()) L.te.end();
     LP.body.focus({ preventScroll: true });
     L.app.focusArea = 'slides';
     const sel = L.app.slideSel;
@@ -100,6 +113,9 @@
       if (!line) { line = h('div', { class: 'drop-line' }); LP.body.appendChild(line); }
       const items = L.$$('.th', LP.list);
       const br = LP.body.getBoundingClientRect();
+      /* let go outside the pane (over the slide), the slides stay where they are */
+      if (ev.clientX < br.left || ev.clientX > br.right) { line.style.display = 'none'; target = null; return; }
+      line.style.display = '';
       target = items.length;
       for (let k = 0; k < items.length; k++) { const r = items[k].getBoundingClientRect(); if (ev.clientY < r.top + r.height / 2) { target = k; break; } }
       const ref = items[target] || items[items.length - 1];

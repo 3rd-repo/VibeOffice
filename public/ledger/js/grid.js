@@ -221,26 +221,31 @@
     }
     return x;
   };
+  /** a new cell selection ends a drawing object's selection (Go To, Find, the Name Box: keys then go to the cells) */
+  const dropObject = () => { if (selObj) { selObj = null; G.syncObjects(); } };
   /** select a single cell (or the merged area containing it) */
   G.select = function (r, c, opts) {
     opts = opts || {};
     const sh = G.sheet(), s = G.sel();
+    dropObject();
     r = Math.max(0, Math.min(MAXR - 1, r)); c = Math.max(0, Math.min(MAXC - 1, c));
     const m = LY.mergeAt(sh, r, c);
     if (m) { r = m.r1; c = m.c1; }
     const rg = m ? { r1: m.r1, c1: m.c1, r2: m.r2, c2: m.c2 } : { r1: r, c1: c, r2: r, c2: c };
     if (opts.add) { s.ranges.push(rg); s.active = s.ranges.length - 1; }
     else { s.ranges = [rg]; s.active = 0; }
-    s.r = r; s.c = c; s.anchor = { r, c };
+    s.r = r; s.c = c; s.anchor = { r, c }; delete s.extent;
     if (!opts.noScroll) G.reveal(opts.revealR != null ? opts.revealR : r, c);
     G.changed();
   };
-  /** extend the active range from the anchor to (r, c) */
+  /** extend the active range from the anchor to (r, c); opts.keepWhole: whole columns (rows) stay whole (Shift+Arrow) */
   G.extendTo = function (r, c, opts) {
     const sh = G.sheet(), s = G.sel();
     r = Math.max(0, Math.min(MAXR - 1, r)); c = Math.max(0, Math.min(MAXC - 1, c));
-    const a = s.anchor || { r: s.r, c: s.c };
+    const a = s.anchor || { r: s.r, c: s.c }, cur = s.ranges[s.active];
     let rg = norm({ r1: a.r, c1: a.c, r2: r, c2: c });
+    if (opts && opts.keepWhole && cur && G.isWholeCols(cur)) { rg.r1 = 0; rg.r2 = MAXR - 1; }
+    if (opts && opts.keepWhole && cur && G.isWholeRows(cur)) { rg.c1 = 0; rg.c2 = MAXC - 1; }
     rg = G.expandMerges(sh, rg);
     s.ranges[s.active] = rg;
     s.extent = { r, c };
@@ -252,16 +257,18 @@
     rg = norm(rg);
     const sh = G.sheet();
     rg = G.expandMerges(sh, rg);
+    dropObject();
     s.ranges = [rg]; s.active = 0;
     s.r = active ? active.r : rg.r1; s.c = active ? active.c : rg.c1;
-    s.anchor = { r: s.r, c: s.c };
+    s.anchor = { r: s.r, c: s.c }; delete s.extent;
     if (!opts || !opts.noScroll) G.reveal(s.r, s.c);
     G.changed();
   };
   G.selectAll = function () {
     const s = G.sel();
+    dropObject();
     s.ranges = [{ r1: 0, c1: 0, r2: MAXR - 1, c2: MAXC - 1 }]; s.active = 0;
-    s.anchor = { r: s.r, c: s.c };
+    s.anchor = { r: s.r, c: s.c }; delete s.extent;
     G.changed();
   };
   G.changed = function () { G.paint(); L.bus.emit('selection'); };
@@ -308,7 +315,7 @@
       if (dr) { let k = Math.abs(dr); while (k > 0) { r += Math.sign(dr); if (r < 0) { r = 0; break; } if (r >= MAXR) { r = MAXR - 1; break; } if (g.rows.size(r) > 0) k--; } }
       if (dc) { let k = Math.abs(dc); while (k > 0) { c += Math.sign(dc); if (c < 0) { c = 0; break; } if (c >= MAXC) { c = MAXC - 1; break; } if (g.cols.size(c) > 0) k--; } }
     }
-    if (opts.extend) G.extendTo(r, c);
+    if (opts.extend) G.extendTo(r, c, { keepWhole: true });
     else G.select(r, c);
   };
   /** Enter / Tab inside a multi-cell selection cycles through it */
@@ -425,6 +432,9 @@
   function onPointerDown(e) {
     if (e.target.closest('.gobj, .af-btn, .dv-btn, .cmt-box, .outline-btn, .sb, .celledit.on')) return;
     if (e.button === 2) {
+      /* a right-click enters what is being typed first, as a click does (pointing, it keeps the formula open) */
+      const ed = L.editor;
+      if (ed && ed.active) { if (ed.canPoint()) return; const shown = G.sheet(); if (!ed.commit() || G.sheet() !== shown) return; }
       /* right click keeps a selection that contains the cell */
       const z = zone(pt(e));
       const s = G.sel();
@@ -446,11 +456,13 @@
     if (ed && ed.active && ed.canPoint() && (z.kind === 'cell' || z.kind === 'colhdr' || z.kind === 'rowhdr' || z.kind === 'border' || z.kind === 'fill')) {
       const r = z.r != null ? z.r : 0, c = z.c != null ? z.c : 0;
       const rg = z.kind === 'colhdr' ? { r1: 0, c1: z.c, r2: MAXR - 1, c2: z.c } : z.kind === 'rowhdr' ? { r1: z.r, c1: 0, r2: z.r, c2: MAXC - 1 } : { r1: r, c1: c, r2: r, c2: c };
-      ed.pointStart(rg, e.ctrlKey || e.metaKey);
-      beginDrag(e, { kind: 'point', anchor: rg, whole: z.kind === 'colhdr' ? 'c' : z.kind === 'rowhdr' ? 'r' : null });
+      const anchor = ed.pointStart(rg, e.ctrlKey || e.metaKey, e.shiftKey);
+      beginDrag(e, { kind: 'point', anchor, whole: z.kind === 'colhdr' ? 'c' : z.kind === 'rowhdr' ? 'r' : null });
       return;
     }
-    if (ed && ed.active) { if (!ed.commit()) return; }
+    /* any other press enters what is being typed first; when that brings the formula's own sheet back, the press
+       has done its work */
+    if (ed && ed.active) { const shown = G.sheet(); if (!ed.commit() || G.sheet() !== shown) return; }
     G.focus();
     const s = G.sel();
     const sh = G.sheet();
@@ -461,18 +473,18 @@
       case 'rowres': beginDrag(e, { kind: 'rowres', r: z.r, y0: p.y, h0: LY.geo(sh).rows.size(z.r) * G.zoomOf(sh) }); return;
       case 'colhdr': {
         const top = G.vs().scrollR;
-        if (e.shiftKey) { const a = s.anchor; s.ranges[s.active] = { r1: 0, c1: Math.min(a.c, z.c), r2: MAXR - 1, c2: Math.max(a.c, z.c) }; }
-        else if (e.ctrlKey || e.metaKey) { s.ranges.push({ r1: 0, c1: z.c, r2: MAXR - 1, c2: z.c }); s.active = s.ranges.length - 1; s.r = top; s.c = z.c; s.anchor = { r: top, c: z.c }; }
-        else { s.ranges = [{ r1: 0, c1: z.c, r2: MAXR - 1, c2: z.c }]; s.active = 0; s.r = top; s.c = z.c; s.anchor = { r: top, c: z.c }; }
+        if (e.shiftKey) { const a = s.anchor; s.ranges[s.active] = { r1: 0, c1: Math.min(a.c, z.c), r2: MAXR - 1, c2: Math.max(a.c, z.c) }; s.extent = { r: s.r, c: z.c }; }
+        else if (e.ctrlKey || e.metaKey) { s.ranges.push({ r1: 0, c1: z.c, r2: MAXR - 1, c2: z.c }); s.active = s.ranges.length - 1; s.r = top; s.c = z.c; s.anchor = { r: top, c: z.c }; delete s.extent; }
+        else { s.ranges = [{ r1: 0, c1: z.c, r2: MAXR - 1, c2: z.c }]; s.active = 0; s.r = top; s.c = z.c; s.anchor = { r: top, c: z.c }; delete s.extent; }
         G.changed();
         beginDrag(e, { kind: 'cols', before });
         return;
       }
       case 'rowhdr': {
         const left = G.vs().scrollC;
-        if (e.shiftKey) { const a = s.anchor; s.ranges[s.active] = { r1: Math.min(a.r, z.r), c1: 0, r2: Math.max(a.r, z.r), c2: MAXC - 1 }; }
-        else if (e.ctrlKey || e.metaKey) { s.ranges.push({ r1: z.r, c1: 0, r2: z.r, c2: MAXC - 1 }); s.active = s.ranges.length - 1; s.r = z.r; s.c = left; s.anchor = { r: z.r, c: left }; }
-        else { s.ranges = [{ r1: z.r, c1: 0, r2: z.r, c2: MAXC - 1 }]; s.active = 0; s.r = z.r; s.c = left; s.anchor = { r: z.r, c: left }; }
+        if (e.shiftKey) { const a = s.anchor; s.ranges[s.active] = { r1: Math.min(a.r, z.r), c1: 0, r2: Math.max(a.r, z.r), c2: MAXC - 1 }; s.extent = { r: z.r, c: s.c }; }
+        else if (e.ctrlKey || e.metaKey) { s.ranges.push({ r1: z.r, c1: 0, r2: z.r, c2: MAXC - 1 }); s.active = s.ranges.length - 1; s.r = z.r; s.c = left; s.anchor = { r: z.r, c: left }; delete s.extent; }
+        else { s.ranges = [{ r1: z.r, c1: 0, r2: z.r, c2: MAXC - 1 }]; s.active = 0; s.r = z.r; s.c = left; s.anchor = { r: z.r, c: left }; delete s.extent; }
         G.changed();
         beginDrag(e, { kind: 'rows', before });
         return;
@@ -485,7 +497,11 @@
         if (e.shiftKey) G.extendTo(z.r, z.c, { noScroll: true });
         else G.select(z.r, z.c, { add: e.ctrlKey || e.metaKey, noScroll: true });
         const link = !e.shiftKey && !e.ctrlKey && sh.links.find((l) => M.rangeContains(l.ref, z.r, z.c));
-        beginDrag(e, { kind: 'cells', link, start: z, before });
+        const d = { kind: 'cells', link, start: z, before };
+        beginDrag(e, d);
+        /* on a hyperlink, holding the button a second selects the cell instead of following it (as Excel: the
+           pointer turns back into the cell cross) */
+        if (link) setTimeout(() => { if (drag === d) { d.held = true; setCursor('cur-cell'); } }, 1000);
         /* data validation drop-down button */
         G.syncObjects();
         return;
@@ -546,13 +562,17 @@
     if (d.kind !== 'point') G.focus();
   }
   let autoTimer = null;
-  function autoScroll(p, fn) {
+  /** a drag held past the edge of the scrolling pane scrolls it. Back above (left of) it only for a drag that began in
+      it: a drag within frozen rows (columns), or along the column (row) headers, leaves the pane where it is. */
+  function autoScroll(p, fn, from) {
     clearInterval(autoTimer);
     const fr = G.frame();
     const main = fr.panes[fr.panes.length - 1];
+    const top = main ? main.y : fr.hdrH, left = main ? main.x : fr.hdrW;
+    const inRows = !from || from.y >= top, inCols = !from || from.x >= left;
     let dr = 0, dc = 0;
-    if (p.y > fr.hdrH + (main ? main.y + main.h - fr.hdrH : 0) - 2) dr = 1; else if (p.y < (main ? main.y : fr.hdrH) && G.vs().scrollR > firstR(fr)) dr = -1;
-    if (p.x > (main ? main.x + main.w : 0) - 2) dc = 1; else if (p.x < (main ? main.x : fr.hdrW) && G.vs().scrollC > firstC(fr)) dc = -1;
+    if (p.y > fr.hdrH + (main ? main.y + main.h - fr.hdrH : 0) - 2) dr = 1; else if (p.y < top && inRows && G.vs().scrollR > firstR(fr)) dr = -1;
+    if (p.x > (main ? main.x + main.w : 0) - 2) dc = 1; else if (p.x < left && inCols && G.vs().scrollC > firstC(fr)) dc = -1;
     if (!dr && !dc) return;
     autoTimer = setInterval(() => { G.scrollBy(dr, dc); fn(); }, 60);
   }
@@ -567,13 +587,15 @@
     if (!drag) return;
     const p = pt(e);
     drag.moved = true;
-    const sh = G.sheet(), s = G.sel(), fr = G.frame();
+    const sh = G.sheet(), s = G.sel();
+    let fr = G.frame();
     const step = () => {
+      fr = G.frame();   // the auto-scroll timer runs this after the sheet scrolled: hit-test the frame as it is now
       const q = cellFromPoint(drag.last || p);
       switch (drag.kind) {
         case 'cells': case 'paint': G.extendTo(q.r, q.c, { noScroll: true }); break;
-        case 'cols': { const a = s.anchor; const hit = RD.hit(fr, Math.max(fr.hdrW + 1, (drag.last || p).x), 2); const c = hit.c != null ? hit.c : q.c; s.ranges[s.active] = { r1: 0, c1: Math.min(a.c, c), r2: MAXR - 1, c2: Math.max(a.c, c) }; G.changed(); break; }
-        case 'rows': { const a = s.anchor; const hit = RD.hit(fr, 2, Math.max(fr.hdrH + 1, (drag.last || p).y)); const r = hit.r != null ? hit.r : q.r; s.ranges[s.active] = { r1: Math.min(a.r, r), c1: 0, r2: Math.max(a.r, r), c2: MAXC - 1 }; G.changed(); break; }
+        case 'cols': { const a = s.anchor; const hit = RD.hit(fr, Math.max(fr.hdrW + 1, (drag.last || p).x), 2); const c = hit.c != null ? hit.c : q.c; s.ranges[s.active] = { r1: 0, c1: Math.min(a.c, c), r2: MAXR - 1, c2: Math.max(a.c, c) }; s.extent = { r: s.r, c }; G.changed(); break; }
+        case 'rows': { const a = s.anchor; const hit = RD.hit(fr, 2, Math.max(fr.hdrH + 1, (drag.last || p).y)); const r = hit.r != null ? hit.r : q.r; s.ranges[s.active] = { r1: Math.min(a.r, r), c1: 0, r2: Math.max(a.r, r), c2: MAXC - 1 }; s.extent = { r, c: s.c }; G.changed(); break; }
         case 'point': {
           const a = drag.anchor;
           let rg = drag.whole === 'c' ? { r1: 0, c1: Math.min(a.c1, q.c), r2: MAXR - 1, c2: Math.max(a.c2, q.c) } : drag.whole === 'r' ? { r1: Math.min(a.r1, q.r), c1: 0, r2: Math.max(a.r2, q.r), c2: MAXC - 1 } : norm({ r1: a.r1, c1: a.c1, r2: q.r, c2: q.c });
@@ -634,7 +656,7 @@
       return;
     }
     step();
-    autoScroll(p, step);
+    autoScroll(p, step, drag.kind === 'cols' ? { x: drag.x0, y: 0 } : drag.kind === 'rows' ? { x: 0, y: drag.y0 } : { x: drag.x0, y: drag.y0 });
   }
   function fillTip(sh, src, to, ctrl) {
     /* the value the last filled cell will get */
@@ -730,7 +752,7 @@
         case 'point': L.editor.pointEnd(); break;
         case 'paint': L.app.painter.release(); break;
         case 'cells': {
-          if (!d.moved && d.link && !e.shiftKey) {
+          if (!d.moved && d.link && !d.held && !e.shiftKey) {
             /* a plain click on a hyperlink follows it */
             L.app.followLink(d.link);
           }
@@ -850,6 +872,7 @@
     const ed = L.editor;
     if (ed.active) { ed.key(e); return; }
     if (e.isComposing) return;
+    if (ed.listKey(e)) return;
     if (G.selectedObject() && L.drawing && L.drawing.key && L.drawing.key(e, G.selectedObject())) { e.preventDefault(); return; }
     const k = e.key, ctrl = e.ctrlKey || e.metaKey, shift = e.shiftKey, alt = e.altKey;
     const s = G.sel();

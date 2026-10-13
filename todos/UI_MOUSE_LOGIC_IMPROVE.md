@@ -1,8 +1,8 @@
 # UI: mouse, selection, drag and focus logic in Quire, Ledger and Lectern
 
-Status: Phases 0, 1 and 2 done (2026-10-12): the audit is in tests/ui/ (59 `todo` left of 85), `tools/older.mjs` runs
-the tests against older code; the data-loss items are fixed; every mouse drag goes through `ui.drag`. Next: Phase 3,
-the focus rule. Read docs/suite.md
+Status: all six phases done (2026-10-13): the audit is in tests/ui/ with no `todo` left, `tools/older.mjs` runs the
+tests against older code; the data-loss items are fixed; every mouse drag goes through `ui.drag`; each app has one
+owner per piece of state; the keyboard stays with the document (the focus rule). Read docs/suite.md
 (Shared code, Brushes) first. An audit of all three apps with real mouse and keyboard input (CDP, paced like a hand)
 confirmed 45 defects; most come from the same few missing mechanisms (Root causes). Six phases, in order: 0 test
 tools, 1 data loss, 2 one shared drag lifecycle, 3 one focus rule, 4 one owner per piece of state in each app,
@@ -39,32 +39,73 @@ Phase 2: one drag lifecycle, `ui.drag` in common/ui.js (Design)
 - [x] Lectern on it: move, handles, marquee, drawing tools, scribble, freeform and curve, text and cell selection,
       thumbnail reorder (P5, P14, P10)
 
+Review follow-up (2026-10-12; reproduced with real input, still present at `3a899d3`)
+- [x] R1 (P2, Phase 2, `09f1839`): Lectern's `liveEdit.commit` in `js/editor.js` records a drag after any keyboard
+      edit made while the button is held, but its undo snapshot predates that edit. Resize a 120 × 80 rectangle,
+      press Right before releasing, then release and Undo twice: the first Undo restores 120 × 80, the second
+      brings back the resized dimensions with the undo stack empty. At `993f783`, two Undos restore the original
+      rectangle. End or isolate a live drag before another edit records history; cover a nudge during resize as
+      well as Ctrl+Z during resize (the earlier review covered only the latter).
+      Done: while a drag's button is held, keys other than Esc, Ctrl+Z/Y and the modifiers go nowhere (`ui.drag`), so
+      no edit comes between a drag's start and its step, in any app; tests R1 and drag.test's "other keys wait".
+- [x] R2 (P2, Phase 1, `993f783`): Quire's Find result changes `E.sel` without clearing `E.objSel`
+      (`A.gotoPos`'s `focus: false` path in `js/app.js`). Select a floating shape, Ctrl+F, find a word, Esc:
+      the word is visibly selected, but typing is ignored and Right moves the old shape by 7.2 pt instead of
+      moving the caret. The same sequence at `ac5652d` replaces the found word and leaves the shape alone.
+      Make selecting a text match end the object selection; add this starting state to Q1's regression test.
+      Done: `A.gotoPos` ends the object selection first; test R2 (Find searches from the shape's anchor, as Word).
+- [x] R3 (P2, Phase 1, `993f783`): Quire's new `E.pressing()` gate in `js/templates.js` remains true after a
+      release in another tab or a move reporting no held button. Press in ordinary text, release in another tab,
+      return and use the arrow keys to enter a MACROBUTTON placeholder: its text is no longer selected for
+      replacement until another click resets the flag. At `ac5652d` the keyboard still selects the whole field.
+      Reset the press state on blur, pointer cancellation and a lost release without applying a cancelled brush.
+      Done: Quire's editor drops the press on window blur, pointercancel and a move with no button held, without
+      'sel-done'; tests R3 and R3b (a lost release paints nothing, the painter stays on).
+- [x] R4 (P2, there before Phase 1; R2's twin, found by looking for the pattern): Ledger's `G.select`,
+      `G.selectRange` and `G.selectAll` leave a selected drawing object selected; only a press on the grid deselects
+      it. Select a shape, Ctrl+G, D5, Enter: D5 is selected, the shape too, and Delete deletes the shape. Find Next
+      goes through the same `G.select`. Done: they drop the object first (`dropObject`); tests R4a (Go To), R4b (Find
+      Next).
+
+The pattern behind R1–R4 (2026-10-13): each came with a new path that skipped the one place keeping a rule (Root
+causes 1, 3, 4 again), and each test began from nothing selected, had nothing in the middle and ended normally. So:
+- [x] Each app's selection setter ends the other kinds (Quire `E.setSel` the object selection, Ledger `G.select` the
+      object; Lectern's `E.select` already does: it ends text editing and `E.cellSel`) (Phase 4)
+- [x] Each app's history push cancels a live drag first, a backstop for any edit that comes in the middle of one
+      (Quire `D.tx`, Ledger `O.tx`, Lectern `L.hist.push`; safe: `ui.drag` is over before its `up` runs)
+- [x] Press state outside `ui.drag`: Quire's text press runs as a `ui.drag` watching the browser's selection; the
+      slide show's `st._down` resets on a lost release and on blur (Phase 5)
+- [x] `tests/lib/gestures.mjs`: the states a gesture starts from, what comes in the middle and the ways out, as
+      lists a gesture test runs through. Done: `tests/ui/gestures.test.mjs` runs five drags through them (115 cases);
+      at `3a899d3` 47 fail (keys acted in the middle of a drag: R1's class), with R1's fix none
+
 Phase 3: one focus rule, the keyboard back to the document (Design)
-- [ ] ui.js dialogs hand the keyboard back through `ui.hooks.refocus()` (Q6 first half, P7)
-- [ ] ui.js menus don't take focus; a command chosen from a menu hands it back (Q6 second half)
-- [ ] Chrome without a control of its own keeps the focus where it is (S11)
-- [ ] Each app's `refocus` puts the model selection back into the page (Quire, Ledger, Lectern)
-- [ ] `tests/ui/focus.test.mjs`: dialogs (OK, Cancel, Esc) from a menu, a toolbar and the context menu; menu commands;
+- [x] ui.js dialogs hand the keyboard back through `ui.hooks.refocus()` (Q6 first half, P7)
+- [x] ui.js menus don't take focus; a command chosen from a menu hands it back (Q6 second half)
+- [x] Chrome without a control of its own keeps the focus where it is (S11)
+- [x] Each app's `refocus` puts the model selection back into the page (Quire, Ledger, Lectern)
+- [x] `tests/ui/focus.test.mjs`: dialogs (OK, Cancel, Esc) from a menu, a toolbar and the context menu; menu commands;
       chrome backgrounds; in every app and in Classic and Paper 2016
 
 Phase 4: one owner per piece of state
-- [ ] Quire object selection: one way in and out of it (Q15, Q10)
-- [ ] Quire model selection at gesture ends (Q9, Q11)
-- [ ] Quire header and footer editing (Q7, Q8)
-- [ ] Lectern: one end-the-interaction path; the Slides pane and the slide own their focus (P3, P4)
-- [ ] Lectern selection on press, shift-click, the edit ring, the scroll bar, double-click (P6, P11, P12, P13)
-- [ ] Lectern table cells (P8, P9)
-- [ ] Ledger cell editor: one way to leave an edit; point mode as Excel (S1, S5, S6, S10, S14b)
-- [ ] Ledger selection extent (S2); shape text then a cell (S4)
-- [ ] No re-render under the pointer on press (S8; P4 above)
+- [x] Quire object selection: one way in and out of it (Q15, Q10)
+- [x] Quire model selection at gesture ends (Q9, Q11)
+- [x] Quire header and footer editing (Q7, Q8)
+- [x] Lectern: one end-the-interaction path; the Slides pane and the slide own their focus (P3, P4)
+- [x] Lectern selection on press, shift-click, the edit ring, the scroll bar, double-click (P6, P11, P12, P13)
+- [x] Lectern table cells (P8, P9)
+- [x] Ledger cell editor: one way to leave an edit; point mode as Excel (S1, S5, S6, S10, S14b)
+- [x] Ledger selection extent (S2); shape text then a cell (S4)
+- [x] No re-render under the pointer on press (S8; P4 above)
 
 Phase 5: the rest
-- [ ] Quire text drag and drop (Q4, Q5); the Drag-and-drop text editing option; dragging inline pictures (Q17a, Q17b)
-- [ ] Quire selection bar (Q12); a drag from a table out to text (Q16)
-- [ ] Ledger auto-scroll (S9, S13); holding the button on a hyperlink (S14a)
-- [ ] Lectern: check the two open questions against PowerPoint (Audit, Lectern, Open)
-- [ ] P15 Lectern: "Click to add first slide" does nothing
-- [ ] docs: docs/suite.md (Drags, Focus), docs/quire.md, docs/ledger.md, docs/lectern.md, docs/testing.md
+- [x] Quire text drag and drop (Q4, Q5); the Drag-and-drop text editing option; dragging inline pictures (Q17a, Q17b)
+- [x] Quire selection bar (Q12); a drag from a table out to text (Q16)
+- [x] Ledger auto-scroll (S9, S13); holding the button on a hyperlink (S14a)
+- [x] Lectern: check the two open questions against PowerPoint (Audit, Lectern, Open)
+- [x] P15 Lectern: "Click to add first slide" does nothing
+- [x] docs: docs/suite.md (Drags, Selections, Focus), docs/ledger.md (point mode), docs/testing.md (gestures, focus, a
+      Chromium per port); docs/quire.md and docs/lectern.md describe no mouse behaviour to update
 
 ## What was done
 
@@ -106,6 +147,48 @@ Phase 5: the rest
   no menu; the swallowing is for the cancelling button's own click only. Also: the press's cursor stays during a drag
   (the held pointer showed the cursor of the element holding it); Ledger's sheet switch, zoom and a new workbook end a
   live drag. Not changed: a drag under 4 px does nothing (the threshold, on purpose).
+
+- 2026-10-13, R4, the pattern behind R1–R4 and Phases 4 and 5 (Phase 3, the focus rule, still open), each test
+  failing at `3a899d3` and passing now; one worker per app, each on a Chromium of its own:
+  - The pattern: one selection setter per app ends the other kinds (Quire `E.setSel` the object selection, with
+    `E.selectObject` the one way in; Ledger `G.select`, `selectRange`, `selectAll` a drawing object, R4); each app's
+    history push cancels a live drag first; Quire's text press is a `ui.drag` that watches the browser's selection
+    (`{ capture: false, cursor: false }`; `cursor: false` is new in `ui.drag`), so every way out of it is `ui.drag`'s;
+    the slide show's press resets on a lost release and blur. `tests/lib/gestures.mjs` and `tests/ui/gestures.test.mjs`.
+  - Quire: Q15 (a floating shape selected leaves no text highlighted: the page holds a hidden caret at its anchor),
+    Q10 (a right-click selects the object, or keeps it selected), Q9 and Q11 (the browser's selection read first), Q7
+    (the part of the page not being edited takes no caret), Q8a–d (the header opens on the page clicked, closes back to
+    the selection before or the point double-clicked, and an empty one opens from the margin), Q12a–c (the selection
+    bar: drag by lines, Shift extends, triple-click selects all), Q16 (from a table out to the text: whole rows,
+    removed with Delete), Q4 and Q5 (drag and drop: forgotten on `dragend`, a drop must carry our mark; `moveRange`),
+    Q17a (the Drag-and-drop text editing option), Q17b (inline pictures, shapes and charts move by drag, with a drop
+    caret; Ctrl copies, Esc puts back). `T.removeRows` in tables.js.
+  - Ledger: S1a–c and S14b (point mode also in Edit mode where the formula expects an operand; Shift+click extends the
+    last reference), S2a–c (the extent resets with every new selection; Shift+Arrow keeps whole columns or rows
+    whole), S4 (shape text finished doesn't reselect a deselected shape), S5a–b and S6 (one `end()` for every way out
+    of an edit, back to the formula's sheet; a right-click and the Name Box enter the typing first), S8 (sheet tabs
+    updated in place, the reorder drag captured by the tab: double-click renames), S9a–b and S13a–b (auto-scroll
+    re-reads the frame each step and leaves frozen panes alone), S10a–b (the Alt+Down list takes its keys and its
+    outside-press listener goes with it), S14a (a hyperlink held 1 s selects the cell instead).
+  - Lectern: `E.endInteraction()` (a tool switch, another slide, undo); P3 (a thumbnail press ends text editing), P4a–c
+    (the Slides pane keeps the keyboard when drawn again; a thumbnail is refreshed in place), toolbars that come with
+    a selection wait for the press to end (and a double-click's time), so the slide doesn't move under the pointer;
+    P6a–b (Shift or Ctrl adds to the selection, never edits), P11 (a click on the edit ring selects the box), P12a–b
+    (the scroll bars only scroll), P13 (double-click selects the word in an unselected shape), P8 and P9 (a press in a
+    table cell edits it and a drag selects cells; the table moves by its border; a press in one cell ends the range),
+    P15 (Click to add first slide). Open questions, decided as Impress does: a thumbnail let go over the slide moves no
+    slide; typing over a cell range goes into the cell the drag started in and ends the range, Delete empties the
+    range's cells (one step).
+  - The full set after it: tests/ui 281 tests, 269 pass, 12 `todo` (Q6a–d, S11a–d, P7a–d: Phase 3), 0 fail; Ledger's
+    unit tests 79, Quire's 29, ribbon and looks 7, all pass.
+
+- 2026-10-13, Phase 3, the focus rule (common/ui.js): a press on chrome with no control of its own, on a menu, the
+  menu bar or a button outside a dialog keeps the keyboard where it is (one `mousedown` listener); a dialog closing
+  gives it back to what had it, except text being edited, which goes through `ui.hooks.refocus()` with the app's
+  selection; a menu command that leaves the keyboard nowhere calls `refocus()`; Lectern's refocus gives the Slides
+  pane its keyboard back. Q6a–d, S11a–d, P7a–d off todo; a test for a dialog over the Slides pane;
+  `tests/ui/focus.test.mjs` (75 cases, three apps, Classic and Paper 2016; 55 fail at `3a899d3`). The full set after
+  it: tests/ui 357 tests, all pass, no `todo` left; ribbon and looks 7 pass.
 
 ## Decisions
 

@@ -178,7 +178,12 @@
     if (!rg) return;
     const t = rg.tbl;
     if (rg.r0 === 0 && rg.r1 >= t.rows.length - 1) { T.deleteTable(); return; }
-    E.edit('Delete Rows', () => {
+    E.edit('Delete Rows', () => T.removeRows(t, rg.r0, rg.r1));
+  };
+  /** remove rows r0…r1 of table t (inside an edit); the caret position in the row now there */
+  T.removeRows = function (t, r0, r1) {
+    const rg = { r0, r1 };
+    {
       D.touchTbl(t);
       const map = R.tblMap(t);
       /* a merge that starts in a deleted row and continues below restarts below */
@@ -194,7 +199,7 @@
       const r = t.rows[Math.min(rg.r0, t.rows.length - 1)];
       cleanMerges(t);
       return firstPos(r.cells.find((c) => c.tcPr.vMerge !== 'continue') || r.cells[0]);
-    });
+    }
   };
   /** a lone 'continue' with no restart above becomes a restart; a restart with nothing below loses its merge */
   function cleanMerges(t) {

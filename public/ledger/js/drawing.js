@@ -209,12 +209,13 @@
 
   /* ------------------------------------------------------------ interaction */
   const guard = () => G().guardProtect && G().guardProtect('objects');
-  function replace(d, patch, label) {
+  /** d changed by patch, as one undo step; the new one is selected unless opts.select is false */
+  function replace(d, patch, label, opts) {
     const s = sh();
     const nd = Object.assign({}, d, patch);
     delete nd._props;
     O.tx(wb(), label || 'Move Object', () => O.setDrawings(s, s.drawings.map((x) => (x === d ? nd : x))));
-    G().selectObject(nd);
+    if (!opts || opts.select !== false) G().selectObject(nd);
     G().syncObjects(true);
     return nd;
   }
@@ -332,7 +333,9 @@
       box.contentEditable = 'false';
       el.classList.remove('editing');
       const text = box.innerText.replace(/\n$/, '');
-      if (text !== (p.text || '')) replace(d, { text, dirty: true, geom: p.geom, fill: p.fill, line: p.line, lineW: p.lineW, font: d.font || { name: 'Arial', sz: 10 } }, 'Typing');
+      /* Esc leaves the shape selected; a press elsewhere (a cell, which has already deselected it) doesn't select it again */
+      const select = G().selectedObject() === d;
+      if (text !== (p.text || '')) replace(d, { text, dirty: true, geom: p.geom, fill: p.fill, line: p.line, lineW: p.lineW, font: d.font || { name: 'Arial', sz: 10 } }, 'Typing', { select });
       else { el._key = null; G().syncObjects(); }
       G().focus();
     };

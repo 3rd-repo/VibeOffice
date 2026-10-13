@@ -508,9 +508,10 @@
       /* inline shape or chart: select as an inline object */
       if (objEl.classList.contains('shp') && objEl.closest('.p') && !objEl.closest('.flt')) {
         e.preventDefault();
+        if (e.button !== 0 && L.ed.objSel && L.ed.objSel.el === objEl) return true;
         const pc = objEl.parentNode;
         const pos = L.layout.domToPos(pc, Array.prototype.indexOf.call(pc.childNodes, objEl));
-        if (pos) L.ed.selectInlineObject(pos, objEl);
+        if (pos) { L.ed.selectInlineObject(pos, objEl); if (e.button === 0) L.ed.startObjectMove(e, pos); }
         return true;
       }
       return false;
@@ -518,21 +519,17 @@
     e.preventDefault();
     const a = findAnchor(wrap);
     if (!a) return true;
+    if (e.button !== 0 && L.ed.objSel && L.ed.objSel.el === wrap) return true;   /* a right-click keeps it selected */
     DR.select(wrap, a);
-    startMove(e, wrap, a);
+    if (e.button === 0) startMove(e, wrap, a);
     return true;
   };
   DR.select = function (wrap, a) {
     DR.clearSelection();
-    L.ed.hideHandles();
+    L.ed.selectObject({ p: a.p, o: a.o, it: wrap._item, el: wrap, float: true });
     selWrap = wrap;
     wrap.classList.add('sel-obj');
-    const it = wrap._item;
-    L.ed.objSel = { p: a.p, o: a.o, it, el: wrap, float: true };
-    L.ed.sel = { a: D.pos(a.p, a.o), f: D.pos(a.p, a.o + 1) };
     showHandles(wrap);
-    L.bus.emit('objsel', L.ed.objSel);
-    L.bus.emit('sel', L.ed.sel);
   };
   function showHandles(target) {
     const sc = L.layout.scroller;

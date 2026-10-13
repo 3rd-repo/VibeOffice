@@ -34,7 +34,10 @@
     E.scroller.append(E.canvas, E.empty);
     container.append(E.rulerH, E.rulerV, E.scroller);
     E.empty.addEventListener('click', () => L.ui.exec('newSlide'));
-    E.scroller.addEventListener('pointerdown', onDown);
+    E.scroller.addEventListener('pointerdown', (e) => {
+      if (e.button === 0) pressStart();
+      try { onDown(e); } finally { if (!L.ui.dragging()) pressEnd(true); }
+    });
     E.scroller.addEventListener('dblclick', onDbl);
     E.scroller.addEventListener('contextmenu', onContext);
     E.scroller.addEventListener('wheel', (e) => {
@@ -53,7 +56,7 @@
 
   E.refocus = () => {
     if (E.editing()) { L.te.focus(); return; }
-    if (L.app && L.app.focusArea === 'slides') return;
+    if (L.app && L.app.focusArea === 'slides') { const b = L.panes && L.panes.left && L.panes.left.body; if (b && b.isConnected && document.activeElement !== b && !b.contains(document.activeElement)) { try { b.focus({ preventScroll: true }); } catch (e) { /* ignore */ } } return; }
     try { E.scroller.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
   };
 
@@ -232,7 +235,7 @@
   E.selectAll = () => { const sl = E.slide(); if (sl) E.select(sl.shapes.map((s) => s.id)); };
   E.saveSel = () => ({ idx: E.idx, view: E.view, sel: E.sel.slice(), edit: E.editing() ? L.te.snapshot() : null });
   E.restoreSel = function (st) {
-    L.ui.dragCancel();   /* the model was replaced (undo, redo): a drag in progress holds shapes no longer there */
+    E.endInteraction();   /* the model was replaced (undo, redo): a drag in progress holds shapes no longer there */
     if (!st) { E.render(); return; }
     if (E.view === 'master') E.buildMaster();
     E.idx = L.clamp(st.idx || 0, 0, Math.max(0, L.pres.slides.length - 1));
@@ -248,7 +251,7 @@
     const n = L.pres.slides.length;
     if (!n) { E.idx = 0; E.render(); return; }
     i = L.clamp(i, 0, n - 1);
-    L.ui.dragCancel();   /* another slide: a drag on this one ends */
+    E.endInteraction();   /* another slide: what was under way on this one ends */
     if (E.editing()) L.te.end();
     if (E.view === 'master') { E.view = 'normal'; L.bus.emit('view'); }
     const changed = i !== E.idx;
@@ -363,9 +366,24 @@
      Only the browser's own text selection inside the text being edited is not one. The editing area holds the
      pointer, so the slide re-rendering under a drag doesn't end it. */
   function slideDrag(e, o) {
-    const then = (fn) => (...a) => { try { if (fn) fn(...a); } finally { L.ui.refresh(); } };
-    return L.ui.drag(e, { threshold: o.threshold, capture: o.capture || E.scroller, move: o.move, up: then(o.up), cancel: then(o.cancel) });
+    const then = (fn, end) => (...a) => { try { if (fn) fn(...a); } finally { L.ui.refresh(); end(...a); } };
+    return L.ui.drag(e, { threshold: o.threshold, capture: o.capture || E.scroller, move: o.move, up: then(o.up, (ev, d) => pressEnd(!d.moved)), cancel: then(o.cancel, () => pressEnd(false)) });
   }
+  /* The toolbars that come and go with the selection (Picture, Tables and Borders, …) change the slide area's size, and
+     so where the slide is. While a press on the slide is under way, and for a double-click's time after a click, that
+     waits (E.holdLayout), so nothing moves under the pointer: a drag from a table's cell stays on the cells it
+     started on, and a double-click's second press lands where the first did. The press ends with its drag (whichever
+     way it ends) or, when it started none, at once. */
+  let pressing = false, laterTimer = 0, later = null;
+  function pressStart() { pressing = true; clearTimeout(laterTimer); laterTimer = 0; }
+  function pressEnd(clicked) {
+    if (!pressing) return;
+    pressing = false;
+    if (later) { if (clicked) laterTimer = setTimeout(flushLater, 450); else flushLater(); }
+  }
+  function flushLater() { clearTimeout(laterTimer); laterTimer = 0; const fn = later; later = null; if (fn) fn(); }
+  /** true when fn (a change of the slide area's size) must wait for the press; it then runs when the press is over */
+  E.holdLayout = (fn) => { if (!pressing && !laterTimer) return false; later = fn; return true; };
   /** shapes a drag changes as it goes: put back on cancel; on commit, one undo step for what changed */
   function liveEdit(shapes) {
     const before = shapes.map((s) => [s, L.clone(s)]);
@@ -393,6 +411,10 @@
   function onDown(e) {
     if (e.button === 1) return;
     L.ui.closeMenus();
+    /* the prompt of an empty presentation is a button of its own: its click adds the first slide (P15) */
+    if (E.empty.contains(e.target)) return;
+    /* the slide area's scroll bars only scroll: no press on the slide's background, selection and editing stay (P12) */
+    if (e.target === E.scroller && (e.offsetX >= E.scroller.clientWidth || e.offsetY >= E.scroller.clientHeight)) return;
     /* a press on the slide takes the keyboard from the Slides pane: Delete, the arrows and the clipboard keys work on
        the slide again (the presses below prevent the browser's own focus change) */
     if (L.app && L.app.focusArea === 'slides') { L.app.focusArea = null; try { E.scroller.focus({ preventScroll: true }); } catch (err) { /* ignore */ } }
@@ -437,17 +459,27 @@
       startMarquee(e);
       return;
     }
-    e.preventDefault();
     const id = pickId(hit);
+    /* a press in a table's cell edits that cell at once, and a drag from it selects cells, as PowerPoint does; the
+       table moves by its border (P8) */
+    if (e.button === 0 && !e.shiftKey && !e.ctrlKey && !L.app.painter.on() && E.shape(id) && E.shape(id).type === 'table' && tgt.closest('td')) {
+      L.te.begin(id, { point: { x: e.clientX, y: e.clientY } });
+      if (L.te.state && L.te.contains(tgt)) { startCellSelect(e, null); return; }
+    }
+    e.preventDefault();
     if (L.app.painter.on()) { paintPress(e, id); return; }
     const wasSelected = E.sel.includes(id) && E.sel.length === 1;
-    if (e.shiftKey || e.ctrlKey) {
-      if (E.sel.includes(id) && !e.ctrlKey) { E.toggleSel(id); return; }
-      if (!E.sel.includes(id)) { E.sel.push(id); E.select(E.sel.slice()); }
-    } else if (!E.sel.includes(id)) E.select([id]);
+    /* Shift or Ctrl adds to the selection and never edits text (P6): a click on a selected object takes it out
+       (Ctrl only when it doesn't drag, which copies) */
+    const multi = e.shiftKey || e.ctrlKey, wasIn = E.sel.includes(id);
+    if (multi) {
+      if (E.editing()) L.te.end();
+      if (wasIn && !e.ctrlKey) { E.toggleSel(id); return; }
+      if (!wasIn) { E.sel.push(id); E.select(E.sel.slice()); }
+    } else if (!wasIn) E.select([id]);
     else if (E.editing()) L.te.end();
     E.refocus();
-    startMove(e, id, wasSelected);
+    startMove(e, id, wasSelected, multi ? { multi: true, wasIn } : null);
   }
   /** caret position for a point in or around the text being edited: above it → start, below → end, beside → that line */
   function caretNear(root, x, y) {
@@ -495,7 +527,10 @@
   }
   const textCapable = (sh) => sh && (sh.type === 'text' || sh.type === 'shape') && !L.geom.isLine(sh.geom) && sh.tx;
 
-  function startMove(e, id, wasSelected) {
+  /** opts: { multi, wasIn } a press with Shift or Ctrl (it selects, never edits); { ring } a press on the hatched
+      ring of the box being edited (a click there selects the box as an object, P11) */
+  function startMove(e, id, wasSelected, opts) {
+    opts = opts || {};
     const p0 = E.toSlide(e.clientX, e.clientY);
     const ids = E.sel.slice();
     const shapes = ids.map((x) => E.find(x)).filter((f) => f && !(f.parent && f.parent.rot));
@@ -520,8 +555,10 @@
       },
       up(ev, d) {
         if (!d.moved) {
+          if (opts.multi) { if (ev.ctrlKey && opts.wasIn && E.sel.length > 1) E.toggleSel(id); return; }
+          if (opts.ring) { if (E.editing()) L.te.end(); E.select([id]); E.refocus(); return; }
           if (prim && textCapable(prim) && (wasSelected || prim.type === 'text' || (prim.ph && L.txt.isEmpty(prim.tx)))) {
-            if (!(prim.type === 'shape' && !wasSelected)) L.te.begin(prim.id, { point: { x: ev.clientX, y: ev.clientY } });
+            if (!(prim.type === 'shape' && !wasSelected)) { L.te.begin(prim.id, { point: { x: ev.clientX, y: ev.clientY } }); clickEdit = { id: prim.id, t: Date.now() }; }
           } else if (prim && prim.type === 'table') L.te.begin(prim.id, { point: { x: ev.clientX, y: ev.clientY } });
           return;
         }
@@ -556,7 +593,7 @@
     const f = E.find(sid);
     if (!f) return;
     const sh = f.shape;
-    if (hd === 'move') { startMove(e, sid, true); return; }
+    if (hd === 'move') { startMove(e, sid, true, { ring: e.target.classList.contains('edit-ring') }); return; }
     if (hd === 'rot' && !E.selected().every(M.canRotate)) return;
     const orig = L.clone(sh);
     const others = E.sel.filter((x) => x !== sid).map((x) => E.find(x)).filter(Boolean).map((of) => ({ f: of, o: L.clone(of.shape) }));
@@ -733,7 +770,7 @@
     const td0 = e.target.closest('td');
     if (!td0) { if (then) slideDrag(e, { threshold: 0, capture: e.target, up: then }); return; }
     const r0 = +td0.dataset.r, c0 = +td0.dataset.c;
-    E.cellSel = null;
+    if (E.cellSel) { E.cellSel = null; E.drawOverlay(); }   /* a press in one cell ends a range, and its highlight (P9) */
     slideDrag(e, {
       threshold: 0,
       capture: e.target,   /* held by the editing area (scaled), the browser would select the cell's text short of the pointer */
@@ -752,6 +789,7 @@
     });
   }
 
+  let clickEdit = null;   /* { id, t }: the text edit a click just started */
   function onDbl(e) {
     if (E.tool && ['freeform', 'curve'].includes(E.tool.kind)) return;
     /* a press's drag holds the pointer in the editing area, so the double-click is addressed to it: the shape is the
@@ -767,7 +805,11 @@
     if (sh.type === 'line') { L.ui.exec('formatObject'); return; }
     if (textCapable(sh)) {
       if (!E.editing() || L.te.target().sh.id !== id) L.te.begin(id, { point: { x: e.clientX, y: e.clientY }, word: true });
+      /* the double-click's second press started the edit (the first selected the shape): the browser placed no word
+         selection, since the press was the slide's, so select the word here (P13) */
+      else if (clickEdit && clickEdit.id === id && Date.now() - clickEdit.t < 1000) L.te.selectWordAt(e.clientX, e.clientY);
     }
+    clickEdit = null;
   }
   function onContext(e) {
     if (L.show && L.show.active) return;
@@ -779,10 +821,16 @@
   }
 
   /* ---------- drawing tools ---------- */
-  E.setTool = function (tool) {
-    /* another tool (or none) ends a drag in progress and drops an unfinished freeform or curve */
+  /** the one way what is under way on the slide ends unfinished: the drag in progress (put back, nothing recorded), an
+      unfinished freeform or curve, a range of table cells and its highlight. A tool switch, another slide and a model
+      replaced (undo, redo) call it; Esc finishes a freeform first (app.js) */
+  E.endInteraction = function () {
     L.ui.dragCancel();
     if (ff) { ff.el.remove(); ff = null; }
+    if (E.cellSel) { E.cellSel = null; E.drawOverlay(); }
+  };
+  E.setTool = function (tool) {
+    E.endInteraction();
     if (E.editing()) L.te.end();
     if (tool) L.ui.brushOn()?.stop();
     E.tool = tool;
