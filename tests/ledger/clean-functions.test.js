@@ -1,7 +1,8 @@
 /* The functions rewritten for todos/CLEAN_APACHE2.0.md (phase 1) keep their results: VDB, DDB, the gamma and beta
    distributions and everything built on them, BESSELY; then erf, the normal and lognormal distributions and the
    gamma function. The baseline was written by the code before each rewrite, except GAMMA(170.5) and GAMMA(171.6),
-   which overflowed to #NUM! there though both are finite (Γ(171.6) ≈ 1.586e308):
+   which overflowed to #NUM! there though both are finite (Γ(171.6) ≈ 1.586e308), and the t and F right tails, GAUSS
+   and the inverses, written again when they were made exact to mpmath (stat-tails.test.js):
      node tests/ledger/clean-functions.test.js --write    (only on that code)
      node tests/ledger/clean-functions.test.js            (checks; also run by node --test) */
 const fs = require('fs');

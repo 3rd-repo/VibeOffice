@@ -143,7 +143,8 @@
     for (let i = 0; i < 300; i++) {
       const mid = (lo + hi) / 2;
       const f = cdf(mid) - p;
-      if (Math.abs(f) < 1e-15 || (hi - lo) < 1e-15 * Math.max(1, Math.abs(mid))) return mid;
+      /* relative, so a tiny p (CHISQ.INV(1e-8,1) ≈ 1.6e-16) is found to full precision too */
+      if (f === 0 || Math.abs(f) < 1e-15 * Math.min(p, 1) || hi - lo <= 1e-15 * Math.abs(mid) || mid === lo || mid === hi) return mid;
       if ((f < 0) === (flo < 0)) { lo = mid; flo = f; } else { hi = mid; }
     }
     return (lo + hi) / 2;
@@ -153,6 +154,8 @@
   S.tInv = (p, df) => { if (p === 0.5) return 0; const r = S.invert((x) => S.tCdf(x, df), p, -1e3, 1e3); return r; };
   S.chiCdf = (x, k) => S.gammaP(k / 2, x / 2);
   S.fCdf = (x, d1, d2) => (x <= 0 ? 0 : S.betaI((d1 * x) / (d1 * x + d2), d1 / 2, d2 / 2));
+  /** the right tail 1 − F(x), from I_(1−w)(d2/2, d1/2) rather than by subtraction, which loses every digit below 1e-16 */
+  S.fTail = (x, d1, d2) => (x <= 0 ? 1 : S.betaI(d2 / (d1 * x + d2), d2 / 2, d1 / 2));
   S.betaPdf = (x, a, b) => Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - (S.lnGamma(a) + S.lnGamma(b) - S.lnGamma(a + b)));
 
   /* --------------------------------------------------------- collections */
@@ -502,7 +505,7 @@
   def('NORMSINV', 1, 1, 'n', (ctx, p) => (p <= 0 || p >= 1 ? E.NUM : S.normInv(p)));
   C.alias('NORM.S.INV', 'NORMSINV');
   def('PHI', 1, 1, 'n', (ctx, x) => S.normPdf(x));
-  def('GAUSS', 1, 1, 'n', (ctx, x) => S.normCdf(x) - 0.5);
+  def('GAUSS', 1, 1, 'n', (ctx, x) => 0.5 * S.erf(x / Math.SQRT2));
   def('LOGNORMDIST', 3, 3, 'nnn', (ctx, x, m, s) => (x <= 0 || s <= 0 ? E.NUM : S.normCdf((Math.log(x) - m) / s)));
   def('LOGNORM.DIST', 4, 4, 'nnnb', (ctx, x, m, s, cum) => { if (x <= 0 || s <= 0) return E.NUM; const z = (Math.log(x) - m) / s; return cum ? S.normCdf(z) : S.normPdf(z) / (x * s); });
   def('LOGINV', 3, 3, 'nnn', (ctx, p, m, s) => (p <= 0 || p >= 1 || s <= 0 ? E.NUM : Math.exp(m + s * S.normInv(p))));
@@ -511,10 +514,10 @@
   C.alias('CONFIDENCE.NORM', 'CONFIDENCE');
   def('CONFIDENCE.T', 3, 3, 'nnn', (ctx, a, s, n) => { n = trunc(n); if (a <= 0 || a >= 1 || s <= 0 || n < 1) return E.NUM; if (n === 1) return E.DIV0; return (-S.tInv(a / 2, n - 1) * s) / Math.sqrt(n); });
   /* t */
-  def('TDIST', 3, 3, 'nnn', (ctx, x, df, tails) => { df = trunc(df); tails = trunc(tails); if (x < 0 || df < 1 || (tails !== 1 && tails !== 2)) return E.NUM; const p = 1 - S.tCdf(x, df); return tails === 2 ? 2 * p : p; });
+  def('TDIST', 3, 3, 'nnn', (ctx, x, df, tails) => { df = trunc(df); tails = trunc(tails); if (x < 0 || df < 1 || (tails !== 1 && tails !== 2)) return E.NUM; const p = S.tCdf(-x, df); return tails === 2 ? 2 * p : p; });
   def('T.DIST', 3, 3, 'nnb', (ctx, x, df, cum) => { df = trunc(df); if (df < 1) return E.NUM; return cum ? S.tCdf(x, df) : S.tPdf(x, df); });
-  def('T.DIST.2T', 2, 2, 'nn', (ctx, x, df) => { df = trunc(df); if (x < 0 || df < 1) return E.NUM; return 2 * (1 - S.tCdf(x, df)); });
-  def('T.DIST.RT', 2, 2, 'nn', (ctx, x, df) => { df = trunc(df); if (df < 1) return E.NUM; return 1 - S.tCdf(x, df); });
+  def('T.DIST.2T', 2, 2, 'nn', (ctx, x, df) => { df = trunc(df); if (x < 0 || df < 1) return E.NUM; return 2 * S.tCdf(-x, df); });
+  def('T.DIST.RT', 2, 2, 'nn', (ctx, x, df) => { df = trunc(df); if (df < 1) return E.NUM; return S.tCdf(-x, df); });
   def('TINV', 2, 2, 'nn', (ctx, p, df) => { df = trunc(df); if (p <= 0 || p > 1 || df < 1) return E.NUM; return Math.abs(S.tInv(p / 2, df)); });
   C.alias('T.INV.2T', 'TINV');
   def('T.INV', 2, 2, 'nn', (ctx, p, df) => { df = trunc(df); if (p <= 0 || p >= 1 || df < 1) return E.NUM; return S.tInv(p, df); });
@@ -522,11 +525,11 @@
   def('CHIDIST', 2, 2, 'nn', (ctx, x, df) => { df = trunc(df); if (x < 0 || df < 1 || df > 1e10) return E.NUM; return S.gammaQ(df / 2, x / 2); });
   C.alias('CHISQ.DIST.RT', 'CHIDIST');
   def('CHISQ.DIST', 3, 3, 'nnb', (ctx, x, df, cum) => { df = trunc(df); if (x < 0 || df < 1) return E.NUM; if (cum) return S.gammaP(df / 2, x / 2); if (x === 0) return df === 2 ? 0.5 : df === 1 ? E.DIV0 : 0; return Math.exp((df / 2 - 1) * Math.log(x) - x / 2 - (df / 2) * Math.LN2 - S.lnGamma(df / 2)); });
-  def('CHIINV', 2, 2, 'nn', (ctx, p, df) => { df = trunc(df); if (p <= 0 || p > 1 || df < 1) return E.NUM; if (p === 1) return 0; return S.invert((x) => 1 - S.gammaP(df / 2, x / 2), p, 0, Math.max(10, df * 10), false); });
+  def('CHIINV', 2, 2, 'nn', (ctx, p, df) => { df = trunc(df); if (p <= 0 || p > 1 || df < 1) return E.NUM; if (p === 1) return 0; return S.invert((x) => S.gammaQ(df / 2, x / 2), p, 0, Math.max(10, df * 10), false); });
   C.alias('CHISQ.INV.RT', 'CHIINV');
   def('CHISQ.INV', 2, 2, 'nn', (ctx, p, df) => { df = trunc(df); if (p < 0 || p >= 1 || df < 1) return E.NUM; if (p === 0) return 0; return S.invert((x) => S.gammaP(df / 2, x / 2), p, 0, Math.max(10, df * 10)); });
   /* F */
-  def('FDIST', 3, 3, 'nnn', (ctx, x, a, b) => { a = trunc(a); b = trunc(b); if (x < 0 || a < 1 || b < 1) return E.NUM; return 1 - S.fCdf(x, a, b); });
+  def('FDIST', 3, 3, 'nnn', (ctx, x, a, b) => { a = trunc(a); b = trunc(b); if (x < 0 || a < 1 || b < 1) return E.NUM; return S.fTail(x, a, b); });
   C.alias('F.DIST.RT', 'FDIST');
   def('F.DIST', 4, 4, 'nnnb', (ctx, x, a, b, cum) => {
     a = trunc(a); b = trunc(b); if (x < 0 || a < 1 || b < 1) return E.NUM;
@@ -534,7 +537,7 @@
     if (x === 0) return a === 2 ? 1 : a < 2 ? E.NUM : 0;
     return Math.exp(0.5 * (a * Math.log(a * x) + b * Math.log(b) - (a + b) * Math.log(a * x + b)) - Math.log(x) - (S.lnGamma(a / 2) + S.lnGamma(b / 2) - S.lnGamma((a + b) / 2)));
   });
-  def('FINV', 3, 3, 'nnn', (ctx, p, a, b) => { a = trunc(a); b = trunc(b); if (p <= 0 || p > 1 || a < 1 || b < 1) return E.NUM; if (p === 1) return 0; return S.invert((x) => 1 - S.fCdf(x, a, b), p, 0, 1000, false); });
+  def('FINV', 3, 3, 'nnn', (ctx, p, a, b) => { a = trunc(a); b = trunc(b); if (p <= 0 || p > 1 || a < 1 || b < 1) return E.NUM; if (p === 1) return 0; return S.invert((x) => S.fTail(x, a, b), p, 0, 1000, false); });
   C.alias('F.INV.RT', 'FINV');
   def('F.INV', 3, 3, 'nnn', (ctx, p, a, b) => { a = trunc(a); b = trunc(b); if (p < 0 || p >= 1 || a < 1 || b < 1) return E.NUM; if (p === 0) return 0; return S.invert((x) => S.fCdf(x, a, b), p, 0, 1000); });
   /* beta */
@@ -642,7 +645,7 @@
       if (type === 2) { const sp = ((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2); t = Math.abs(mean(x) - mean(y)) / Math.sqrt(sp * (1 / n1 + 1 / n2)); df = n1 + n2 - 2; }
       else { const se = v1 / n1 + v2 / n2; t = Math.abs(mean(x) - mean(y)) / Math.sqrt(se); df = (se * se) / ((v1 / n1) * (v1 / n1) / (n1 - 1) + (v2 / n2) * (v2 / n2) / (n2 - 1)); }
     }
-    const p = 1 - S.tCdf(t, df);
+    const p = S.tCdf(-t, df);
     return tails === 2 ? 2 * p : p;
   });
   C.alias('T.TEST', 'TTEST');
@@ -653,8 +656,7 @@
     const v1 = devsq(x) / (x.length - 1), v2 = devsq(y) / (y.length - 1);
     if (!v1 || !v2) return E.DIV0;
     const f = v1 / v2;
-    const p = S.fCdf(f, x.length - 1, y.length - 1);
-    return 2 * Math.min(p, 1 - p);
+    return 2 * Math.min(S.fCdf(f, x.length - 1, y.length - 1), S.fTail(f, x.length - 1, y.length - 1));
   });
   C.alias('F.TEST', 'FTEST');
   def('CHITEST', 2, 2, 'aa', (ctx, a, b) => {
