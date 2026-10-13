@@ -658,8 +658,9 @@
     let type = b.type === 'xlsm' || b.type === 'xltx' || b.type === 'xltm' || b.type === 'csv' || b.type === 'txt' ? b.type : 'xlsx';
     const name = h('input', { type: 'text', value: base, style: 'width:100%' });
     const pw = { open: b.password || '', backup: false };
-    const tools = ui.button('Too&ls ▾', () => {
-      const r = tools.getBoundingClientRect();
+    /* the Tools button's menu, under the button */
+    const tools = (button) => {
+      const r = button.getBoundingClientRect();
       ui.openMenu([{ label: '&General Options...', run: () => {
         const p1 = h('input', { type: 'password', value: pw.open, autocomplete: 'new-password' });
         ui.dialog({ title: 'Save Options', width: 320, body: h('div', { class: 'col' }, ui.group('File sharing', ui.field('Password to &open:', p1)), h('div', { class: 'hint', text: 'Workbooks saved with a password are encrypted (AES-256) and open in Excel 2010 and later.' })), buttons: [{ label: 'OK', primary: true, onClick: () => {
@@ -668,9 +669,9 @@
           ui.dialog({ title: 'Confirm Password', width: 300, body: h('div', { class: 'col' }, ui.field('Reenter password to proceed.', p2), h('div', { class: 'hint', text: 'Caution: If you lose or forget the password, it cannot be recovered.' })), buttons: [{ label: 'OK', primary: true, onClick: () => { if (p2.value !== p1.value) { ui.msg("Confirmation password is not identical.", { icon: 'warn' }); return false; } pw.open = p1.value; } }, { label: 'Cancel' }] });
         } }, { label: 'Cancel' }] });
       } }], { left: r.left, bottom: r.bottom });
-    });
+    };
     return ui.dialog({ title: 'Save As', width: 460, body: h('div', { class: 'col' }, ui.field('File &name:', name), ui.field('Save as &type:', ui.select(types, type, (v) => { type = v; })), h('div', { class: 'hint', text: 'The file is saved to your browser\'s downloads.' })),
-      buttons: [{ label: 'Tools', onClick: () => { tools.click(); return false; } }, { label: '&Save', primary: true, onClick: () => {
+      buttons: [{ label: 'Tools', onClick: (close, button) => { tools(button); return false; } }, { label: '&Save', primary: true, onClick: () => {
         const ext = { xmlss: 'xml', html: 'htm' }[type] || type;
         const n = (name.value.trim() || base).replace(/\.(xlsx|xlsm|xltx|xltm|xml|csv|txt|htm|html|pdf)$/i, '') + '.' + ext;
         b.password = pw.open || undefined;

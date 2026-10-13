@@ -108,7 +108,8 @@
     const depth = opts.depth || 0;
     ui.closeMenus(depth);
     const list = (typeof items === 'function' ? items() : items).map(resolveItem).filter((x) => x && !x.hidden);
-    const el = h('div', { class: 'menu' + (opts.cls ? ' ' + opts.cls : ''), role: 'menu', tabindex: '-1' });
+    /* a menu from inside a dialog (a drop-down button there) goes above the dialogs */
+    const el = h('div', { class: 'menu' + (opts.cls ? ' ' + opts.cls : '') + (ui.dialogOpen() ? ' over-dlg' : ''), role: 'menu', tabindex: '-1' });
     const rows = [];
     list.forEach((it) => {
       if (it.sep) { el.appendChild(h('div', { class: 'm-sep' })); return; }
@@ -365,7 +366,7 @@
   const dlgStack = [];
   ui.dialogOpen = () => dlgStack.length > 0;
   /**
-   * opts: {title, body, width, buttons:[{label, primary, cancel, onClick(close)→false to keep open}], onClose, help}
+   * opts: {title, body, width, buttons:[{label, primary, cancel, onClick(close, button)→false to keep open}], onClose, help}
    */
   ui.dialog = function (opts) {
     ui.closeMenus();
@@ -388,7 +389,7 @@
     const btns = (opts.buttons || [{ label: 'OK', primary: true }]).map((b, i) => {
       const el = h('button', { class: 'btn' + (b.primary ? ' primary' : ''), type: 'button', html: ampHTML(b.label) });
       el.addEventListener('click', () => {
-        if (b.onClick) { const r = b.onClick(close); if (r === false) return; }
+        if (b.onClick) { const r = b.onClick(close, el); if (r === false) return; }
         close(i);
       });
       foot.appendChild(el);

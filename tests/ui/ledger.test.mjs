@@ -559,3 +559,38 @@ test('S14d The right button pressed during a left-button drag opens no shortcut 
     u.clean();
   } finally { await u.close(); }
 });
+
+test('A drop-down inside a dialog opens above it: Format Cells ▸ Patterns ▸ Pattern picks a pattern', async () => {
+  const u = await ledger();
+  const centre = (sel) => u.evaluate(`(() => { const e = [...document.querySelectorAll(${JSON.stringify(sel)})].find((x) => x.offsetParent); if (!e) return null; const r = e.getBoundingClientRect();
+    return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2), top: document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === e }; })()`);
+  try {
+    await u.click(await pt(u, 'B2'));
+    await u.evaluate(`L.dlg.formatCells(4)`); await pause(300);
+    await u.click(await u.evaluate(`(() => { const b = [...document.querySelectorAll('.dlg button')].find((x) => x.textContent.trim() === 'Pattern'); const r = b.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`));
+    const swatch = await centre('.menu .pat-grid button[aria-label="darkGrid"]');
+    assert.ok(swatch, 'the pattern menu is open');
+    assert.ok(swatch.top, 'its swatches are on top, not under the dialog');
+    await u.click(swatch);
+    await u.click(await u.evaluate(`(() => { const b = [...document.querySelectorAll('.dlg button')].find((x) => x.textContent.trim() === 'OK'); const r = b.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`));
+    assert.equal(await dialog(u), null, 'the dialog is closed');
+    assert.equal(await u.evaluate(`(() => { const s = L.grid.sheet(); return (L.grid.wb.styles.get(s.styleAt(1, 1)).fill || {}).pattern; })()`), 'darkGrid');
+    u.clean();
+  } finally { await u.close(); }
+});
+
+test('Save As ▸ Tools opens its menu under the button, above the dialog', async () => {
+  const u = await ledger();
+  try {
+    await u.evaluate(`void L.dlg.saveAs()`); await pause(300);
+    const b = await u.evaluate(`(() => { const e = [...document.querySelectorAll('.dlg button')].find((x) => x.textContent.trim() === 'Tools'); const r = e.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2), l: r.left, b: r.bottom }; })()`);
+    await u.click(b);
+    const m = await u.evaluate(`(() => { const e = document.querySelector('.menu'); if (!e) return null; const r = e.getBoundingClientRect(), i = e.querySelector('.m-item').getBoundingClientRect();
+      return { l: r.left, t: r.top, top: document.elementFromPoint(i.left + i.width / 2, i.top + i.height / 2).closest('.menu') === e, text: e.textContent }; })()`);
+    assert.ok(m, 'the menu is open');
+    assert.ok(Math.abs(m.l - b.l) < 3 && Math.abs(m.t - b.b) < 3, `under the button (menu at ${m.l},${m.t}; button ${b.l},${b.b})`);
+    assert.ok(m.top, 'above the dialog');
+    assert.match(m.text, /General Options/);
+    u.clean();
+  } finally { await u.close(); }
+});
