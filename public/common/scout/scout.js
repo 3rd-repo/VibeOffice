@@ -65,23 +65,14 @@
   /* ------------------------------------------------------- rig constants */
   const UPPER = 24, FORE = 27;                 // front leg segment lengths
   const RWL = [87, 173], RWR = [113, 173];     // resting paw positions
-  /* Two camera angles. Actions are authored once in "front" coordinates; each view maps them.
-   * tq = three-quarter, body angled toward screen-left, head turned to the viewer (default). */
-  const VIEWS = {
-    front: {
-      head: -0, scene: 0, turn: 0, hr: 0, tail: [118, 156], tailAdd: 0, shadow: [100, 44],
-      sh: { L: [87, 122], R: [113, 122] }, d: { L: [0, 0], R: [0, 0] },
-      /* camera: screen = O + F*forward + U*up + L*lateral (forward points at the viewer here) */
-      cam: { O: [100, 172], F: [0, .27], U: [0, -1], L: [1, 0], floor: 176.5, D: [.96, .27, 0] },
-      hind3: { L: { lz: -21, side: -1, splay: 30, slot: 'back' }, R: { lz: 21, side: 1, splay: 30, slot: 'back', ear: [133, 84] } }
-    },
-    tq: {
-      head: -16, scene: -16, turn: -.3, hr: 3, tail: [150, 150], tailAdd: 6, shadow: [108, 54],
-      sh: { L: [69, 121], R: [87, 124] }, d: { L: [-18, -1.5], R: [-26, 2.5] },
-      /* forward points to screen-left and toward the viewer; the near side (+lateral) is screen-right */
-      cam: { O: [134, 173.5], F: [-.8, .16], U: [0, -1], L: [.6, .22], floor: 176.5, D: [.58, .27, .77] },
-      hind3: { L: { lz: -15, side: -1, splay: 12, slot: 'back', far: 1 }, R: { lz: 15, side: 1, splay: 12, slot: 'front', ear: [133, 84], roll: 4 } }
-    }
+  /* The camera: three-quarter, body angled toward screen-left, head turned to the viewer. Actions are authored in
+   * front-facing rig coordinates (forward toward the viewer); the camera maps them. */
+  const VIEW = {
+    head: -16, scene: -16, turn: -.3, hr: 3, tail: [150, 150], tailAdd: 6, shadow: [108, 54],
+    sh: { L: [69, 121], R: [87, 124] }, d: { L: [-18, -1.5], R: [-26, 2.5] },
+    /* forward points to screen-left and toward the viewer; the near side (+lateral) is screen-right */
+    cam: { O: [134, 173.5], F: [-.8, .16], U: [0, -1], L: [.6, .22], floor: 176.5, D: [.58, .27, .77] },
+    hind3: { L: { lz: -15, side: -1, splay: 12, slot: 'back', far: 1 }, R: { lz: 15, side: 1, splay: 12, slot: 'front', ear: [133, 84], roll: 4 } }
   };
   /* One canine hind leg, in rig units. Bones: femur, tibia, metatarsus (dogs stand on their toes,
    * so the hock is a lifted heel). Angles are the direction from the ball of the foot to the hock:
@@ -89,12 +80,8 @@
   const HIND3 = { hipY: 27, femur: 25, tibia: 27, meta: 13.5, ball: 12.5, metR: 3.4, reach: 22,
     sitHock: 174, standHock: 108, hangHock: 96, thA: 13.5, thW: 16, thS: 19, gas: 7.5, wK: 12, wH: 10, wM: 9 };
 
-  /* Where scene objects stand, in scene coordinates (the scene layer shifts with the view). */
-  const STAGE = {
-    front: { printer: [166, 176], easel: [160, 176], trash: [36, 176] },
-    tq: { printer: [42, 176], easel: [46, 176], trash: [44, 176] }
-  };
-  const stageOf = p => STAGE[p.view] || STAGE.front;
+  /* Where scene objects stand, in scene coordinates (the scene layer is shifted by the camera's scene). */
+  const STAGE = { printer: [42, 176], easel: [46, 176], trash: [44, 176] };
 
   /** The head's outline, its chin moved by (dx, down) and its crown by up (<= 0), from 'M100 37C123 37 135 52 134 70C133 88 121 104
    *  100 104C79 104 67 88 66 70C65 52 77 37 100 37Z' at rest; map (x, y) => [x, y] puts it in another space. */
@@ -286,7 +273,7 @@
       p.scale *= 1 + .07 * k; p.y += 3 * k;
       const knocks = [.75, 1.05, 1.35];
       const hit = knocks.reduce((m, a) => Math.max(m, bump(t, a - .12, a + .1)), 0);
-      p.wR = mix2(p.wR, [p.view === 'tq' ? 136 : 126, 100 + 4 * hit], k);
+      p.wR = mix2(p.wR, [136, 100 + 4 * hit], k);
       p.pawSR = 1 + .7 * k + .25 * hit; p.padsR = k;
       p.hr += 6 * k; both(p, 'brow', .6 * k); both(p, 'browT', .4 * k);
       both(p, 'ear', 10 * hit);
@@ -405,7 +392,7 @@
     cat: 'task', dur: 3.6, key: 2.05, office: ['msoAnimationCheckingSomething'],
     desc: 'A clipboard floats up turned toward him and a pencil ticks off each item while he reads down the list and nods.',
     pose(t, p) {
-      const tq = p.view === 'tq', side = tq ? -1 : 1;
+      const side = -1;   // toward his work, at screen-left
       const k = win(t, 0, .45, 3.15, 3.55);
       const grow = E.back(seg(t, 0, .5)) * (1 - E.in(seg(t, 3.15, 3.55)));
       const rows = [1.05, 1.65, 2.25], Y = [-8, 2, 12];
@@ -420,7 +407,7 @@
       p.faceY += 1.5 * nod; p.hy += 3 * nod; both(p, 'brow', -.2 * k);
       p.smile += .55 * seg(t, 2.35, 2.6) * k;
       both(p, 'ear', 6 * nod);
-      p.held = { layer: 'F', items: { clipboard: { s: 1.12 * grow, pos: { front: [152, 116], tq: [32, 116] }, t, yaw: { front: -45, tq: 45 }, tilt: 8, c: rows.map(a => seg(t, a, a + .14)), float: true } } };
+      p.held = { layer: 'F', items: { clipboard: { s: 1.12 * grow, pos: [32, 116], t, yaw: 45, tilt: 8, c: rows.map(a => seg(t, a, a + .14)), float: true } } };
       p.write = { on: 'clipboard', uv, lift: 3 * (1 - onPage) + 9 * (1 - seg(t, .55, .95)), r: 226, s: 1.15 * grow };
     }
   };
@@ -441,7 +428,7 @@
       p.eyeS += .2 * found; both(p, 'brow', .9 * found); both(p, 'ear', 40 * found);
       p.y -= 4 * bump(t, 2.7, 2.95); p.mouth += .35 * found; p.smile += .4 * found;
       p.wag = 6 + 24 * found; p.wagHz = 5;
-      const mx = p.view === 'tq' ? 86 : 100;
+      const mx = 86;
       p.props.floatMag = { x: mx + 26 * sweep * k, y: 164 + 2 * Math.sin(t * 2.3) - 6 * found, r: -10 * sweep * s, s: 1.1 * E.back(seg(t, 0, .45)) * (1 - E.in(seg(t, 3.3, 3.75))), t };
       p.props.sniff = { o: s, t, x: 100 + 7 * sweep * s, y: 92 + 10 * s };
       p.props.exclaim = { o: win(t, 2.72, 2.8, 3.2, 3.4), s: E.back(seg(t, 2.72, 2.95)) };
@@ -465,7 +452,7 @@
     cat: 'task', dur: 3.8, key: 2.0, office: ['msoAnimationWritingNotingSomething'],
     desc: 'A notepad floats up beside him, turned toward him, and a pencil writes three lines of notes by itself while he concentrates.',
     pose(t, p) {
-      const tq = p.view === 'tq', side = tq ? -1 : 1;
+      const side = -1;   // toward his work, at screen-left
       const k = win(t, 0, .45, 3.35, 3.75);
       const grow = E.back(seg(t, 0, .5)) * (1 - E.in(seg(t, 3.35, 3.75)));
       const W = [[1.0, 1.7], [1.8, 2.5], [2.6, 3.2]];
@@ -476,7 +463,7 @@
       p.lookX += (.7 * side + .25 * (q - .5)) * k; p.lookY += (.25 + .12 * line) * k;
       p.turn += .35 * side * k; p.hr += 4 * side * k;
       p.tongue = .5 * k; p.tongueX = 3 * side; both(p, 'browT', -.35 * k); p.browR += .2 * k;
-      p.held = { layer: 'F', items: { notepad: { s: 1.2 * grow, pos: { front: [150, 118], tq: [34, 118] }, t, yaw: { front: -45, tq: 45 }, tilt: 8, lines: prog, float: true } } };
+      p.held = { layer: 'F', items: { notepad: { s: 1.2 * grow, pos: [34, 118], t, yaw: 45, tilt: 8, lines: prog, float: true } } };
       p.write = { on: 'notepad', uv: [u, v], lift: 2.6 * (1 - writing) + 8 * (1 - seg(t, .55, .95)), r: 226 + 4 * wig * writing, s: 1.2 * grow };
     }
   };
@@ -485,10 +472,10 @@
     cat: 'task', dur: 3.8, key: 1.9, office: ['msoAnimationPrinting'],
     desc: 'A small printer pops up beside him and feeds out a page while he watches, then he gives it two approving nods.',
     pose(t, p) {
-      const tq = p.view === 'tq', dir = tq ? -1 : 1, at = stageOf(p).printer;
+      const dir = -1, at = STAGE.printer;
       const k = win(t, .15, .45, 3.3, 3.7);
       p.turn += .55 * dir * k; p.lookX += .9 * dir * k; p.lookY += .45 * k; p.hr += 4 * dir * k;
-      p[tq ? 'earL' : 'earR'] += 10 * bump(t, .6, .9);
+      p.earL += 10 * bump(t, .6, .9);
       const done = win(t, 2.3, 2.45, 3.1, 3.4);
       p.smile += .5 * done; p.wag = 6 + 22 * done; p.wagHz = 5;
       const nod = bump(t, 2.45, 2.7) + bump(t, 2.75, 3.0);
@@ -505,7 +492,7 @@
     cat: 'task', dur: 3.9, key: 1.95, office: ['msoAnimationSaving'],
     desc: 'A floppy disk floats down to him; he digs a hole in the mat and it sinks in for safekeeping, like a good bone.',
     pose(t, p) {
-      const cx = p.view === 'tq' ? 92 : 100;
+      const cx = 92;
       const k = win(t, 0, .3, 3.5, 3.9);
       const dig = win(t, 1.35, 1.5, 2.35, 2.5);
       const d = osc(t, 5);
@@ -533,7 +520,7 @@
     cat: 'task', dur: 4.1, key: 1.6, office: ['msoAnimationSendingMail'],
     desc: 'An envelope floats up to his nose; he licks it shut, a paw-print stamp drops onto it, and it sprouts wings and flies off.',
     pose(t, p) {
-      const cx = p.view === 'tq' ? 86 : 100;
+      const cx = 86;
       const k = win(t, 0, .3, 3.7, 4.1);
       const hover = win(t, .1, .4, 2.15, 2.3);
       const lick = win(t, .95, 1.05, 1.28, 1.4);
@@ -566,7 +553,7 @@
       const focus = win(t, .3, .5, .9, 1.0);
       both(p, 'browT', -.5 * focus); p.lidL = Math.max(p.lidL, .35 * focus); p.lidR = Math.max(p.lidR, .35 * focus);
       const lift = win(t, .55, .85, 2.45, 2.7);
-      const at = stageOf(p).trash, lidA = -75 * lift;
+      const at = STAGE.trash, lidA = -75 * lift;
       const whoa = win(t, .95, 1.05, 1.6, 1.9);
       p.eyeS += .18 * whoa; both(p, 'brow', .8 * whoa); p.mouth = Math.max(p.mouth, .45 * whoa); p.lean -= 3 * whoa;
       both(p, 'ear', 28 * bump(t, .95, 1.5));
@@ -592,7 +579,7 @@
       p.hy += 2.5 * Math.abs(osc(t, 1.5)) * type; p.hr += 3 * osc(t, .5) * type;
       p.lookY += .6 * k; p.faceY += 1.2 * k; p.smile += .45 * type; both(p, 'brow', .25 * type);
       p.wag = 10 * type;
-      const cx = p.view === 'tq' ? 74 : 100;
+      const cx = 74;
       p.props.techy = { o: 1 - off, y: -34 * (1 - E.back(on)) - 30 * E.in(off), glow: .5 + .5 * osc(t, 1), t };
       p.props.floatLaptop = { x: cx, y: 172 - 4 * E.out(seg(t, .3, .7)) + 1.6 * Math.sin(t * 2.3), s: E.back(seg(t, .3, .62)) * (1 - E.in(seg(t, 3.3, 3.65))), glow: type, t };
       p.props.binary = { o: type, t };
@@ -603,13 +590,13 @@
     cat: 'persona', dur: 4.0, key: 1.9, office: ['msoAnimationGetWizardy'],
     desc: 'A wizard hat appears in a puff; a wand floats up beside him, winds up and casts a burst of stars.',
     pose(t, p) {
-      const tq = p.view === 'tq', side = tq ? -1 : 1;
+      const side = -1;
       const k = win(t, .1, .4, 3.5, 3.95);
       const hat = E.back(seg(t, .15, .5)) * (1 - E.in(seg(t, 3.45, 3.8)));
       const raise = win(t, .7, 1.15, 1.35, 1.55);
       const swish = seg(t, 1.35, 1.6), hold = win(t, 1.35, 1.6, 2.9, 3.4);
       const wr = side * (t < 1.35 ? -20 * raise : lerp(-20, 75, E.out(swish)) * (1 - seg(t, 2.9, 3.4)));
-      const wx = tq ? 40 : 152, wy = 118 - 34 * raise + 2 * Math.sin(t * 2.4);
+      const wx = 40, wy = 118 - 34 * raise + 2 * Math.sin(t * 2.4);
       p.lookY -= .5 * raise; p.lookX += .8 * side * (hold + raise * .6); p.turn += .35 * side * hold;
       p.happy = .8 * win(t, 1.6, 1.7, 2.4, 2.6);
       both(p, 'brow', .8 * hold); p.smile += .6 * hold; p.mouth = .4 * win(t, 1.55, 1.65, 2.2, 2.5);
@@ -630,7 +617,7 @@
     cat: 'persona', dur: 4.3, key: 2.2, office: ['msoAnimationGetArtsy'],
     desc: 'Puts on a beret; a palette and brush float up and the brush paints a little bone on the easel while he directs, then he admires it.',
     pose(t, p) {
-      const tq = p.view === 'tq', dir = tq ? -1 : 1, EZ = stageOf(p).easel;
+      const dir = -1, EZ = STAGE.easel;
       const k = win(t, .1, .4, 3.8, 4.25);
       const gear = E.back(seg(t, .15, .5)) * (1 - E.in(seg(t, 3.75, 4.1)));
       const paint = win(t, .8, 1.0, 3.0, 3.2), admire = win(t, 3.0, 3.2, 3.7, 4.0);
@@ -722,7 +709,7 @@
       p.lookX += (.15 + .35 * glance) * k; p.lookY += .6 * glance; p.faceY += 1.5 * glance;
       p.hr -= 4 * k; p.wag = 0.01;
       const sigh = bump(t, 2.36, 2.76); p.mouth = .25 * sigh; p.sy *= 1 - .025 * sigh;
-      p.props.dust = { o: k, t, x: p.view === 'tq' ? 108 : 117, y: 178 };
+      p.props.dust = { o: k, t, x: 108, y: 178 };
     }
   };
 
@@ -860,7 +847,7 @@
       const line = ((t + 10) % .8) / .8;
       p.lookY += .45 * k; p.lookX += (-.5 + .95 * E.io(clamp(line * 1.15))) * read * .8 + (.4 - .9 * flip) * turning;
       p.faceY += 1.2 * k; p.hy += 1 * k; both(p, 'browT', .15 * k);
-      p.held = { layer: 'F', items: { book: { s: 1.12 * grow, pos: { front: [100, 128], tq: [52, 120] }, t, facing: 'dog', tilt: 30, flip: turning > 0 ? flip : -1, float: true } } };
+      p.held = { layer: 'F', items: { book: { s: 1.12 * grow, pos: [52, 120], t, facing: 'dog', tilt: 30, flip: turning > 0 ? flip : -1, float: true } } };
       blink(p, t, 1.62); blink(p, t, 3.22);
     }
   };
@@ -1017,8 +1004,8 @@
     cat: 'idle', extra: true, dur: 1.9, key: .7,
     desc: 'Turns to look at you for a moment with a small smile.',
     pose(t, p) {
-      const k = win(t, .1, .45, 1.25, 1.75), V = VIEWS[p.view] || VIEWS.front;
-      p.turn -= V.turn * .9 * k; p.hr -= V.hr * .5 * k; p.lookX = lerp(p.lookX, 0, k); p.lookY -= .05 * k;
+      const k = win(t, .1, .45, 1.25, 1.75);
+      p.turn -= VIEW.turn * .9 * k; p.hr -= VIEW.hr * .5 * k; p.lookX = lerp(p.lookX, 0, k); p.lookY -= .05 * k;
       p.smile += .35 * k; both(p, 'brow', .2 * k); both(p, 'ear', 4 * k); blink(p, t, .8);
     }
   };
@@ -1422,7 +1409,7 @@
       }
     },
     easel: {
-      layer: 'front', at: STAGE.front.easel,
+      layer: 'front', at: STAGE.easel,
       svg: `<path d="M-15 0L-5 -56M15 0L5 -56" stroke="${LINE}" stroke-width="4.8" stroke-linecap="round"/>
         <path d="M-15 0L-5 -56M15 0L5 -56" stroke="#b07a45" stroke-width="2.8" stroke-linecap="round"/>
         <rect x="-18" y="-54" width="36" height="31" rx="1.5" fill="#fffdf7" ${OL} stroke-width="1.8"/>
@@ -1770,7 +1757,7 @@
   /* ============================================================ CARDS
    * Flat objects that live in 3D: pages, boards, the laptop, the canvas. Each has front and back art
    * in its own local units (x right, y down, centred), placed on a plane facing the dog, the camera, or
-   * halfway between, then projected with the view's camera (an exact affine map for a plane).
+   * halfway between, then projected with the camera (an exact affine map for a plane).
    */
   const VE = 'vector-effect="non-scaling-stroke"';
   const OLv = (w = 1.8) => `stroke="${LINE}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round" ${VE}`;
@@ -1890,9 +1877,8 @@
 
 
   /* ============================================================== DOG SVG */
-  function dogMarkup(u, view) {
-    const id = n => `scout${u}-${n}`;
-    const tq = view === 'tq', V = VIEWS[view] || VIEWS.front;
+  function dogMarkup(u) {
+    const id = n => `scout${u}-${n}`, V = VIEW;
     const ear = `
       <path d="M76 45C63 47 55.5 62 55.5 80C55.5 97 58.5 110 65 114.5C71.5 118.5 77.5 112 78.5 104C79.5 90 79.5 68 78.5 52C78 48 77.5 46 76 45Z" fill="${C.ear}" ${OL}/>
       <path d="M70 58C64.5 70 63.5 89 66.5 106" fill="none" stroke="${C.earD}" stroke-width="2.2" stroke-linecap="round" opacity=".55"/>
@@ -1936,15 +1922,13 @@
             <path data-p="leg${S}Toes" fill="none" stroke="${LINE}" stroke-width="1.3" stroke-linecap="round"/>
           </g>`;
     };
-    const saddle = `<path d="M83 106C75 122 71 138 72 154C77 146 81 131 87 118Z" fill="${C.black}"/>`;
     const skull = 'M100 37C123 37 135 52 134 70C133 88 121 104 100 104C79 104 67 88 66 70C65 52 77 37 100 37Z';
-    const torso = 'M84 101C76 118 70 140 72 160C73 172 82 178 100 178C118 178 127 172 128 160C130 140 124 118 116 101Z';
     const tag = (x, y) => `<circle cx="${x}" cy="${y - 5.8}" r="2" fill="none" stroke="#9c874f" stroke-width="1.4"/>
           <circle cx="${x}" cy="${y}" r="5.4" fill="${C.tag}" ${OL} stroke-width="1.6"/>${pawPrint(x, y + .4, .62, C.tagD)}`;
     const FAR = '#efe7da';
     /* Three-quarter body: chest and front legs to the left, near haunch and tail to the right. */
     const torsoQ = 'M64 96C54 112 50 134 53 152C55 165 60 174 74 177L140 178C155 178 165 168 163 152C161 138 148 120 128 108C118 102 110 99 104 97Z';
-    const bodyBack = tq ? `
+    const bodyBack = `
           <g data-p="slotBack">${hindLeg('L', true)}</g>
           <path d="${torsoQ}" fill="${C.tan}"/>
           <path d="M102 97C112 99 120 103 128 108C148 120 161 138 163 152C163 156 162 160 160 163C152 152 140 142 128 136C114 129 104 120 100 108Z" fill="${C.black}"/>
@@ -1953,21 +1937,12 @@
           <path d="${torsoQ}" fill="none" ${OL}/>
           <path d="M57 98Q82 114 111 95L112 101.5Q82 121 56 104.5Z" fill="${C.collar}" ${OL}/>
           <path d="M61 102.5Q82 116.5 108 99.5" fill="none" stroke="${C.collarL}" stroke-width="1.1" stroke-dasharray="2 2"/>
-` : `
-          <g data-p="slotBack">${hindLeg('L')}${hindLeg('R')}</g>
-          <path d="${torso}" fill="${C.tan}"/>
-          ${saddle}<g transform="${MIR}">${saddle}</g>
-          <path d="M100 103C86 106 77 122 78 144C79 162 88 176 100 177C112 176 121 162 122 144C123 122 114 106 100 103Z" fill="${C.white}"/>
-          <path d="M91 152C91 163 94.5 171 100 174.5" fill="none" stroke="${C.whiteD}" stroke-width="3" stroke-linecap="round"/>
-          <path d="${torso}" fill="none" ${OL}/>
-          <path d="M79 101Q100 113 121 101L122 107.5Q100 120.5 78 107.5Z" fill="${C.collar}" ${OL}/>
-          <path d="M83 105.6Q100 115.4 117 105.6" fill="none" stroke="${C.collarL}" stroke-width="1.1" stroke-dasharray="2 2"/>
-          ${tag(100, 120)}`;
+`;
     const legShape = (name, fill) => `<path data-p="${name}F" fill="${fill}"/><path data-p="${name}S" fill="none" stroke="${C.whiteD}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path data-p="${name}O" fill="none" ${OL}/>`;
-    const armM = S => `<g data-p="arm${S}">${legShape('arm' + S, tq && S === 'L' ? FAR : C.white)}${paw(S, tq && S === 'L' ? FAR : C.white)}</g>`;
-    const bodyFront = `<g data-p="slotFront">${tq ? hindLeg('R') : ''}</g>
+    const armM = S => `<g data-p="arm${S}">${legShape('arm' + S, S === 'L' ? FAR : C.white)}${paw(S, S === 'L' ? FAR : C.white)}</g>`;
+    const bodyFront = `<g data-p="slotFront">${hindLeg('R')}</g>
           <g data-p="handL"></g><g data-p="handR"></g><g data-p="heldB"></g>
-          ${armM('L') + armM('R')}${tq ? `<g clip-path="url(#${id('tagC')})">${tag(80, 118.6)}</g>` : ''}
+          ${armM('L') + armM('R')}<g clip-path="url(#${id('tagC')})">${tag(80, 118.6)}</g>
           <g data-p="heldF"></g>
           <g data-p="handLF"></g><g data-p="handRF"></g>`;
 
@@ -2107,7 +2082,7 @@
   const scribbleY = (x, y, seed) => y + 1.3 * Math.sin(x * 2.1 + seed) * (Math.sin(x * .55 + seed * 2) > -.75 ? 1 : 0) - .5 * Math.sin(x * .8 + seed);
 
 
-  /** Outline of an ellipsoid under the view's projection: semi-axes already projected to 2D. */
+  /** Outline of an ellipsoid under the camera's projection: semi-axes already projected to 2D. */
   function ellipse2(c, axes) {
     let a = 0, b = 0, d = 0;
     for (const v of axes) { a += v[0] * v[0]; b += v[0] * v[1]; d += v[1] * v[1]; }
@@ -2207,8 +2182,7 @@
      * @param {function} [opts.onmoved] (x, y) when the user has dragged him somewhere (desktop)
      */
     constructor(opts = {}) {
-      this.o = Object.assign({ mode: 'desktop', view: 'tq', parent: null, size: 168, x: null, y: null, idle: true, balloon: true, label: 'Scout, the assistant' }, opts);
-      this.view = VIEWS[this.o.view] ? this.o.view : 'tq';
+      this.o = Object.assign({ mode: 'desktop', parent: null, size: 168, x: null, y: null, idle: true, balloon: true, label: 'Scout, the assistant' }, opts);
       const mode = this.o.mode;
       this.uid = ++UID;
       this.speed = 1;
@@ -2225,7 +2199,7 @@
       this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       this.svg.setAttribute('viewBox', '-30 -30 260 235');
       this.svg.setAttribute('aria-hidden', 'true');
-      this.svg.innerHTML = dogMarkup(this.uid, this.view);
+      this.svg.innerHTML = dogMarkup(this.uid);
       el.appendChild(this.svg);
       this.P = {};
       this.svg.querySelectorAll('[data-p]').forEach(n => { this.P[n.getAttribute('data-p')] = n; });
@@ -2259,22 +2233,6 @@
       if (mode !== 'still') wake(this);
     }
 
-    /** Switch camera angle: 'tq' (three-quarter, default) or 'front'. */
-    setView(view) {
-      const v = VIEWS[view] ? view : 'tq';
-      if (v === this.view) return this;
-      this.view = v;
-      for (const k in this._props) this._props[k].wrap.remove();
-      this._props = {};
-      this.svg.innerHTML = dogMarkup(this.uid, v);
-      this.P = {};
-      this.svg.querySelectorAll('[data-p]').forEach(n => { this.P[n.getAttribute('data-p')] = n; });
-      this._from = null; this._blend = 9;
-      const c = this._cur;
-      this._render(this._compute(c ? c.t : 0), this.o.mode === 'still' ? (c ? c.t : this._still ? this._still.t : 0) : this._clock);
-      return this;
-    }
-    static get views() { return Object.keys(VIEWS); }
 
     /* ---------- catalogue ---------- */
     static get actions() { return ORDER.slice(); }
@@ -2511,7 +2469,6 @@
     }
     _compute(t) {
       const p = rest();
-      p.view = this.view;
       const c = this._cur;
       if (c) c.def.pose(c.t, p);
       else if (this._still) A[this._still.name].pose(this._still.t, p);
@@ -2550,7 +2507,7 @@
     }
 
     _render(p, time) {
-      const P = this.P, V = VIEWS[this.view] || VIEWS.front;
+      const P = this.P, V = VIEW;
       attr(P.mat, 'transform', `translate(100 181) scale(${f(p.mat)} ${f(.35 + .65 * clamp(p.mat, 0, 2))}) translate(-100 -181)`);
       attr(P.mat, 'opacity', f(clamp(p.matO)));
       const ss = clamp(1 - Math.max(0, -p.y) / 80, .3, 1) * p.scale;
@@ -2649,7 +2606,7 @@
       });
       this._drawHeld(held, V, p);
 
-      /* hind legs: a 3D leg posed in its own plane, then projected with this view's camera.
+      /* hind legs: a 3D leg posed in its own plane, then projected with the camera.
          hip -> femur (down and forward) -> stifle -> tibia (down and back) -> hock -> metatarsus -> paw.
          Sitting folds every joint: hock on the floor behind, metatarsus flat, paw under the knee.
          When the body rises the paws stay planted and the heels lift; past full reach the legs hang. */
@@ -2763,7 +2720,7 @@
     }
     /* ---------- items held in the paws ----------
        Each is a flat plane with an orientation in the scene (turned toward the dog, or facing him),
-       projected with this view's camera, so it reads as turned in both views. Its position comes from
+       projected with the camera, so it reads as turned. Its position comes from
        the paws on screen. */
     _heldFrames(p, V, arms) {
       const out = {}, h = p.held;
@@ -2784,18 +2741,17 @@
       for (const name in h.items) {
         const st = h.items[name], s = st.s == null ? 1 : st.s;
         if (s < .02) continue;
-        const byView = v => v && !Array.isArray(v) && typeof v === 'object' ? (v[this.view] != null ? v[this.view] : v.front) : v;
         /* orientation: turned `yaw` degrees from facing the viewer toward the dog, top tipped back `tilt` */
         let n;
         if (st.facing === 'dog') { const a = (st.tilt || 35) * D2R; n = [-Math.cos(a), Math.sin(a), 0]; }
         else {
-          const yaw = byView(st.yaw), base = Math.atan2(D[2], D[0]) + (yaw == null ? 45 : yaw) * D2R, a = (st.tilt || 0) * D2R;
+          const yaw = st.yaw, base = Math.atan2(D[2], D[0]) + (yaw == null ? 45 : yaw) * D2R, a = (st.tilt || 0) * D2R;
           n = v3.norm([Math.cos(base) * Math.cos(a), Math.sin(a), Math.sin(base) * Math.cos(a)]);
         }
         const fr = frame(n), pw = P2(fr.wd), pu = P2(fr.up);
         let C2;
         if (st.pos) {
-          const ps = byView(st.pos), tt = st.t || 0;
+          const ps = st.pos, tt = st.t || 0;
           C2 = [ps[0] + .8 * Math.sin(tt * 1.7), ps[1] + 1.8 * Math.sin(tt * 2.3)];
         } else if (st.anchor === 'L' || st.anchor === 'R') {
           const w = arms[st.anchor].W, at = st.at || [0, 0];
@@ -2955,7 +2911,7 @@
     _closeBalloon() { if (this._bDone) this._bDone(this._bPick ? null : false); }
     _placeBalloon(text, withChoices) {
       const b = this.balloon, W = this.el.offsetWidth || this.o.size, H = this.el.offsetHeight || W * 235 / 260, sc = W / 260;
-      const V = VIEWS[this.view] || VIEWS.front;
+      const V = VIEW;
       const headX = (130 + V.head) * sc, headTop = 64 * sc;
       this._bText.textContent = text; this._bChoices.hidden = !withChoices;
       b.style.width = ''; b.style.left = '0px'; b.style.top = '0px'; b.style.bottom = 'auto'; b.classList.remove('is-below');
