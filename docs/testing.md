@@ -32,7 +32,7 @@ Check after a change to `suite.js` or to an app's start, open or save code: `<ap
 
 Templates: `node tools/templates.mjs` opens every template (`<app>/?template=<id>`) and fails on a script error or a missing preview; look at the new previews in the Create File view.
 
-Pattern fills: the preset bitmaps in `common/geometry.js` are PowerPoint's. `node tools/patterns/deck.mjs` writes `tmp/patterns/patterns.pptx` (each of the 54 presets in a labelled rectangle); save it as PDF from PowerPoint and `python3 tools/patterns/read-pdf.py patterns.pdf` prints the tiles, the form of `tests/patterns.powerpoint.json` (`node --test tests/patterns.test.mjs`).
+Pattern fills: the preset bitmaps in `common/geometry.js` are PowerPoint's. `node tools/patterns/deck.mjs` writes `tmp/patterns/patterns.pptx` (each of the 54 presets in a labelled rectangle); save it as PDF from PowerPoint and `python3 tools/patterns/read-pdf.py patterns.pdf` prints the tiles, the form of `tests/patterns.powerpoint.json` (`node --test tests/patterns.test.mjs`). Ledger's cell patterns (`js/render.js`) likewise: `node tools/patterns/sheet.mjs` writes `tmp/patterns/cellpatterns.xlsx` (the 17 patterns), Excel saves it as PDF, and `read-pdf.py --cells` prints the tiles, `tests/patterns.excel-mac.json` (from Excel for Mac, which draws them at double size; the test applies the rule in `render.js` that brings them to single pixels).
 
 ## Looks
 

@@ -336,15 +336,10 @@
       } }, { label: 'Cancel' }],
     });
   };
-  /** a small tile showing a fill pattern */
+  /** a small tile showing a fill pattern (solid: the pattern colour) */
   function patternURL(p, fg, bg) {
-    const px = { darkGray: ['1011', '0101'], mediumGray: ['10', '01'], lightGray: ['1000', '0010'], gray125: ['10000000', '00001000'], gray0625: ['1000000000000000', '0000000010000000'], darkHorizontal: ['1111', '1111', '0000', '0000'], darkVertical: ['1100', '1100', '1100', '1100'], darkDown: ['1100', '0110', '0011', '1001'], darkUp: ['0011', '0110', '1100', '1001'], darkGrid: ['1111', '1111', '1100', '1100'], darkTrellis: ['1111', '0110', '1111', '1001'], lightHorizontal: ['1111', '0000', '0000', '0000'], lightVertical: ['1000', '1000', '1000', '1000'], lightDown: ['1000', '0100', '0010', '0001'], lightUp: ['0001', '0010', '0100', '1000'], lightGrid: ['1111', '1000', '1000', '1000'], lightTrellis: ['1010', '0101', '1010', '0001'] }[p];
-    if (!px) return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="${fg}"/></svg>`)}`;
-    let rects = '';
-    const rowsP = px.length === 2 && px[0].length > 4 ? px.concat(px.map(() => '0'.repeat(px[0].length)).slice(0, px[0].length - 2)) : px;
-    const n = Math.max(rowsP.length, rowsP[0].length);
-    for (let y = 0; y < n; y++) { const row = rowsP[y % rowsP.length]; for (let x = 0; x < n; x++) if (row[x % row.length] === '1') rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${fg}"/>`; }
-    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${n}" height="${n}" shape-rendering="crispEdges"><rect width="${n}" height="${n}" fill="${bg}"/>${rects}</svg>`)}`;
+    if (!L.render.CELL_PATTERNS[p]) return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="${fg}"/></svg>`)}`;
+    return L.render.patternURL(p, fg, bg);
   }
   D.patternURL = patternURL;
 

@@ -505,7 +505,7 @@ support for every formula or external data source.
 | `js/model.js`, `js/ops.js` | Workbook model (sparse rows, shared styles, names, tables), undo history, every editing operation |
 | `js/formula.js`, `js/calc.js` | Formula language (A1, R1C1, structured references, `@`, spills), calculation engine and dependency graph |
 | `js/fn-core.js`, `js/fn-lookup.js`, `js/fn-stat.js`, `js/fn-fin.js`, `js/fn-eng.js`, `js/fninfo.js` | The 519 worksheet functions and their catalogue for Insert Function |
-| `../common/numfmt.js`, `js/layout.js`, `js/render.js`, `js/cf.js`, `js/styles.js` | Number formats, text measurement, the canvas renderer, conditional formats, list styles |
+| `../common/numfmt.js`, `js/layout.js`, `js/render.js`, `js/cf.js`, `js/styles.js` | Number formats, text measurement, the canvas renderer (with the 17 cell fill patterns, as Excel draws them: docs/testing.md), conditional formats, list styles |
 | `js/grid.js`, `js/editor.js`, `js/clipboard.js` | Selection, scrolling, keyboard and mouse; in-cell editing and point mode; clipboard |
 | `js/preserve.js` | Package ownership, workbook/property merges and retained style indices |
 | `js/xlsx-read.js`, `js/xlsx-write.js`, `js/csv.js`, `js/xmlss.js` | File formats |
