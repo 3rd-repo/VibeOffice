@@ -75,6 +75,13 @@ another tab and back. Two runs at once each need a Chromium of their own: `CDP=h
   modes (Classic): Quire with Track Changes, a header being edited, Outline view; Ledger with frozen panes, the second
   sheet, 150 %; Lectern with the speaker notes being edited, the Slides pane holding the keyboard, a slide with a
   transition.
+- `textmap.test.mjs`: every piece of editable text maps to the document, and a click on it puts the caret there.
+  Check 1 sweeps the page without input (`tests/lib/textmap.mjs`): in Quire every editable text node is in an
+  indexed paragraph and maps to a position and back with the model's text; in Lectern the text of every placeholder,
+  text box, shape, table cell and group or diagram node, each edited in turn, does the same. Check 2 clicks into text
+  of each kind with real input: the caret is at the clicked character, and a letter typed goes there. Generated
+  documents with every kind of text; `node tools/textmap-corpus.mjs quire|lectern DIR N OUT.json [--hf]` runs check 1
+  over corpus files (`--hf`: Quire's headers and footers, opened for editing).
 - `painter.test.mjs`: the Format Painter in each app (docs/suite.md, Brushes): it paints the dragged text, cells or
   object once the mouse is let go, a clicked word; a double-clicked painter stays on until Esc; links stay; in Lectern
   the text being edited stays edited, and text in another box can be painted.

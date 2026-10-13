@@ -231,6 +231,27 @@ Phase 5: the rest
   the edit ring does. Tests: a diagram's labels take a caret (and save), the move cursor in Quire, a diagram's frame
   in Lectern; each fails at `bec8055`.
 
+## Text that takes no caret (2026-10-13)
+
+After the diagram labels (text shown and editable that the document's index didn't know), a general check:
+`tests/ui/textmap.test.mjs` (check 1, every editable text maps to the document and back; check 2, a click puts the
+caret there and typing goes there) and `tools/textmap-corpus.mjs`. Results, check 1: Quire 300 Word files (5,712
+text nodes in body, cells, groups, comments and text boxes) and 52 with headers or footers opened (427) clean; Lectern
+200 decks (1,148 nodes) clean but for what is so by design (a caret in a field snaps to its end; a missing picture's
+label; a cell covered by a merge, now skipped). Check 2: Quire, 63 clicks in 120 files and the generated document,
+all right. Found:
+- [ ] T1 Lectern: the slide moves when a selection brings a toolbar (Diagram: 93 px left, 34 px down and narrower,
+      a pane opening too; Tables and Borders: 23 px right, 26 px down). A click on a diagram's node selects the
+      diagram, the slide moves, and the next click at the same place lands on the background and deselects: the
+      sample deck's funnel ("40 markets") never gets a caret; a table cell's caret lands away from the click. The
+      hold of Phase 4 only delays the move. `textmap.test.mjs` "clicks into a table cell and a diagram's node" (todo).
+      To do (the user, 2026-10-13): the contextual toolbars (Picture, Tables and Borders, LettersArt, Diagram) float
+      over the slide area, as PowerPoint 2003's do, instead of docking a row that resizes it; and whatever opens beside
+      the slide with a diagram selected stops changing the slide area's size.
+- [ ] T2 Ledger: a text box's text shows the move cursor; a click selects the box, a second click does nothing, a
+      double-click starts editing with the caret at the end, not at the word (Excel puts the caret at the click).
+      `textmap.test.mjs` "a click on a text box's word" (todo).
+
 ## Decisions
 
 - A release we never saw (button let go in another tab or window) cancels the drag, as a lost mouse capture does in
