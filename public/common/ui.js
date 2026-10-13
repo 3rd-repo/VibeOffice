@@ -9,8 +9,9 @@
 
   /* What the app's editor does around commands, toolbar boxes and dialogs; each app fills these in (app.js).
    * beforeExec: bring the selection model up to date; refocus: give the keyboard back to the document;
-   * commitEdit: finish an edit in progress before a toolbar box takes the focus. */
-  ui.hooks = { beforeExec() {}, refocus() {}, commitEdit() {} };
+   * commitEdit: finish an edit in progress before a toolbar box takes the focus; ownsText(el): el is the document's
+   * own editable text, which refocus gives back with the app's selection (other editable text gets its own back). */
+  ui.hooks = { beforeExec() {}, refocus() {}, commitEdit() {}, ownsText() { return false; } };
   /* Theme colours for the colour menus (Lectern): schemeColors(design) -> [{ ref, hex, tip }], currentDesign() */
   ui.schemeColors = null;
   ui.currentDesign = null;
@@ -370,6 +371,9 @@
     ui.closeMenus();
     hideTip();
     const prevFocus = document.activeElement;
+    /* the selection in text being edited, for text the app doesn't give back itself (Lectern's speaker notes) */
+    const s0 = window.getSelection();
+    const prevRange = prevFocus && prevFocus.isContentEditable && s0.rangeCount && prevFocus.contains(s0.anchorNode) ? s0.getRangeAt(0).cloneRange() : null;
     const overlay = h('div', { class: 'dlg-overlay' });
     const dlg = h('div', { class: 'dlg', role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.title });
     dlg.style.width = Math.min(opts.width || 380, window.innerWidth - 16) + 'px';
@@ -433,12 +437,14 @@
       overlay.remove();
       if (opts.onClose) opts.onClose(i);
       result(i);
-      /* the keyboard goes back to what had it (a box, a pane's list, the dialog under this one, the grid), except text
-         being edited, which the app gives back with its selection (the page's own moved into the dialog), and nothing
-         (<body>, a menu gone), which goes to the document */
-      const back = prevFocus && prevFocus.isConnected && prevFocus !== document.body && !prevFocus.isContentEditable;
-      if (back) { try { prevFocus.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
-      else ui.hooks.refocus();
+      /* the keyboard goes back to what had it: a box, a pane's list, the dialog under this one, the grid, text being
+         edited with the selection it had (the page's own moved into the dialog); the document's own text the app gives
+         back itself, with its selection (ui.hooks.ownsText); nothing (<body>, a menu gone) goes to the document */
+      const live = prevFocus && prevFocus.isConnected && prevFocus !== document.body;
+      if (live && !(prevFocus.isContentEditable && ui.hooks.ownsText(prevFocus))) {
+        try { prevFocus.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+        if (prevRange && prevRange.startContainer.isConnected && prevRange.endContainer.isConnected) { const s = window.getSelection(); s.removeAllRanges(); s.addRange(prevRange); }
+      } else ui.hooks.refocus();
     }
     setTimeout(() => {
       const first = opts.focus ? (typeof opts.focus === 'string' ? L.$(opts.focus, dlg) : opts.focus) : L.$('input:not([type=checkbox]):not([type=radio]),select,textarea', body) || btns.find((b, i) => opts.buttons && opts.buttons[i] && opts.buttons[i].primary) || btns[0];

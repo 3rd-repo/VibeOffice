@@ -303,7 +303,7 @@
     if (E.collapsed()) return E.sel.f;
     const [a, b] = E.range();
     if (E.cellSel) { const r = clearCells(); if (r) return r; }
-    if (E.rowSel) return deleteRowSel(a, b);
+    if (E.rowSel && !O.tracking()) return deleteRowSel(a, b);   /* tracked, the text is marked deleted as any (rows can't be) */
     const pos = O.deleteRange(a, b);
     O.repairFields(D.storyOf(doc(), pos.p));
     return pos;
@@ -920,9 +920,11 @@
           O.deleteRange(a, b);
           return end;
         }
-        /* the source's removal joins the rest of its last paragraph to its first */
-        if (D.cmp(d, target, b) >= 0 && target.p === b.p) at = D.pos(a.p, a.o + target.o - b.o);
+        /* a drop later in the source's last paragraph is counted from that paragraph's end, which the removal doesn't
+           touch: the removal may shorten the paragraph and join it to the source's first, or (tracked) leave it whole */
+        const tail = D.cmp(d, target, b) >= 0 && target.p === b.p ? D.plen(b.p) - target.o : null;
         O.deleteRange(a, b);
+        if (tail != null) { const p = D.info(d, b.p) ? b.p : a.p; at = D.pos(p, D.plen(p) - tail); }
       }
       return { a: at, f: O.insertBlocks(at, blocks) };
     });

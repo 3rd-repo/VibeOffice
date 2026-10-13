@@ -19,6 +19,7 @@
     beforeExec() {},
     refocus() { if (L.ed) L.ed.refocus(); },
     commitEdit() { if (L.ed && L.ed.textSave) L.ed.textSave(); },
+    ownsText: (el) => !!(L.ed && L.ed.scroller && L.ed.scroller.contains(el)),   /* the slide's text, not the notes */
   };
   /* colour menus offer the design's theme colours first */
   ui.currentDesign = () => (L.ed && L.ed.slide && L.pres ? M.design(L.pres, L.ed.slide()) : null);

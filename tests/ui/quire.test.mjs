@@ -203,6 +203,13 @@ test('Q5 a word moved forward in its paragraph: typing next goes at the moved wo
   /* Word selects the moved text, so X replaces it; X just after it would do too */
   assert.match((await body(u))[0], /^Alpha gamma delta (beta )?Xepsilon zeta eta theta\.$/);
 }));
+/** the text of block b as it shows with Track Changes: deleted runs left out */
+const shown = (u, b) => u.evaluate(`L.D.doc.main.blocks[${b}].runs.filter((r) => !(r.rPr && r.rPr.del)).map((r) => r.text || '').join('')`);
+test('Q5 tracked: a word moved forward in its paragraph lands at the drop caret (the deleted source stays in place)', () => inQuire(PARAS(['Alpha beta gamma delta epsilon zeta eta theta.', 'Second paragraph.']) + 'd.settings.track = true;', async (u) => {
+  await u.drag(await atB(u, 0, 6), await atB(u, 0, 11), 4);    // "beta "
+  await u.drag(await atB(u, 0, 7), await atB(u, 0, 23), 10);   // dropped before "epsilon"
+  assert.equal(await shown(u, 0), 'Alpha gamma delta beta epsilon zeta eta theta.');
+}));
 
 const FOCUS = ['First paragraph of text.', 'Second paragraph of ordinary text.', 'Third paragraph.'];
 const FOCUS_Z = ['First paragraph of text.', 'Second Z of ordinary text.', 'Third paragraph.'];
@@ -401,6 +408,13 @@ test('Q16 a drag from a table cell down into the text selects whole rows, and De
   const text = await body(u);
   assert.ok(!text.some(Array.isArray), 'the table is gone');
   assert.equal(text[0], 'First paragraph of text.');
+}));
+test('Q16 tracked: Delete over the rows and the text below marks them deleted, and Reject All brings everything back', () => inQuire(PARAS(['First paragraph of text.', 'Second paragraph.', 'Third paragraph after the table.']) + TABLE(1) + 'd.settings.track = true;', async (u) => {
+  const before = await body(u);
+  await u.drag(await pointIn(u, 'B[1].rows[0].cells[0].blocks[0]', 2), await atB(u, 3, 5), 8);
+  await u.key('Delete');
+  await u.evaluate(`L.ui.exec('rejectAll')`); await pause(300);
+  assert.deepEqual(await body(u), before);
 }));
 
 test('Q17a with "Drag-and-drop text editing" off, a drag from selected text selects instead of moving', () => inQuire(PARAS(DND) + 'L.app.opts.dragDrop = false;', async (u) => {

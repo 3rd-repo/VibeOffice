@@ -190,6 +190,15 @@ Phase 5: the rest
   `tests/ui/focus.test.mjs` (75 cases, three apps, Classic and Paper 2016; 55 fail at `3a899d3`). The full set after
   it: tests/ui 357 tests, all pass, no `todo` left; ribbon and looks 7 pass.
 
+- 2026-10-13, an outside review of `d69ae57`, four regressions reproduced with real input, each test failing at
+  `d69ae57`: (1) Q16's row deletion bypassed Track Changes (Reject All left the table gone): tracked, the selection is
+  deleted as text (rows can't be marked deleted); (2) a tracked move dropped later in its paragraph landed short
+  (`moveRange` assumed the source physically went): the drop point is counted from the paragraph's end; (3) a dialog
+  over Lectern's speaker notes gave the keyboard to the slide: a dialog gives editable text back with the selection it
+  had, unless it is the document's own (`ui.hooks.ownsText`: Quire's page, Lectern's slide), which `refocus()` gives
+  back; (4) the thumbnail's star after an edit previewed on the detached thumbnail (`refreshThumb` moves the star):
+  it uses the thumbnail it is in. Tests: Q5 tracked, Q16 tracked, the speaker notes and Print, the star after an edit.
+
 ## Decisions
 
 - A release we never saw (button let go in another tab or window) cancels the drag, as a lost mouse capture does in

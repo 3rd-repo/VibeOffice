@@ -64,7 +64,7 @@
     const meta = h('div', { class: 'th-meta' }, h('span', { class: 'th-num', text: String(i + (L.pres.firstNum || 1)) }));
     if ((s.trans && s.trans.type && s.trans.type !== 'none') || (s.anims && s.anims.length)) {
       const star = h('span', { class: 'th-star', 'data-tip': 'Play animations', html: '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 .8l1.5 3.2 3.4.4-2.5 2.3.7 3.4L6 8.4 2.9 10.1l.7-3.4L1.1 4.4l3.4-.4z" fill="none" stroke="#333"/></svg>' });
-      star.addEventListener('click', (e) => { e.stopPropagation(); const fr = it.querySelector('.th-frame'); L.show.previewTransition(fr, L.pres, s, L.pres.slides[i - 1]); });
+      star.addEventListener('click', (e) => { e.stopPropagation(); const fr = (e.currentTarget.closest('.th') || it).querySelector('.th-frame');   /* the thumbnail shown: refreshThumb moves the star into it */ L.show.previewTransition(fr, L.pres, s, L.pres.slides[i - 1]); });
       meta.appendChild(star);
     }
     const frame = h('button', { class: 'th-frame', type: 'button', 'aria-label': `Slide ${i + 1}` });

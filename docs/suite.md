@@ -123,9 +123,10 @@ switch, another slide and undo.
 **Focus.** The keyboard stays with the document unless the user picks a control of its own. A press on chrome with
 none (a toolbar's, the ribbon's or a pane's background, a grip, the status bar, a tab strip), on a menu, the menu bar
 or a button outside a dialog keeps it where it is (one `mousedown` listener in `ui.js`). A dialog closing gives it back
-to what had it, except text being edited, which the app's `ui.hooks.refocus()` gives back with its selection (Quire
-`E.refocus`, Lectern the text at `L.te.lastSel`, the slide or the Slides pane); a menu command that leaves it nowhere
-calls `refocus()` too (`tests/ui/focus.test.mjs`).
+to what had it, editable text with the selection it had (Lectern's speaker notes), except the document's own text
+(`ui.hooks.ownsText(el)`: Quire's page, Lectern's slide), which the app's `ui.hooks.refocus()` gives back with its
+model selection (Quire `E.refocus`, Lectern the text at `L.te.lastSel`, the slide or the Slides pane); a menu command
+that leaves it nowhere calls `refocus()` too (`tests/ui/focus.test.mjs`).
 
 **Brushes.** The Format Painter of each app, and Quire's highlighter, is a `ui.brush({ el, pick, apply, hint, status })`: a click on its button arms it for one use or puts it down, a double-click keeps it on, Esc puts it down, and one brush is on at a time. Arming it changes nothing else: the selection and the text being edited stay. It paints once, when the mouse is let go, never while a selection is still being dragged out: the app calls `brush.release()` then (Quire on the editor's `sel-done`, Ledger at the end of a cell drag, Lectern at pointer up in the slide editor) and its `apply` paints what was marked. What the apps paint follows Office and LibreOffice's Clone Formatting (Writer, Calc, Impress): a click inside a word paints the word; Ledger tiles the source range over a larger target; Lectern carries the text's formatting from text being edited and the whole object's otherwise, paints the text dragged over in any box and the whole object when the press is beside its text, and a click beside the objects puts even a kept-on painter down. The painted formatting replaces the target's own; links, fields and revision marks stay (`tests/ui/painter.test.mjs`).
 

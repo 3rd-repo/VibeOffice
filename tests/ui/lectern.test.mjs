@@ -263,6 +263,22 @@ test('With the Slides pane holding the keyboard, Format ▸ Background… closed
   u.clean();
 }));
 
+test('Editing the speaker notes, Print (Ctrl+P) closed with Esc gives the keyboard back to the notes, the caret where it was', () => lectern(async (u) => {
+  await setup(u, '');
+  await u.click(await u.el('.notes-in'));
+  await u.key('End');
+  await u.type(' more');
+  const notes = await u.evaluate('L.ed.slide().notes');
+  assert.ok(notes.endsWith(' more'), 'setup: typed into the notes');
+  await u.key('p', { ctrl: true }); await pause(300);
+  assert.equal(await u.evaluate('L.ui.dialogOpen()'), true, 'setup: the Print dialog is open');
+  await u.esc(); await pause(200);
+  assert.equal(await u.focused(), 'notes-in', 'the notes have the keyboard');
+  await u.type('X');
+  assert.equal(await u.evaluate('L.ed.slide().notes'), notes + 'X', 'typing goes on where it was');
+  u.clean();
+}));
+
 /* ---------- Phase 4: one owner per piece of state ---------- */
 
 test('P3 Editing text, a click on the current slide\'s thumbnail ends the edit: Delete then deletes the slide', () => lectern(async (u) => {
@@ -272,6 +288,18 @@ test('P3 Editing text, a click on the current slide\'s thumbnail ends the edit: 
   assert.equal((await state(u)).editing, null, 'text editing ended');
   await u.key('Delete');
   assert.equal(await order(u), 'S2', 'the slide is deleted');
+  u.clean();
+}));
+
+test('After an edit on the slide, the thumbnail\'s star previews the transition on the thumbnail shown', () => lectern(async (u) => {
+  await setup(u, RECT);
+  await u.evaluate(`(() => { L.ed.slide().trans = { type: 'fade', spd: 'slow', click: true }; L.panes.left.render();
+    const play = L.show.previewTransition; L.show.previewTransition = function (host, ...a) { window.__previewOn = host.isConnected; return play(host, ...a); }; })()`);
+  await pause(300);
+  await u.click(await shapeBox(u, 'rectR'));
+  await u.key('ArrowRight'); await pause(600);   // a nudge: the thumbnail is refreshed in place
+  await u.click(await u.el('.th[data-i="0"] .th-star'));
+  assert.equal(await u.evaluate('window.__previewOn'), true, 'the preview plays on the thumbnail on screen');
   u.clean();
 }));
 

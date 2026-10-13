@@ -15,6 +15,7 @@
     beforeExec() { if (L.ed && L.ed.syncSel && !L.ed.objSel) L.ed.syncSel(); },
     refocus() { if (L.ed) L.ed.refocus(); },
     commitEdit() { if (L.ed && L.ed.textSave) L.ed.textSave(); },
+    ownsText: (el) => !!(L.layout && L.layout.root && L.layout.root.contains(el)),
   };
 
   const DEFAULT_OPTS = {
