@@ -248,9 +248,12 @@ all right. Found:
       To do (the user, 2026-10-13): the contextual toolbars (Picture, Tables and Borders, LettersArt, Diagram) float
       over the slide area, as PowerPoint 2003's do, instead of docking a row that resizes it; and whatever opens beside
       the slide with a diagram selected stops changing the slide area's size.
-- [ ] T2 Ledger: a text box's text shows the move cursor; a click selects the box, a second click does nothing, a
+- [x] T2 Ledger: a text box's text shows the move cursor; a click selects the box, a second click does nothing, a
       double-click starts editing with the caret at the end, not at the word (Excel puts the caret at the click).
       `textmap.test.mjs` "a click on a text box's word" (todo).
+      Done: a press inside a text box edits its text with the caret there, and a drag selects text (the text cursor);
+      a 4 px band along its edge moves it (the move cursor); a click on the text of an AutoShape already selected puts
+      the caret there (a drag still moves it); a double-click selects the word. Three tests, each failing at `1ed0b50`.
 
 ## Decisions
 

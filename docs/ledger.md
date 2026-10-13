@@ -108,7 +108,9 @@ searchable topics, the keyboard-shortcut reference and a function reference for 
 - Charts in opened files are drawn from their own definitions (3-D charts flat; radar and stock charts
   as lines; bubble charts as scatter) and are saved back unchanged unless you edit them.
 - Pictures (PNG, JPEG, GIF, BMP, SVG and Windows metafiles — EMF and WMF are drawn by Ledger's own
-  metafile player), AutoShapes and text boxes: move, resize, copy, order, Format Object.
+  metafile player), AutoShapes and text boxes: move, resize, copy, order, Format Object; their text is edited in
+  place (a click in a text box, or on the text of a selected AutoShape, puts the caret there; a text box moves by its
+  edge).
 - Conditional formatting from newer files is shown too: data bars, colour scales and icon sets
   (including the Excel 2010 sets and custom icon combinations), and sparklines.
 

@@ -149,14 +149,52 @@ test('Lectern, check 2: clicks into a table cell and a diagram\'s node put the c
 });
 
 /* ---------------------------------------------------------------- Ledger */
-test('Ledger, check 2: a click on a text box\'s word puts the caret there, and typing goes there', { todo: 'T2: a click selects the box; a double-click puts the caret at the end' }, async () => {
+/** a Ledger text box holding "Hello wonderful world", not selected; the point of the "d" of "wonderful", and its edge */
+async function ledgerTextBox(t) {
+  await t.evaluate(`L.drawing.insertShape('textbox', { x: 300, y: 260, w: 260, h: 90 })`); await pause(400);
+  await t.type('Hello wonderful world'); await t.esc(); await pause(150); await t.esc(); await pause(150);
+  await t.click(await t.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), b = L.grid.cellRect(1, 1); return { x: w.left + b.x + 5, y: w.top + b.y + 5 }; })()`)); await pause(300);
+  return t.evaluate(`(() => { const w = document.createTreeWalker(document.querySelector('#glayer'), NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) if (n.data.includes('wonderful')) { const k = n.data.indexOf('wonderful') + 3, r = document.createRange(); r.setStart(n, k); r.setEnd(n, k + 1); const b = r.getBoundingClientRect(), box = document.querySelector('#glayer .gobj').getBoundingClientRect(); return { x: b.left + 1, y: b.top + b.height / 2, edge: { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + 1) } }; } return null; })()`);
+}
+test('Ledger: a text box\'s edge shows the move cursor and a drag on it moves the box; a double-click selects the word', async () => {
   const t = await open('ledger', { look: 'classic' });
   try {
-    await t.evaluate(`L.drawing.insertShape('textbox', { x: 300, y: 260, w: 260, h: 90 })`); await pause(400);
-    await t.type('Hello wonderful world'); await t.esc(); await pause(150); await t.esc(); await pause(150);
-    await t.click(await t.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), b = L.grid.cellRect(1, 1); return { x: w.left + b.x + 5, y: w.top + b.y + 5 }; })()`)); await pause(300);
-    const p = await t.evaluate(`(() => { const w = document.createTreeWalker(document.querySelector('#glayer'), NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) if (n.data.includes('wonderful')) { const k = n.data.indexOf('wonderful') + 3, r = document.createRange(); r.setStart(n, k); r.setEnd(n, k + 1); const b = r.getBoundingClientRect(); return { x: b.left + 1, y: b.top + b.height / 2 }; } return null; })()`);
+    const p = await ledgerTextBox(t);
+    assert.equal(await t.evaluate(`getComputedStyle(document.elementFromPoint(${p.edge.x}, ${p.edge.y})).cursor`), 'move', 'the edge');
+    const before = await t.evaluate(`JSON.stringify(L.grid.sheet().drawings[0].anchor)`);
+    await t.drag(p.edge, { x: p.edge.x + 40, y: p.edge.y + 30 }, 6); await pause(200);
+    assert.notEqual(await t.evaluate(`JSON.stringify(L.grid.sheet().drawings[0].anchor)`), before, 'moved');
+    assert.equal(await t.evaluate(`L.grid.sheet().drawings[0].text`), 'Hello wonderful world', 'its text as it was');
+    const q = await t.evaluate(`(() => { const w = document.createTreeWalker(document.querySelector('#glayer'), NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) if (n.data.includes('wonderful')) { const k = n.data.indexOf('wonderful') + 3, r = document.createRange(); r.setStart(n, k); r.setEnd(n, k + 1); const b = r.getBoundingClientRect(); return { x: b.left + 1, y: b.top + b.height / 2 }; } })()`);
+    await t.click(await t.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), b = L.grid.cellRect(1, 1); return { x: w.left + b.x + 5, y: w.top + b.y + 5 }; })()`)); await pause(700);
+    await t.dblclick(q); await pause(300);
+    assert.equal(await t.evaluate('String(getSelection()).trim()'), 'wonderful', 'the double-clicked word is selected');
+    await t.type('great'); await t.esc(); await pause(200);
+    assert.equal(await t.evaluate(`L.grid.sheet().drawings[0].text`), 'Hello great world');
+    t.clean();
+  } finally { await t.close(); }
+});
+test('Ledger, check 2: a click on a text box\'s word puts the caret there, and typing goes there', async () => {
+  const t = await open('ledger', { look: 'classic' });
+  try {
+    const p = await ledgerTextBox(t);
     assert.equal(await t.evaluate(`getComputedStyle(document.elementFromPoint(${p.x}, ${p.y})).cursor`), 'text', 'the text cursor over the text');
+    await t.click(p); await pause(300);
+    await t.type('Q'); await t.esc(); await pause(200);
+    assert.equal(await t.evaluate(`L.grid.sheet().drawings[0].text`), 'Hello wonQderful world');
+    t.clean();
+  } finally { await t.close(); }
+});
+test('Ledger: a click on the text of an AutoShape already selected puts the caret there; on one not selected it selects it', async () => {
+  const t = await open('ledger', { look: 'classic' });
+  try {
+    await t.evaluate(`L.drawing.insertShape('rect', { x: 300, y: 260, w: 260, h: 90 })`); await pause(400);
+    await t.type('Hello wonderful world'); await t.esc(); await pause(150);
+    const cell = await t.evaluate(`(() => { const w = document.querySelector('#gridwrap').getBoundingClientRect(), b = L.grid.cellRect(1, 1); return { x: w.left + b.x + 5, y: w.top + b.y + 5 }; })()`);
+    await t.click(cell); await pause(700);
+    const p = await t.evaluate(`(() => { const w = document.createTreeWalker(document.querySelector('#glayer'), NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) if (n.data.includes('wonderful')) { const k = n.data.indexOf('wonderful') + 3, r = document.createRange(); r.setStart(n, k); r.setEnd(n, k + 1); const b = r.getBoundingClientRect(); return { x: b.left + 1, y: b.top + b.height / 2 }; } })()`);
+    await t.click(p); await pause(700);
+    assert.equal(await t.evaluate(`!!L.grid.selectedObject() && !document.querySelector('#glayer .editing')`), true, 'the first click selects it');
     await t.click(p); await pause(300);
     await t.type('Q'); await t.esc(); await pause(200);
     assert.equal(await t.evaluate(`L.grid.sheet().drawings[0].text`), 'Hello wonQderful world');

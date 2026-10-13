@@ -90,13 +90,14 @@
     const content = h('div', { class: 'gobj-c' });
     el.appendChild(content);
     el.addEventListener('pointerdown', (e) => onDown(e, el));
-    el.addEventListener('dblclick', (e) => { e.stopPropagation(); DR.activate(el._d); });
+    el.addEventListener('dblclick', (e) => { e.stopPropagation(); DR.activate(el._d, { x: e.clientX, y: e.clientY, word: true }); });
     el.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); if (G().selectedObject() !== el._d) G().selectObject(el._d); DR.contextMenu(e, el._d); });
     void s;
     return el;
   };
   DR.update = function (el, d, s, rc, selected) {
     el._d = d;
+    el.classList.toggle('txbox', d.kind === 'shape' && !!d.txBox);   /* a press inside a text box edits its text */
     const content = el.firstChild;
     const z = (s.view.zoom || 100) / 100;
     const w = Math.max(1, Math.round(rc.w)), hh = Math.max(1, Math.round(rc.h));
@@ -238,8 +239,21 @@
     e.preventDefault();
     if (e.button !== 0) return;
     if (L.editor && L.editor.active && !L.editor.commit()) return;
-    const d = el._d;
-    if (G().selectedObject() !== d) G().selectObject(d);
+    const d = el._d, wasSelected = G().selectedObject() === d;
+    /* a press inside a text box (not on its edge, which moves it) edits its text: the caret where it was pressed, and
+       a drag selects text, as in Excel */
+    if (d.kind === 'shape' && d.txBox && e.target.closest('.gobj-t') && !d.locked && !(sh().protection && !d.unlocked)) {
+      if (!wasSelected) G().selectObject(d);
+      DR.editText(d, null, { x: e.clientX, y: e.clientY });
+      const box = el.querySelector('.gobj-t'), s = window.getSelection();
+      ui.drag(e, { capture: false, threshold: 0, cursor: false, move(ev) {
+        const r = document.caretRangeFromPoint && document.caretRangeFromPoint(ev.clientX, ev.clientY);
+        if (r && box && box.contains(r.startContainer) && s.rangeCount) s.extend(r.startContainer, r.startOffset);
+      } });
+      return;
+    }
+    if (!wasSelected) G().selectObject(d);
+    const onText = d.kind === 'shape' && !!e.target.closest('.gobj-t');   /* the press, not the release: the drag holds the pointer */
     G().focus();
     const handle = e.target.closest('.gobj-h');
     if ((d.locked || (sh().protection && !d.unlocked)) && guard()) return;
@@ -273,6 +287,8 @@
       },
       up(ev, g) {
         ghost.remove();
+        /* a click on the text of a shape already selected puts the caret there (a drag moves it) */
+        if (!g.moved && !handle && wasSelected && onText && (d.text || '').length) { DR.editText(d, null, { x: ev.clientX, y: ev.clientY }); return; }
         if (!g.moved) return;
         const fr = G().frame();
         if (d.anchor && d.anchor.type !== 'abs') { cur.x = Math.max(fr.hdrW, cur.x); cur.y = Math.max(fr.hdrH, cur.y); }
@@ -307,12 +323,15 @@
     return !ctrl; /* swallow typing so it does not go into cells */
   };
   /** double-click / Enter: edit a chart's options or a shape's text */
-  DR.activate = function (d) {
+  /** at: the point double-clicked, for a shape's text (its word is selected) */
+  DR.activate = function (d, at) {
     if (d.kind === 'chart') { if (d.chart) L.chartWizard.open({ edit: d }); return; }
-    if (d.kind === 'shape') { DR.editText(d); return; }
+    if (d.kind === 'shape') { DR.editText(d, null, at); return; }
     if (d.kind === 'image') DR.format(d);
   };
-  DR.editText = function (d, firstKey) {
+  /** edit a shape's text: firstKey replaces it (typing on the selected shape); at { x, y, word }: the caret goes to
+      that point (and its word is selected), else to the end */
+  DR.editText = function (d, firstKey, at) {
     if (guard()) return;
     const el = Array.from(L.$('#glayer').children).find((x) => x._d === d);
     if (!el) return;
@@ -327,7 +346,10 @@
     box.contentEditable = 'true';
     box.spellcheck = false;
     box.focus();
-    const range = document.createRange(); range.selectNodeContents(box); range.collapse(false); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    let range = at && !firstKey && document.caretRangeFromPoint ? document.caretRangeFromPoint(at.x, at.y) : null;
+    if (!range || !box.contains(range.startContainer)) { range = document.createRange(); range.selectNodeContents(box); range.collapse(false); }
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    if (at && at.word && sel.modify && range.startContainer.nodeType === 3) { sel.modify('move', 'backward', 'word'); sel.modify('extend', 'forward', 'word'); }
     const finish = () => {
       box.removeEventListener('blur', finish);
       box.contentEditable = 'false';
