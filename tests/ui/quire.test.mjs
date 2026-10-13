@@ -579,3 +579,33 @@ test('a table\'s column border: a drag sets the widths; a click or Esc leaves th
   assert.deepEqual(await undoLabels(u), ['Column Width']);
 }));
 
+
+test('the toolbar\'s Insert Table grid: a move over 2 × 3 and a click insert that table', () => inQuire(PARAS(['First paragraph.', 'Second paragraph.']), async (u) => {
+  await u.click(await u.el('.tb-drop[data-tip="Insert Table"]'));
+  const cell = (k) => u.el(`.tgp-cells span:nth-child(${k})`);
+  const a = await cell(1);
+  await u.glide(a, await cell(8), 6);   // row 2, column 3 of the 5-wide grid
+  assert.equal(await u.evaluate(`document.querySelector('.tgp-label').textContent`), '2 x 3 Table');
+  await u.click(await cell(8));
+  assert.equal(await u.evaluate(`!!document.querySelector('.tgp-cells')`), false, 'the menu closes');
+  const tb = await u.evaluate(`L.D.doc.main.blocks.filter((b) => b.t === 'tbl').map((t) => [t.rows.length, t.rows[0].cells.length])`);
+  assert.deepEqual(tb, [[2, 3]]);
+}));
+
+test('PDF export draws a table as on screen: one line between cells, the columns as wide', () => inQuire(PARAS(['First paragraph.', 'Second paragraph.']) + 'd.main.blocks.splice(1, 0, D.simpleTable(2, 2, 432));', async (u) => {
+  // the page picture in the PDF, sampled along the middle of the table's first row: where its dark lines are
+  const r = await u.evaluate(`(async () => {
+    const pg = L.layout.pages[0].el, P = pg.getBoundingClientRect(), tds = [...pg.querySelectorAll('td')].slice(0, 2).map((e) => e.getBoundingClientRect());
+    const bytes = new Uint8Array(await (await L.app.buildPDF()).arrayBuffer()); L.ui.busy(false);
+    let s = 0; while (!(bytes[s] === 0xff && bytes[s + 1] === 0xd8)) s++;
+    let e = bytes.length; while (!(bytes[e - 2] === 0xff && bytes[e - 1] === 0xd9)) e--;
+    const img = await createImageBitmap(new Blob([bytes.subarray(s, e)], { type: 'image/jpeg' })), k = img.width / P.width;
+    const c = new OffscreenCanvas(img.width, img.height), g = c.getContext('2d'); g.drawImage(img, 0, 0);
+    const y = Math.round((tds[0].top + tds[0].bottom) / 2 - P.top) * k, x0 = Math.round((tds[0].left - P.left - 6) * k), x1 = Math.round((tds[1].right - P.left + 6) * k);
+    const px = g.getImageData(x0, Math.round(y), x1 - x0, 1).data, lines = [];
+    for (let x = 0, on = false; x < x1 - x0; x++) { const dark = px[x * 4] < 128; if (dark && !on) lines.push(Math.round((x + x0) / k - (tds[0].left - P.left))); on = dark; }
+    return { lines, w: [tds[0].width, tds[1].width].map(Math.round) };
+  })()`);
+  assert.equal(r.lines.length, 3, `three lines across two cells (${r.lines}), not a box round each cell`);
+  assert.ok(Math.abs(r.lines[1] - r.w[0]) <= 2 && Math.abs(r.lines[2] - r.w[0] - r.w[1]) <= 2, `the lines where the screen has them (${r.lines}; cells ${r.w})`);
+}));

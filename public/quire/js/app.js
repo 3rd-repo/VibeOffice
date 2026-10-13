@@ -122,16 +122,26 @@
         const cells = h('div', { class: 'tgp-cells' });
         const lbl = h('div', { class: 'tgp-label', text: 'Cancel' });
         let cur = [0, 0];
+        // the cells stay put while the grid grows (a cell replaced under the pointer between press and release
+        // gets no click, so the table was never inserted)
         const draw = () => {
           cells.style.gridTemplateColumns = `repeat(${C}, 18px)`;
-          L.clear(cells);
+          const have = new Map([...cells.children].map((s) => [s.dataset.ij, s]));
+          let next = cells.firstChild;
           for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
-            const s = h('span', { class: i < cur[0] && j < cur[1] ? 'on' : '' });
-            s.addEventListener('pointerenter', () => { cur = [i + 1, j + 1]; if (i + 2 > R && R < 12) R++; if (j + 2 > C && C < 10) C++; draw(); lbl.textContent = `${cur[0]} x ${cur[1]} Table`; });
-            s.addEventListener('click', () => { close(); L.tables.insert(cur[0], cur[1]); });
-            cells.appendChild(s);
+            let s = have.get(i + ',' + j);
+            if (s) next = s.nextSibling; else cells.insertBefore(s = h('span', { 'data-ij': i + ',' + j }), next);
+            s.classList.toggle('on', i < cur[0] && j < cur[1]);
           }
         };
+        cells.addEventListener('pointerover', (e) => {
+          const s = e.target.closest('span[data-ij]');
+          if (!s) return;
+          const [i, j] = s.dataset.ij.split(',').map(Number);
+          cur = [i + 1, j + 1]; if (i + 2 > R && R < 12) R++; if (j + 2 > C && C < 10) C++;
+          draw(); lbl.textContent = `${cur[0]} x ${cur[1]} Table`;
+        });
+        cells.addEventListener('click', () => { if (cur[0]) { close(); L.tables.insert(cur[0], cur[1]); } });
         draw();
         box.append(cells, lbl);
         return box;
@@ -852,12 +862,13 @@
   };
 
   /* ---------- PDF (print) ---------- */
+  /** the document's own rules (`.p …`, `table.tbl …`), for the page pictures of PDF export */
   function docCSS() {
     let css = '';
     for (const sheet of document.styleSheets) {
       let rules;
       try { rules = sheet.cssRules; } catch (e) { continue; }
-      for (const r of rules) if (r.selectorText && /(^|[\s,])\.(pg|p|pc|lbl|tb|img|shp|tbl|cf|nref|fdyn|ffcb|crop|pg-|frm|flt|anc|sym|raw|zw|fnsep|fnote|hbrk|sectmark|cmk|cmr|ins|del|hid|lnk|sgrp|tbx|geo|wa|chart)/.test(r.selectorText)) css += r.cssText + '\n';
+      for (const r of rules) if (r.selectorText && /(^|[\s,>]|\b(?:table|td))\.(pg|p|pc|lbl|tb|img|shp|tbl|cf|nref|fdyn|ffcb|crop|pg-|frm|flt|anc|sym|raw|zw|fnsep|fnote|hbrk|sectmark|cmk|cmr|ins|del|hid|lnk|sgrp|tbx|geo|wa|chart)/.test(r.selectorText)) css += r.cssText + '\n';
     }
     return css + '.crop{display:none}.pg-hdr,.pg-ftr{opacity:1!important}.cmk,.cmr{background:none!important}td.csel{background-image:none!important}.p.chg::before{display:none}';
   }
