@@ -10,15 +10,17 @@ import assert from 'node:assert/strict';
 import { open, pause } from '../lib/input.mjs';
 import { cases, run, settled } from '../lib/gestures.mjs';
 
-/** run a gesture through every case on one tab per starting state; o: { open(), starts, from(t), to(t, a), state(t),
-    steps(t) } */
+/** run a gesture through every case on one tab per starting state, then through the brief cases in each mode from the
+    first state; o: { open(mode), starts, modes: [{ name, on(t) }] (open runs on before it builds what is dragged),
+    from(t), to(t, a), state(t), steps(t) } */
 function matrix(name, o) {
   test(name, async (s) => {
-    for (const start of o.starts) {
-      const t = await o.open();
+    const runs = o.starts.map((start) => ({ start })).concat((o.modes || []).map((mode) => ({ start: o.starts[0], mode })));
+    for (const { start, mode } of runs) {
+      const t = await o.open(mode);
       try {
-        for (const c of cases([start])) {
-          await s.test(c.name, async () => {
+        for (const c of cases([start], { brief: !!mode })) {
+          await s.test((mode ? `in ${mode.name}, ` : '') + c.name, async () => {
             await start.run(t); await pause(150);
             const before = await o.state(t), n0 = await o.steps(t);
             const a = await o.from(t), b = await o.to(t, a);
@@ -36,14 +38,14 @@ function matrix(name, o) {
             assert.deepEqual(await o.state(t), before, 'and one Undo brings back what was there');
           });
         }
-        await s.test(`from ${start.name}: no browser errors, no external requests`, () => t.clean());
+        await s.test(`${mode ? `in ${mode.name}, ` : ''}from ${start.name}: no browser errors, no external requests`, () => t.clean());
       } finally { await t.close(); }
     }
   });
 }
 
 /* ---------------------------------------------------------------- Quire: moving a floating shape */
-const quire = async () => {
+const quire = async (mode) => {
   const t = await open('quire');
   await t.evaluate(`(async () => {
     const { D } = L, d = D.newDoc();
@@ -53,6 +55,7 @@ const quire = async () => {
     L.app.loadDoc(d, 'UI test');
     await new Promise((r) => setTimeout(r, 600));
   })()`);
+  if (mode) { await mode.on(t); await pause(300); }
   return t;
 };
 const quireText = (t, b, o) => t.evaluate(`(() => { const m = L.layout.posToDom(L.D.pos(L.D.doc.main.blocks[${b}], ${o})), r = document.createRange();
@@ -69,6 +72,10 @@ matrix('Quire: moving a floating shape', {
   to: (t, a) => ({ x: a.x + 80, y: a.y + 40 }),
   state: async (t) => ({ box: await flt(t), text: await t.evaluate(`L.D.doc.main.blocks.map((b) => L.D.ptext(b)).join('|')`) }),
   steps: (t) => t.evaluate('L.D.histState().undo.length'),
+  modes: [
+    { name: 'Track Changes', on: (t) => t.evaluate(`L.ui.exec('trackChanges')`) },   // the command: its toolbar comes at once
+    { name: 'zoom 150%', on: (t) => t.evaluate(`L.layout.setZoom(1.5)`) },
+  ],
 });
 
 /* ---------------------------------------------------------------- Ledger: moving a shape, the fill handle */
@@ -78,8 +85,9 @@ const gobj = (t) => t.evaluate(`(() => { const r = document.querySelector('#glay
 const ledgerSteps = (t) => t.evaluate('L.grid.wb.undo.stack.length');
 const ledgerCells = (t) => t.evaluate(`[0, 1, 2, 3, 4].map((r) => L.editor.cellText(L.grid.sheet(), r, 0))`);
 matrix('Ledger: moving a shape', {
-  open: async () => {
+  open: async (mode) => {
     const t = await open('ledger');
+    if (mode) { await mode.on(t); await pause(300); }
     await t.evaluate(`L.ui.exec('insertShape')`);
     await t.drag(await cell(t, 4, 4), await cell(t, 9, 6), 6);
     return t;
@@ -93,10 +101,16 @@ matrix('Ledger: moving a shape', {
   to: (t, a) => ({ x: a.x + 80, y: a.y + 40 }),
   state: async (t) => ({ box: await gobj(t), cells: await ledgerCells(t) }),
   steps: ledgerSteps,
+  modes: [
+    { name: 'frozen panes', on: async (t) => { await t.click(await cell(t, 2, 1)); await t.evaluate(`L.ui.exec('freezePanes')`); } },
+    { name: 'the second sheet', on: (t) => t.evaluate(`L.app.activateSheet(1)`) },
+    { name: 'zoom 150%', on: (t) => t.evaluate(`L.grid.setZoom(150)`) },
+  ],
 });
 matrix('Ledger: the fill handle', {
-  open: async () => {
+  open: async (mode) => {
     const t = await open('ledger');
+    if (mode) { await mode.on(t); await pause(300); }
     await t.click(await cell(t, 0, 0)); await t.type('1'); await t.key('Enter');
     return t;
   },
@@ -105,16 +119,21 @@ matrix('Ledger: the fill handle', {
   to: async (t) => { const c = await cell(t, 3, 0); return { x: c.x, y: c.y }; },
   state: ledgerCells,
   steps: ledgerSteps,
+  modes: [
+    { name: 'frozen panes', on: async (t) => { await t.click(await cell(t, 2, 1)); await t.evaluate(`L.ui.exec('freezePanes')`); } },
+    { name: 'the second sheet', on: (t) => t.evaluate(`L.app.activateSheet(1)`) },
+    { name: 'zoom 150%', on: (t) => t.evaluate(`L.grid.setZoom(150)`) },
+  ],
 });
 
 /* ---------------------------------------------------------------- Lectern: moving and resizing a shape */
-const lectern = async () => {
+const lectern = async (mode) => {
   const t = await open('lectern');
+  if (mode) { await mode.on(t); await pause(300); }
   await t.evaluate(`(async () => {
     const E = L.ed, M = L.model, T = L.txt;
     if (L.te.active()) L.te.end();
-    E.goto(0);
-    const slide = L.pres.slides[0];
+    const slide = L.ed.slide();
     const r = M.newShape(L.pres, slide, 'rect', 200, 150, 120, 80); r.id = 'rectR';
     const b = M.newTextBox(L.pres, slide, 450, 300, 300, 40, true); b.id = 'boxB'; b.tx.ps = [{ lvl: 0, pp: {}, rs: [{ t: 'Some words' }] }];
     slide.shapes = [r, b];
@@ -129,6 +148,12 @@ const lsteps = (t) => t.evaluate('L.hist.undo.length');
 const slideBlank = (t) => t.evaluate(`(() => { const r = L.ed.host.getBoundingClientRect(); return { x: Math.round(r.left + 60 * L.ed.scale), y: Math.round(r.bottom - 40 * L.ed.scale) }; })()`);
 matrix('Lectern: moving a shape', {
   open: lectern,
+  modes: [
+    { name: 'a slide with a transition', on: (t) => t.evaluate(`L.ed.slide().trans = { type: 'fade', spd: 'slow', click: true }`) },
+    { name: 'the second slide', on: (t) => t.evaluate(`(() => { L.ui.exec('newSlide'); L.ed.goto(1); })()`) },
+    { name: 'the Outline tab', on: (t) => t.evaluate(`L.panes.left.setTab('outline')`) },
+    { name: 'zoom 150%', on: (t) => t.evaluate(`L.ed.setZoom(1.5)`) },
+  ],
   starts: [
     { name: 'nothing selected', run: async (t) => t.click(await slideBlank(t)) },
     { name: 'the shape selected', run: async (t) => { await t.click(await slideBlank(t)); await t.click(await lbox(t, 'rectR')); } },
@@ -141,6 +166,12 @@ matrix('Lectern: moving a shape', {
 });
 matrix('Lectern: resizing a shape', {
   open: lectern,
+  modes: [
+    { name: 'a slide with a transition', on: (t) => t.evaluate(`L.ed.slide().trans = { type: 'fade', spd: 'slow', click: true }`) },
+    { name: 'the second slide', on: (t) => t.evaluate(`(() => { L.ui.exec('newSlide'); L.ed.goto(1); })()`) },
+    { name: 'the Outline tab', on: (t) => t.evaluate(`L.panes.left.setTab('outline')`) },
+    { name: 'zoom 150%', on: (t) => t.evaluate(`L.ed.setZoom(1.5)`) },
+  ],
   starts: [{ name: 'the shape selected', run: async (t) => { await t.click(await slideBlank(t)); await t.click(await lbox(t, 'rectR')); } }],
   from: (t) => t.el('.ed-overlay [data-h="se"]'),
   to: (t, a) => ({ x: a.x + 60, y: a.y + 40 }),

@@ -1,8 +1,10 @@
 # UI: mouse, selection, drag and focus logic in Quire, Ledger and Lectern
 
-Status: all six phases done (2026-10-13): the audit is in tests/ui/ with no `todo` left, `tools/older.mjs` runs the
-tests against older code; the data-loss items are fixed; every mouse drag goes through `ui.drag`; each app has one
-owner per piece of state; the keyboard stays with the document (the focus rule). Read docs/suite.md
+Status (2026-10-13): all six phases and two review rounds are done: the audit is in tests/ui/ with no `todo` left,
+`tools/older.mjs` runs the tests against older code; the data-loss items are fixed; every mouse drag goes through
+`ui.drag`; each app has one owner per piece of state; the keyboard stays with the document (the focus rule); gestures
+and focus are tested in each app's modes. Not finished until: the mode-test review's To do below (Lectern's starting
+states), a full passing run after it, and a check by hand in a real (headed) browser. Read docs/suite.md
 (Shared code, Brushes) first. An audit of all three apps with real mouse and keyboard input (CDP, paced like a hand)
 confirmed 45 defects; most come from the same few missing mechanisms (Root causes). Six phases, in order: 0 test
 tools, 1 data loss, 2 one shared drag lifecycle, 3 one focus rule, 4 one owner per piece of state in each app,
@@ -107,6 +109,16 @@ Phase 5: the rest
 - [x] docs: docs/suite.md (Drags, Selections, Focus), docs/ledger.md (point mode), docs/testing.md (gestures, focus, a
       Chromium per port); docs/quire.md and docs/lectern.md describe no mouse behaviour to update
 
+## To do from the mode-test review (2026-10-13)
+
+- [ ] P2: Lectern's new 150 % gesture mode does not reset "nothing selected" between cases.
+      `tests/ui/gestures.test.mjs` uses `slideBlank`, which returns (356, 1121) in the 1280 × 800 test viewport;
+      the click is outside the viewport and hits nothing. After the first release and Undo, `L.ed.sel` still
+      contains `rectR`, so the subsequent cancellation cases pass from a selected shape instead of their named
+      starting state. Use a visible, hit-tested background point and assert the selection/editing state after
+      each start. Reproduced against `1900bd3` plus the pending mode tests with
+      `/tmp/vibeoffice-review-mode-start.test.mjs`: the second case fails the starting-selection assertion.
+
 ## What was done
 
 - 2026-10-12 (1035247), the Format Painter: `ui.brush` (common/ui.js) is the mode every painter and Quire's highlighter
@@ -198,6 +210,16 @@ Phase 5: the rest
   had, unless it is the document's own (`ui.hooks.ownsText`: Quire's page, Lectern's slide), which `refocus()` gives
   back; (4) the thumbnail's star after an edit previewed on the detached thumbnail (`refreshThumb` moves the star):
   it uses the thumbnail it is in. Tests: Q5 tracked, Q16 tracked, the speaker notes and Print, the star after an edit.
+
+- 2026-10-13, the modes the tests had skipped (both review rounds found faults only there): `tests/lib/gestures.mjs`
+  and `tests/ui/gestures.test.mjs` run each drag briefly in its app's modes (Quire Track Changes and 150 %; Ledger
+  frozen panes, the second sheet, 150 %; Lectern a slide with a transition, the second slide, the Outline tab, 150 %),
+  `tests/ui/focus.test.mjs` the dialogs, menus and chrome presses in them (Quire Track Changes, a header, Outline view;
+  Ledger frozen panes, the second sheet, 150 %; Lectern the speaker notes, the Slides pane, a transition). All pass;
+  the speaker-notes mode fails at `d69ae57`, as the review found. No new fault: one apparent one was the test turning
+  Track Changes on without its command (the Reviewing toolbar then came with the first edit). Checked: Ctrl+PageUp and
+  Ctrl+PageDown never reach a page in a Chrome tab (Chrome switches tabs), so they can't work after the tab's menu
+  either; the arrow keys do (test).
 
 ## Decisions
 

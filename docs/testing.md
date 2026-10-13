@@ -63,12 +63,18 @@ another tab and back. Two runs at once each need a Chromium of their own: `CDP=h
   resizing a shape in Lectern) run through the lists in `tests/lib/gestures.mjs`: each state it starts from (nothing,
   text or a range selected, the shape selected, text being edited), each key in the middle (an arrow, a letter,
   Delete, Ctrl+Z) and each way out (the release, Esc, a right-click, a release the page never saw, a release in
-  another tab). After any of them no drag is left and no cursor held; the release made one undo step that brings back
-  exactly what was there, any other ending changed and recorded nothing. A new drag adds its `matrix(…)` there.
+  another tab), then, briefly, in each mode the app can be in (Track Changes and 150 % zoom in Quire; frozen panes, the
+  second sheet and 150 % in Ledger; a slide with a transition, the second slide, the Outline tab and 150 % in
+  Lectern). After any of them no drag is left and no cursor held; the release made one undo step that brings back
+  exactly what was there, any other ending changed and recorded nothing. A new drag adds its `matrix(…)` there, and a
+  new mode goes into the lists of both files: what broke in review broke only in a mode no test had on.
 - `focus.test.mjs`: the keyboard back to the document, in each app and in the Classic and Paper 2016 looks: dialogs
   from a shortcut, a toolbar or ribbon button and the context menu, closed with Esc, Cancel and OK; menu-bar commands;
   the ribbon's tabs; presses on chrome without a control (toolbars, grips, the status bar, the ribbon's tab strip).
-  After each, the element that had the keyboard has it again, with the same selection.
+  After each, the element that had the keyboard has it again, with the same selection. Then the same in each app's
+  modes (Classic): Quire with Track Changes, a header being edited, Outline view; Ledger with frozen panes, the second
+  sheet, 150 %; Lectern with the speaker notes being edited, the Slides pane holding the keyboard, a slide with a
+  transition.
 - `painter.test.mjs`: the Format Painter in each app (docs/suite.md, Brushes): it paints the dragged text, cells or
   object once the mouse is let go, a clicked word; a double-clicked painter stays on until Esc; links stay; in Lectern
   the text being edited stays edited, and text in another box can be painted.

@@ -143,3 +143,78 @@ for (const [app, A] of Object.entries(APPS)) for (const look of ['classic', 'pap
     } finally { await t.close(); }
   });
 }
+
+/* ---------------------------------------------------------------- the same in the modes an app can be in (Classic) */
+/* Each mode: on(t) after the app's setup; into and selection when the keyboard is somewhere else in that mode;
+   shortcut for a dialog that opens there; context: false where the context menu is the browser's own. */
+const qPoint = (t, story, b, o) => t.evaluate(`(() => { const m = L.layout.posToDom(L.D.pos(${story}[${b}], ${o})), r = document.createRange(); r.setStart(m.node, m.offset); r.collapse(true); const x = r.getClientRects()[0] || r.getBoundingClientRect(); return { x: x.left + 1, y: x.top + x.height / 2 }; })()`);
+const qSel = (t) => t.evaluate(`(() => { L.ed.syncSel(); const [a, b] = L.D.order(L.D.doc, L.ed.sel.a, L.ed.sel.f); return [a.p.id, a.o, b.p.id, b.o]; })()`);
+/** the page's own selection, as text */
+const domSel = (t) => t.evaluate(`String(getSelection())`);
+const MODES = {
+  quire: [
+    { name: 'Track Changes', on: (t) => t.evaluate(`L.ui.exec('trackChanges')`) },
+    { name: 'a header being edited', on: async (t) => {
+      await t.evaluate(`(async () => { const d = L.D.doc; d.hf.h1 = { kind: 'hdr', id: 'h1', blocks: [L.D.para([L.D.text('Header text here')], { style: 'Header' })] }; d.sect.refs = { hdr: { default: 'h1' }, ftr: {} };
+        L.app.loadDoc(d, 'UI test'); await new Promise((r) => setTimeout(r, 600)); L.app.editHeaderFooter('hdr', 0); await new Promise((r) => setTimeout(r, 400)); })()`);
+    },
+    into: async (t) => { const st = `L.D.doc.hf.h1.blocks`; await t.drag(await qPoint(t, st, 0, 7), await qPoint(t, st, 0, 11), 6); return qPoint(t, st, 0, 9); },
+    selection: qSel },
+    { name: 'Outline view', on: (t) => t.evaluate(`L.ui.exec('viewOutline')`), selection: qSel },
+  ],
+  ledger: [
+    { name: 'frozen panes', on: (t) => t.evaluate(`(() => { L.grid.select(1, 1); L.ui.exec('freezePanes'); })()`) },
+    { name: 'the second sheet', on: (t) => t.evaluate(`L.app.activateSheet(1)`) },
+    { name: 'zoom 150%', on: (t) => t.evaluate(`L.grid.setZoom(150)`) },
+  ],
+  lectern: [
+    { name: 'the speaker notes being edited', on: async () => {},
+      into: async (t) => { const p = await t.el('.notes-in'); await t.click(p); await t.key('End'); await t.type(' some notes'); for (let i = 0; i < 5; i++) await t.key('ArrowLeft', { shift: true }); return p; },
+      selection: domSel, shortcut: ['p', { ctrl: true }], context: false, ok: false },
+    { name: 'the Slides pane holding the keyboard', on: async () => {},
+      into: async (t) => { const p = await t.el('.th[data-i="0"] .th-frame'); await t.click(p); return p; },
+      selection: (t) => t.evaluate(`[L.ed.idx, [...L.app.slideSel].join(), L.app.focusArea]`), shortcut: ['p', { ctrl: true }], context: false, ok: false },
+    { name: 'a slide with a transition', on: (t) => t.evaluate(`(() => { L.ed.slide().trans = { type: 'fade', spd: 'slow', click: true }; L.panes.left.render(); })()`) },
+  ],
+};
+for (const [app, A] of Object.entries(APPS)) for (const M of MODES[app]) {
+  test(`${app}, in ${M.name}: the keyboard stays with the document`, async (s) => {
+    const t = await open(app, { look: 'classic' });
+    try {
+      await A.setup(t);
+      await M.on(t); await pause(300);
+      const into = M.into || A.into, selection = M.selection || A.selection, shortcut = M.shortcut || A.shortcut;
+      const keeps = async (fn) => {
+        const p = await into(t);
+        const home = await t.focused(), sel = await selection(t);
+        await fn(p);
+        await pause(250);
+        assert.equal(await t.evaluate('L.ui.dialogOpen()'), false, 'no dialog left open');
+        assert.equal(await t.focused(), home, 'the keyboard is back where it was');
+        assert.deepEqual(await selection(t), sel, 'with the same selection');
+      };
+      const closers = [['Esc', () => t.esc()], ['Cancel', async () => t.click(await cancelButton(t))]];
+      if (M.ok ?? A.ok) closers.push(['OK', async () => t.click(await okButton(t))]);
+      for (const [how, close] of closers) {
+        await s.test(`a dialog from a shortcut, closed with ${how}`, () => keeps(async () => {
+          await t.key(...shortcut); await pause(300);
+          assert.equal(await t.evaluate('L.ui.dialogOpen()'), true, 'the dialog is open');
+          await close();
+        }));
+      }
+      if (M.context !== false) {
+        await s.test('a dialog from the context menu, closed with Esc', () => keeps(async (p) => {
+          await t.rightClick(p); await t.pick(A.context); await pause(300);
+          assert.equal(await t.evaluate('L.ui.dialogOpen()'), true, 'the dialog is open');
+          await t.esc();
+        }));
+      }
+      await s.test('a menu opened from the menu bar and closed with Esc', () => keeps(async () => { await t.menu('Edit'); await pause(150); await t.esc(); }));
+      for (const sel of ['.cmdbars', '#statusbar']) {
+        if (!(await blank(t, sel))) continue;
+        await s.test(`a press on ${sel} where it has no control`, () => keeps(async () => { await t.click(await blank(t, sel)); }));
+      }
+      await s.test('no browser errors, no external requests', () => t.clean());
+    } finally { await t.close(); }
+  });
+}

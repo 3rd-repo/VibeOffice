@@ -350,6 +350,20 @@ test('S10b Esc closes the Alt+Down list and leaves the cell as it was', async ()
   } finally { await u.close(); }
 });
 
+/* (Ctrl+PageDown and Ctrl+PageUp never reach a page in a Chrome tab, which switches tabs with them) */
+test('A sheet tab\'s context menu closed with Esc: the arrow keys still move on the sheet', async () => {
+  const u = await ledger();
+  try {
+    await u.click(await pt(u, 'B2'));
+    await u.rightClick(await tab(u, 'Sheet1'));
+    assert.ok(await menus(u), 'setup: the tab\'s menu is open');
+    await u.esc(); await pause(150);
+    await u.key('ArrowDown');
+    assert.equal((await selection(u)).active, 'B3');
+    u.clean();
+  } finally { await u.close(); }
+});
+
 /* ---------------------------------------------------------------- S11: chrome keeps the keyboard on the sheet */
 for (const [id, what, where0] of [
   ['S11a', 'the status bar', (u) => blank(u, '#statusbar')],
