@@ -4,7 +4,7 @@
  *
  * Coverage
  *   - All 43 actions in the Office "Clippit" agent data, under the same names
- *     (Congratulate, IdleRopePile, GetWizardy, Hearing_1, ...), and 15 extras of his own.
+ *     (Congratulate, IdleRopePile, GetWizardy, Hearing_1, ...), and 24 extras of his own (9 of them small idles).
  *   - All 35 Office 2003 MsoAnimationType constants, accepted as aliases
  *     (play('msoAnimationPrinting') plays Print).
  *
@@ -14,8 +14,10 @@
  *   scout.ask('What would you like to do?', ['Print it', 'Save it']).then(choice => …);
  *   scout.play('Searching');                          // any action name or Office constant
  *
- * The frame loop runs only while something moves: it stops once he is hidden and starts again with the
- * next action; freeze(true) stops it while he is shown (the window in the background).
+ * The frame loop runs only while something moves, as Microsoft Agent's sprite held its frame between animations:
+ * at rest he sits still and nothing is drawn but a blink now and then (every frame) and now and then a slow sway of
+ * the tail (about 10 frames a second, as a nap); it stops once he is hidden and starts again with the next action;
+ * freeze(true) stops it while he is shown (the window in the background).
  */
 (function (root) {
   'use strict';
@@ -947,8 +949,92 @@
       p.props.scent = { o: k, t };
     }
   };
+  /* Small idles for while the user works: short, quiet, no props, each back at rest by its end. */
+  A.IdleEarFlick = {
+    cat: 'idle', extra: true, dur: 1.1, key: .2,
+    desc: 'Flicks one ear, then the other, as if a fly went past.',
+    pose(t, p) {
+      p.earL += 18 * bump(t, .08, .24) + 8 * bump(t, .24, .38);
+      p.earR += 15 * bump(t, .5, .66) + 6 * bump(t, .66, .8);
+      p.lookX -= .12 * win(t, .05, .2, .35, .5); p.lookX += .12 * win(t, .45, .6, .8, 1.0);
+    }
+  };
+  A.IdleLickChops = {
+    cat: 'idle', extra: true, dur: 1.2, key: .45,
+    desc: 'Licks his chops once, side to side.',
+    pose(t, p) {
+      const l = win(t, .2, .32, .66, .82);
+      p.mouth = Math.max(p.mouth, .22 * l); p.tongue = Math.max(p.tongue, .55 * l); p.tongueX = 3.5 * Math.sin(seg(t, .26, .76) * Math.PI * 2);
+      p.hy += 1.2 * l; p.smile += .15 * l; blink(p, t, .95);
+    }
+  };
+  A.IdleSlowBlink = {
+    cat: 'idle', extra: true, dur: 1.7, key: .75,
+    desc: 'Closes his eyes slowly and opens them again, content.',
+    pose(t, p) {
+      const k = win(t, .1, .6, .95, 1.5);
+      p.lidL = Math.max(p.lidL, k); p.lidR = Math.max(p.lidR, k); p.autoBlink = 0;
+      p.smile += .25 * k; p.hy += 1.5 * k; p.hr -= 2 * k;
+    }
+  };
+  A.IdleSettle = {
+    cat: 'idle', extra: true, dur: 2.0, key: .6,
+    desc: 'Shifts his weight on the mat and settles again.',
+    pose(t, p) {
+      const a = win(t, .1, .55, .85, 1.35), b = win(t, .85, 1.2, 1.5, 1.9);
+      p.lean += 3.5 * a - 1.5 * b; p.x += 1.5 * a - .7 * b; p.hr -= 2 * a - b;
+      squash(p, t, 1.3, .35, .035); blink(p, t, 1.45);
+    }
+  };
+  A.IdleTailThump = {
+    cat: 'idle', extra: true, dur: 1.8, key: .8,
+    desc: 'Thumps his tail a few lazy times, pleased with things.',
+    pose(t, p) {
+      const k = win(t, .1, .35, 1.25, 1.7);
+      p.wag = 2.5 + 12 * k; p.wagHz = 2.2; p.smile += .2 * k;
+      p.lidL = Math.max(p.lidL, .15 * k); p.lidR = Math.max(p.lidR, .15 * k);
+    }
+  };
+  A.IdleCurious = {
+    cat: 'idle', extra: true, dur: 2.0, key: .8,
+    desc: 'Tilts his head the other way, one brow up, curious, then straightens.',
+    pose(t, p) {
+      const k = win(t, .12, .5, 1.3, 1.8);
+      p.hr -= 9 * k; p.turn -= .1 * k; p.lookX -= .2 * k; p.lookY -= .1 * k;
+      p.browL += .45 * k; p.earL += 12 * k; p.earR -= 4 * k; blink(p, t, 1.05);
+    }
+  };
+  A.IdleLookAtYou = {
+    cat: 'idle', extra: true, dur: 1.9, key: .7,
+    desc: 'Turns to look at you for a moment with a small smile.',
+    pose(t, p) {
+      const k = win(t, .1, .45, 1.25, 1.75), V = VIEWS[p.view] || VIEWS.front;
+      p.turn -= V.turn * .9 * k; p.hr -= V.hr * .5 * k; p.lookX = lerp(p.lookX, 0, k); p.lookY -= .05 * k;
+      p.smile += .35 * k; both(p, 'brow', .2 * k); both(p, 'ear', 4 * k); blink(p, t, .8);
+    }
+  };
+  A.IdleWatchWork = {
+    cat: 'idle', extra: true, dur: 2.2, key: 1.0,
+    desc: 'Glances over at your work and gives a small approving nod.',
+    pose(t, p) {
+      const k = win(t, .1, .45, 1.6, 2.05), n = bump(t, .95, 1.25) + .5 * bump(t, 1.25, 1.5);
+      p.lookX -= .65 * k; p.lookY -= .45 * k; p.turn -= .15 * k; p.hr -= 3 * k; p.faceY -= 1.5 * k;
+      p.hy += 3.5 * n; p.faceY += 1.5 * n; p.smile += .2 * k; blink(p, t, 1.7);
+    }
+  };
+  A.IdleYawn = {
+    cat: 'idle', extra: true, dur: 2.2, key: 1.0,
+    desc: 'Gives a small yawn, eyes squeezed shut, and settles again.',
+    pose(t, p) {
+      const k = win(t, .25, .75, 1.25, 1.8);
+      p.mouth = Math.max(p.mouth, .85 * k); p.tongue = Math.max(p.tongue, .25 * k); p.sy *= 1 + .025 * k;
+      p.lidL = Math.max(p.lidL, .9 * k); p.lidR = Math.max(p.lidR, .9 * k); p.autoBlink = 0;
+      p.hy -= 2 * k; p.faceY -= 2 * k; p.hr += 4 * k; both(p, 'ear', -6 * k);
+    }
+  };
   const EXTRAS = ['Acknowledge', 'Decline', 'Pleased', 'Sad', 'Surprised', 'Confused', 'Uncertain',
-    'Suggest', 'Read', 'Announce', 'Fetch', 'Shake', 'Beg', 'ChaseTail', 'SniffAir'];
+    'Suggest', 'Read', 'Announce', 'Fetch', 'Shake', 'Beg', 'ChaseTail', 'SniffAir',
+    'IdleEarFlick', 'IdleLickChops', 'IdleSlowBlink', 'IdleSettle', 'IdleTailThump', 'IdleCurious', 'IdleLookAtYou', 'IdleWatchWork', 'IdleYawn'];
 
   /* Canonical order of the Clippit agent's 43 actions. */
   const ORDER = ['Congratulate', 'LookRight', 'SendMail', 'Thinking', 'Explain', 'IdleRopePile', 'IdleAtom', 'Print', 'Hide',
@@ -968,14 +1054,26 @@
   /* Office 2003 MsoAnimationType → action. */
   const OFFICE = {};
   ORDER.forEach(n => (A[n].office || []).forEach(c => { OFFICE[c] = n; }));
-  const IDLES = ['Idle1_1', 'IdleAtom', 'IdleRopePile', 'IdleSideToSide', 'IdleHeadScratch', 'IdleFingerTap', 'IdleSnooze', 'IdleEyeBrowRaise'];
-  /* The floating assistant idles rarely and mostly quietly, so it doesn't pull focus from the page. */
-  const IDLE_POOL = [['Idle1_1', 6], ['LookDownLeft', 2], ['LookLeft', 2], ['LookUp', 1], ['LookRight', 1], ['IdleEyeBrowRaise', 2],
-    ['Hearing_1', 1], ['IdleHeadScratch', 1], ['IdleFingerTap', 1], ['IdleSideToSide', 1], ['IdleSnooze', 1], ['IdleAtom', .4], ['IdleRopePile', .4]];
-  function pickIdle() {
-    let r = Math.random() * IDLE_POOL.reduce((a, b) => a + b[1], 0);
-    for (const [n, w] of IDLE_POOL) { if ((r -= w) <= 0) return n; }
-    return 'Idle1_1';
+  /* Idling follows the user (userActive), so he doesn't pull focus from the page: while
+     they work, a small thing now and then; once they have been quiet a while, more and bigger; after five minutes
+     he naps until they are back. [quiet for (s), pause after his last act (s), what he does (weighted)] */
+  const SMALL = [['Idle1_1', 1.5], ['IdleEarFlick', 1.5], ['IdleSlowBlink', 1.5], ['IdleWatchWork', 1.5], ['IdleTailThump', 1], ['IdleSettle', 1],
+    ['IdleCurious', 1], ['IdleLookAtYou', 1], ['IdleLickChops', .8], ['IdleEyeBrowRaise', .5],
+    ['LookLeft', .8], ['LookDownLeft', .8], ['LookRight', .6], ['LookDownRight', .6], ['LookUpLeft', .6], ['LookDown', .5], ['LookUpRight', .4], ['LookUp', .3]];
+  const NAP = 'IdleSnooze';
+  const IDLE_STAGES = [
+    [0, [45, 90], SMALL],
+    [30, [8, 16], SMALL.concat([['Hearing_1', 1], ['IdleHeadScratch', 1], ['IdleYawn', 1], ['SniffAir', 1]])],
+    [120, [10, 20], [['Idle1_1', 2], ['IdleHeadScratch', 2], ['IdleFingerTap', 2], ['IdleSideToSide', 2], ['Hearing_1', 1], ['SniffAir', 1],
+      ['IdleEyeBrowRaise', 1], ['IdleAtom', 1], ['IdleRopePile', 1], ['IdleYawn', 1], ['IdleSettle', 1], ['IdleTailThump', 1]]],
+    [300, [2, 2], [[NAP, 1]]],
+  ];
+  /** a weighted pick, not one of `recent` (his last idles) while the pool has others */
+  function pickIdle(pool = IDLE_STAGES[1][2], recent = []) {
+    const fresh = pool.filter(it => recent.indexOf(it[0]) < 0), from = fresh.length ? fresh : pool;
+    let r = Math.random() * from.reduce((a, b) => a + b[1], 0);
+    for (const [n, w] of from) { if ((r -= w) <= 0) return n; }
+    return from[0][0];
   }
   const NOT_RANDOM = ['Show', 'Hide', 'GoodBye', 'Greeting', 'RestPose'];
 
@@ -2047,17 +2145,37 @@
   }
 
   /* --------------------------------------------------------- the ticker */
-  const live = new Set();
-  let raf = 0, last = 0;
+  /* Each frame asks when the next is needed (_wait): now (an action, a blink, words), in SLOW_MS (the tail's sway at
+     rest, a nap) or when his next blink or sway is due; meanwhile nothing runs, but a look at the time every CHECK_MS
+     (idling follows the clock). Time asleep still counts on his clock (real), not in an action (dt). */
+  const live = new Set(), SLOW_MS = 90, CHECK_MS = 1000;
+  let raf = 0, nap = 0, last = 0, ticking = false;
   function frame(now) {
-    const dt = Math.min(.05, Math.max(0, (now - last) / 1000));
+    raf = 0;
+    const real = Math.max(0, (now - last) / 1000);
     last = now;
-    live.forEach(a => a._tick(dt));
-    raf = live.size ? requestAnimationFrame(frame) : 0;
+    ticking = true;
+    try { live.forEach(a => a._tick(Math.min(.15, real), real)); } finally { ticking = false; }
+    if (!live.size) return;
+    let wait = Infinity;
+    live.forEach(a => { wait = Math.min(wait, a._wait()); });
+    if (wait <= 0) raf = requestAnimationFrame(frame);
+    else nap = setTimeout(() => { nap = 0; raf = requestAnimationFrame(frame); }, Math.min(wait, CHECK_MS));
   }
-  function wake(a) { live.add(a); if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+  function wake(a) {
+    if (ticking) { live.add(a); return; }   // the frame under way asks it when it needs the next
+    if (nap) {   // asleep: the clocks catch up with the time slept, and the next frame comes now
+      clearTimeout(nap); nap = 0;
+      const now = performance.now();
+      live.forEach(x => { x._clock += Math.max(0, now - last) / 1000; });
+      last = now;
+    } else if (!raf) last = performance.now();
+    live.add(a);
+    if (!raf) raf = requestAnimationFrame(frame);
+  }
 
   const BLEND = .2;
+  const SWAY = { dur: 3.2, deg: 7, hz: .45 };   // the tail's slow sway at rest, now and then
   let UID = 0;
   const reduceMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -2070,7 +2188,7 @@
      * @param {HTMLElement} [opts.parent=document.body]
      * @param {number} [opts.size=168] rendered width in px
      * @param {number} [opts.x] [opts.y] desktop position in px (defaults to bottom-right)
-     * @param {boolean} [opts.idle=true] play idle actions when nothing else is queued (desktop)
+     * @param {boolean} [opts.idle=true] play idle actions when nothing else is queued, following the user (userActive) (desktop)
      * @param {string} [opts.label] what a screen reader says for him (desktop)
      * @param {function} [opts.onclick] () on a click that is not a drag, or Enter / Space (desktop)
      * @param {function} [opts.onmenu] (x, y) on a right-click, Shift+F10 or the menu key (desktop)
@@ -2085,9 +2203,9 @@
       this.onframe = null; this.onend = null;
       this._q = []; this._running = false;
       this._cur = null; this._clock = 0; this._blend = 9; this._from = null; this._last = null;
-      this._nextBlink = 1.2 + Math.random() * 2; this._blinkT0 = -9;
+      this._nextBlink = 1.2 + Math.random() * 2; this._blinkT0 = -9; this._nextSway = 6 + Math.random() * 10; this._swayT0 = -99; this._wagPh = 0;
       this._talking = false; this._hidden = mode === 'desktop';
-      this._idleAt = 12 + Math.random() * 8; this._props = {}; this._move = null;
+      this._activeAt = 0; this._restAt = 0; this._idleR = Math.random(); this._recent = []; this._nx = null; this._props = {}; this._move = null;
 
       const el = this.el = document.createElement('div');
       el.className = 'scout-agent ' + (mode === 'desktop' ? 'is-desktop' : 'is-inline');
@@ -2157,10 +2275,21 @@
     hasAnimation(name) { return !!Scout.resolve(name); }
 
     /* ---------- queued API (each call waits its turn) ---------- */
-    /** Queue an action by Clippit name or Office constant. Resolves true when it completes. */
+    /** Queue an action by Clippit name or Office constant. Resolves true when it completes.
+     *  opts.interrupt: now, in place of everything. opts.next: as soon as the act under way ends, in place of any other
+     *  waiting this way (a newer one takes its place, resolving it false): an idle gives way at once, a nap ends
+     *  first with his waking up. */
     play(name, opts = {}) {
       if (opts.interrupt) { this.stop(); return this._playNow(name, opts); }
+      if (opts.next) return this._playNext(name, opts);
       return this._enqueue(() => this._playNow(name, opts));
+    }
+    /** The user did something (a key, a click): idling starts over from small things, and a nap ends. */
+    userActive() {
+      this._activeAt = this._clock;
+      const c = this._cur;
+      if (c && c.idle && c.loop) this.finish();
+      return this;
     }
     /** Pop in on the mat (no-op if already visible). */
     show(fast) {
@@ -2196,6 +2325,7 @@
     /** Clear the queue, stop the current action and close the balloon. */
     stop() {
       this._q.length = 0;
+      if (this._nx) { const nx = this._nx; this._nx = null; nx.res(false); }
       if (this._cur) this._endCurrent(false);
       this._closeBalloon();
       return this;
@@ -2206,8 +2336,14 @@
     setLoop(on) { if (this._cur) this._cur.loop = !!on; return this; }
     /** Finish only the current action early. */
     stopCurrent() { if (this._cur) this._endCurrent(false); return this; }
-    /** End a looping action gracefully: it plays its exit (e.g. Snooze wakes up) and then resolves. */
-    finish() { if (this._cur) { this._cur.loop = false; this._cur.stopAt = 0; } return this; }
+    /** End a looping action gracefully: it plays its exit now (e.g. Snooze wakes up) and then resolves. */
+    finish() {
+      const c = this._cur; if (!c || !c.loop) return this;
+      c.loop = false; c.stopAt = 0;
+      const sg = c.def.seg;
+      if (sg && c.t < sg[1]) { c.t = sg[1]; this._from = this._last; this._blend = 0; this._kick(); }
+      return this;
+    }
 
     /** Stop drawing and keep the frame on screen (the window is in the background), or carry on from it.
      *  Time stands still meanwhile: an action resumes where it was, queued calls wait their turn. */
@@ -2222,7 +2358,7 @@
     pause() { if (this._cur) this._cur.paused = true; return this; }
     resume() { if (this._cur) { this._cur.paused = false; this._kick(); } return this; }
     seek(t) { if (this._cur) { this._cur.t = clamp(t, 0, this._cur.def.dur); this._blend = 9; this._kick(); } return this; }
-    get current() { const c = this._cur; return c ? { name: c.name, t: c.t, dur: c.def.dur, paused: !!c.paused, loop: !!c.loop } : null; }
+    get current() { const c = this._cur; return c ? { name: c.name, t: c.t, dur: c.def.dur, paused: !!c.paused, loop: !!c.loop, idle: !!c.idle } : null; }
     get hidden() { return this._hidden; }
     /** Render a single frame of an action (no auto-blinking), e.g. for thumbnails. */
     pose(name, t) {
@@ -2247,7 +2383,20 @@
       if (this._running || !this._q.length) return;
       this._running = true;
       const { fn, res } = this._q.shift();
-      Promise.resolve().then(fn).then(v => { res(v); }, () => res(false)).then(() => { this._running = false; this._idleAt = this._clock + 16 + Math.random() * 16; this._pump(); });
+      Promise.resolve().then(fn).then(v => { res(v); }, () => res(false)).then(() => { this._running = false; this._restAt = this._clock; this._pump(); });
+    }
+    _playNext(name, opts) {
+      if (this._nx) { const old = this._nx; this._nx = null; old.res(false); }
+      const c = this._cur;
+      if (!c || (c.idle && !(c.name === NAP && c.t >= c.def.seg[0]))) return this._playNow(name, opts);
+      return new Promise(res => { this._nx = { name, opts, res }; if (c.idle) this.finish(); });
+    }
+    /* what waits for the act under way (play next), once it has ended; another started meanwhile: after that one */
+    _runNext() {
+      const nx = this._nx;
+      if (!nx || this._cur) return;
+      this._nx = null;
+      this._playNow(nx.name, nx.opts).then(nx.res);
     }
     _playNow(name, opts = {}) {
       let n = Scout.resolve(name);
@@ -2262,7 +2411,7 @@
       this._still = null;
       this._from = this._last; this._blend = 0;
       return new Promise(res => {
-        const c = this._cur = { name: n, def, t: clamp(opts.at || 0, 0, def.dur), loop: !!opts.loop, paused: !!opts.paused, res };
+        const c = this._cur = { name: n, def, t: clamp(opts.at || 0, 0, def.dur), loop: !!opts.loop, paused: !!opts.paused, idle: !!opts.idle, res };
         if (opts.duration > 0) { c.loop = true; c.stopAt = this._clock + opts.duration / 1000; }
         if (opts.until && typeof opts.until.then === 'function') { c.loop = true; opts.until.then(() => { if (this._cur === c) c.loop = false; }, () => { if (this._cur === c) c.loop = false; }); }
         this._kick();
@@ -2270,21 +2419,25 @@
     }
     _endCurrent(done) {
       const c = this._cur; if (!c) return;
-      this._cur = null;
+      this._cur = null; this._restAt = this._clock;
       this._from = this._last; this._blend = 0;
       if (done && c.def.hides) this._setHidden();
       if (this.onend) this.onend(c.name, done);
       c.res(done);
+      this._kick();
+      if (this._nx) Promise.resolve().then(() => this._runNext());
       if (this.o.mode === 'still' && !this._still) live.delete(this);
     }
     _kick() { if (!this._frozen) wake(this); }
-    _unhide() { this._hidden = false; this.el.classList.remove('is-hidden'); this._kick(); }
+    _unhide() { this._hidden = false; this.el.classList.remove('is-hidden'); this._drawnSteady = false; this._kick(); }
     _setHidden() { this._hidden = true; this.el.classList.add('is-hidden'); this._closeBalloon(); }
 
     /* ---------- internals: frame ---------- */
-    _tick(dt) {
-      this._clock += dt;
+    _tick(dt, real = dt) {
+      this._clock += real;
       this._blend += dt;
+      /* the tail's wag runs on a phase of its own, so a change of pace (a blend between actions) can't make it jump */
+      if (this._last) this._wagPh = (this._wagPh + Math.PI * 2 * this._last.wagHz * dt) % (Math.PI * 2);
       const c = this._cur;
       if (c && !c.paused) {
         c.t += dt * this.speed;
@@ -2297,15 +2450,52 @@
         }
       }
       if (this._move) this._stepMove();
-      if (this.o.mode === 'desktop' && this.o.idle && !this._cur && !this._running && !this._q.length && !this._hidden &&
-          !this._dragging && this._clock > this._idleAt && !reduceMotion()) {
-        this.play(pickIdle());
+      const clk = this._clock;
+      if (clk >= this._nextBlink) { this._blinkT0 = clk; this._nextBlink = clk + (Math.random() < .1 ? .32 : 4 + Math.random() * 5); }
+      if (clk >= this._nextSway) {
+        if (!this._cur && !reduceMotion()) this._swayT0 = clk;
+        this._nextSway = clk + SWAY.dur + 8 + Math.random() * 14;
       }
-      const p = this._compute(c ? c.t : 0);
-      this._render(p, this.o.mode === 'still' ? (c ? c.t : 0) : this._clock);
+      if (this.o.mode === 'desktop' && this.o.idle && !this._cur && !this._running && !this._q.length && !this._nx && !this._hidden &&
+          !this._dragging && !reduceMotion()) {
+        const st = this._idleStage(), due = this._restAt + lerp(st[1][0], st[1][1], this._idleR);
+        if (this._clock >= due) {
+          const n = pickIdle(st[2], this._recent);
+          this._recent = [n].concat(this._recent).slice(0, 2);
+          this._idleR = Math.random();
+          this.play(n, { idle: true, loop: n === NAP });
+        }
+      }
+      /* nothing moves: the frame on screen stays as it is */
+      const steady = this._steady();
+      if (!steady || !this._drawnSteady) {
+        const p = this._compute(c ? c.t : 0);
+        this._render(p, this.o.mode === 'still' ? (c ? c.t : 0) : this._clock);
+        this._drawnSteady = steady;
+      }
       if (this.onframe && c) this.onframe(c.name, c.t, c.def.dur);
       if (this.o.mode === 'still' && !this._cur) live.delete(this);
       else if (this._hidden && !this._cur && !this._move && this._blend >= BLEND) live.delete(this);
+    }
+    _idleStage() {
+      const quiet = this._clock - this._activeAt;
+      let st = IDLE_STAGES[0];
+      for (const it of IDLE_STAGES) if (quiet >= it[0]) st = it;
+      return st;
+    }
+    /* at rest, nothing moving: no action, move, blend, words, balloon turning in, blink or sway */
+    _steady() {
+      const clk = this._clock;
+      return !this._cur && !this._still && !this._move && !this._talking && this._blend >= BLEND && !(this._bOpen && clk - this._bT0 < .4) &&
+        clk - this._blinkT0 >= .2 && clk - this._swayT0 >= SWAY.dur;
+    }
+    /* how soon he needs a frame (ms): 0 every frame; SLOW_MS for a nap or the tail's sway; at rest, his next blink or sway */
+    _wait() {
+      const c = this._cur, clk = this._clock;
+      if (this._steady()) return (Math.min(this._nextBlink, this._nextSway) - clk) * 1000;
+      if (this._move || this._talking || this._blend < BLEND || (this._bOpen && clk - this._bT0 < .4)) return 0;
+      if (c) return c.idle && c.loop && c.name === NAP && c.t >= c.def.seg[0] ? SLOW_MS : 0;
+      return clk - this._blinkT0 < .2 ? 0 : SLOW_MS;
     }
     _compute(t) {
       const p = rest();
@@ -2319,24 +2509,20 @@
         for (const key of NUM_KEYS) p[key] = lerp(fr[key], p[key], k);
         p.wL = mix2(fr.wL, p.wL, k); p.wR = mix2(fr.wR, p.wR, k);
       }
-      if (this.o.mode !== 'still') this._auto(p);
+      if (this.o.mode !== 'still') { this._auto(p); p.wagPh = this._wagPh; }
       this._last = p;
       return p;
     }
     _auto(p) {
       const clk = this._clock;
-      if (clk >= this._nextBlink) {
-        this._blinkT0 = clk;
-        this._nextBlink = clk + (Math.random() < .15 ? .32 : 3 + Math.random() * 3.5);
-      }
       const bt = clk - this._blinkT0, b = bt < .17 ? Math.sin(bt / .17 * Math.PI) * p.autoBlink : 0;
       if (b > p.lidL) p.lidL = b;
       if (b > p.lidR) p.lidR = b;
-      p.breath = Math.sin(clk * Math.PI * 2 * .28);
       if (this._talking) p.mouth = Math.max(p.mouth, .18 + .5 * Math.abs(Math.sin(clk * 12.5)) * (.65 + .35 * Math.sin(clk * 3.1)));
-      if (!p.wag) { p.wag = 2.5; p.wagHz = .35; }
+      /* in an action the tail keeps a little wag (faded in from rest); at rest it is still but for a sway now and then */
+      if (this._cur) { if (!p.wag) { p.wag = 2.5 * (this._blend < BLEND ? E.io(this._blend / BLEND) : 1); p.wagHz = .35; } }
+      else if (clk - this._swayT0 < SWAY.dur) { p.wag = SWAY.deg * win(clk - this._swayT0, 0, .7, SWAY.dur - .9, SWAY.dur); p.wagHz = SWAY.hz; }
       if (!this._cur) {
-        p.hr += 1.2 * Math.sin(clk * Math.PI * 2 * .09);
         if (this._bOpen) {
           const k = Math.min(1, (clk - this._bT0) / .35);
           p.lookY -= .55 * this._bUp * k; p.lookX += .45 * this._bDir * k;
@@ -2527,7 +2713,7 @@
       }
 
       /* tail */
-      const tp = tailPaths(p.tail + V.tailAdd + p.wag * Math.sin(Math.PI * 2 * p.wagHz * time), V.tail);
+      const tp = tailPaths(p.tail + V.tailAdd + p.wag * Math.sin(p.wagPh != null ? p.wagPh : Math.PI * 2 * p.wagHz * time), V.tail);
       attr(P.tailO, 'd', tp.all); attr(P.tailF, 'd', tp.all); attr(P.tailT, 'd', tp.tip);
 
       /* props */
@@ -2716,6 +2902,7 @@
       b.classList.toggle('has-choices', choices.length > 0);
       this._placeBalloon(text, choices.length > 0);
       tx.textContent = ''; ch.hidden = true;
+      this._kick();
       b.classList.add('is-on'); this._bOpen = true; this._bT0 = this._clock;
       const words = text.split(/(\s+)/);
       let i = 0;
@@ -2723,7 +2910,7 @@
       return new Promise(res => {
         this._bDone = val => {
           clearTimeout(this._bTimer); clearInterval(this._bType);
-          this._talking = false; this._bOpen = false; this._bDone = null; this._bPick = null;
+          this._talking = false; this._bOpen = false; this._bDone = null; this._bPick = null; this._drawnSteady = false; this._kick();
           b.classList.remove('is-on'); res(val);
         };
         this._bPick = choices.length ? (n => { if (this._bDone) this._bDone(choices[n].value); }) : null;
@@ -2776,6 +2963,7 @@
       if (this.o.mode !== 'desktop') return Promise.resolve(false);
       return new Promise(res => {
         const from = this._pos.slice(), dist = Math.hypot(x - from[0], y - from[1]);
+        this._kick();
         this._move = { from, to: [x, y], t0: this._clock, dur: Math.max(.3, ms / 1000), k: 0, hops: Math.max(1, Math.round(dist / 70)), dir: Math.sign(x - from[0]) || 0, res };
         this._kick();
       });
@@ -2820,7 +3008,7 @@
       const end = e => {
         if (!start) return;
         const s = start; start = null;
-        this._dragging = false; el.classList.remove('is-dragging'); this._idleAt = this._clock + 14;
+        this._dragging = false; el.classList.remove('is-dragging'); this._restAt = this._clock;
         if (e.type !== 'pointerup') return;
         if (s.moved) { if (o.onmoved) o.onmoved(this._pos[0], this._pos[1]); }
         else if (o.onclick) o.onclick();
