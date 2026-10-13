@@ -7,6 +7,7 @@
      node tests/ledger/clean-functions.test.js            (checks; also run by node --test) */
 const fs = require('fs');
 const path = require('path');
+require('../../public/common/core.js');
 require('../../public/common/numfmt.js');
 for (const f of ['formula', 'model', 'calc', 'fn-core', 'fn-lookup', 'fn-stat', 'fn-fin', 'fn-eng']) require('../../public/ledger/js/' + f + '.js');
 const L = globalThis.L, M = L.model, C = L.calc;

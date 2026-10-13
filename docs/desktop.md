@@ -118,6 +118,8 @@ The installer runs from Downloads, so it loads nothing from its own folder: it i
 
 ## Linux
 
+Not supported for now (2026-10-13): no Linux release is made, and Windows is the desktop app. The build below still works for development. The binary links the system's GTK 3 (LGPL-2.1-or-later), WebKitGTK (LGPL and BSD) and libsoup dynamically, which the LGPL allows (AGENTS.md, Code from other projects); the licence check below covers only the Rust crates, not these native libraries, so before a Linux release they are listed too, and what a package bundles is told apart from what it requires of the system.
+
 The same crate builds for Linux against WebKitGTK 4.1, GTK 3 and libsoup 3 (`libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libsoup-3.0-dev`):
 
     cd desktop && cargo build --release --target x86_64-unknown-linux-gnu
@@ -136,7 +138,7 @@ Run it with a file to open: `target/x86_64-unknown-linux-gnu/release/vibeoffice 
 | `VibeOffice-Windows-x64.zip` | 5.8 MB |
 | `vibeoffice`, Linux release | 7.2 MB |
 
-Licenses: `tools/oss-licenses.py` lists every crate compiled into the app and its installer, on Windows and Linux (168 today: the workspace's members and their normal dependencies all the way down, with features as the build resolves them, from `cargo tree`; not what only build scripts or Tauri's procedural macros use, such as `cssparser`, `selectors` and `dtoa-short`, MPL-2.0, which never reach the binary), with the license files from each package, and the DLL installed beside the exe (`WebView2Loader.dll`), in `public/oss-licenses.html`; run it after changing a dependency. It stops if a shipped crate's licence needs copyleft; `--check` (also in `node --test tests/licenses.test.mjs`) checks the page against the crates that ship.
+Licenses: `tools/oss-licenses.py` lists every crate compiled into the app and its installer, on Windows and Linux (Linux's native GTK and WebKitGTK libraries are not crates and are not covered: Linux above; 168 today: the workspace's members and their normal dependencies all the way down, with features as the build resolves them, from `cargo tree`; not what only build scripts or Tauri's procedural macros use, such as `cssparser`, `selectors` and `dtoa-short`, MPL-2.0, which never reach the binary), with the license files from each package, and the DLL installed beside the exe (`WebView2Loader.dll`), in `public/oss-licenses.html`; run it after changing a dependency. It stops if a shipped crate's licence needs copyleft; `--check` (also in `node --test tests/licenses.test.mjs`) checks the page against the crates that ship.
 
 No exe packers (UPX): antivirus flags packed exes. The largest pages are the thesaurus (`common/dict/en.thes`, 2 MB) and the two word lists (650 KB each).
 

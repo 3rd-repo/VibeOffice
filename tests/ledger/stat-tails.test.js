@@ -3,6 +3,7 @@
 //   node --test tests/ledger/stat-tails.test.js
 const test = require('node:test');
 const assert = require('node:assert/strict');
+require('../../public/common/core.js');
 require('../../public/common/numfmt.js');
 for (const f of ['formula', 'model', 'calc', 'fn-core', 'fn-lookup', 'fn-stat', 'fn-fin', 'fn-eng']) require('../../public/ledger/js/' + f + '.js');
 const { model: M, calc: C } = globalThis.L;
