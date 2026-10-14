@@ -809,6 +809,21 @@
     if (ty === 'SECTIONPAGES') return D.fmtNum(fieldCounts && fieldCounts.sections[page.si] || 1, f || 'decimal');
     if (ty === 'SECTION') return String(page.si + 1);
     return '';
+    /* a footer grows upwards from its bottom edge, so the paragraphs after a float's anchor moved it up: a float
+       placed from its paragraph (or line) follows it */
+    const z = LY.scale(), pgTop = page.el.getBoundingClientRect().top;
+    for (const frag of container.querySelectorAll('.p')) {
+      if (!frag._floats) continue;
+      const dy = (frag.getBoundingClientRect().top - pgTop) / z;
+      for (const w of frag._floats) {
+        const f = w._item && w._item.float, pos = w._pos;
+        if (!f || !pos || (f.posV.rel && f.posV.rel !== 'paragraph' && f.posV.rel !== 'line')) continue;
+        const shift = dy - pos.fragR.y;
+        if (Math.abs(shift) < 0.01) continue;
+        pos.y += shift; pos.baseY += shift; pos.fragR.y = dy;
+        w.style.top = pos.y + 'px';
+      }
+    }
   };
   /**
    * STYLEREF in a header or footer: the first (\l: last) text on this page in the given paragraph or

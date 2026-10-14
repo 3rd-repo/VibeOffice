@@ -245,7 +245,8 @@
       else if (it.vert === 'vert270') { tbx.style.writingMode = 'vertical-rl'; tbx.style.transform = 'rotate(180deg)'; }
       tbx.contentEditable = opts.readOnly ? 'false' : 'true';
       tbx.classList.add('ed-tb');
-      const inner = el('div', 'tbi', 'position:relative;width:100%');
+      /* as long as the lines (the box's height in vertical text), so the anchor places it across them */
+      const inner = el('div', 'tbi', 'position:relative;inline-size:100%');
       tbx.appendChild(inner);
       box.appendChild(tbx);
       /* paragraphs are laid out once the box is in the document (tab stops need measuring) */
