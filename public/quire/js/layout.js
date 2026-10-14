@@ -810,17 +810,6 @@
     const hctx = Object.assign({}, ctx, { story, dyn: (ty, fmt, instr) => LY.dynField(ty, fmt, page, instr), openCmts: null, page, hf: true, grid: 0 });
     LY.flow(fr, story.blocks, { bi: 0, sub: null }, story.blocks.length, hctx);
     fixAbsFrames(container);
-    return container.offsetHeight;
-  }
-  LY.dynField = function (ty, fmt, page, instr) {
-    if (!page) return '1';
-    if (ty === 'STYLEREF') return page.body && page.body.querySelector('.p') ? LY.styleRefOnPage(page, instr || '') : '';
-    const f = { Arabic: 'decimal', ROMAN: 'upperRoman', roman: 'lowerRoman', ALPHABETIC: 'upperLetter', alphabetic: 'lowerLetter', Ordinal: 'ordinal', CardText: 'cardinalText', OrdText: 'ordinalText' }[fmt];
-    if (ty === 'PAGE') return D.fmtNum(page.numVal, f || page.numFmt || 'decimal');
-    if (ty === 'NUMPAGES') return D.fmtNum(fieldCounts ? fieldCounts.total : 1, f || 'decimal');
-    if (ty === 'SECTIONPAGES') return D.fmtNum(fieldCounts && fieldCounts.sections[page.si] || 1, f || 'decimal');
-    if (ty === 'SECTION') return String(page.si + 1);
-    return '';
     /* a footer grows upwards from its bottom edge, so the paragraphs after a float's anchor moved it up: a float
        placed from its paragraph (or line) follows it */
     const z = LY.scale(), pgTop = page.el.getBoundingClientRect().top;
@@ -836,6 +825,17 @@
         w.style.top = pos.y + 'px';
       }
     }
+    return container.offsetHeight;
+  }
+  LY.dynField = function (ty, fmt, page, instr) {
+    if (!page) return '1';
+    if (ty === 'STYLEREF') return page.body && page.body.querySelector('.p') ? LY.styleRefOnPage(page, instr || '') : '';
+    const f = { Arabic: 'decimal', ROMAN: 'upperRoman', roman: 'lowerRoman', ALPHABETIC: 'upperLetter', alphabetic: 'lowerLetter', Ordinal: 'ordinal', CardText: 'cardinalText', OrdText: 'ordinalText' }[fmt];
+    if (ty === 'PAGE') return D.fmtNum(page.numVal, f || page.numFmt || 'decimal');
+    if (ty === 'NUMPAGES') return D.fmtNum(fieldCounts ? fieldCounts.total : 1, f || 'decimal');
+    if (ty === 'SECTIONPAGES') return D.fmtNum(fieldCounts && fieldCounts.sections[page.si] || 1, f || 'decimal');
+    if (ty === 'SECTION') return String(page.si + 1);
+    return '';
   };
   /**
    * STYLEREF in a header or footer: the first (\l: last) text on this page in the given paragraph or
