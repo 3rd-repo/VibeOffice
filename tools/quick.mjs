@@ -28,12 +28,13 @@ changed = [...new Set(changed)];
 /* rules: changed path → test files. Seconds are measured run times (2026-10-14), for the estimate. */
 const SECONDS = { 'tests/ui/smoke.test.mjs': 20, 'tests/ui/quire.test.mjs': 175, 'tests/ui/ledger.test.mjs': 130, 'tests/ui/lectern.test.mjs': 130,
   'tests/ui/focus.test.mjs': 265, 'tests/ui/focus.test.mjs :: classic': 90, 'tests/ui/drag.test.mjs': 45, 'tests/ui/gestures.test.mjs': 480, 'tests/ui/painter.test.mjs': 40, 'tests/ui/textmap.test.mjs': 165,
-  'tests/ledger/*.test.js': 5, 'tests/quire/*.test.js': 1, 'tests/from-issues/*/*.test.mjs': 1, 'tests/scout.test.mjs': 190, 'tests/desktop/host.test.mjs': 32, 'tests/sw.test.mjs': 10,
+  'tests/ledger/*.test.js': 5, 'tests/quire/*.test.js': 1, 'tests/quire/lines.test.mjs': 5, 'tests/from-issues/*/*.test.mjs': 1, 'tests/scout.test.mjs': 190, 'tests/desktop/host.test.mjs': 32, 'tests/sw.test.mjs': 10,
   'tests/ribbon.test.mjs': 5, 'tests/search.test.mjs': 4, 'tests/ooxml/check.test.mjs': 3 };
 const RULES = [
   [/^public\/(quire|ledger|lectern|common)\/|^public\/[^/]+\.(html|js|css)$/, ['tests/ui/smoke.test.mjs', 'tests/licenses.test.mjs', 'tests/from-issues/*/*.test.mjs']],   // and the reported issues' tests
   [/^public\/ledger\/|^tools\/ledger\//, ['tests/ledger/*.test.js', 'tests/ui/ledger.test.mjs']],
   [/^public\/quire\//, ['tests/quire/*.test.js', 'tests/ui/quire.test.mjs']],
+  [/^public\/quire\/js\/(render|portions|layout|drawing)\.js$|^tests\/lib\/lines\.mjs$/, ['tests/quire/lines.test.mjs']],   // line heights against Word and LibreOffice
   [/^public\/lectern\//, ['tests/ooxml/lectern-review.test.mjs', 'tests/ui/lectern.test.mjs']],
   [/^public\/common\/(core|dml|numfmt|xml|opc|opc-order|zip|sha|crypto|metafile|geometry|charts)\.js$/, ['tests/ledger/*.test.js', 'tests/quire/*.test.js']],
   [/^public\/common\/(ui|ribbon|search)\.js$/, ['tests/ui/focus.test.mjs :: classic', 'tests/ui/drag.test.mjs']],   // focus in the Classic look

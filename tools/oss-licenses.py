@@ -143,8 +143,8 @@ def main():
              texts_=[apache]),
         # code and data derived from other projects: each file says "Derived from <name> …" (tests/licenses.test.mjs)
         work('Apache OpenOffice', 'Apache License 2.0', [('openoffice.org', 'https://www.openoffice.org'), ('github.com/apache/openoffice', 'https://github.com/apache/openoffice')],
-             'Rewritten in JavaScript from its spreadsheet code: the depreciation and interest functions DDB, IPMT, AMORLINC and AMORDEGRC, and the scroll bars\' range. Its English AutoCorrect list is the base of the default list.',
-             files='public/ledger/js/fn-fin.js, public/ledger/js/grid.js, public/common/spell.js', texts_=[apache, notice('apache-openoffice-NOTICE.txt')], derived=True),
+             'Rewritten in JavaScript from its spreadsheet code: the depreciation and interest functions DDB, IPMT, AMORLINC and AMORDEGRC, and the scroll bars\' range. Quire sizes each line by what it holds following its text layout (Writer\'s line portions). Its English AutoCorrect list is the base of the default list.',
+             files='public/ledger/js/fn-fin.js, public/ledger/js/grid.js, public/quire/js/portions.js, public/common/spell.js', texts_=[apache, notice('apache-openoffice-NOTICE.txt')], derived=True),
         work('commonmark.js', 'BSD-2-Clause', [('github.com/commonmark/commonmark.js', 'https://github.com/commonmark/commonmark.js')],
              'Quire\'s Markdown reader is a condensed translation of its block and inline parsers. Copyright (c) 2014 John MacFarlane.',
              files='public/quire/js/markdown.js', texts_=[notice('commonmark.js-LICENSE.txt')], derived=True),

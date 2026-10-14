@@ -142,6 +142,25 @@ and open http://127.0.0.1:8770/. For an update, stop the server, stage again wit
 
 Run both after a change to `markdown.js` or `mdio.js`; the numbers are in docs/quire.md.
 
+Line heights (`quire/js/portions.js`): `node --test tests/quire/lines.test.mjs` (a few seconds; `REPORT=1` prints what it
+measured) checks two documents in Quire against another application's PDF, read by `python3 tools/wordlines.py PDF DOCX
+OUT.json` into rows (the text at one height on a page, matched by a hash of its last characters, so a document whose
+text isn't ours is compared without storing it):
+
+- a Word-saved 19-page walkthrough against Word's PDF of it (`tests/quire/lines/walkthrough-word.json`): pages start
+  where Word's do, and two lines that follow each other in both are as far apart as in Word, within 0.75pt. The
+  document and the PDF stay out of git, in `~/corpora/word-ref/` (`fluent-walkthrough.docx`, `fluent-walkthrough.word.pdf`;
+  or the folder named in `QUIRE_WORD_REF`); without them that part is skipped;
+- `tests/quire/lines/linecases.docx` (`python3 tools/linecases.py make`), one case per paragraph between marker lines,
+  against LibreOffice's PDF of it (`soffice --headless --convert-to pdf`, then `python3 tools/linecases.py read PDF
+  tests/quire/lines/linecases-lo.json`): the cases LibreOffice draws as Word does are asserted, the others recorded.
+
+Page counts across the corpus: `node tools/quire-pages.mjs OUT.jsonl [--jobs 4]` opens every Word-saved `.docx` in
+`~/corpora/word` (Microsoft Office Word with `<Pages>` in docProps/app.xml) and records Quire's page count beside
+Word's; `--compare BEFORE.jsonl AFTER.jsonl` lists what a change moved, and every file it moved away from Word's count.
+For the "before", serve the last commit's site on a port of its own (`git archive HEAD public | tar -x -C
+tmp/pages-before`, `python3 tools/serve.py 8771 tmp/pages-before/public`) and run with `BASE=http://127.0.0.1:8771`.
+
 ## From issues: tests/from-issues/
 
 Regression tests for a reported issue live in `tests/from-issues/N/` (N is the issue number), so a later change that breaks one shows which report it reopens. Each fails on the commit before its fix.

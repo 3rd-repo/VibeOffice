@@ -209,6 +209,7 @@
     outer.appendChild(pc);
     const ls = R.lineSpec(pPr);
     const markR = D.rProps(d, p, null, tctx);
+    pc.dataset.markSz = R.px(markR.sz || 12);   /* the ¶ drawn with formatting marks is the mark's size (R.layoutMarks) */
     /* paragraph box */
     const st = [];
     const ind = pPr.ind || {};
@@ -253,11 +254,14 @@
     st.push(`font-family:${L.fontStack(strutR.font).replace(/"/g, "'")}`, `font-size:${R.px(strutR.sz || 12)}px`);
     /* Word 2013+ (compatibility mode 15) fits justified lines by shrinking spaces up to 20% */
     if (pPr.jc === 'both' && d.settings && d.settings.compat >= 15) st.push(`word-spacing:${L.round(-0.2 * R.spaceEm(strutR.font) * R.px(strutR.sz || 12), 3)}px`);
+    /* the paragraph's own line (CSS's strut): what each line is at least, where the line rule gives one (exact, at
+       least, a grid's pitch); with auto spacing R.lineBoxes takes it away once a line holds anything */
+    const gridMin = gridPx ? R.gridLine(gridPx, ls.mult || 1, 0, strutR.font) : 0;
     if (ls.exact) st.push(`line-height:${ls.exact}px`);
-    else if (ls.atLeast) st.push(`line-height:${Math.max(ls.atLeast, R.px((strutR.sz || 12) * R.lineFactor(strutR.font)))}px`);
-    else if (gridPx) st.push(`line-height:${gridLine(strutR)}px`);
+    else if (ls.atLeast) st.push(`line-height:${ls.atLeast}px`);
+    else if (gridPx) st.push(`line-height:${gridMin}px`);
     else st.push(`line-height:${L.round(R.lineFactor(strutR.font) * ls.mult, 4)}`);
-    const runLine = gridPx ? { grid: gridPx, mult: ls.mult || 1, line: gridLine(strutR) } : ls.mult != null && !ls.exact ? ls.mult : null;
+    const runLine = gridPx ? { grid: gridPx, mult: ls.mult || 1, line: gridMin } : ls.mult != null && !ls.exact ? ls.mult : null;
     if (gridPx) pc.dataset.grid = runLine.line;   /* the line's box when measured (LY.lines): runs that fit are shorter */
     /* borders & shading, grouped with identical neighbours */
     const bd = pPr.borders;
@@ -306,6 +310,8 @@
         span.textContent = text;
         if (lv.fmt === 'bullet' && lv.rPr && /symbol|wingdings/i.test(lv.rPr.font || '')) lr.font = 'Arial';
         span.style.cssText = R.runCSS(lr, runLine);
+        /* a Symbol or Wingdings bullet is drawn in Arial, but its line is as tall as its own font makes it (Word) */
+        if (lv.rPr && lr.font !== lv.rPr.font && typeof runLine === 'number') span.style.lineHeight = String(L.round(R.lineFactor(lv.rPr.font) * runLine, 4));
         if (lv.picture && L.media.has(lv.picture)) { const im = document.createElement('img'); im.src = L.media.url(lv.picture); im.style.cssText = 'height:0.75em;vertical-align:baseline'; span.appendChild(im); }
         pc.appendChild(span);
         if (lv.suff !== 'nothing') {
@@ -326,12 +332,17 @@
       const br = document.createElement('br');
       br.className = 'fill';
       pc.appendChild(br);
-      if (!firstText) { pc.style.fontFamily = L.fontStack(markR.font).replace(/"/g, "'"); pc.style.fontSize = R.px(markR.sz || 12) + 'px'; if (!ls.exact && !ls.atLeast) pc.style.lineHeight = gridPx ? gridLine(markR) + 'px' : L.round(R.lineFactor(markR.font) * ls.mult, 4); }
     } else if (lastEl && (lastEl.nodeName === 'BR' && !lastEl.classList.contains('fill') || lastEl.firstChild?.nodeType === 3 && /\n$/.test(lastEl.firstChild.data))) {
       const br = document.createElement('br');
       br.className = 'fill';
       pc.appendChild(br);
     }
+    /* each line as tall as what it holds (portions.js) */
+    R.lineBoxes(pc, {
+      ls, grid: !!gridPx, dropCap: pc.dataset.dropLines != null, to,
+      markCSS: R.runCSS(markR, ls.exact ? null : ls.atLeast ? 1 : runLine), markFont: L.fontStack(markR.font).replace(/"/g, "'"), markSize: R.px(markR.sz || 12) + 'px',
+      markLine: gridPx ? gridLine(markR) + 'px' : String(L.round(R.lineFactor(markR.font) * ls.mult, 4)), strutLine: String(L.round(R.lineFactor(strutR.font) * (ls.mult || 1), 4)),
+    });
     if (last) {
       outer.classList.add('last');
       if (p.sect && ctx.view !== 'web') outer.classList.add('has-sect');
@@ -528,6 +539,8 @@
           el.dataset.label = it.type === 'page' ? 'Page Break' : 'Column Break';
         } else {
           el = document.createElement('br');
+          /* Chromium sizes a line by its block, not by a <br>: R.lineBoxes gives this style to the line it ends */
+          el.style.cssText = R.runCSS(r, mult);
         }
       } else if ((it.t === 'img' || it.t === 'shape' || it.t === 'group' || it.t === 'chart') && it.float) {
         if (!L.drawing) continue;
@@ -629,18 +642,19 @@
         layer.className = 'format-marks'; layer.contentEditable = 'false'; layer.setAttribute('aria-hidden', 'true');
         const pc = p.firstChild, cs = getComputedStyle(pc), rtl = cs.direction === 'rtl', vertical = cs.writingMode !== 'horizontal-tb';
         layer.style.writingMode = cs.writingMode;
-        const mark = (cls, r) => {
+        /* a mark is as large as its character: ¶ the paragraph mark, ↵ its line break (not the paragraph's first run) */
+        const mark = (cls, r, size) => {
           if (!r || !r.height) return;
           const span = document.createElement('span'); span.className = cls;
           const x = vertical || rtl ? r.left : r.right, y = vertical ? (rtl ? r.top : r.bottom) : r.top;
-          span.style.cssText = `left:${x - box.left - p.clientLeft}px;top:${y - box.top - p.clientTop}px;font-size:${cs.fontSize}`;
+          span.style.cssText = `left:${x - box.left - p.clientLeft}px;top:${y - box.top - p.clientTop}px;font-size:${size || cs.fontSize}`;
           if (rtl) span.style.transform = vertical ? 'translateY(-100%)' : 'translateX(-100%)';
           layer.appendChild(span);
         };
-        for (const br of show ? pc.querySelectorAll(':scope > br:not(.fill)') : []) mark('mark-br', br.getBoundingClientRect());
+        for (const br of show ? pc.querySelectorAll(':scope > br:not(.fill)') : []) mark('mark-br', br.getBoundingClientRect(), br.style.fontSize);
         if (p.classList.contains('last')) {
           range.selectNodeContents(pc);
-          mark('mark-p', Array.from(range.getClientRects()).at(-1));
+          mark('mark-p', Array.from(range.getClientRects()).at(-1), pc.dataset.markSz && pc.dataset.markSz + 'px');
         }
         for (const sp of show ? pc.querySelectorAll(':scope > span[data-o]') : []) {
           const text = sp.firstChild;

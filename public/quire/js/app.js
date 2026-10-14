@@ -516,8 +516,7 @@
       for (const f of col0.querySelectorAll('.p')) {
         if (f === frag) break;
         if (f.compareDocumentPosition(frag) & Node.DOCUMENT_POSITION_FOLLOWING) {
-          const lh = parseFloat(getComputedStyle(f.firstChild).lineHeight) || 16;
-          ln += Math.max(1, Math.round((f.firstChild.offsetHeight) / lh));
+          ln += LY.lineCount(f);
         }
       }
     }

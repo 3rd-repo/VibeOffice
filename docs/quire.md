@@ -45,6 +45,22 @@ Licences for the word lists are in `public/common/dict/LICENSES.txt`.
   new page anyway: pushed off a full page (or, in Word 2013+ documents, past a page break) it stays at
   the foot of that page. Of 153 Word-saved corpus files with such a paragraph, 3 more now show
   Word's stored page count (113), and none moves away from it.
+- Each line is as tall as what it holds, as Word sizes lines (`js/portions.js`, after Apache OpenOffice
+  Writer's line portions): a line with text by its text, a picture alone in its line exactly the
+  picture's height (Quire added the text's descent below it, 3 to 7pt), a large first word no longer
+  makes every line of its paragraph that tall, and blanks and tabs don't raise a line. A line holding
+  nothing that counts takes the paragraph mark's font, or that of the line break that ends it; with
+  exact spacing every line is the value, whatever sizes its text has; a Symbol or Wingdings bullet's
+  line is as tall as that font makes it, though it is drawn in Arial. A Word-saved 19-page walkthrough
+  that made 20 pages (two pictures pushed a page break onto a page of its own) now breaks where Word's
+  PDF does on every page, and two lines that follow each other there are as far apart as in Word
+  within 0.51pt (`tests/quire/lines.test.mjs`); 15 synthetic cases match LibreOffice within 0.2pt. Of
+  2,289 Word-saved corpus files, 2,136 show Word's stored page count (2,127 before); the 10 whose count
+  changed all moved toward Word's, none away (`tools/quire-pages.mjs`).
+  Not covered yet: a picture in a line with exact spacing (Word clips it to the line), a picture alone
+  with multiple spacing or on a grid, a line of only a small picture (Quire follows LibreOffice: the
+  mark's line, the picture at its foot), and a large paragraph mark after small text (matched to
+  LibreOffice only).
 - On a document line grid (East Asian documents) a line is the grid pitch times its "multiple"
   spacing, and at least the whole pitches its text needs: 1.5 lines on the usual 15.6pt grid are
   23.4pt, and 14pt text at 1.7 lines takes two pitches, 31.2pt (issue #11). Word centres the text in
@@ -389,6 +405,7 @@ compatibility results are archived with the run history rather than mixed into c
 | `../common/sha.js`, `../common/crypto.js` | Password-protected documents: compound-file reader/writer, AES, ECMA-376 agile and standard encryption |
 | `js/dmodel.js`, `js/ops.js` | Document model (paragraphs, runs, tables, sections, styles, numbering), undo history, editing operations |
 | `js/render.js`, `js/layout.js` | Paragraph/run rendering, pagination, headers/footers, footnotes, columns, floats |
+| `js/portions.js` | How tall each line is, from what it holds (after Apache OpenOffice Writer's line portions) |
 | `js/editor.js` | contentEditable bridge: selection mapping, typing, IME, clipboard, keyboard |
 | `js/preserve.js` | Package ownership/merges; controls and XML bindings; property/range preservation; opaque frames, compatibility alternatives and clipboard dependencies |
 | `js/preserve-drawing.js` | Property-level DrawingML/VML merges, including compatibility choices, picture effects and anchor edits |

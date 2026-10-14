@@ -314,7 +314,7 @@
       else { paras = D.allParas(d); if (incl.input.checked) for (const k of ['fn', 'en']) for (const id in d[k]) D.walk(d[k][id], (b) => { if (b.t === 'p') paras.push(b); }); }
       const st = D.stats(paras);
       let lines = 0;
-      if (LY.pages.length) for (const pg of LY.pages) for (const f of pg.el.querySelectorAll('.pg-body .p')) { if (f.closest('.balloons')) continue; const lh = parseFloat(getComputedStyle(f.firstChild).lineHeight) || 16; lines += Math.max(1, Math.round(f.firstChild.offsetHeight / lh)); }
+      if (LY.pages.length) for (const pg of LY.pages) for (const f of pg.el.querySelectorAll('.pg-body .p')) { if (f.closest('.balloons')) continue; lines += LY.lineCount(f); }
       const rows = [['Pages', selOnly ? '' : LY.pages.length || 1], ['Words', st.words], ['Characters (no spaces)', st.charsNoSp], ['Characters (with spaces)', st.chars], ['Paragraphs', st.paras], ['Lines', selOnly ? '' : lines || st.paras]];
       for (const [k, v] of rows) if (v !== '') tbl.appendChild(h('tr', null, h('td', { text: k }), h('td', { text: Number(v).toLocaleString() })));
     };
