@@ -1,0 +1,80 @@
+{
+ "pdf": "LibreOffice",
+ "cases": [
+  {
+   "case": "picture alone, 12pt mark",
+   "asWord": true,
+   "pt": 61.55
+  },
+  {
+   "case": "picture alone, 28pt mark",
+   "asWord": true,
+   "pt": 61.55
+  },
+  {
+   "case": "small picture alone (8pt), 12pt mark",
+   "asWord": false,
+   "pt": 23.1
+  },
+  {
+   "case": "picture with text on its line",
+   "asWord": true,
+   "pt": 63.75
+  },
+  {
+   "case": "picture alone in a table cell",
+   "asWord": true,
+   "pt": 61.55
+  },
+  {
+   "case": "big first run, then smaller text on more lines",
+   "asWord": true,
+   "pt": 50.7
+  },
+  {
+   "case": "big spaces in small text",
+   "asWord": true,
+   "pt": 23.1
+  },
+  {
+   "case": "big tab in small text",
+   "asWord": true,
+   "pt": 23.1
+  },
+  {
+   "case": "only spaces, 28pt, 10pt mark",
+   "asWord": false,
+   "pt": 23.1
+  },
+  {
+   "case": "Shift+Enter twice: a line, an empty line, a line",
+   "asWord": true,
+   "pt": 46.2
+  },
+  {
+   "case": "Shift+Enter at the end of the paragraph",
+   "asWord": true,
+   "pt": 34.65
+  },
+  {
+   "case": "big paragraph mark after small text",
+   "asWord": false,
+   "pt": 23.1
+  },
+  {
+   "case": "exact 14pt, big first run then smaller text",
+   "asWord": true,
+   "pt": 39.55
+  },
+  {
+   "case": "double spacing, picture alone",
+   "asWord": false,
+   "pt": 73.1
+  },
+  {
+   "case": "empty numbered paragraph",
+   "asWord": false,
+   "pt": 23.1
+  }
+ ]
+}
