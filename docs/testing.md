@@ -50,6 +50,22 @@ Classic must not change when only the theme machinery changes: compare screensho
 
 ## Mouse, selection, drag and focus: tests/ui/
 
+Two sizes. After each change, `node tools/quick.mjs` (the uncommitted changes, or the last commit; `node tools/quick.mjs
+<rev>` for everything since a commit; `--dry` lists the plan): it maps the files changed to the tests that cover them
+and runs those, the Node tests first. The smoke test, `tests/ui/smoke.test.mjs` (about 20 s), runs whenever the apps
+changed: the Start Center and each app load with no errors and nothing from outside; in each app a click puts the
+keyboard in the document and typing lands there, the File menu and a dialog from its shortcut open and close with Esc
+and give the keyboard back, a drop-down inside a dialog opens above it (Ledger's Format Cells), and Undo takes the
+typing back. A touched app adds its Node tests and its own UI file (2–3 minutes), shared event, menu and dialog code
+(`common/ui.js`) the focus tests in the Classic look and the drag tests, and a changed test file runs itself; the rules
+are at the top of `tools/quick.mjs`. Run the change's own test on the code before it too (`tools/older.mjs`).
+
+The whole of `tests/ui/` (about 25 minutes) runs before a release: `node tools/ui-full.mjs` runs it and records the
+result in `.ui-full-tested.json` (ignored by Git) for a hash of `public/`'s content, committed or not.
+`tools/ui-tested.sh` compares the `public/` about to go out with that record; `tools/web-release.sh` and
+`../cf-vibeoffice/sync-cf-pages.sh` warn when the suite has not run on it, ran with failures, or `public/` has changed
+since. A partial run (extra arguments, e.g. `--test-name-pattern`) or one during which `public/` changed records nothing.
+
 `node --test --test-concurrency=1 tests/ui/*.test.mjs` drives each app in the local Chromium with real input: CDP Input events
 paced like a hand (`tests/lib/input.mjs`), because synthetic DOM events hide what an app does in the middle of a drag.
 The helper starts the static server, and a headless Chromium (profile `tmp/chromium-profile`, left running) when

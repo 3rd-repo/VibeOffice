@@ -60,11 +60,13 @@ export async function openPage(app, options = {}) {
           attach = function(app, hooks) { window.__corpusHooks = hooks; return ${options.persistence === false ? 'undefined' : 'fn(app, hooks)'}; };
         }});
       }});` });
-    await send('Page.navigate', { url: base + '/' + app + '/?new' });
+    // no app: the Start Center, ready once it has loaded (it attaches no document)
+    await send('Page.navigate', { url: app ? base + '/' + app + '/?new' : base + '/' });
+    const ready = app ? '!!window.__corpusHooks' : "document.readyState === 'complete' && !!window.VO";
     for (let i = 0; i < 200; i++) {
-      if (await evaluate('!!window.__corpusHooks').catch(() => false)) return { evaluate, close, errors, requests, send };
+      if (await evaluate(ready).catch(() => false)) return { evaluate, close, errors, requests, send };
       await pause(100);
     }
-    throw new Error(app + ' did not attach to the suite');
+    throw new Error((app || 'the Start Center') + ' did not attach to the suite');
   } catch (e) { await close(); throw e; }
 }
