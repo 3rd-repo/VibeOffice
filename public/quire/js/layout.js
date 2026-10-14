@@ -107,18 +107,26 @@
     const lines = [];
     let prev = null; /* previous rect */
     let forceNew = false;
-    const lhCache = new Map();
-    const lhOf = (span) => {
+    const lhCache = new Map(), grid = +pc.dataset.grid || 0;
+    const metricsOf = (span) => {
       let v = lhCache.get(span);
-      if (v == null) { const cs = getComputedStyle(span); v = parseFloat(cs.lineHeight); if (isNaN(v)) v = parseFloat(cs.fontSize) * 1.2; lhCache.set(span, v); }
+      if (v == null) {
+        const cs = getComputedStyle(span), lh = parseFloat(cs.lineHeight);
+        /* on a document grid the line is the paragraph's (runs that fit are shorter; a superscript's 0 stays 0); with
+           the font's own line height (Word's single spacing; its text, centred in the line on a document grid) */
+        v = { lh: isNaN(lh) ? parseFloat(cs.fontSize) * 1.2 : lh > 0 ? Math.max(grid, lh) : lh, nat: parseFloat(cs.fontSize) * R.lineFactor(cs.fontFamily.split(',')[0].replace(/["']/g, '').trim()) };
+        lhCache.set(span, v);
+      }
       return v;
     };
-    const add = (o, rect, lh) => {
+    /** a line: its box (top, bottom) and where Word's text ends in it (text) */
+    const add = (o, rect, m) => {
+      const lh = m && m.lh;
       const top = (rect.top - frameTop) / scale, bottom = (rect.bottom - frameTop) / scale;
-      const half = lh != null ? Math.max(0, (lh - rect.height / scale) / 2) : 0;
+      const half = lh != null ? Math.max(0, (lh - rect.height / scale) / 2) : 0, text = m ? (top + bottom) / 2 + m.nat / 2 : bottom;
       const isNew = !prev || forceNew || (rect.left < prev.left - 1 && rect.top > prev.top + 0.5) || rect.top >= prev.bottom - 0.5 && rect.left <= prev.left;
-      if (isNew) lines.push({ o, top: top - half, bottom: bottom + half });
-      else { const ln = lines[lines.length - 1]; ln.bottom = Math.max(ln.bottom, bottom + half); ln.top = Math.min(ln.top, top - half); }
+      if (isNew) lines.push({ o, top: top - half, bottom: bottom + half, text });
+      else { const ln = lines[lines.length - 1]; ln.bottom = Math.max(ln.bottom, bottom + half); ln.top = Math.min(ln.top, top - half); ln.text = Math.max(ln.text, text); }
       prev = rect;
       forceNew = false;
     };
@@ -136,7 +144,7 @@
       const o0 = +node.dataset.o;
       const tn = node.firstChild;
       if (tn && tn.nodeType === 3 && node.contentEditable !== 'false') {
-        const lh = lhOf(node);
+        const sm = metricsOf(node);
         const text = tn.data;
         /* sample at break opportunities, refine with binary search between samples */
         let lastI = -1, lastR = null;
@@ -151,9 +159,9 @@
               const mr = charRect(tn, mid);
               if (mr && mr.top > lastR.top + 0.5 && mr.left < lastR.left + 1) hi = mid; else lo = mid + 1;
             }
-            if (lo < i) { const lr = charRect(tn, lo); if (lr) add(o0 + lo, lr, lh); }
+            if (lo < i) { const lr = charRect(tn, lo); if (lr) add(o0 + lo, lr, sm); }
           }
-          add(o0 + i, r, lh);
+          add(o0 + i, r, sm);
           lastI = i; lastR = r;
         };
         for (let i = 0; i < text.length; i++) {
@@ -271,10 +279,14 @@
       /* does not fit: split by lines */
       const lines = LY.lines(frag, frame.top, scale);
       /* Word's "multiple" line spacing: the last line on a page only needs its single-spaced height to
-         fit; the extra leading may run into the bottom margin (same capacity as Word and LibreOffice) */
+         fit; the extra leading may run into the bottom margin (same capacity as Word and LibreOffice).
+         On a document line grid Word centres the text in its line, and only the space below the text may
+         run into the margin, whatever the spacing (tools/linegrid.py) */
       const lsx = R.lineSpec(pPr);
-      const multX = !ctx.inCell && frame.kind === 'col' && lsx.mult > 1 && !lsx.atLeast && !lsx.exact ? lsx.mult : 1;
-      const slackOf = (ln) => (multX > 1 && ln ? (ln.bottom - ln.top) * (1 - 1 / multX) : 0);
+      const atFoot = !ctx.inCell && frame.kind === 'col' && !lsx.atLeast && !lsx.exact;
+      const onGrid = atFoot && ctx.grid && !pPr.noSnap;
+      const multX = atFoot && !onGrid && lsx.mult > 1 ? lsx.mult : 1;
+      const slackOf = (ln) => (!ln ? 0 : onGrid ? (ln.text != null ? Math.max(0, ln.bottom - ln.text) : 0) : multX > 1 ? (ln.bottom - ln.top) * (1 - 1 / multX) : 0);
       /* (an empty paragraph has no measured lines: its text bottom is the box minus the space after) */
       let textBottom;
       if (lines.length) textBottom = lines[lines.length - 1].bottom - slackOf(lines[lines.length - 1]);

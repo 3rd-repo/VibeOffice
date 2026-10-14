@@ -28,10 +28,10 @@ changed = [...new Set(changed)];
 /* rules: changed path → test files. Seconds are measured run times (2026-10-14), for the estimate. */
 const SECONDS = { 'tests/ui/smoke.test.mjs': 20, 'tests/ui/quire.test.mjs': 175, 'tests/ui/ledger.test.mjs': 130, 'tests/ui/lectern.test.mjs': 130,
   'tests/ui/focus.test.mjs': 265, 'tests/ui/focus.test.mjs :: classic': 90, 'tests/ui/drag.test.mjs': 45, 'tests/ui/gestures.test.mjs': 480, 'tests/ui/painter.test.mjs': 40, 'tests/ui/textmap.test.mjs': 165,
-  'tests/ledger/*.test.js': 5, 'tests/quire/*.test.js': 1, 'tests/scout.test.mjs': 190, 'tests/desktop/host.test.mjs': 32, 'tests/sw.test.mjs': 10,
+  'tests/ledger/*.test.js': 5, 'tests/quire/*.test.js': 1, 'tests/from-issues/*/*.test.mjs': 1, 'tests/scout.test.mjs': 190, 'tests/desktop/host.test.mjs': 32, 'tests/sw.test.mjs': 10,
   'tests/ribbon.test.mjs': 5, 'tests/search.test.mjs': 4, 'tests/ooxml/check.test.mjs': 3 };
 const RULES = [
-  [/^public\/(quire|ledger|lectern|common)\/|^public\/[^/]+\.(html|js|css)$/, ['tests/ui/smoke.test.mjs', 'tests/licenses.test.mjs']],
+  [/^public\/(quire|ledger|lectern|common)\/|^public\/[^/]+\.(html|js|css)$/, ['tests/ui/smoke.test.mjs', 'tests/licenses.test.mjs', 'tests/from-issues/*/*.test.mjs']],   // and the reported issues' tests
   [/^public\/ledger\/|^tools\/ledger\//, ['tests/ledger/*.test.js', 'tests/ui/ledger.test.mjs']],
   [/^public\/quire\//, ['tests/quire/*.test.js', 'tests/ui/quire.test.mjs']],
   [/^public\/lectern\//, ['tests/ooxml/lectern-review.test.mjs', 'tests/ui/lectern.test.mjs']],
@@ -79,9 +79,9 @@ const run = (label, files, extra = []) => {
   console.log(`${last.ok ? '✔' : '✖'} ${label}: ${last.pass} passed${last.fail ? `, ${last.fail} failed` : ''}${last.todo ? `, ${last.todo} todo` : ''} (${last.s} s)`);
   if (!last.ok) console.log(out.slice(out.indexOf('✖ failing tests:') >>> 0).split('\n').slice(0, 30).join('\n'));
 };
-const expand = (t) => t.includes('*') ? fs.readdirSync(path.join(root, path.dirname(t))).filter((f) => f.endsWith(path.basename(t).replace('*', ''))).map((f) => path.join(path.dirname(t), f)) : [t];
+const expand = (t) => t.includes('*') ? fs.globSync(t, { cwd: root }).sort() : [t];
 const node = order.filter((t) => !isUI(t)), ui = order.filter(isUI);
-if (node.length) run('Node tests', node.flatMap(expand));
+if (node.length) run('Node tests', [...new Set(node.flatMap(expand))]);
 for (const t of ui) { const [files, extra] = split(t); run(t, files, ['--test-concurrency=1', ...extra]); }
 const bad = results.filter((r) => !r.ok);
 console.log(bad.length ? `\n${bad.length} of ${results.length} failed.` : `\nAll ${results.length} passed. Before a release: node tools/ui-full.mjs (the whole of tests/ui/).`);
