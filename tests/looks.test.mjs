@@ -47,7 +47,8 @@ test('every setting the chrome uses is defined', () => {
   const defined = names(looks);
   for (const [file, css] of Object.entries(SHEETS)) {
     const used = new Set([...css.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1]));
-    const missing = [...used].filter((n) => !defined.has(n) && !DOCUMENT_VARS.has(n));
+    /* --t-…: text an app sets in the UI's language for its CSS to draw (common/i18n.js), not a look setting */
+    const missing = [...used].filter((n) => !defined.has(n) && !DOCUMENT_VARS.has(n) && !n.startsWith('--t-'));
     assert.deepEqual(missing, [], `${file} uses undefined settings`);
   }
 });

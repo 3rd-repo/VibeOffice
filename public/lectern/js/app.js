@@ -82,8 +82,8 @@
           { label: 'Act&ion Buttons', sub: [{ custom: (close) => shapeGrid(L.geom.MENU['Action Buttons'], close) }] }, 'actionSettings', '-',
           'animSchemes', 'customAnim', 'transitionPane', '-', 'hideSlide'],
       },
-      { label: '&Window', items: () => [{ label: '&1 ' + A.fileName, checked: () => true, run: () => {} }] },
-      { label: '&Help', items: ['help', 'showAssistant', '-', 'gettingStarted', '-', 'about'] },
+      { label: '&Window', items: () => [{ label: '&1 ' + A.fileName.replace(/&/g, '&&'), raw: true, checked: () => true, run: () => {} }] },
+      { label: '&Help|menu bar', items: ['help', 'showAssistant', '-', 'gettingStarted', '-', 'about'] },
     ];
     void autoShapeSub;
     const row = L.$('#menurow');
@@ -106,7 +106,7 @@
     ui.openMenu([
       { label: '&Lines', icon: 'line', sub: ['drawLine', 'drawArrow', 'drawDblArrow', 'drawCurve', 'drawFreeform', 'drawScribble'] },
       { label: 'Co&nnectors', icon: 'elbow', sub: [{ label: 'Straight Connector', icon: 'line', run: () => E.setTool({ kind: 'line', geom: 'straightConnector1' }) }, 'drawElbow', 'drawCurvedConn', { label: 'Elbow Arrow Connector', icon: 'elbow', run: () => E.setTool({ kind: 'line', geom: 'bentConnector3', arrows: 'end' }) }] },
-      ...['Basic Shapes', 'Block Arrows', 'Flowchart', 'Stars and Banners', 'Callouts', 'Action Buttons'].map((g) => ({ label: g.replace(/^(\w)/, '&$1'), icon: { 'Basic Shapes': 'autoshapes', 'Block Arrows': 'arrowStyle', Flowchart: 'diagram', 'Stars and Banners': 'animation', Callouts: 'comment', 'Action Buttons': 'actionSettings' }[g], sub: [{ custom: (close) => shapeGrid(L.geom.MENU[g], close) }] })),
+      ...[['Basic Shapes', '&Basic Shapes'], ['Block Arrows', '&Block Arrows'], ['Flowchart', '&Flowchart'], ['Stars and Banners', '&Stars and Banners'], ['Callouts', '&Callouts'], ['Action Buttons', '&Action Buttons']].map(([g, label]) => ({ label, icon: { 'Basic Shapes': 'autoshapes', 'Block Arrows': 'arrowStyle', Flowchart: 'diagram', 'Stars and Banners': 'animation', Callouts: 'comment', 'Action Buttons': 'actionSettings' }[g], sub: [{ custom: (close) => shapeGrid(L.geom.MENU[g], close) }] })),
       '-', { label: '&More AutoShapes...', icon: 'clipart', run: () => L.panes.task.show('clipart') },
     ], { left: r.left, bottom: r.bottom }, { selectFirst: !at });
   }
@@ -125,7 +125,7 @@
   }
   const lineSVG = (w, dash, extra) => `<svg width="90" height="14" viewBox="0 0 90 14"><path d="M2 7h86" stroke="#000" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} fill="none"/>${extra || ''}</svg>`;
   function lineStyleMenu(r) {
-    ui.openMenu([{ custom: (close) => listPanel(WEIGHTS.map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: w + ' pt', run: () => A.setLineProp({ w }) })).concat([{ label: 'More Lines...', run: () => ui.exec('formatObject', 'Colors and Lines') }]), close) }], r);
+    ui.openMenu([{ custom: (close) => listPanel(WEIGHTS.map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: L.t('{0} pt', w), run: () => A.setLineProp({ w }) })).concat([{ label: 'More Lines...', run: () => ui.exec('formatObject', 'Colors and Lines') }]), close) }], r);
   }
   function dashMenu(r) {
     ui.openMenu([{ custom: (close) => listPanel(L.dlg.DASHES.map(([k, n]) => ({ html: lineSVG(2, (L.render.dashArray(k, 2) || '').replace(/,/g, ' ')), label: n, run: () => A.setLineProp({ dash: k }) })), close) }], r);
@@ -158,7 +158,7 @@
       { label: 'Nud&ge', sub: ['nudgeUp', 'nudgeDown', 'nudgeLeft', 'nudgeRight'] },
       { label: '&Align or Distribute', sub: ['alignL', 'alignC', 'alignR', 'alignT', 'alignM', 'alignB', '-', 'distH', 'distV', '-', 'alignToSlide'] },
       { label: 'Rotate or Fl&ip', sub: ['freeRotate', 'rotateLeft', 'rotateRight', '-', 'flipH', 'flipV'] }, '-',
-      { label: 'C&hange AutoShape', enabled: () => E.selected().some((s) => s.type === 'shape' || s.type === 'text'), sub: ['Basic Shapes', 'Block Arrows', 'Flowchart', 'Stars and Banners', 'Callouts', 'Action Buttons'].map((g) => ({ label: g, sub: [{ custom: (close) => { const el = shapeGrid(L.geom.MENU[g], close); L.$$('button', el).forEach((b, i) => { const nb = b.cloneNode(true); nb.addEventListener('click', () => { close(); A.changeAutoShape(L.geom.MENU[g][i]); }); b.replaceWith(nb); }); return el; } }] })) },
+      { label: 'C&hange AutoShape', enabled: () => E.selected().some((s) => s.type === 'shape' || s.type === 'text'), sub: ['Basic Shapes', 'Block Arrows', L.N('Flowchart'), 'Stars and Banners', L.N('Callouts'), 'Action Buttons'].map((g) => ({ label: g, sub: [{ custom: (close) => { const el = shapeGrid(L.geom.MENU[g], close); L.$$('button', el).forEach((b, i) => { const nb = b.cloneNode(true); nb.addEventListener('click', () => { close(); A.changeAutoShape(L.geom.MENU[g][i]); }); b.replaceWith(nb); }); return el; } }] })) },
       'setDefaults',
     ], r);
   }
@@ -182,7 +182,7 @@
   A.parts = {
     font: (o) => ui.combo(Object.assign({ id: 'tb-font', width: 136, tip: 'Font', options: () => { const d = E.slide() && L.pres.designs[E.slide().design]; return L.fontSections({ major: d?.fonts?.major, minor: d?.fonts?.minor }); }, preview: (v) => `font-family:${L.fontStack(v)};font-size:13px`, note: L.fontNote, listCls: 'fonts', value: () => { const s = textState(); return s ? s.font : ''; }, enabled: () => !!textState(), onChange: (v) => A.setFontName(v) }, o)),
     size: (o) => ui.combo(Object.assign({ id: 'tb-size', width: 44, tip: 'Font Size', options: () => L.SIZE_LIST, value: () => { const s = textState(); return s && s.sz ? String(L.round(s.sz, 1)) : ''; }, enabled: () => !!textState(), onChange: (v) => A.setFontSize(parseFloat(v)) }, o)),
-    zoom: (o) => ui.combo(Object.assign({ id: 'tb-zoom', width: 52, tip: 'Zoom', options: () => ['Fit', '400%', '200%', '150%', '100%', '75%', '66%', '50%', '33%', '25%'], value: () => (E.zoom === 'fit' ? 'Fit' : E.zoomPct() + '%'), onChange: (v) => { if (/fit/i.test(v)) E.setZoom('fit'); else { const n = parseFloat(v); if (n > 0) E.setZoom(n / 100); } } }, o)),
+    zoom: (o) => ui.combo(Object.assign({ id: 'tb-zoom', width: 64, tip: 'Zoom', options: () => [L.t('Fit'), '400%', '200%', '150%', '100%', '75%', '66%', '50%', '33%', '25%'], value: () => (E.zoom === 'fit' ? L.t('Fit') : E.zoomPct() + '%'), onChange: (v) => { if (/fit/i.test(v) || v === L.t('Fit')) E.setZoom('fit'); else { const n = parseFloat(v); if (n > 0) E.setZoom(n / 100); } } }, o)),
   };
   A.menus = {
     color: (kind) => colorDD(kind), autoShapes: (r) => openAutoShapes(r), draw: (r) => drawMenu(r), lineStyle: (r) => lineStyleMenu(r), dash: (r) => dashMenu(r), arrow: (r) => arrowMenu(r), shadow: (r) => shadowMenu(r),
@@ -200,7 +200,7 @@
       outlining: ui.toolbar('outlining', 'Outlining', ['promote', 'demote', 'moveParaUp', 'moveParaDown', '|', 'summarySlide', 'showFormatting']),
       picture: ui.toolbar('picture', 'Picture', ['insertPicture', ui.tbDrop('', 'colorPic', A.menus.picColor, 'Color'), 'picMoreContrast', 'picLessContrast', 'picMoreBright', 'picLessBright', '|', 'picCrop', 'rotateLeft', ui.tbDrop('', 'lineStyle', lineStyleMenu, 'Line Style'), '|', ui.tbButton('formatObject', { icon: 'formatPicture' }), 'picTransparent', 'picReset']),
       tables: ui.toolbar('tables', 'Tables and Borders', [ui.tbDrop('', 'dashStyle', (r) => ui.openMenu([{ custom: (close) => listPanel(L.dlg.DASHES.map(([k, n]) => ({ html: lineSVG(2, (L.render.dashArray(k, 2) || '').replace(/,/g, ' ')), label: n, run: () => { A.tblBorder.dash = k; } })), close) }], r), 'Border Style'),
-        ui.tbDrop('', 'lineStyle', (r) => ui.openMenu([{ custom: (close) => listPanel(WEIGHTS.map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: w + ' pt', run: () => { A.tblBorder.w = w; } })), close) }], r), 'Border Width'),
+        ui.tbDrop('', 'lineStyle', (r) => ui.openMenu([{ custom: (close) => listPanel(WEIGHTS.map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: L.t('{0} pt', w), run: () => { A.tblBorder.w = w; } })), close) }], r), 'Border Width'),
         ui.tbDrop('', 'lineColor', (r, b) => ui.colorMenu(b, { mode: 'plain', grid: true }, (v) => { if (typeof v === 'string') A.tblBorder.c = v; }), 'Border Color'),
         ui.tbDrop('', 'bordersAll', A.menus.tableBorders, 'Borders'),
         ui.tbDrop('', 'fillColor', A.menus.tableFill, 'Fill Color'),
@@ -210,7 +210,7 @@
         ui.tbDrop('', 'waShape', A.menus.waShape, 'LettersArt Shape'),
         'waSameHeight', 'waVertical',
         ui.tbDrop('', 'alignCenter', (r) => ui.openMenu([['l', '&Left Align'], ['ctr', '&Center'], ['r', '&Right Align']].map(([k, n]) => ({ label: n, run: () => A.waSet({ algn: k }) })), r), 'LettersArt Alignment'),
-        ui.tbDrop('', 'charSpacing', (r) => ui.openMenu([[-3, '&Very Tight'], [-1.5, '&Tight'], [0, '&Normal'], [2, '&Loose'], [4, 'V&ery Loose']].map(([k, n]) => ({ label: n, run: () => A.waSet({ spc: k }) })), r), 'LettersArt Character Spacing')]),
+        ui.tbDrop('', 'charSpacing', (r) => ui.openMenu([[-3, '&Very Tight'], [-1.5, '&Tight|spacing'], [0, '&Normal'], [2, '&Loose'], [4, 'V&ery Loose']].map(([k, n]) => ({ label: n, run: () => A.waSet({ spc: k }) })), r), 'LettersArt Character Spacing')]),
       master: ui.toolbar('master', 'Slide Master View', ['insertTitleMaster', 'deleteTitleMaster', '|', ui.tbButton('closeMaster', { label: 'Close Master View' })]),
       sorter: ui.toolbar('sorter', 'Slide Sorter', ['hideSlide', 'rehearse', '|', 'summarySlide', 'speakerNotes', '|', ui.tbButton('transitionPane', { label: 'Transition' }), ui.tbButton('slideDesign', { label: 'Design' }), ui.tbButton('newSlide', { label: 'New Slide' })]),
     };
@@ -285,15 +285,14 @@
     sb.append(A.sbSlide, A.sbDesign, A.sbMsg, A.sbLang, A.sbZoom);
     L.bus.on('zoom', () => { A.sbZoom.firstChild.textContent = E.zoomPct() + '%'; zr.value = E.zoomPct(); ui.refresh(); });
   }
-  A.status = (msg) => { if (!A.sbMsg) return; A.sbMsg.textContent = msg; clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sbMsg.textContent = ''; }, 3000); };
+  A.status = (msg) => { if (!A.sbMsg) return; A.sbMsg.textContent = L.t(msg); clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sbMsg.textContent = ''; }, 3000); };
   A.updateStatus = function () {
     if (!A.sbSlide) return;
     const n = L.pres.slides.length;
-    if (A.view === 'master') A.sbSlide.textContent = E.masterKind === 'title' ? 'Title Master' : 'Slide Master';
-    else if (A.view === 'sorter') A.sbSlide.textContent = 'Slide Sorter';
-    else A.sbSlide.textContent = n ? `Slide ${E.idx + 1} of ${n}` : 'No slides';
-    const d = E.design();
-    A.sbDesign.textContent = d ? d.name : '';
+    if (A.view === 'master') A.sbSlide.textContent = E.masterKind === 'title' ? L.t('Title Master') : L.t('Slide Master');
+    else if (A.view === 'sorter') A.sbSlide.textContent = L.t('Slide Sorter');
+    else A.sbSlide.textContent = n ? L.t('Slide {0} of {1}', E.idx + 1, n) : L.t('No slides');
+    A.sbDesign.textContent = M.designName(E.design());
   };
   A.updateTitle = () => { document.title = `${A.fileName} - Lectern 2003`; };
 
@@ -361,7 +360,7 @@
   };
   async function confirmDiscard() {
     if (!L.hist.dirty) return true;
-    const r = await ui.msg(`Do you want to save the changes you made to ${A.fileName}?`, { icon: 'warn', buttons: ['&Yes', '&No', 'Cancel'] });
+    const r = await ui.msg(L.t('Do you want to save the changes you made to {0}?', A.fileName), { icon: 'warn', buttons: ['&Yes', '&No', 'Cancel'] });
     if (r === 0) return await A.save() === 'saved';
     if (r === 1 && window.VO) VO.discard(L.pres);   // its unsaved version goes too
     return r === 1;
@@ -393,12 +392,12 @@
   };
   A.openFile = async function (file) {
     if (/\.txt$/i.test(file.name)) { if (!(await confirmDiscard())) return; const text = await L.readAsText(file); const pres = M.newPresentation(Object.assign({ design: 'default', empty: true }, A.newSize())); A.loadPres(pres, file.name.replace(/\.txt$/i, '')); A.outlineToSlides(text, 0); return; }
-    if (/\.ppt$/i.test(file.name)) { ui.msg(`${file.name} is in the older binary PowerPoint 97–2003 format. Open it in PowerPoint, Keynote, Google Slides or LibreOffice and save it as .pptx, then open the .pptx here.`, { icon: 'warn' }); return; }
+    if (/\.ppt$/i.test(file.name)) { ui.msg(L.t('{0} is in the older binary PowerPoint 97–2003 format. Open it in PowerPoint, Keynote, Google Slides or LibreOffice and save it as .pptx, then open the .pptx here.', file.name), { icon: 'warn' }); return; }
     if (!(await confirmDiscard())) return;
-    ui.busy(true, `Opening ${file.name}...`);
+    ui.busy(true, L.t('Opening {0}...', file.name));
     try {
       const buf = await L.readAsArrayBuffer(file);
-      const progress = (i, n) => ui.busy(true, `Opening ${file.name}... (slide ${i} of ${n})`);
+      const progress = (i, n) => ui.busy(true, L.t('Opening {0}... (slide {1} of {2})', file.name, i, n));
       let pres = null, password, wrong = false;
       for (;;) {
         try { pres = await L.pptx.read(buf, { progress, password }); break; } catch (e) {
@@ -408,7 +407,7 @@
           wrong = e.code === 'badpassword';
           password = await ui.password(file.name, wrong);
           if (password == null) return;
-          ui.busy(true, `Opening ${file.name}...`);
+          ui.busy(true, L.t('Opening {0}...', file.name));
         }
       }
       if (!pres.slides.length) pres.slides.push(M.newSlide(pres, 'title', Object.keys(pres.designs)[0]));
@@ -418,13 +417,13 @@
       ui.busy(false);
       if (pres.repaired) {
         const lost = pres.repaired.parts.filter((p) => /slides\/slide\d+\.xml$/.test(p)).length;
-        ui.msg(`${L.APP} found a problem with content in ${file.name} and repaired the presentation.` + (lost ? `\n${lost} slide${lost > 1 ? 's' : ''} could not be recovered.` : '\nCheck the slides before you save over the original.'), { icon: 'warn' });
+        ui.msg(L.t('{0} found a problem with content in {1} and repaired the presentation.', L.APP, file.name) + '\n' + (lost > 1 ? L.t('{0} slides could not be recovered.', lost) : lost ? L.t('1 slide could not be recovered.') : L.t('Check the slides before you save over the original.')), { icon: 'warn' });
       } else if (/\.pps[xm]$/i.test(file.name)) L.show.start({ from: 0 });
     } catch (e) {
       ui.busy(false);
       console.error(e);
-      if (e && e.code === 'ole') ui.msg(e.message, { icon: 'warn' });
-      else ui.msg(`${L.APP} can't read ${file.name}. ${e && e.message ? e.message : ''}\nMake sure the file is a PowerPoint 2007 or later presentation (.pptx).`, { icon: 'error' });
+      if (e && e.code === 'ole') ui.msg(L.t(e.message), { icon: 'warn' });
+      else ui.msg(L.t('{0} can\'t read {1}. {2}\nMake sure the file is a PowerPoint 2007 or later presentation (.pptx).', L.APP, file.name, e && e.message ? L.t(e.message) : ''), { icon: 'error' });
     }
   };
   A.save = async function () {
@@ -456,12 +455,12 @@
       if (losses === null) return 'declined';
       const r = await L.saveFile(`${name}.${ext}`, blob);
       if (r === 'saved') L.opc.acknowledge(L.pres, losses);
-      if (r === 'saved' && /^(pptx|pptm|ppsx|ppsm|potx|potm)$/.test(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); L.hist.dirty = false; A.status(`Saved ${name}.${ext}`); if (window.VO) VO.saved(`${name}.${ext}`, blob, L.pres); }
+      if (r === 'saved' && /^(pptx|pptm|ppsx|ppsm|potx|potm)$/.test(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); L.hist.dirty = false; A.status(L.t('Saved {0}', `${name}.${ext}`)); if (window.VO) VO.saved(`${name}.${ext}`, blob, L.pres); }
       return r;
     } catch (e) {
       ui.busy(false);
       console.error(e);
-      ui.msg(`The file could not be saved: ${e.message || e}`, { icon: 'error' });
+      ui.msg(L.t('The file could not be saved: {0}', e.message || e), { icon: 'error' });
     }
   };
   A.outlineText = function () {
@@ -506,7 +505,7 @@
     g.drawImage(img, 0, 0, w, hh);
     return c;
   };
-  const canvasBlob = (c, type, q) => new Promise((res, rej) => { try { c.toBlob((b) => (b ? res(b) : rej(new Error('This browser blocked the image export.'))), type, q); } catch (e) { rej(new Error('This browser blocked the image export.')); } });
+  const canvasBlob = (c, type, q) => new Promise((res, rej) => { try { c.toBlob((b) => (b ? res(b) : rej(new Error(L.t('This browser blocked the image export.')))), type, q); } catch (e) { rej(new Error(L.t('This browser blocked the image export.'))); } });
   A.slideCanvas = function (slide, width, map) {
     const pres = L.pres;
     const el = L.render.slide(pres, slide, { mode: 'thumb', index: pres.slides.indexOf(slide) });
@@ -523,7 +522,7 @@
       const css = slideCSS(true);
       let n = 0;
       for (const p of els) {
-        ui.busy(true, `Creating PDF... (page ${++n} of ${els.length})`);
+        ui.busy(true, L.t('Creating PDF... (page {0} of {1})', ++n, els.length));
         const w = p.offsetWidth, hh = p.offsetHeight;
         const clone = p.cloneNode(true);
         clone.style.margin = '0'; clone.style.boxShadow = 'none'; clone.style.position = 'relative';
@@ -536,7 +535,7 @@
       const slides = L.pres.slides.filter((s) => !s.hidden);
       let n = 0;
       for (const s of slides) {
-        ui.busy(true, `Creating PDF... (slide ${++n} of ${slides.length})`);
+        ui.busy(true, L.t('Creating PDF... (slide {0} of {1})', ++n, slides.length));
         const c = await A.slideCanvas(s, Math.round(L.pres.W * 2.5), map);
         pages.push({ jpeg: await jpeg(c), iw: c.width, ih: c.height, pw: L.pres.W, ph: L.pres.H });
       }
@@ -546,7 +545,7 @@
   A.previewPDF = async function () {
     ui.busy(true, 'Creating PDF...');
     try { const blob = await A.buildPDF('preview'); ui.busy(false); await L.saveFile(`${A.fileName} (${{ slides: 'Slides', handouts: 'Handouts', notes: 'Notes', outline: 'Outline' }[A.printOpts.what] || 'Print'}).pdf`, blob); }
-    catch (e) { ui.busy(false); console.error(e); ui.msg('The PDF could not be created: ' + (e.message || e), { icon: 'error' }); }
+    catch (e) { ui.busy(false); console.error(e); ui.msg(L.t('The PDF could not be created: {0}', e.message || e), { icon: 'error' }); }
   };
   A.buildWebPage = async function () {
     const pres = L.pres;
@@ -701,7 +700,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     const cs = L.clone(d.colors);
     const rows = M.SCHEME_SLOTS.map(([k, label]) => {
       const p = L.dlg.colorPick(cs[k], (c) => { cs[k] = c[0] === '#' ? c : M.resolveColor(c, d); });
-      return ui.field(label + ':', p, { cls: 'wide' });
+      return ui.field(label, p, { cls: 'wide' });   /* named as in Office's list of scheme colours, without a colon */
     });
     ui.dialog({ title: 'Edit Color Scheme', body: h('div', { class: 'col' }, ...rows), width: 360, buttons: [{ label: '&Apply', primary: true, onClick: () => A.applyColorScheme(cs, true) }, { label: 'Cancel' }] });
   };
@@ -722,7 +721,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
       M.gcDesigns(L.pres);
       E.render();
       L.bus.emit('slides-changed', { design: true });
-    } catch (e) { ui.busy(false); ui.msg('That design could not be read: ' + e.message, { icon: 'error' }); }
+    } catch (e) { ui.busy(false); ui.msg(L.t('That design could not be read: {0}', e.message), { icon: 'error' }); }
   };
   /** move a slide to a design, relocating untouched placeholders */
   A.moveToDesign = function (s, d) {
@@ -907,7 +906,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     if (!s) return;
     const ta = h('textarea', { id: 'sn-text', rows: 10, style: 'width:100%' });
     ta.value = s.notes || '';
-    ui.dialog({ title: 'Speaker Notes', body: h('div', { class: 'col' }, h('label', { for: 'sn-text', text: `Slide ${E.idx + 1}:` }), ta), width: 420, buttons: [{ label: 'Close', primary: true, onClick: () => { if (ta.value !== (s.notes || '')) { L.hist.push('Notes'); s.notes = ta.value; L.panes.notes.render(); } } }] });
+    ui.dialog({ title: 'Speaker Notes', body: h('div', { class: 'col' }, h('label', { for: 'sn-text', text: L.t('Slide {0}:', E.idx + 1) }), ta), width: 420, buttons: [{ label: 'Close', primary: true, onClick: () => { if (ta.value !== (s.notes || '')) { L.hist.push(L.N('Notes')); s.notes = ta.value; L.panes.notes.render(); } } }] });
   };
   A.outlineToSlides = function (text, at) {
     const lines = String(text).replace(/\r/g, '').split('\n');
@@ -963,7 +962,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     const shapes = E.selected();
     if (!shapes.length) return;
     if (L.diagram && L.diagram.deleteKids(shapes)) return;
-    E.commit('Clear', () => {
+    E.commit(L.N('Clear'), () => {
       const slide = E.slide();
       for (const sh of shapes) {
         const f = E.find(sh.id);
@@ -980,7 +979,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
   A.duplicateSel = function () {
     const shapes = E.selected().filter((s) => !E.find(s.id).parent);
     if (!shapes.length) return;
-    E.commit('Duplicate', () => {
+    E.commit(L.N('Duplicate'), () => {
       const slide = E.slide();
       E.sel = M.dupMany(shapes).map((c) => { M.translate(c, 12, 12); slide.shapes.push(c); return c.id; });
     });
@@ -993,7 +992,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
   A.group = function () {
     const shapes = E.selected().filter((s) => !E.find(s.id).parent);
     if (shapes.length < 2) return;
-    E.commit('Group', () => {
+    E.commit(L.N('Group'), () => {
       const slide = E.slide();
       const order = slide.shapes.filter((s) => shapes.includes(s));
       const at = slide.shapes.indexOf(order[order.length - 1]);
@@ -1009,7 +1008,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
   A.ungroup = function () {
     const groups = E.selected().filter((s) => s.type === 'group');
     if (!groups.length) return;
-    E.commit('Ungroup', () => {
+    E.commit(L.N('Ungroup'), () => {
       const slide = E.slide();
       const out = [];
       for (const g of groups) {
@@ -1036,7 +1035,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
   A.order = function (op) {
     const shapes = E.selected();
     if (!shapes.length) return;
-    E.commit('Order', () => {
+    E.commit(L.N('Order'), () => {
       for (const sh of op === 'front' || op === 'forward' ? shapes.slice().reverse() : shapes) {
         const f = E.find(sh.id);
         const list = f.list;
@@ -1053,7 +1052,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     const toSlide = A.opts.alignToSlide || shapes.length === 1;
     const bb = (s) => (s.type === 'group' ? M.groupBounds(s) : L.rotBounds(s));
     const ref = toSlide ? { x: 0, y: 0, w: L.pres.W, h: L.pres.H } : L.unionBounds(shapes.map(bb));
-    E.commit('Align', () => {
+    E.commit(L.N('Align'), () => {
       for (const s of shapes) {
         const b = bb(s);
         let dx = 0, dy = 0;
@@ -1072,7 +1071,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     const ref = A.opts.alignToSlide ? { x: 0, y: 0, w: L.pres.W, h: L.pres.H } : L.unionBounds(items.map((i) => i.b));
     const total = items.reduce((a, i) => a + (axis === 'h' ? i.b.w : i.b.h), 0);
     const gap = ((axis === 'h' ? ref.w : ref.h) - total) / Math.max(1, items.length - 1);
-    E.commit('Distribute', () => {
+    E.commit(L.N('Distribute'), () => {
       let pos = axis === 'h' ? ref.x : ref.y;
       for (const it of items) {
         if (axis === 'h') M.translate(it.s, pos - it.b.x, 0); else M.translate(it.s, 0, pos - it.b.y);
@@ -1080,8 +1079,8 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
       }
     });
   };
-  A.rotate = (deg) => { if (!E.selected().every(M.canRotate)) return; E.commit('Rotate', () => { for (const s of E.selected()) { if (s.type === 'line') { const [a, b] = L.geom.lineEnds(s); const cx = s.x + s.w / 2, cy = s.y + s.h / 2; L.geom.setLineEnds(s, L.rotPt(a[0], a[1], cx, cy, deg), L.rotPt(b[0], b[1], cx, cy, deg)); } else s.rot = (((s.rot || 0) + deg) % 360 + 360) % 360; } }); };
-  A.flip = (axis) => { if (!E.selected().every(M.canRotate)) return; E.commit('Flip', () => {
+  A.rotate = (deg) => { if (!E.selected().every(M.canRotate)) return; E.commit(L.N('Rotate'), () => { for (const s of E.selected()) { if (s.type === 'line') { const [a, b] = L.geom.lineEnds(s); const cx = s.x + s.w / 2, cy = s.y + s.h / 2; L.geom.setLineEnds(s, L.rotPt(a[0], a[1], cx, cy, deg), L.rotPt(b[0], b[1], cx, cy, deg)); } else s.rot = (((s.rot || 0) + deg) % 360 + 360) % 360; } }); };
+  A.flip = (axis) => { if (!E.selected().every(M.canRotate)) return; E.commit(L.N('Flip'), () => {
     for (const s of E.selected()) {
       if (s.type === 'group') { const g = s; for (const k of g.kids) { if (axis === 'h') { k.x = g.x + g.w - (k.x - g.x) - k.w; k.flipH = !k.flipH; } else { k.y = g.y + g.h - (k.y - g.y) - k.h; k.flipV = !k.flipV; } k.rot = k.rot ? 360 - k.rot : 0; } continue; }
       if (axis === 'h') s.flipH = !s.flipH; else s.flipV = !s.flipV;
@@ -1092,7 +1091,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     const step = fine ? 1 : E.grid.snap ? E.grid.size : 1;
     const shapes = E.selected();
     if (!shapes.length) return;
-    L.hist.push('Nudge', 'nudge');
+    L.hist.push(L.N('Nudge'), 'nudge');
     for (const s of shapes) { M.translate(s, dx * step, dy * step); const f = E.find(s.id); if (f.parent) E.fitGroup(f.parent); }
     if (E.view === 'master') E.syncMaster();
     if (shapes.length === 1 && !E.find(shapes[0].id).parent) E.renderShape(shapes[0].id); else E.render();
@@ -1152,28 +1151,28 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
       }
     });
   };
-  A.setShadow = (sh) => E.commit('Shadow', () => { for (const s of E.selected()) { if (s.type === 'wordart') s.wa.shadow = L.clone(sh); else s.shadow = L.clone(sh); } });
+  A.setShadow = (sh) => E.commit(L.N('Shadow'), () => { for (const s of E.selected()) { if (s.type === 'wordart') s.wa.shadow = L.clone(sh); else s.shadow = L.clone(sh); } });
   /* text formatting */
   A.applyFontColor = function (c) {
     L.fmt.run((r) => { const n = Object.assign({}, r); if (c) n.color = c; else delete n.color; delete n.fill; return n; }, 'Font Color', (wa) => { wa.fill = c ? { t: 'solid', c, a: 1 } : { t: 'solid', c: 'tx1', a: 1 }; });
   };
-  A.setFontName = (v) => { if (!v) return; L.addRecentFont(v); L.fmt.run((r) => Object.assign({}, r, { font: v }), 'Font', (wa) => { wa.font = v; }); };
+  A.setFontName = (v) => { if (!v) return; L.addRecentFont(v); L.fmt.run((r) => Object.assign({}, r, { font: v }), L.N('Font'), (wa) => { wa.font = v; }); };
   A.setFontSize = (v) => { if (!(v > 0)) return; v = L.clamp(v, 1, 4000); L.fmt.run((r) => Object.assign({}, r, { sz: v }), 'Font Size'); };
   A.toggleRun = function (key) {
     const st = L.fmt.state();
     if (!st) return;
     const on = !st[key];
-    const label = { b: 'Bold', i: 'Italic', u: 'Underline', shd: 'Shadow' }[key];
+    const label = { b: L.N('Bold'), i: L.N('Italic'), u: L.N('Underline'), shd: L.N('Shadow') }[key];
     L.fmt.run((r) => { const n = Object.assign({}, r); if (key === 'u') { if (on) n.u = 'sng'; else n.u = 'none'; } else n[key] = on ? true : false; return n; }, label, (wa) => { if (key === 'b' || key === 'i') wa[key] = on; if (key === 'shd') wa.shadow = on ? { c: '#000000', a: 0.4, dx: 3, dy: 3, blur: 0 } : null; });
   };
   A.toggleBaseline = function (v) {
     const st = L.fmt.state();
     const cur = st && st.r && st.r.base;
-    L.fmt.run((r) => { const n = Object.assign({}, r); if (cur === v) delete n.base; else n.base = v; return n; }, v > 0 ? 'Superscript' : 'Subscript');
+    L.fmt.run((r) => { const n = Object.assign({}, r); if (cur === v) delete n.base; else n.base = v; return n; }, v > 0 ? L.N('Superscript') : L.N('Subscript'));
   };
   A.setAlign = (a) => {
     if (!TE.active() && E.selected().some((s) => s.type === 'wordart')) { A.waSet({ algn: a }); return; }
-    L.fmt.para((p) => { p.pp = Object.assign({}, p.pp, { algn: a }); }, 'Alignment');
+    L.fmt.para((p) => { p.pp = Object.assign({}, p.pp, { algn: a }); }, L.N('Alignment'));
   };
   A.stepFont = function (d) {
     const st = L.fmt.state();
@@ -1194,10 +1193,10 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
       if (!off && cls === 'other' && !(p.pp.marL > 0)) { p.pp.marL = 27 + (p.lvl || 0) * 36; p.pp.indent = -27; }
       if (off && cls === 'other') { delete p.pp.marL; delete p.pp.indent; }
       if (bu.t === 'char' && (!bu.ch || bu.ch === 'undefined')) bu.ch = '•';
-    }, kind === 'num' ? 'Numbering' : 'Bullets');
+    }, kind === 'num' ? L.N('Numbering') : L.N('Bullets'));
   };
   A.indent = function (d) {
-    L.fmt.para((p) => { p.lvl = L.clamp((p.lvl || 0) + d, 0, 8); }, d > 0 ? 'Demote' : 'Promote');
+    L.fmt.para((p) => { p.lvl = L.clamp((p.lvl || 0) + d, 0, 8); }, d > 0 ? L.N('Demote') : L.N('Promote'));
     if (L.panes.left.tab === 'outline') L.panes.left.render();
   };
   A.moveParas = function (d) {
@@ -1215,7 +1214,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
   A.insertField = function (f) {
     A.ensureTextTarget();
     if (!TE.active()) return;
-    L.hist.push('Insert ' + (f === 'slidenum' ? 'Slide Number' : 'Date'));
+    L.hist.push(f === 'slidenum' ? 'Insert Slide Number' : 'Insert Date');
     TE.insertField(f);
   };
   /** make sure there's an active text editing target; returns true if editing */
@@ -1293,7 +1292,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     if (s && !ph) { const size = 180; s.x = (L.pres.W - size) / 2; s.y = (L.pres.H - size) / 2; s.w = size; s.h = size; E.render(); }
   };
   A.picMode = (m) => E.commit('Picture Color', () => { for (const s of E.selected()) if (s.type === 'image') { s.img = Object.assign({}, s.img); if (m) s.img.mode = m; else delete s.img.mode; } });
-  A.picAdjust = (k, d) => E.commit(k === 'bright' ? 'Brightness' : 'Contrast', () => { for (const s of E.selected()) if (s.type === 'image') { s.img = Object.assign({}, s.img); s.img[k] = L.clamp(L.round((s.img[k] || 0) + d, 2), -1, 1); } });
+  A.picAdjust = (k, d) => E.commit(k === 'bright' ? L.N('Brightness') : L.N('Contrast'), () => { for (const s of E.selected()) if (s.type === 'image') { s.img = Object.assign({}, s.img); s.img[k] = L.clamp(L.round((s.img[k] || 0) + d, 2), -1, 1); } });
   A.picReset = () => E.commit('Reset Picture', () => { for (const s of E.selected()) if (s.type === 'image') { s.img = {}; s.crop = { l: 0, t: 0, r: 0, b: 0 }; } });
   A.picTransparentTool = function () {
     const s = E.primary();
@@ -1365,7 +1364,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     const { sh } = c;
     const snap = TE.active() ? TE.snapshot() : null;
     if (snap) TE.detach();
-    L.hist.push('Table');
+    L.hist.push(L.N('Table'));
     const t = sh.tbl;
     switch (op) {
       case 'rowAbove': for (let i = c.r0; i <= c.r1; i++) A.tableAddRow(sh, c.r0, false); break;
@@ -1426,7 +1425,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     const none = { t: 'none', w: 1 };
     const snap = TE.active() ? TE.snapshot() : null;
     if (snap) TE.detach();
-    L.hist.push('Borders');
+    L.hist.push(L.N('Borders'));
     const t = c.sh.tbl;
     for (let r = c.r0; r <= c.r1; r++) for (let q = c.c0; q <= c.c1; q++) {
       const cell = t.rows[r].cells[q];
@@ -1459,7 +1458,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     const c = tableCtx();
     if (!c) return;
     const bc = L.dlg.colorPick(A.tblBorder.c, (v) => { A.tblBorder.c = v; });
-    const bw = ui.select(L.dlg.LINE_WEIGHTS.map((w) => [w, w + ' pt']), A.tblBorder.w, (v) => { A.tblBorder.w = +v; });
+    const bw = ui.select(L.dlg.LINE_WEIGHTS.map((w) => [w, L.t('{0} pt', w)]), A.tblBorder.w, (v) => { A.tblBorder.w = +v; });
     const bs = ui.select(L.dlg.DASHES, A.tblBorder.dash, (v) => { A.tblBorder.dash = v; });
     const btns = h('div', { class: 'row' }, ...[['all', 'bordersAll'], ['out', 'bordersOut'], ['in', 'bordersIn'], ['none', 'bordersNone'], ['t', 'bordersTop'], ['b', 'bordersBottom'], ['l', 'bordersLeft'], ['r', 'bordersRight']].map(([k, ic]) => { const b = h('button', { type: 'button', class: 'btn small', html: L.icons.get(ic), 'aria-label': k }); b.addEventListener('click', () => A.tableBorders(k)); return b; }));
     const cf = L.dlg.fillPicker({ t: 'none' }, 'fill', (f) => A.tableFill(f));
@@ -1480,9 +1479,9 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     if (ph) { sh.ph = L.clone(ph.ph); slide.shapes.splice(slide.shapes.indexOf(ph), 1, sh); } else slide.shapes.push(sh);
     E.sel = [sh.id];
     E.render(); E.touched();
-    L.chart.edit(sh, (c) => E.commit('Chart', () => { sh.chart = c; }));
+    L.chart.edit(sh, (c) => E.commit(L.N('Chart'), () => { sh.chart = c; }));
   };
-  ui.cmd('editChart', { label: 'Edit Chart Data...', icon: 'chart', enabled: () => { const s = E.primary(); return !!s && s.type === 'chart'; }, run: () => { const s = E.primary(); L.chart.edit(s, (c) => E.commit('Chart', () => { s.chart = c; })); } });
+  ui.cmd('editChart', { label: 'Edit Chart Data...', icon: 'chart', enabled: () => { const s = E.primary(); return !!s && s.type === 'chart'; }, run: () => { const s = E.primary(); L.chart.edit(s, (c) => E.commit(L.N('Chart'), () => { s.chart = c; })); } });
   A.insertWordArtDialog = function () {
     L.dlg.wordartGallery((idx) => {
       const st = L.dlg.WA_STYLES[idx];
@@ -1552,13 +1551,14 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
   };
 
   /* ================= AutoContent wizard ================= */
+  /* presentation type (shown in the UI's language) → its slides, [title, bullets] (content: English, as the templates') */
   const AUTOCONTENT = {
-    'Recommending a Strategy': [['Recommending a Strategy', ['Your name', 'Date']], ['Vision Statement', ['Where we want to be in three years', 'What success looks like for customers']], ['Goals', ['Goal and its measure', 'Goal and its measure', 'Goal and its measure']], ['Today\'s Situation', ['Strengths we build on', 'Gaps we need to close', 'What competitors are doing']], ['Options', ['Option A — cost, benefit, risk', 'Option B — cost, benefit, risk', 'Option C — cost, benefit, risk']], ['Recommendation', ['The option we propose and why', 'What it will cost', 'How we will know it is working']], ['Next Steps', ['Decision needed today', 'Owners and dates', 'When we report back']]],
-    'Project Overview': [['Project Overview', ['Project lead', 'Date']], ['Objectives', ['What the project will deliver', 'Who benefits']], ['Scope', ['In scope', 'Out of scope']], ['Timeline', ['Milestone and date', 'Milestone and date', 'Milestone and date']], ['Team and Roles', ['Sponsor', 'Lead', 'Contributors']], ['Risks', ['Risk — likelihood — mitigation', 'Risk — likelihood — mitigation']], ['Status Reporting', ['How often we report', 'Where to find updates']]],
-    'Status Report': [['Status Report', ['Team or project', 'Reporting period']], ['Summary', ['Overall status: on track / at risk / off track', 'Highlights since last report']], ['Progress', ['Completed', 'In progress', 'Not started']], ['Issues', ['Issue — impact — help needed']], ['Next Period', ['Planned work', 'Decisions needed']]],
-    'Brainstorming Session': [['Brainstorming Session', ['Facilitator', 'Date']], ['Ground Rules', ['Every idea counts', 'Build on others\' ideas', 'Quantity first, judgment later']], ['The Question', ['State the problem in one sentence']], ['Ideas', ['', '', '']], ['Grouping the Ideas', ['Theme', 'Theme', 'Theme']], ['Next Steps', ['Ideas to explore', 'Owners and dates']]],
-    'Training': [['Training', ['Instructor', 'Date']], ['Learning Objectives', ['After this session you will be able to...', '...', '...']], ['Agenda', ['Topic one', 'Topic two', 'Practice', 'Review']], ['Topic One', ['Key concept', 'Example', 'Try it']], ['Topic Two', ['Key concept', 'Example', 'Try it']], ['Review', ['What we covered', 'Where to learn more', 'Questions']]],
-    'Selling a Product or Service': [['Product Name', ['Presenter', 'Date']], ['The Problem', ['What customers struggle with today']], ['Our Solution', ['What it does', 'How it is different']], ['Benefits', ['Saves time', 'Saves money', 'Reduces risk']], ['Pricing', ['Plans and options']], ['Getting Started', ['How to buy', 'Who to contact']]],
+    [L.N('Recommending a Strategy')]: [['Recommending a Strategy', ['Your name', 'Date']], ['Vision Statement', ['Where we want to be in three years', 'What success looks like for customers']], ['Goals', ['Goal and its measure', 'Goal and its measure', 'Goal and its measure']], ['Today\'s Situation', ['Strengths we build on', 'Gaps we need to close', 'What competitors are doing']], ['Options', ['Option A — cost, benefit, risk', 'Option B — cost, benefit, risk', 'Option C — cost, benefit, risk']], ['Recommendation', ['The option we propose and why', 'What it will cost', 'How we will know it is working']], ['Next Steps', ['Decision needed today', 'Owners and dates', 'When we report back']]],
+    [L.N('Project Overview')]: [['Project Overview', ['Project lead', 'Date']], ['Objectives', ['What the project will deliver', 'Who benefits']], ['Scope', ['In scope', 'Out of scope']], ['Timeline', ['Milestone and date', 'Milestone and date', 'Milestone and date']], ['Team and Roles', ['Sponsor', 'Lead', 'Contributors']], ['Risks', ['Risk — likelihood — mitigation', 'Risk — likelihood — mitigation']], ['Status Reporting', ['How often we report', 'Where to find updates']]],
+    [L.N('Status Report')]: [['Status Report', ['Team or project', 'Reporting period']], ['Summary', ['Overall status: on track / at risk / off track', 'Highlights since last report']], ['Progress', ['Completed', 'In progress', 'Not started']], ['Issues', ['Issue — impact — help needed']], ['Next Period', ['Planned work', 'Decisions needed']]],
+    [L.N('Brainstorming Session')]: [['Brainstorming Session', ['Facilitator', 'Date']], ['Ground Rules', ['Every idea counts', 'Build on others\' ideas', 'Quantity first, judgment later']], ['The Question', ['State the problem in one sentence']], ['Ideas', ['', '', '']], ['Grouping the Ideas', ['Theme', 'Theme', 'Theme']], ['Next Steps', ['Ideas to explore', 'Owners and dates']]],
+    [L.N('Training')]: [['Training', ['Instructor', 'Date']], ['Learning Objectives', ['After this session you will be able to...', '...', '...']], ['Agenda', ['Topic one', 'Topic two', 'Practice', 'Review']], ['Topic One', ['Key concept', 'Example', 'Try it']], ['Topic Two', ['Key concept', 'Example', 'Try it']], ['Review', ['What we covered', 'Where to learn more', 'Questions']]],
+    [L.N('Selling a Product or Service')]: [['Product Name', ['Presenter', 'Date']], ['The Problem', ['What customers struggle with today']], ['Our Solution', ['What it does', 'How it is different']], ['Benefits', ['Saves time', 'Saves money', 'Reduces risk']], ['Pricing', ['Plans and options']], ['Getting Started', ['How to buy', 'Who to contact']]],
   };
   A.autoContent = function () {
     const types = Object.keys(AUTOCONTENT);
@@ -1602,7 +1602,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
   A.copyShapes = function (cut) {
     const shapes = E.selected().filter((s) => !(E.find(s.id) && E.find(s.id).parent && false));
     if (!shapes.length) return null;
-    const c = { kind: 'shapes', shapes: L.clone(shapes), design: E.design().id, label: (shapes.length > 1 ? shapes.length + ' objects: ' : '') + (clipText(shapes) || shapes[0].name), text: clipText(shapes) };
+    const c = { kind: 'shapes', shapes: L.clone(shapes), design: E.design().id, label: shapes.length > 1 ? L.t('{0} objects: {1}', shapes.length, clipText(shapes) || shapes[0].name) : clipText(shapes) || shapes[0].name, text: clipText(shapes) };
     pushClip(c);
     if (cut) A.deleteSel();
     return c;
@@ -1612,7 +1612,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     if (!ss.length) return null;
     const designs = {};
     for (const s of ss) designs[s.design] = L.clone(L.pres.designs[s.design]);
-    const c = { kind: 'slides', slides: L.clone(ss), designs, label: ss.length + ' slide' + (ss.length > 1 ? 's' : '') + ': ' + (M.slideTitle(ss[0]) || 'Untitled'), text: ss.map((s) => M.allText(s)).join('\n\n') };
+    const c = { kind: 'slides', slides: L.clone(ss), designs, label: ss.length > 1 ? L.t('{0} slides: {1}', ss.length, M.slideTitle(ss[0]) || L.t('Untitled')) : L.t('1 slide: {0}', M.slideTitle(ss[0]) || L.t('Untitled')), text: ss.map((s) => M.allText(s)).join('\n\n') };
     pushClip(c);
     if (cut) A.deleteSlides();
     return c;
@@ -1636,7 +1636,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
   A.pasteItem = function (c) {
     if (!c) return;
     if (c.kind === 'text') {
-      if (TE.active()) { L.hist.push('Paste'); TE.insertText(c.text); return; }
+      if (TE.active()) { L.hist.push(L.N('Paste')); TE.insertText(c.text); return; }
       return A.pasteText(c.text);
     }
     if (c.kind === 'slides') {
@@ -1650,10 +1650,10 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
       return;
     }
     if (c.kind === 'shapes') {
-      if (TE.active()) { L.hist.push('Paste'); TE.insertText(c.text || ''); return; }
+      if (TE.active()) { L.hist.push(L.N('Paste')); TE.insertText(c.text || ''); return; }
       const slide = E.slide();
       if (!slide) return;
-      E.commit('Paste', () => {
+      E.commit(L.N('Paste'), () => {
         const ids = [];
         for (const d of M.dupMany(c.shapes)) {
           const clash = slide.shapes.some((x) => Math.abs(x.x - d.x) < 1 && Math.abs(x.y - d.y) < 1);
@@ -1670,7 +1670,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     const slide = E.slide();
     if (!slide || !text) return;
     const lines = text.replace(/\r/g, '').split('\n');
-    L.hist.push('Paste');
+    L.hist.push(L.N('Paste'));
     const tb = M.newTextBox(L.pres, slide, L.pres.W * 0.1, L.pres.H * 0.3, L.pres.W * 0.8, 40, true);
     tb.tx.ps = lines.map((l) => T.para(l));
     slide.shapes.push(tb);
@@ -1682,8 +1682,8 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     const c = A.clip;
     if (!c) return;
     let mode = 'native';
-    const body = h('div', { class: 'col' }, h('div', { text: 'Source: ' + c.label.slice(0, 60) }), ui.radio('ps', '&Paste as ' + (c.kind === 'slides' ? 'slides' : 'Lectern objects'), true, () => { mode = 'native'; }), ui.radio('ps', 'Paste as &Unformatted Text', false, () => { mode = 'text'; }));
-    ui.dialog({ title: 'Paste Special', body, width: 360, buttons: [{ label: 'OK', primary: true, onClick: () => (mode === 'text' ? (TE.active() ? (L.hist.push('Paste'), TE.insertText(c.text || '')) : A.pasteText(c.text || '')) : A.pasteItem(c)) }, { label: 'Cancel' }] });
+    const body = h('div', { class: 'col' }, h('div', { text: L.t('Source: {0}', c.label.slice(0, 60)), translate: 'no' }), ui.radio('ps', c.kind === 'slides' ? '&Paste as slides' : '&Paste as Lectern objects', true, () => { mode = 'native'; }), ui.radio('ps', 'Paste as &Unformatted Text', false, () => { mode = 'text'; }));
+    ui.dialog({ title: 'Paste Special', body, width: 360, buttons: [{ label: 'OK', primary: true, onClick: () => (mode === 'text' ? (TE.active() ? (L.hist.push(L.N('Paste')), TE.insertText(c.text || '')) : A.pasteText(c.text || '')) : A.pasteItem(c)) }, { label: 'Cancel' }] });
   };
   let pendingClip = null;
   document.addEventListener('copy', (e) => onClipEvent(e, 'copy'));
@@ -1716,7 +1716,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     }
     if (A.clip && (marker === A.clip.id || (text && text === A.clip.text))) { A.pasteItem(A.clip); return; }
     if (files.length) { A.insertPictureFiles(files); return; }
-    if (text) { const sel = E.primary(); if (sel && sel.tx && E.sel.length === 1) { TE.begin(sel.id, { atEnd: true }); L.hist.push('Paste'); TE.insertText(text); } else A.pasteText(text); }
+    if (text) { const sel = E.primary(); if (sel && sel.tx && E.sel.length === 1) { TE.begin(sel.id, { atEnd: true }); L.hist.push(L.N('Paste')); TE.insertText(text); } else A.pasteText(text); }
   });
 
   /* ================= context menus ================= */
@@ -1859,7 +1859,7 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
       if (s.tx || s.type === 'shape') {
         e.preventDefault();
         TE.begin(s.id, { selectAll: true });
-        if (TE.active()) { L.hist.push('Typing'); TE.insertText(e.key); }
+        if (TE.active()) { L.hist.push(L.N('Typing')); TE.insertText(e.key); }
       }
     }
   });
@@ -2200,6 +2200,8 @@ addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type:
     });
   };
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => A.init());
-  else A.init();
+  /* once the page and the UI's dictionary are here (common/i18n.js) */
+  const boot = () => (window.VO && VO.i18n ? VO.i18n.whenReady(() => A.init()) : A.init());
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();

@@ -97,7 +97,9 @@ try {
   for (const f of pre ? pre.split(',') : []) await send('Page.addScriptToEvaluateOnNewDocument', { source: fs.readFileSync(f, 'utf8') });
 
   const t0 = Date.now();
-  await send('Page.navigate', { url: `${BASE}/${page}${qs ? '?' + qs : ''}` });
+  // the UI in English unless the query asks for a language (lang=ja, lang=qps; common/i18n.js)
+  const q = /(^|&)lang=/.test(qs || '') ? qs : (qs ? qs + '&' : '') + 'lang=en';
+  await send('Page.navigate', { url: `${BASE}/${page}?${q}` });
   let ok = false;
   while (!ok && Date.now() - t0 < 240000) {
     await sleep(250);

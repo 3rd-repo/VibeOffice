@@ -334,6 +334,21 @@
     return doc;
   };
 
+  /** a new document as the Office of a language makes it (loc: common/locales.js, L.locale.get()): page, line grid,
+      fonts, languages, the Normal style, tab stops, punctuation compression; the user's own Default… page setup
+      (L.store 'defaultSect') comes first. Only for a document the user starts, never for one that is opened. */
+  D.applyLocale = function (doc, loc) {
+    if (!loc || !loc.sect) return doc;
+    Object.assign(doc.sect, L.clone(loc.sect), L.store.get('defaultSect', null) || {});
+    if (loc.rPr) Object.assign(doc.defaults.rPr, loc.rPr);
+    if (loc.pPr && doc.styles.Normal) doc.styles.Normal.pPr = Object.assign({}, doc.styles.Normal.pPr, loc.pPr);
+    if (loc.defTab) doc.settings.defTab = loc.defTab;
+    if (loc.charSpacing) doc.settings.charSpacing = loc.charSpacing;
+    if (loc.themeLang) doc.settings.themeLang = Object.assign({}, loc.themeLang);
+    if (loc.themeEA) Object.assign(doc.theme, { minorEA: loc.themeEA.minor, majorEA: loc.themeEA.major });
+    return doc;
+  };
+
   /* ================= property resolution ================= */
   const NESTED_P = ['ind', 'sp', 'borders', 'shd', 'num', 'frame', 'dropCap'];
   D.mergePPr = function (base, over) {

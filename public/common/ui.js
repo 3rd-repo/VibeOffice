@@ -30,18 +30,36 @@
     if (c.enabled && !c.enabled()) return;
     ui.hooks.beforeExec();
     let r;
-    try { r = c.run(arg, ev); } catch (e) { console.error(e); ui.msg('That action could not be completed: ' + (e && e.message ? e.message : e), { icon: 'warn' }); }
+    try { r = c.run(arg, ev); } catch (e) { console.error(e); ui.msg(t('That action could not be completed: {0}', e && e.message ? e.message : e), { icon: 'warn' }); }
     ui.refresh();
     tell('vo-command', { id, result: r });
     return r;
   };
   ui.enabled = (id) => { const c = ui.cmds[id]; return !!c && (!c.enabled || !!c.enabled()); };
   ui.checked = (id) => { const c = ui.cmds[id]; return !!c && !!c.checked && !!c.checked(); };
-  const stripAmp = (s) => String(s || '').replace(/&&/g, '\u0000').replace(/&(\S)/g, '$1').replace(/\u0000/g, '&');
-  /* "&x" marks the access key; "&&" and "& " stay a literal ampersand */
-  const ampHTML = (s) => L.esc(s || '').replace(/&amp;&amp;/g, '\u0000').replace(/&amp;(\S)/g, '<u>$1</u>').replace(/\u0000/g, '&amp;');
+  /* UI text is English in the code and shown in the UI's language (common/i18n.js; docs/i18n.md): labels through
+     stripAmp / ampHTML, the rest through t */
+  const t = (s, ...args) => (L.t ? L.t(s, ...args) : s);
+  /* "&x" marks the access key; "&&" and "& " stay a literal ampersand; "|chart" after the text is its context
+     (common/i18n.js), not shown */
+  const plainAmp = (s) => String(s || '').replace(/\|[^|]*$/, '').replace(/&&/g, '\u0000').replace(/&(\S)/g, '$1').replace(/\u0000/g, '&');
+  /** a label as shown, without its access key mark */
+  const stripAmp = (s) => plainAmp(t(s));
+  /** text as HTML, its access key underlined */
+  const ampMark = (s) => L.esc(s || '').replace(/&amp;&amp;/g, '\u0000').replace(/&amp;(\S)/g, '<u>$1</u>').replace(/\u0000/g, '&amp;');
+  /** a label as shown, its access key underlined */
+  const ampHTML = (s) => ampMark(t(s));
+  const keyOf = (s) => { const m = /&([^&\s])/.exec(s || ''); return m ? m[1].toLowerCase() : null; };
+  /** the access key of a label as shown */
+  const accessKey = (s) => keyOf(t(s));
+  /** a shortcut as shown: its key names in the UI's language (Ctrl+Shift+F12 is Strg+Umschalt+F12 in German), each
+      in the context "key" (a key's Home, not a Home button's) */
+  const keyText = (k) => (k ? String(k).split('+').map((p) => ({ Ctrl: t('Ctrl|key'), Shift: t('Shift|key'), Alt: t('Alt|key'), Del: t('Del|key'), Ins: t('Ins|key'), Esc: t('Esc|key'), Home: t('Home|key'), End: t('End|key'), Enter: t('Enter|key'), Tab: t('Tab|key'), Space: t('Space|key'), Backspace: t('Backspace|key'), 'Page Up': t('Page Up|key'), 'Page Down': t('Page Down|key'), PgUp: t('PgUp|key'), PgDn: t('PgDn|key') })[p] || p).join('+') : '');
   ui.stripAmp = stripAmp;
+  ui.plainAmp = plainAmp;
   ui.ampHTML = ampHTML;
+  ui.accessKey = accessKey;
+  ui.keyText = keyText;
 
   /* ---------- tooltips ---------- */
   let tipEl = null, tipTimer = null, tipTarget = null;
@@ -49,7 +67,7 @@
     const t = target.getAttribute('data-tip');
     if (!t) return;
     if (!tipEl) { tipEl = h('div', { class: 'tooltip', role: 'tooltip' }); document.body.appendChild(tipEl); }
-    tipEl.textContent = t;
+    tipEl.textContent = target.closest('[translate="no"]') ? t : (L.t ? L.t(t) : t);   // data (a font's name) stays as it is
     tipEl.hidden = false;
     const r = tipEl.getBoundingClientRect();
     let left = x + 2, top = y + 20;
@@ -120,12 +138,13 @@
       const row = h('div', { class: 'm-item' + (disabled ? ' dis' : '') + (checked ? ' chk' : '') + (it.sub ? ' has-sub' : '') + (it.bold ? ' bold' : ''), role: 'menuitem', 'aria-disabled': disabled ? 'true' : null });
       const icoHTML = it.html ? it.html : it.icon ? L.icons.get(it.icon) : checked ? (it.radio ? '<span class="m-radio">●</span>' : '<span class="m-check">✓</span>') : '';
       row.appendChild(h('span', { class: 'm-ico' + (checked && it.icon ? ' on' : ''), html: icoHTML }));
-      row.appendChild(h('span', { class: 'm-lbl', html: ampHTML(it.label) }));
-      row.appendChild(h('span', { class: 'm-key', text: it.key || '' }));
+      /* it.raw: data shown as it is (a font's name in a font list, a file's in Recent Files), not UI text; its
+         access key, if any, is the label's own */
+      row.appendChild(h('span', { class: 'm-lbl', html: it.raw ? ampMark(it.label) : ampHTML(it.label), translate: it.raw ? 'no' : null }));
+      row.appendChild(h('span', { class: 'm-key', text: it.raw ? it.key || '' : keyText(it.key), translate: it.raw ? 'no' : null }));
       row.appendChild(h('span', { class: 'm-sub', html: it.sub ? '▶' : '' }));
       row._it = it;
-      const mn = /&(.)/.exec(it.label || '');
-      row._mn = mn ? mn[1].toLowerCase() : null;
+      row._mn = it.raw ? keyOf(it.label) : accessKey(it.label);
       row.addEventListener('pointerenter', () => { setActive(row); if (it.sub && !disabled) openSub(row); else ui.closeMenus(depth + 1); });
       row.addEventListener('click', (e) => { e.stopPropagation(); activate(row); });
       rows.push(row);
@@ -242,7 +261,7 @@
     }
     bar.openByKey = (ch) => {
       if (ui.barKeys && ui.barKeys.active()) return ui.barKeys.byKey(ch);
-      const i = menus.findIndex((m) => /&(.)/.exec(m.label) && /&(.)/.exec(m.label)[1].toLowerCase() === ch.toLowerCase());
+      const i = menus.findIndex((m) => accessKey(m.label) === ch.toLowerCase());
       if (i >= 0) { open(i, true); return true; }
       return false;
     };
@@ -258,7 +277,7 @@
     opts = opts || {};
     const c = ui.cmds[id] || {};
     const label = opts.label != null ? opts.label : c.tbLabel;
-    const b = h('button', { class: 'tb-btn' + (label ? ' with-label' : ''), type: 'button', 'data-cmd': id, 'aria-label': stripAmp(c.label || id), 'data-tip': stripAmp(c.tip || c.label || id) + (c.key ? ` (${c.key})` : '') });
+    const b = h('button', { class: 'tb-btn' + (label ? ' with-label' : ''), type: 'button', 'data-cmd': id, 'aria-label': stripAmp(c.label || id), 'data-tip': stripAmp(c.tip || c.label || id) + (c.key ? ` (${keyText(c.key)})` : '') });
     b.innerHTML = (c.icon || opts.icon ? L.icons.get(opts.icon || c.icon) : '') + (label ? `<span class="tb-lbl">${ampHTML(label)}</span>` : '');
     b.addEventListener('pointerdown', (e) => e.preventDefault()); /* keep the focus and selection where they are */
     b.addEventListener('click', (e) => ui.exec(id, opts.arg, e));
@@ -313,7 +332,7 @@
         if (x && x.run) return { label: x.label, run: async () => { await x.run(); btn.click(); } };   // an action, then the list again
         const v = x && typeof x === 'object' ? x.value : x;
         return {
-          label: String(x && x.label || v).replace(/&/g, '&&'), value: v,
+          label: String(x && x.label || v).replace(/&/g, '&&'), value: v, raw: true,
           html: '', run: () => { inp.value = v; o.onChange(String(v)); ui.hooks.refocus(); },
           checked: () => String(v) === String(o.value()),
           key: o.note ? o.note(v) : '',
@@ -418,7 +437,7 @@
       dlg.addEventListener('keydown', (e) => { entry.keys(e); e.stopPropagation(); });   // keys stay in a modeless dialog
     } else dlgStack.push(entry);
     entry.keys = (e) => {
-      if (e.key === 'Escape') { e.preventDefault(); const ci = (opts.buttons || []).findIndex((b) => b.cancel || /^cancel$|^close$/i.test(stripAmp(b.label))); if (ci >= 0) btns[ci].click(); else close(null); return true; }
+      if (e.key === 'Escape') { e.preventDefault(); const ci = (opts.buttons || []).findIndex((b) => b.cancel || /^cancel$|^close$/i.test(plainAmp(b.label))); if (ci >= 0) btns[ci].click(); else close(null); return true; }
       if (e.key === 'Enter' && !e.shiftKey && !(e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON' || e.target.isContentEditable || e.target.tagName === 'SELECT'))) {
         const pi = (opts.buttons || []).findIndex((b) => b.primary);
         if (pi >= 0) { e.preventDefault(); btns[pi].click(); return true; }
@@ -467,10 +486,10 @@
     };
     const body = h('div', { class: 'msgbox' }, h('div', { class: 'msg-ico', html: icons[o.icon || 'info'] }), h('div', { class: 'msg-text' }));
     const t = body.querySelector('.msg-text');
-    String(text).split('\n').forEach((line, i) => { if (i) t.appendChild(h('br')); t.appendChild(document.createTextNode(line)); });
+    String(L.t ? L.t(text) : text).split('\n').forEach((line, i) => { if (i) t.appendChild(h('br')); t.appendChild(document.createTextNode(line)); });
     const labels = o.buttons || ['OK'];
     tell('vo-message', { icon: o.icon || 'info' });
-    const d = ui.dialog({ title: o.title || L.APP, body, width: o.width || 380, buttons: labels.map((l, i) => ({ label: l, primary: i === (o.def || 0), cancel: /cancel|^no$/i.test(stripAmp(l)) })) });
+    const d = ui.dialog({ title: o.title || L.APP, body, width: o.width || 380, buttons: labels.map((l, i) => ({ label: l, primary: i === (o.def || 0), cancel: /cancel|^no$/i.test(plainAmp(l)) })) });
     return d.done;
   };
   /** Help ▸ About, the same in every app: icon, name and version, the app's own paragraphs, the link to the open
@@ -479,13 +498,13 @@
   ui.about = function (o) {
     const body = h('div', { class: 'col about' },
       h('div', { class: 'about-head' }, h('span', { html: L.icons.app ? L.icons.app(48) : '' }),
-        h('div', null, h('div', { class: 'about-name', text: o.name + ' 2003 Web Edition' }), h('div', { text: 'Version ' + L.VERSION }))),
+        h('div', null, h('div', { class: 'about-name', text: t('{0} 2003 Web Edition', o.name) }), h('div', { text: t('Version {0}', L.VERSION) }))),
       ...o.text.map((t) => h('p', { text: t })),
-      h('p', null, 'Made possible by open source software: ', h('a', { href: root.VO ? root.VO.LICENSES : '../oss-licenses.html', target: '_blank', rel: 'noopener',
-        class: 'about-oss', text: 'Open source licenses', onclick: (e) => { if (root.VO) { e.preventDefault(); root.VO.showLicenses(); } } }), '.'),
+      h('p', null, ...t('Made possible by open source software: {0}.').split('{0}').flatMap((part, i) => (i ? [h('a', { href: root.VO ? root.VO.LICENSES : '../oss-licenses.html', target: '_blank', rel: 'noopener',
+        class: 'about-oss', text: 'Open source licenses', onclick: (e) => { if (root.VO) { e.preventDefault(); root.VO.showLicenses(); } } }), part] : [part]))),
       h('p', { text: 'Open source under the Apache License 2.0, provided as is, without warranty. VibeOffice.work is an independent project. Product names in its documentation are trademarks of their owners; VibeOffice.work is not affiliated with them.' }),
-      h('p', { class: 'about-marks', text: `Microsoft, ${o.office} and Office are trademarks of Microsoft Corporation. ${o.name} is an independent work and is not affiliated with Microsoft.` }));
-    return ui.dialog({ title: 'About ' + o.name, width: 420, body, buttons: [{ label: 'OK', primary: true }] });
+      h('p', { class: 'about-marks', text: t('Microsoft, {0} and Office are trademarks of Microsoft Corporation. {1} is an independent work and is not affiliated with Microsoft.', o.office, o.name) }));
+    return ui.dialog({ title: t('About {0}', o.name), width: 420, body, buttons: [{ label: 'OK', primary: true }] });
   };
   ui.prompt = function (label, value, title) {
     const inp = h('input', { type: 'text', id: 'prompt-in', value: value || '', style: 'width:100%' });
@@ -509,7 +528,7 @@
     }
     const list = h('ul', { style: 'max-height:240px;overflow:auto;margin:8px 0;padding-left:22px' });
     for (const [what, places] of groups) list.appendChild(h('li', { style: 'margin-bottom:8px' },
-      h('div', { text: what }), places.length ? h('div', { class: 'hint', text: places.length > 4 ? places.slice(0, 4).join(', ') + ' and ' + (places.length - 4) + ' more' : places.join(', ') }) : null));
+      h('div', { text: what }), places.length ? h('div', { class: 'hint', text: places.length > 4 ? t('{0} and {1} more', places.slice(0, 4).join(', '), places.length - 4) : places.join(', ') }) : null));
     const body = h('div', { class: 'col' },
       h('div', { text: 'Some of this file can\'t be saved exactly as it was:' }), list,
       h('div', { text: 'Click Continue to save anyway, or Cancel to go back to your document without saving.' }));
@@ -522,7 +541,7 @@
   ui.password = function (fileName, wrong) {
     const inp = h('input', { type: 'password', id: 'pw-in', value: '', style: 'width:100%', autocomplete: 'off' });
     let val = null;
-    const d = ui.dialog({ title: 'Password', width: 340, body: h('div', { class: 'col' }, h('div', { text: wrong ? 'The password is incorrect. Try again.' : `'${fileName}' is protected.` }), h('label', { for: 'pw-in', text: 'Enter password to open file' }), inp), buttons: [{ label: 'OK', primary: true, onClick: () => { val = inp.value; } }, { label: 'Cancel' }] });
+    const d = ui.dialog({ title: 'Password', width: 340, body: h('div', { class: 'col' }, h('div', { text: wrong ? 'The password is incorrect. Try again.' : t('\'{0}\' is protected.', fileName) }), h('label', { for: 'pw-in', text: 'Enter password to open file' }), inp), buttons: [{ label: 'OK', primary: true, onClick: () => { val = inp.value; } }, { label: 'Cancel' }] });
     setTimeout(() => inp.focus(), 0);
     return d.done.then(() => val);
   };
@@ -548,11 +567,13 @@
     wrap.input = inp;
     return wrap;
   };
+  /** options: [value, label] pairs, whose labels are UI text, or plain values shown as they are (font names, sizes);
+      o.translate: 'no' shows every label as it is */
   ui.select = (options, value, onChange, o) => {
     const sel = h('select', Object.assign({ id: (o && o.id) || 'sel' + (++ctlId) }, o || {}));
     for (const op of options) {
       const [v, l] = Array.isArray(op) ? op : [op, op];
-      const opt = h('option', { value: v, text: l });
+      const opt = h('option', { value: v, text: l, translate: !Array.isArray(op) || (o && o.translate === 'no') ? 'no' : null });
       if (String(v) === String(value)) opt.selected = true;
       sel.appendChild(opt);
     }
@@ -604,11 +625,22 @@
   ui.group = (title, ...kids) => h('fieldset', { class: 'grp' }, h('legend', { html: ampHTML(title) }), ...kids);
   /** Tools ▸ Options ▸ General ▸ Theme: the suite's look (common/looks.css). { el, apply() }; apply on OK
    *  changes every open window of the suite. null outside the suite (no common/suite.js). */
+  /** the suite's own choices for Tools ▸ Options: the look (Theme) and the UI's language (common/i18n.js) */
   ui.lookField = () => {
     if (!window.VO || !VO.look) return null;
     let pick = VO.look.get();
     const sel = ui.select(VO.look.list().map((l) => [l.id, l.name]), pick, (v) => { pick = v; }, { id: 'op-look' });
-    return { el: ui.field('Theme:', sel), apply: () => { if (pick !== VO.look.get()) VO.look.set(pick); } };
+    const el = h('div', { class: 'col' }, ui.field('Theme:', sel));
+    let lang = VO.lang && VO.lang.get();
+    /* each language named in itself */
+    if (VO.lang) el.appendChild(ui.field('Language:', ui.select(VO.lang.list().map((l) => [l.id, l.id === 'auto' ? t('Auto (as the browser)') : l.name]), lang, (v) => { lang = v; }, { id: 'op-lang', translate: 'no' })));
+    return {
+      el,
+      apply: () => {
+        if (pick !== VO.look.get()) VO.look.set(pick);
+        if (VO.lang && lang !== VO.lang.get()) { VO.lang.set(lang); ui.toast('The new language is used in the windows you open from now on.'); }
+      },
+    };
   };
 
   /* ---------- colour pickers ---------- */
@@ -657,8 +689,10 @@
     };
     ui.openMenu([{ custom: panel }], { left: r.left, bottom: r.bottom }, { cls: 'color-menu' });
   };
-  const CNAMES = { '#000000': 'Black', '#993300': 'Brown', '#333300': 'Olive Green', '#003300': 'Dark Green', '#003366': 'Dark Teal', '#000080': 'Dark Blue', '#333399': 'Indigo', '#333333': 'Gray-80%', '#800000': 'Dark Red', '#FF6600': 'Orange', '#808000': 'Dark Yellow', '#008000': 'Green', '#008080': 'Teal', '#0000FF': 'Blue', '#666699': 'Blue-Gray', '#808080': 'Gray-50%', '#FF0000': 'Red', '#FF9900': 'Light Orange', '#99CC00': 'Lime', '#339966': 'Sea Green', '#33CCCC': 'Aqua', '#3366FF': 'Light Blue', '#800080': 'Violet', '#969696': 'Gray-40%', '#FF00FF': 'Pink', '#FFCC00': 'Gold', '#FFFF00': 'Yellow', '#00FF00': 'Bright Green', '#00FFFF': 'Turquoise', '#00CCFF': 'Sky Blue', '#993366': 'Plum', '#C0C0C0': 'Gray-25%', '#FF99CC': 'Rose', '#FFCC99': 'Tan', '#FFFF99': 'Light Yellow', '#CCFFCC': 'Light Green', '#CCFFFF': 'Light Turquoise', '#99CCFF': 'Pale Blue', '#CC99FF': 'Lavender', '#FFFFFF': 'White' };
-  ui.colorName = (c) => CNAMES[String(c).toUpperCase()] || String(c).toUpperCase();
+  /* the colour names Office shows, in the UI's language where they are shown */
+  const N = (x) => x;
+  const CNAMES = { '#000000': N('Black'), '#993300': N('Brown'), '#333300': N('Olive Green'), '#003300': N('Dark Green'), '#003366': N('Dark Teal'), '#000080': N('Dark Blue'), '#333399': N('Indigo'), '#333333': N('Gray-80%'), '#800000': N('Dark Red'), '#FF6600': N('Orange'), '#808000': N('Dark Yellow'), '#008000': N('Green'), '#008080': N('Teal'), '#0000FF': N('Blue'), '#666699': N('Blue-Gray'), '#808080': N('Gray-50%'), '#FF0000': N('Red'), '#FF9900': N('Light Orange'), '#99CC00': N('Lime'), '#339966': N('Sea Green'), '#33CCCC': N('Aqua'), '#3366FF': N('Light Blue'), '#800080': N('Violet'), '#969696': N('Gray-40%'), '#FF00FF': N('Pink'), '#FFCC00': N('Gold'), '#FFFF00': N('Yellow'), '#00FF00': N('Bright Green'), '#00FFFF': N('Turquoise'), '#00CCFF': N('Sky Blue'), '#993366': N('Plum'), '#C0C0C0': N('Gray-25%'), '#FF99CC': N('Rose'), '#FFCC99': N('Tan'), '#FFFF99': N('Light Yellow'), '#CCFFCC': N('Light Green'), '#CCFFFF': N('Light Turquoise'), '#99CCFF': N('Pale Blue'), '#CC99FF': N('Lavender'), '#FFFFFF': N('White') };
+  ui.colorName = (c) => t(CNAMES[String(c).toUpperCase()]) || String(c).toUpperCase();
   /** "Colors" dialog with Standard and Custom tabs. cb(hex|null) */
   ui.moreColors = function (initial, cb) {
     let cur = initial && initial[0] === '#' ? initial : '#3366FF';
@@ -694,7 +728,7 @@
       h('div', { class: 'field' }, h('label', { for: 'cc-native', text: 'Pick:' }), nat),
       ui.field('&Red:', R), ui.field('&Green:', Gs), ui.field('&Blue:', Bs), ui.field('He&x:', hex));
     const tabs = ui.tabs([{ label: 'Standard', body: h('div', null, h('div', { class: 'cc-cap', text: 'Colors:' }), std, grays) }, { label: 'Custom', body: custom }]);
-    const side = h('div', { class: 'cc-side' }, h('div', { class: 'cc-cap', text: 'New' }), prevNew, prevOld, h('div', { class: 'cc-cap', text: 'Current' }));
+    const side = h('div', { class: 'cc-side' }, h('div', { class: 'cc-cap', text: 'New|color' }), prevNew, prevOld, h('div', { class: 'cc-cap', text: 'Current' }));
     set(cur);
     let ok = false;
     ui.dialog({ title: 'Colors', body: h('div', { class: 'cc-wrap' }, tabs, side), width: 440, buttons: [{ label: 'OK', primary: true, onClick: () => { ok = true; } }, { label: 'Cancel' }] })
@@ -861,7 +895,7 @@
   ui.toast = (text, ms, action) => {
     let t = L.$('.toast');
     if (!t) { t = h('div', { class: 'toast', role: 'status' }); document.body.appendChild(t); }
-    t.textContent = text;
+    t.textContent = L.t ? L.t(text) : text;
     if (action) t.append(' ', h('button', { class: 'toast-act', type: 'button', text: action.label, onclick: () => { t.hidden = true; action.run(); } }));
     t.hidden = false;
     clearTimeout(t._t);
@@ -870,7 +904,7 @@
   ui.busy = (on, text) => {
     let b = L.$('.busy');
     if (!!on !== !!(b && !b.hidden)) tell('vo-busy', { on: !!on, text: on ? text || 'Working...' : '' });
-    if (on) { if (!b) { b = h('div', { class: 'busy' }, h('div', { class: 'busy-box' }, h('span', { class: 'busy-spin' }), h('span', { class: 'busy-t' }))); document.body.appendChild(b); } b.querySelector('.busy-t').textContent = text || 'Working...'; b.hidden = false; }
+    if (on) { if (!b) { b = h('div', { class: 'busy' }, h('div', { class: 'busy-box' }, h('span', { class: 'busy-spin' }), h('span', { class: 'busy-t' }))); document.body.appendChild(b); } b.querySelector('.busy-t').textContent = t(text || 'Working...'); b.hidden = false; }
     else if (b) b.hidden = true;
   };
 })(typeof window !== 'undefined' ? window : globalThis);

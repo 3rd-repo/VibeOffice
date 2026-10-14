@@ -535,7 +535,7 @@
     if (!st) return;
     const t = e.inputType;
     if (t === 'historyUndo' || t === 'historyRedo') { e.preventDefault(); L.ui.exec(t === 'historyUndo' ? 'undo' : 'redo'); return; }
-    L.hist.push('Typing', 'type:' + st.id + ':' + (st.cell ? st.cell.join(',') : ''));
+    L.hist.push(L.N('Typing'), 'type:' + st.id + ':' + (st.cell ? st.cell.join(',') : ''));
     if (t === 'insertParagraph') { e.preventDefault(); TE.newParagraph(); return; }
     if (t === 'insertLineBreak') { e.preventDefault(); TE.insertText('\n', { asBreak: true }); return; }
     if (t === 'insertText' && e.data) {
@@ -582,7 +582,7 @@
     if (files.length && L.app) { TE.end(); L.app.insertPictureFiles(files); return; }
     const text = dt.getData('text/plain');
     if (!text) return;
-    L.hist.push('Paste');
+    L.hist.push(L.N('Paste'));
     TE.insertText(text.replace(/\r\n?/g, '\n').replace(/\t/g, '\t'));
   }
 
@@ -684,17 +684,17 @@
     if (T.collapsed(s)) {
       const w = T.wordAt(t.tx, { p: s.p0, o: s.o0 });
       if (w) {
-        L.hist.push(label || 'Format');
+        L.hist.push(label || L.N('Format'));
         T.mapRange(t.tx, w, fn);
         TE.rerender(s);
       } else {
         const base = T.propsAt(t.tx, { p: s.p0, o: s.o0 });
         const p = t.tx.ps[s.p0];
-        if (!T.len(p)) { L.hist.push(label || 'Format'); p.end = fn(Object.assign({}, p.end || base)); delete p.end.t; TE.rerender(s); }
+        if (!T.len(p)) { L.hist.push(label || L.N('Format')); p.end = fn(Object.assign({}, p.end || base)); delete p.end.t; TE.rerender(s); }
         else TE.pending = { at: { p: s.p0, o: s.o0 }, props: (() => { const r = fn(Object.assign({}, base, TE.pending ? TE.pending.props : {})); delete r.t; return r; })() };
       }
     } else {
-      L.hist.push(label || 'Format');
+      L.hist.push(label || L.N('Format'));
       T.mapRange(t.tx, s, fn);
       TE.rerender(s);
     }
@@ -760,7 +760,7 @@
     if (k === 'F2') { e.preventDefault(); const id = t.sh.id; TE.end(); E.select([id]); E.refocus(); return true; }
     if (k === 'Enter' && !e.ctrlKey && !e.altKey && !e.metaKey) {
       e.preventDefault();
-      L.hist.push('Typing', 'type:' + TE.state.id + ':' + (TE.state.cell ? TE.state.cell.join(',') : ''));
+      L.hist.push(L.N('Typing'), 'type:' + TE.state.id + ':' + (TE.state.cell ? TE.state.cell.join(',') : ''));
       if (e.shiftKey) TE.insertText('\n', { asBreak: true }); else TE.newParagraph();
       return true;
     }
@@ -768,7 +768,7 @@
       e.preventDefault();
       if (t.sh.type === 'table') { TE.moveCell(e.shiftKey ? -1 : 1); return true; }
       if (TE.atParaStart() || TE.multiPara() || e.shiftKey) L.ui.exec(e.shiftKey ? 'promote' : 'demote');
-      else { L.hist.push('Typing', 'type:' + TE.state.id + ':' + (TE.state.cell ? TE.state.cell.join(',') : '')); TE.insertText('\t'); }
+      else { L.hist.push(L.N('Typing'), 'type:' + TE.state.id + ':' + (TE.state.cell ? TE.state.cell.join(',') : '')); TE.insertText('\t'); }
       return true;
     }
     if (k === 'Backspace' && !e.ctrlKey && TE.atParaStart()) {
@@ -783,7 +783,7 @@
     const cells = E.cellSel, id = t.sh.id, cell = TE.state.cell;
     TE.detach();
     E.cellSel = cells;
-    L.hist.push('Clear');
+    L.hist.push(L.N('Clear'));
     F.forEachTx(t.sh, (tx) => { tx.ps = [Object.assign(L.clone(tx.ps[0]), { rs: [] })]; });
     E.cellSel = null;
     E.render({ keepEdit: false });
@@ -844,7 +844,7 @@
     const cells = E.cellSel;   /* a range of table cells: detaching ends it, but it is what gets formatted */
     if (editSnap) TE.detach();
     E.cellSel = cells;
-    L.hist.push(label || 'Format');
+    L.hist.push(label || L.N('Format'));
     for (const sh of shapes) {
       if (sh.type === 'wordart') { if (waFn) waFn(sh.wa); continue; }
       forEachTx(sh, (tx) => { T.mapRange(tx, T.allRange(tx), fn); for (const p of tx.ps) if (!p.rs.length) { p.end = fn(Object.assign({}, p.end || {})); delete p.end.t; } });

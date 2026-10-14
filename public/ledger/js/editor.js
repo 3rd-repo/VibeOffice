@@ -247,13 +247,13 @@
       const chk = O.checkFormula(body);
       if (chk.error) {
         if (chk.fixed) {
-          L.ui.msg('Ledger found an error in the formula you entered. Do you want to accept the correction proposed below?\n\n=' + chk.fixed + '\n\n• To accept the correction, click Yes.\n• To close this message and correct the formula yourself, click No.', { icon: 'question', buttons: ['&Yes', '&No'], width: 430 }).then((i) => {
+          L.ui.msg(L.t('Ledger found an error in the formula you entered. Do you want to accept the correction proposed below?\n\n={0}\n\n• To accept the correction, click Yes.\n• To close this message and correct the formula yourself, click No.', chk.fixed), { icon: 'question', buttons: ['&Yes', '&No'], width: 430 }).then((i) => {
             if (i === 0) { setText('=' + chk.fixed); E.commit(opts); }
             else surface.focus();
           });
           return false;
         }
-        L.ui.msg('The formula you typed contains an error.\n\n• To get assistance in entering a function, click OK, and then click Function on the Insert menu.\n• If you are not trying to enter a formula, avoid using an equal sign (=) or minus sign (-), or precede it with a single quotation mark (\').', { icon: 'warn', width: 440 }).then(() => {
+        L.ui.msg(L.t('The formula you typed contains an error.\n\n• To get assistance in entering a function, click OK, and then click Function on the Insert menu.\n• If you are not trying to enter a formula, avoid using an equal sign (=) or minus sign (-), or precede it with a single quotation mark (\').'), { icon: 'warn', width: 440 }).then(() => {
           surface.focus();
           if (chk.pos != null) { const p = Math.min(surface.value.length, chk.pos + 1); try { surface.setSelectionRange(p, p); } catch (e) { /* ignore */ } }
         });
@@ -266,10 +266,10 @@
       const bad = p.kind === 'value' ? L.cf.dvCheck(sh, r, c, p.v) : null;
       if (bad && bad.showError !== false) {
         const style = bad.errorStyle || 'stop';
-        const msg = bad.error || 'The value you entered is not valid.\nA user has restricted values that can be entered into this cell.';
+        const msg = bad.error || L.t('The value you entered is not valid.\nA user has restricted values that can be entered into this cell.');
         const title = bad.errorTitle || L.APP;
         if (style === 'stop') { L.ui.msg(msg, { icon: 'error', title, buttons: ['&Retry', 'Cancel'] }).then((i) => { if (i === 0) { surface.focus(); surface.select(); } else E.cancel(); }); return false; }
-        L.ui.msg(msg + (style === 'warning' ? '\n\nContinue?' : ''), { icon: style === 'warning' ? 'warn' : 'info', title, buttons: style === 'warning' ? ['&Yes', '&No', 'Cancel'] : ['OK', 'Cancel'] }).then((i) => {
+        L.ui.msg(style === 'warning' ? L.t('{0}\n\nContinue?', msg) : msg, { icon: style === 'warning' ? 'warn' : 'info', title, buttons: style === 'warning' ? ['&Yes', '&No', 'Cancel'] : ['OK', 'Cancel'] }).then((i) => {
           if (i === 0) E.commit(Object.assign({}, opts, { skipValidation: true }));
           else if (style === 'warning' && i === 1) { surface.focus(); surface.select(); }
           else E.cancel();
@@ -281,7 +281,7 @@
       const s = g.sel();
       const arr = O.arrayAt(sh, r, c);
       if (arr && !opts.array && !(arr.r1 === arr.r2 && arr.c1 === arr.c2)) { L.ui.msg('You cannot change part of an array.', { icon: 'warn' }); return false; }
-      O.tx(sh.wb, 'Typing', () => {
+      O.tx(sh.wb, L.N('Typing'), () => {
         if (opts.array || (E.wasArray && arr)) {
           const rg = opts.array ? s.ranges[s.active] : arr;
           O.enter(sh, rg.r1, rg.c1, text, { array: rg });
@@ -526,16 +526,16 @@
     if (!fn) return;
     const info = L.fninfo.get(fn.name);
     if (!info) return;
-    tipEl = h('div', { class: 'ftip' });
+    tipEl = h('div', { class: 'ftip', translate: 'no' });
     const args = info.args || [];
-    tipEl.appendChild(h('a', { text: fn.name, onclick: () => L.ui.exec('functionArgs') }));
+    tipEl.appendChild(h('a', { translate: 'no', text: fn.name, onclick: () => L.ui.exec('functionArgs') }));
     tipEl.appendChild(document.createTextNode('('));
     let shown = 0;
     args.forEach((a, i) => {
       if (shown) tipEl.appendChild(document.createTextNode(', '));
       const repeat = /\.\.\.$/.test(a);
       const active = i === fn.arg || (repeat && fn.arg >= i);
-      const el = h(active ? 'b' : 'span', { text: a });
+      const el = h(active ? 'b' : 'span', { translate: 'no', text: a });
       tipEl.appendChild(el);
       shown++;
     });
@@ -586,9 +586,9 @@
   E.pickList = function (items, onPick) {
     hideAux();
     const q = G().cellRect(G().sel().r, G().sel().c);
-    acList = h('div', { class: 'acl', role: 'listbox' });
+    acList = h('div', { class: 'acl', role: 'listbox', translate: 'no' });
     items.forEach((v, i) => {
-      const d = h('div', { text: String(v), role: 'option' });
+      const d = h('div', { text: String(v), role: 'option', translate: 'no' });
       d.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); const f = onPick; hideAux(); f(v); });
       acList.appendChild(d);
       d._i = i;

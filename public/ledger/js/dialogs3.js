@@ -44,12 +44,12 @@
     let pick = prefer || null;
     const search = h('input', { type: 'text', placeholder: 'Type a brief description of what you want to do and then click Go', style: 'flex:1;min-width:0' });
     const listBox = h('div');
-    const syntax = h('div', { class: 'if-syntax' }), desc = h('div', { class: 'if-desc' });
-    const describe = (name) => { const f = FI.get(name); syntax.textContent = f ? FI.syntax(f) : ''; desc.textContent = f ? f.desc : ''; };
+    const syntax = h('div', { class: 'if-syntax', translate: 'no' }), desc = h('div', { class: 'if-desc' });
+    const describe = (name) => { const f = FI.get(name); syntax.textContent = f ? FI.syntax(f) : ''; desc.textContent = f ? L.t(f.desc) : ''; };
     let lb;
     const draw = (names) => {
       listBox.textContent = '';
-      lb = D.list(names.map((n) => [n, n]), names.includes(pick) ? pick : names[0], (n) => { pick = n; describe(n); }, { class: 'lbox fnlist' });
+      lb = D.list(names.map((n) => [n, n]), names.includes(pick) ? pick : names[0], (n) => { pick = n; describe(n); }, { class: 'lbox fnlist', translate: 'no' });
       lb.ondbl = (n) => { pick = n; d.close(1); go(); };
       listBox.appendChild(lb);
       if (!names.includes(pick)) pick = names[0] || null;
@@ -62,9 +62,9 @@
     };
     const catSel = ui.select(FI.categories.map((c) => [c, c]), cat, (v) => { cat = v; draw(byCat()); });
     const doSearch = () => {
-      const words = search.value.toLowerCase().split(/\W+/).filter((w) => w.length > 2);
+      const words = search.value.toLowerCase().split(/[^\p{L}\p{N}_]+/u).filter((w) => w.length > 2 || /[^\x00-\x7f]/.test(w));
       if (!words.length) return;
-      const scored = FI.all().map((f) => { const t = (f.name + ' ' + f.desc).toLowerCase(); let sc = 0; for (const w of words) { if (f.name.toLowerCase() === w) sc += 10; if (t.includes(w)) sc += 2; if (t.includes(w.replace(/s$/, ''))) sc += 1; } return [f.name, sc]; }).filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 30).map((x) => x[0]);
+      const scored = FI.all().map((f) => { const t = (f.name + ' ' + f.desc + ' ' + L.t(f.desc)).toLowerCase(); let sc = 0; for (const w of words) { if (f.name.toLowerCase() === w) sc += 10; if (t.includes(w)) sc += 2; if (t.includes(w.replace(/s$/, ''))) sc += 1; } return [f.name, sc]; }).filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 30).map((x) => x[0]);
       catSel.value = 'Recommended';
       draw(scored.length ? scored : []);
     };
@@ -105,21 +105,21 @@
       const out = h('span', { class: 'fa-val' });
       const upd = () => { const t = inp.value.trim(); out.textContent = t ? '= ' + show(evalText(t)) : nm.startsWith('[') ? '' : '= '; refresh(); };
       inp.addEventListener('input', upd);
-      inp.addEventListener('focus', () => { help.textContent = ''; help.append(h('b', { text: nm.replace(/[[\]]/g, '').replace(/^./, (c) => c.toUpperCase()) + ' ' }), document.createTextNode(FI.argHelp(nm) || '')); if (repeating && i === inputs.length - 1) addRow(i + 1, ''); });
-      const label = h('label', { class: nm.startsWith('[') ? 'opt' : 'req', text: nm.replace(/[[\]]/g, '').replace(/^./, (c) => c.toUpperCase()) });
+      inp.addEventListener('focus', () => { help.textContent = ''; help.append(h('b', { translate: 'no', text: nm.replace(/[[\]]/g, '').replace(/^./, (c) => c.toUpperCase()) + ' ' }), document.createTextNode(L.t(FI.argHelp(nm)) || '')); if (repeating && i === inputs.length - 1) addRow(i + 1, ''); });
+      const label = h('label', { class: nm.startsWith('[') ? 'opt' : 'req', translate: 'no', text: nm.replace(/[[\]]/g, '').replace(/^./, (c) => c.toUpperCase()) });
       const rb = D.refBox ? null : null;
       void rb;
       rows.appendChild(h('div', { class: 'fa-row' }, label, inp, out));
       inputs.push(inp);
       upd();
     };
+    const callText = () => { const args = inputs.map((i) => i.value.trim()); while (args.length && !args[args.length - 1] && args.length > base.filter((a) => !a.startsWith('[')).length) args.pop(); return f.name + '(' + args.join(',') + ')'; };
     const n0 = Math.max(base.length, preset.length, 1);
     for (let i = 0; i < n0; i++) addRow(i, preset[i]);
-    const callText = () => { const args = inputs.map((i) => i.value.trim()); while (args.length && !args[args.length - 1] && args.length > base.filter((a) => !a.startsWith('[')).length) args.pop(); return f.name + '(' + args.join(',') + ')'; };
-    function refresh() { if (!inputs.length) return; const v = evalText(callText()); total.textContent = 'Formula result = ' + (v == null ? '' : show(v)); result.textContent = '= ' + (v == null ? '' : show(v)); }
+    function refresh() { if (!inputs.length) return; const v = evalText(callText()); total.textContent = L.t('Formula result = {0}', v == null ? '' : show(v)); result.textContent = '= ' + (v == null ? '' : show(v)); }
     refresh();
-    help.textContent = f.desc;
-    ui.dialog({ title: 'Function Arguments', width: 520, body: h('div', { class: 'col' }, h('b', { text: f.name }), rows, result, h('div', { class: 'fa-desc', text: f.desc }), help, total),
+    help.textContent = L.t(f.desc);
+    ui.dialog({ title: 'Function Arguments', width: 520, body: h('div', { class: 'col' }, h('b', { translate: 'no', text: f.name }), rows, result, h('div', { class: 'fa-desc', text: f.desc }), help, total),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
         const call = callText();
         if (ed.active) {
@@ -157,7 +157,7 @@
     const refIn = D.refBox(F.quoteSheet(s.name) + '!' + F.absRangeName(G().range()), 300);
     const comment = h('input', { type: 'text', style: 'width:100%' });
     const box = h('div');
-    const draw = () => { box.textContent = ''; const lb = D.list(names.filter((n) => !n.hidden && !/^_xlnm\./i.test(n.name)).map((n) => [qualified(w, n), qualified(w, n)]), null, (q) => { const n = names.find((x) => qualified(w, x) === q); nameIn.value = q; refIn.input.value = '=' + String(n.ref).replace(/^=/, ''); comment.value = n.comment || ''; }, { class: 'lbox short' }); box.appendChild(lb); };
+    const draw = () => { box.textContent = ''; const lb = D.list(names.filter((n) => !n.hidden && !/^_xlnm\./i.test(n.name)).map((n) => [qualified(w, n), qualified(w, n)]), null, (q) => { const n = names.find((x) => qualified(w, x) === q); nameIn.value = q; refIn.input.value = '=' + String(n.ref).replace(/^=/, ''); comment.value = n.comment || ''; }, { class: 'lbox short', translate: 'no' }); box.appendChild(lb); };
     draw();
     /* a name for the active cell's label, as Excel proposes */
     const sel = G().sel();
@@ -189,7 +189,7 @@
     const names = visibleNames(w);
     if (!names.length) { ui.msg('There are no names defined in this workbook.', { icon: 'info' }); return; }
     let pick = qualified(w, names[0]);
-    const lb = D.list(names.map((n) => [qualified(w, n), qualified(w, n)]), pick, (v) => { pick = v; });
+    const lb = D.list(names.map((n) => [qualified(w, n), qualified(w, n)]), pick, (v) => { pick = v; }, { translate: 'no' });
     const insert = () => { const ed = E(); if (ed.active) ed.insertText(pick); else { ed.begin('enter', '=' + pick); } };
     const d = ui.dialog({ title: 'Paste Name', width: 300, body: h('div', { class: 'col' }, h('label', { text: 'Paste &name' }), lb),
       buttons: [{ label: 'Paste &List', onClick: () => { tryRun(() => { const s = sh(), sel = G().sel(); O.tx(w, 'Paste List', () => names.forEach((n, i) => { O.put(s, sel.r + i, sel.c, { v: qualified(w, n) }); O.put(s, sel.r + i, sel.c + 1, { v: '=' + F.display(String(n.ref).replace(/^=/, '')) }); })); }); } }, { label: 'OK', primary: true, onClick: () => insert() }, { label: 'Cancel' }] });
@@ -216,7 +216,7 @@
     const names = visibleNames(w).filter((n) => { try { const a = F.parse(String(n.ref)); return a.t === 'ref' || a.t === 'area'; } catch (e) { return false; } });
     if (!names.length) { ui.msg('There are no names that refer to cells.', { icon: 'info' }); return; }
     const picked = new Set(names.map((n) => n.name));
-    const box = h('div', { class: 'lbox checks' }, ...names.map((n) => ui.check(n.name, true, (v) => { if (v) picked.add(n.name); else picked.delete(n.name); })));
+    const box = h('div', { class: 'lbox checks', translate: 'no' }, ...names.map((n) => ui.check(n.name, true, (v) => { if (v) picked.add(n.name); else picked.delete(n.name); })));
     ui.dialog({ title: 'Apply Names', width: 300, body: h('div', { class: 'col' }, h('label', { text: 'Apply &names:' }), box), buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => {
       const targets = names.filter((n) => picked.has(n.name)).map((n) => { const a = F.parse(String(n.ref)); return { name: n.name, a, sheet: (a.sheet || s.name).toLowerCase() }; });
       let rg = O.clip(s, G().range());
@@ -268,14 +268,14 @@
       if ((n.t === 'op' || n.t === 'un' || n.t === 'pct' || n.t === 'paren') && kidsOf.every((k) => isLit(k) || k.t === 'area')) return n;
       return null;
     };
-    const text = h('div', { class: 'ev-text' });
+    const text = h('div', { class: 'ev-text', translate: 'no' });
     const render = (mark) => {
       text.textContent = '';
       const full = F.toText(ast);
       if (!mark) { text.textContent = '=' + full; return; }
       const part = F.toText(mark);
       const i = full.indexOf(part);
-      text.append(document.createTextNode('=' + full.slice(0, Math.max(0, i))), h('u', { text: part }), document.createTextNode(i >= 0 ? full.slice(i + part.length) : ''));
+      text.append(document.createTextNode('=' + full.slice(0, Math.max(0, i))), h('u', { translate: 'no', text: part }), document.createTextNode(i >= 0 ? full.slice(i + part.length) : ''));
     };
     let cur = next(ast);
     render(cur);
@@ -289,10 +289,10 @@
       ast = target === ast ? rep : F.map(ast, (n) => (n === target ? rep : null));
       cur = isLit(ast) ? null : next(ast);
       render(cur);
-      if (!cur) d.buttons[0].textContent = 'Restart';
+      if (!cur) d.buttons[0].textContent = L.t('Restart');
       return false;
     } };
-    const d = ui.dialog({ title: 'Evaluate Formula', width: 520, body: h('div', { class: 'col' }, h('div', { class: 'row', style: 'gap:16px' }, h('div', null, h('div', { class: 'hint', text: 'Reference:' }), h('b', { text: F.quoteSheet(s.name) + '!' + F.cellName(sel.r, sel.c, true, true) })), h('div', { style: 'flex:1' }, h('div', { class: 'hint', text: 'Evaluation:' }), text)), h('div', { class: 'hint', text: 'To show the result of the underlined expression, click Evaluate. The most recent result appears italicized.' })),
+    const d = ui.dialog({ title: 'Evaluate Formula', width: 520, body: h('div', { class: 'col' }, h('div', { class: 'row', style: 'gap:16px' }, h('div', null, h('div', { class: 'hint', text: 'Reference:' }), h('b', { translate: 'no', text: F.quoteSheet(s.name) + '!' + F.cellName(sel.r, sel.c, true, true) })), h('div', { style: 'flex:1' }, h('div', { class: 'hint', text: 'Evaluation:' }), text)), h('div', { class: 'hint', text: 'To show the result of the underlined expression, click Evaluate. The most recent result appears italicized.' })),
       buttons: [evalBtn, { label: 'Close' }] });
   };
 
@@ -307,11 +307,11 @@
     let sel = -1;
     const draw = () => {
       tbl.textContent = '';
-      tbl.appendChild(h('tr', null, ...['Book', 'Sheet', 'Name', 'Cell', 'Value', 'Formula'].map((t) => h('th', { text: t }))));
+      tbl.appendChild(h('tr', null, ...[L.N('Book|workbook'), L.N('Sheet'), L.N('Name'), L.N('Cell'), L.N('Value'), L.N('Formula')].map((t) => h('th', { text: t }))));
       w._watches.forEach((x, i) => {
         if (!w.sheets.includes(x.sh)) return;
         const cl = x.sh.get(x.r, x.c);
-        const tr = h('tr', { class: i === sel ? 'on' : '' }, h('td', { text: A().books[A().cur].name }), h('td', { text: x.sh.name }), h('td', { text: '' }), h('td', { text: F.cellName(x.r, x.c, true, true) }), h('td', { text: L.csv.cellText(x.sh, x.r, x.c) }), h('td', { text: cl && cl.f != null ? '=' + F.display(cl.f) : '' }));
+        const tr = h('tr', { class: i === sel ? 'on' : '' }, h('td', { translate: 'no', text: A().books[A().cur].name }), h('td', { translate: 'no', text: x.sh.name }), h('td', { translate: 'no', text: '' }), h('td', { translate: 'no', text: F.cellName(x.r, x.c, true, true) }), h('td', { translate: 'no', text: L.csv.cellText(x.sh, x.r, x.c) }), h('td', { translate: 'no', text: cl && cl.f != null ? '=' + F.display(cl.f) : '' }));
         tr.addEventListener('click', () => { sel = i; draw(); });
         tr.addEventListener('dblclick', () => { const k = w.sheets.indexOf(x.sh); if (k !== w.active) A().activateSheet(k); G().select(x.r, x.c); });
         tbl.appendChild(tr);
@@ -342,16 +342,16 @@
     const sel = G().sel();
     let i = Math.max(0, list.findIndex((x) => x.r > sel.r || (x.r === sel.r && x.c >= sel.c)));
     if (!list.length) { ui.msg('The error check of the entire sheet is complete.', { icon: 'info' }); return; }
-    const head = h('b'), formula = h('div', { class: 'ev-text' }), title = h('div', { style: 'font-weight:bold' }), desc = h('div');
+    const head = h('b'), formula = h('div', { class: 'ev-text', translate: 'no' }), title = h('div', { style: 'font-weight:bold' }), desc = h('div');
     const showI = () => {
       const x = list[i];
       G().select(x.r, x.c);
       const cl = s.get(x.r, x.c);
-      head.textContent = 'Error in cell ' + F.cellName(x.r, x.c) + ':';
+      head.textContent = L.t('Error in cell {0}:', F.cellName(x.r, x.c));
       formula.textContent = cl && cl.f != null ? '=' + F.display(cl.f) : String(cl ? cl.v : '');
-      title.textContent = x.kind === 'numtext' ? 'Number Stored as Text' : ERRDESC[x.kind] || 'Error';
-      desc.textContent = x.kind === 'numtext' ? 'The number in this cell is formatted as text or preceded by an apostrophe.' : ERRHELP[x.kind] || '';
-      fixBtn.textContent = x.kind === 'numtext' ? 'Convert to Number' : 'Show Calculation Steps...';
+      title.textContent = x.kind === 'numtext' ? L.t('Number Stored as Text') : L.t(ERRDESC[x.kind] || L.N('Error'));
+      desc.textContent = x.kind === 'numtext' ? L.t('The number in this cell is formatted as text or preceded by an apostrophe.') : L.t(ERRHELP[x.kind] || '');
+      fixBtn.textContent = x.kind === 'numtext' ? L.t('Convert to Number') : L.t('Show Calculation Steps...');
     };
     const fixBtn = ui.button('Show Calculation Steps...', () => {
       const x = list[i];
@@ -368,7 +368,7 @@
 
   /* ================================================================ Page Setup */
   const HF_PRESETS = ['', '&P', 'Page &P', 'Page &P of &N', '&A', '&F', '&A, Page &P', '&F, Page &P', '&D', 'Confidential, &D, Page &P', '&F, &A', 'Prepared by &[User] &D, Page &P'];
-  const hfLabel = (code, s) => { if (!code) return '(none)'; const p = L.print.parseHF(code.replace('&[User]', A().opts.userName || ''), { page: 1, pages: 1, sheet: s.name, file: A().books[A().cur].name }); return ['l', 'c', 'r'].map((k) => p[k].map((x) => x.text).join('')).filter(Boolean).join(', '); };
+  const hfLabel = (code, s) => { if (!code) return L.t('(none)'); const p = L.print.parseHF(code.replace('&[User]', A().opts.userName || ''), { page: 1, pages: 1, sheet: s.name, file: A().books[A().cur].name }); return ['l', 'c', 'r'].map((k) => p[k].map((x) => x.text).join('')).filter(Boolean).join(', '); };
   D.pageSetup = function (tab) {
     const s = sh(), w = wb();
     const p = JSON.parse(JSON.stringify(s.print));
@@ -378,25 +378,26 @@
     let area = getName('_xlnm.print_area');
     const titles = L.print.titles(s);
     /* page */
-    const adj = ui.spin({ value: p.scale || 100, min: 10, max: 400, step: 5, dec: 0, unit: '% normal size', onChange: (v) => { p.scale = Math.round(v); } });
+    const adj = ui.spin({ value: p.scale || 100, min: 10, max: 400, step: 5, dec: 0, fmt: (v) => L.t('{0}% normal size', Math.round(v)), onChange: (v) => { p.scale = Math.round(v); } });
     const fitW = ui.spin({ value: p.fitW == null ? 1 : p.fitW, min: 0, max: 32767, step: 1, dec: 0, onChange: (v) => { p.fitW = Math.round(v) || null; } });
     const fitH = ui.spin({ value: p.fitH == null ? 1 : p.fitH, min: 0, max: 32767, step: 1, dec: 0, onChange: (v) => { p.fitH = Math.round(v) || null; } });
-    const first = h('input', { type: 'text', value: p.firstPage != null ? String(p.firstPage) : 'Auto', style: 'width:70px' });
+    const first = h('input', { type: 'text', value: p.firstPage != null ? String(p.firstPage) : L.t('Auto'), style: 'width:70px' });
     const pageTab = h('div', { class: 'col' },
       ui.group('Orientation', h('div', { class: 'row', style: 'gap:24px' }, ui.radio('ps-o', 'Por&trait', p.orientation !== 'landscape', () => { p.orientation = 'portrait'; }), ui.radio('ps-o', '&Landscape', p.orientation === 'landscape', () => { p.orientation = 'landscape'; }))),
       ui.group('Scaling', h('div', { class: 'row', style: 'gap:8px' }, ui.radio('ps-s', '&Adjust to:', !p.fit, () => { p.fit = false; }), adj), h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap' }, ui.radio('ps-s', '&Fit to:', !!p.fit, () => { p.fit = true; }), fitW, h('span', { text: 'page(s) wide by' }), fitH, h('span', { text: 'tall' }))),
-      ui.field('Paper si&ze:', ui.select(Object.keys(L.print.PAPERS).map((k) => [k, L.print.PAPERS[k][0] + ' (' + L.print.PAPERS[k][1] + ' x ' + L.print.PAPERS[k][2] + ' in)']), p.paper || 1, (v) => { p.paper = +v; })),
-      ui.field('Print &quality:', ui.select(['600 dpi', '300 dpi', '150 dpi'], '600 dpi')),
+      ui.field('Paper si&ze:', ui.select(Object.keys(L.print.PAPERS).map((k) => [k, L.t('{0} ({1} x {2} in)', L.t(L.print.PAPERS[k][0]), L.print.PAPERS[k][1], L.print.PAPERS[k][2])]), p.paper || 1, (v) => { p.paper = +v; })),
+      ui.field('Print &quality:', ui.select(['600 dpi', '300 dpi', '150 dpi'], '600 dpi', null, { translate: 'no' })),
       ui.field('Fi&rst page number:', first));
     /* margins */
     const mspin = (k) => ui.spin({ value: p.margins[k], min: 0, max: 20, step: 0.25, unit: '', onChange: (v) => { p.margins[k] = v; } });
     const marTab = h('div', { class: 'col' }, h('div', { class: 'ps-margins' }, ui.field('&Top:', mspin('t')), ui.field('H&eader:', mspin('header')), ui.field('&Left:', mspin('l')), ui.field('&Right:', mspin('r')), ui.field('&Bottom:', mspin('b')), ui.field('&Footer:', mspin('footer'))),
       ui.group('Center on page', ui.check('Hori&zontally', !!p.hCenter, (v) => { p.hCenter = v; }), ui.check('&Vertically', !!p.vCenter, (v) => { p.vCenter = v; })), h('div', { class: 'hint', text: 'Margins are in inches.' }));
     /* header / footer */
-    const hfSel = (key) => { const opts = HF_PRESETS.slice(); if (p[key] && !opts.includes(p[key])) opts.unshift(p[key]); const sel = ui.select(opts.map((c) => [c, hfLabel(c, s)]), p[key] || '', (v) => { p[key] = v; prevH.textContent = hfLabel(p.header, s); prevF.textContent = hfLabel(p.footer, s); }); return sel; };
-    const prevH = h('div', { class: 'hf-prev', text: hfLabel(p.header, s) }), prevF = h('div', { class: 'hf-prev', text: hfLabel(p.footer, s) });
+    /* the headers and footers are the sheet's own text: shown as they print */
+    const hfSel = (key) => { const opts = HF_PRESETS.slice(); if (p[key] && !opts.includes(p[key])) opts.unshift(p[key]); const sel = ui.select(opts.map((c) => [c, hfLabel(c, s)]), p[key] || '', (v) => { p[key] = v; prevH.textContent = hfLabel(p.header, s); prevF.textContent = hfLabel(p.footer, s); }, { translate: 'no' }); return sel; };
+    const prevH = h('div', { class: 'hf-prev', translate: 'no', text: hfLabel(p.header, s) }), prevF = h('div', { class: 'hf-prev', translate: 'no', text: hfLabel(p.footer, s) });
     const hSel = hfSel('header'), fSel = hfSel('footer');
-    const custom = (key) => D.customHF(p[key] || '', key === 'header' ? 'Header' : 'Footer', (code) => { p[key] = code; const sel = key === 'header' ? hSel : fSel; if (!Array.from(sel.options).some((o) => o.value === code)) sel.insertBefore(h('option', { value: code, text: hfLabel(code, s) }), sel.firstChild); sel.value = code; prevH.textContent = hfLabel(p.header, s); prevF.textContent = hfLabel(p.footer, s); });
+    const custom = (key) => D.customHF(p[key] || '', key === 'header' ? L.N('Header') : L.N('Footer'), (code) => { p[key] = code; const sel = key === 'header' ? hSel : fSel; if (!Array.from(sel.options).some((o) => o.value === code)) sel.insertBefore(h('option', { value: code, translate: 'no', text: hfLabel(code, s) }), sel.firstChild); sel.value = code; prevH.textContent = hfLabel(p.header, s); prevF.textContent = hfLabel(p.footer, s); });
     const hfTab = h('div', { class: 'col' }, prevH, ui.field('He&ader:', hSel), h('div', { class: 'row', style: 'gap:8px' }, ui.button('&Custom Header...', () => custom('header')), ui.button('C&ustom Footer...', () => custom('footer'))), ui.field('&Footer:', fSel), prevF,
       ui.check('Different &odd and even pages', !!p.diffOddEven, (v) => { p.diffOddEven = v; }), ui.check('Different first &page', !!p.diffFirst, (v) => { p.diffFirst = v; }), ui.check('Scale with document', p.hfScale !== false, (v) => { p.hfScale = v; }), ui.check('Align with page margins', p.hfAlign !== false, (v) => { p.hfAlign = v; }));
     /* sheet */
@@ -438,9 +439,9 @@
     for (const k in areas) areas[k].addEventListener('focus', () => { last = areas[k]; });
     const ins = (t) => { const a = last; const s0 = a.selectionStart, s1 = a.selectionEnd; a.value = a.value.slice(0, s0) + t + a.value.slice(s1); a.focus(); a.setSelectionRange(s0 + t.length, s0 + t.length); };
     const fb = (label, t) => h('button', { type: 'button', class: 'btn small', text: label, onclick: () => ins(t) });
-    const font = () => { const f = h('input', { type: 'text', value: 'Arial', style: 'width:110px' }); const st = ui.select(['Regular', 'Bold', 'Italic', 'Bold Italic'], 'Regular'); const sz = h('input', { type: 'text', value: '10', style: 'width:40px' }); ui.dialog({ title: 'Font', width: 320, body: h('div', { class: 'row', style: 'gap:8px' }, ui.field('Font:', f), ui.field('Style:', st), ui.field('Size:', sz)), buttons: [{ label: 'OK', primary: true, onClick: () => ins(`&"${f.value},${st.value}"&${parseInt(sz.value, 10) || 10}`) }, { label: 'Cancel' }] }); };
+    const font = () => { const f = h('input', { type: 'text', value: 'Arial', style: 'width:110px' }); const st = ui.select([['Regular', L.N('Regular')], ['Bold', L.N('Bold')], ['Italic', L.N('Italic')], ['Bold Italic', 'Bold Italic']], 'Regular'); const sz = h('input', { type: 'text', value: '10', style: 'width:40px' }); ui.dialog({ title: 'Font', width: 320, body: h('div', { class: 'row', style: 'gap:8px' }, ui.field('Font:', f), ui.field('Style:', st), ui.field('Size:', sz)), buttons: [{ label: 'OK', primary: true, onClick: () => ins(`&"${f.value},${st.value}"&${parseInt(sz.value, 10) || 10}`) }, { label: 'Cancel' }] }); };
     ui.dialog({ title: kind, width: 560, body: h('div', { class: 'col' }, h('div', { class: 'hint', text: 'To format text: select the text, then choose the font button. To insert a page number, date, time, file path, filename, or tab name: position the insertion point in the edit box, then choose the appropriate button.' }),
-      h('div', { class: 'row', style: 'gap:4px;flex-wrap:wrap' }, h('button', { type: 'button', class: 'btn small', text: 'A (Font)', onclick: font }), fb('Page #', '&P'), fb('Pages', '&N'), fb('Date', '&D'), fb('Time', '&T'), fb('Path & File', '&Z&F'), fb('File', '&F'), fb('Tab', '&A')),
+      h('div', { class: 'row', style: 'gap:4px;flex-wrap:wrap' }, h('button', { type: 'button', class: 'btn small', text: 'A (Font)', onclick: font }), fb('Page #', '&P'), fb(L.N('Pages'), '&N'), fb(L.N('Date'), '&D'), fb(L.N('Time'), '&T'), fb('Path & File', '&Z&F'), fb(L.N('File'), '&F'), fb(L.N('Tab'), '&A')),
       h('div', { class: 'hf-secs' }, ui.field('&Left section:', areas.l), ui.field('&Center section:', areas.c), ui.field('&Right section:', areas.r))),
     buttons: [{ label: 'OK', primary: true, onClick: () => { const out = (areas.l.value ? '&L' + areas.l.value : '') + (areas.c.value ? '&C' + areas.c.value : '') + (areas.r.value ? '&R' + areas.r.value : ''); done(out); } }, { label: 'Cancel' }] });
   };

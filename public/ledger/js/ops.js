@@ -6,6 +6,8 @@
   const M = L.model, C = L.calc, F = L.formula, NF = L.numfmt, LY = L.layout;
   const O = (L.ops = {});
   const MAXR = M.MAXR, MAXC = M.MAXC;
+  /* the undo steps' names are shown translated in Edit ▸ Undo: N marks them for the catalog (common/i18n.js; as is in Node) */
+  const N = L.N || ((s) => s);
 
   /* ------------------------------------------------------------ transactions */
   let changes = null, structural = false;
@@ -227,7 +229,7 @@
     what = what || 'contents';
     const wb = sh.wb;
     if (what !== 'formats' && what !== 'comments') { const a = O.cutsArray(sh, ranges); if (a) throw Object.assign(new Error('You cannot change part of an array.'), { code: 'array' }); }
-    O.tx(wb, what === 'all' ? 'Clear' : what === 'formats' ? 'Clear Formats' : what === 'comments' ? 'Clear Comments' : 'Clear Contents', () => {
+    O.tx(wb, what === 'all' ? N('Clear') : what === 'formats' ? 'Clear Formats' : what === 'comments' ? 'Clear Comments' : 'Clear Contents', () => {
       for (const rg0 of ranges) {
         const whole = rg0.c1 === 0 && rg0.c2 >= MAXC - 1 || rg0.r1 === 0 && rg0.r2 >= MAXR - 1;
         const rg = O.clip(sh, rg0);
@@ -340,7 +342,7 @@
   O.borders = function (sh, ranges, spec, label) {
     const line = spec.line || { style: 'thin' };
     const wb = sh.wb;
-    O.tx(wb, label || 'Borders', () => {
+    O.tx(wb, label || N('Borders'), () => {
       for (const rg0 of ranges) {
         const rg = O.clip(sh, rg0);
         if (rg0.r2 >= MAXR - 1 || rg0.c2 >= MAXC - 1) { if (rg.r2 - rg.r1 > 2000 || rg.c2 - rg.c1 > 200) continue; }
@@ -526,7 +528,7 @@
   };
   O.hideLines = function (sh, axis, list, hide) {
     const wb = sh.wb;
-    O.tx(wb, hide ? 'Hide' : 'Unhide', () => {
+    O.tx(wb, hide ? N('Hide') : N('Unhide'), () => {
       const arr = axis === 'r' ? sh.rows : sh.cols;
       const snap = () => list.map((i) => [i, arr[i] ? Object.assign({}, arr[i]) : null]);
       const before = snap();
@@ -565,7 +567,7 @@
   };
   O.autofitCols = function (sh, cols, rows) {
     const wb = sh.wb;
-    O.tx(wb, 'AutoFit', () => {
+    O.tx(wb, N('AutoFit'), () => {
       for (const c of cols) { const w = O.bestWidth(sh, c, rows); if (w != null) O.setColWidth(sh, [c], w); }
     });
   };
@@ -604,7 +606,7 @@
   };
   O.autofitRows = function (sh, rows, label) {
     const wb = sh.wb;
-    O.tx(wb, label || 'AutoFit', () => {
+    O.tx(wb, label || N('AutoFit'), () => {
       const snap = () => rows.map((r) => [r, sh.rows[r] ? Object.assign({}, sh.rows[r], { cells: undefined }) : null]);
       const before = snap();
       for (const r of rows) {
@@ -778,7 +780,8 @@
    */
   O.insertLines = function (sh, axis, at, n) {
     const wb = sh.wb;
-    const label = (n > 0 ? 'Insert ' : 'Delete ') + (axis === 'r' ? (Math.abs(n) > 1 ? 'Rows' : 'Row') : Math.abs(n) > 1 ? 'Columns' : 'Column');
+    const many = Math.abs(n) > 1;
+    const label = n > 0 ? (axis === 'r' ? (many ? 'Insert Rows' : 'Insert Row') : many ? 'Insert Columns' : 'Insert Column') : axis === 'r' ? (many ? 'Delete Rows' : 'Delete Row') : many ? 'Delete Columns' : 'Delete Column';
     /* refuse to split arrays / push data off the sheet */
     if (n > 0) {
       const lastUsed = axis === 'r' ? sh.maxR : sh.maxC;
@@ -989,7 +992,7 @@
   };
   O.validSheetName = function (wb, name, self) {
     if (!name || name.length > 31) return 'A sheet name must be 1 to 31 characters long.';
-    if (/[:\\/?*[\]]/.test(name)) return 'A sheet name cannot contain any of these characters:  : \\ / ? * [ ]';
+    if (/[:\\/?*[\]]/.test(name)) return N('A sheet name cannot contain any of these characters:  : \\ / ? * [ ]');
     if (/^'|'$/.test(name)) return 'A sheet name cannot begin or end with an apostrophe.';
     if (/^history$/i.test(name)) return 'History is a reserved name.';
     const other = wb.sheetByName(name);
@@ -1082,7 +1085,7 @@
   };
   O.sheetProp = function (wb, sh, key, val, label) {
     const old = sh[key];
-    O.tx(wb, label || 'Sheet', () => { sh[key] = val; wb.undo.op(() => { sh[key] = old; }, () => { sh[key] = val; }); });
+    O.tx(wb, label || N('Sheet'), () => { sh[key] = val; wb.undo.op(() => { sh[key] = old; }, () => { sh[key] = val; }); });
   };
 
   /* ------------------------------------------------------------ sort */
@@ -1112,7 +1115,7 @@
     const a = O.cutsArray(sh, [rg]);
     if (a) throw Object.assign(new Error('You cannot change part of an array.'), { code: 'array' });
     if (sh.merges.some((m) => M.rangesOverlap(m, rg) && !(m.r1 === m.r2 && byRows) && !(m.c1 === m.c2 && !byRows))) throw Object.assign(new Error('This operation requires the merged cells to be identically sized.'), { code: 'merge' });
-    return O.structural(sh, 'Sort', () => {
+    return O.structural(sh, N('Sort'), () => {
       const r1 = rg.r1 + (byRows && opts.header ? 1 : 0), c1 = rg.c1 + (!byRows && opts.header ? 1 : 0);
       const n = byRows ? rg.r2 - r1 + 1 : rg.c2 - c1 + 1;
       const lines = [];
@@ -1306,7 +1309,7 @@
     const down = dest.r2 > src.r2, up = dest.r1 < src.r1, right = dest.c2 > src.c2, left = dest.c1 < src.c1;
     const vertical = down || up;
     if (O.cutsArray(sh, [dest])) throw Object.assign(new Error('You cannot change part of an array.'), { code: 'array' });
-    O.tx(wb, 'AutoFill', () => {
+    O.tx(wb, N('AutoFill'), () => {
       const lines = vertical ? src.c2 - src.c1 + 1 : src.r2 - src.r1 + 1;
       const n = vertical ? src.r2 - src.r1 + 1 : src.c2 - src.c1 + 1;
       for (let li = 0; li < lines; li++) {
@@ -1344,7 +1347,7 @@
   O.fillSeries = function (sh, rg, o) {
     const wb = sh.wb;
     const byRows = o.rows; /* series along rows (left → right) */
-    O.tx(wb, 'Series', () => {
+    O.tx(wb, N('Series'), () => {
       const lines = byRows ? rg.r2 - rg.r1 + 1 : rg.c2 - rg.c1 + 1;
       const len = byRows ? rg.c2 - rg.c1 + 1 : rg.r2 - rg.r1 + 1;
       for (let li = 0; li < lines; li++) {
@@ -1416,7 +1419,7 @@
     const flags = 'g' + (o.matchCase ? '' : 'i');
     const esc = String(o.what).replace(/~([*?~])|([*?])|([.+^${}()|[\]\\])/g, (m, e, w, sp) => (e ? '\\' + e : w === '*' ? '[\\s\\S]*' : w === '?' ? '[\\s\\S]' : '\\' + sp));
     const re = new RegExp(o.whole ? '^' + esc + '$' : esc, flags);
-    O.tx(wb, 'Replace', () => {
+    O.tx(wb, N('Replace'), () => {
       for (const h of cells) {
         const cell = h.sh.get(h.r, h.c);
         if (!cell) continue;

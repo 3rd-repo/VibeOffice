@@ -9,7 +9,8 @@
   const P = (L.print = {});
   const G = () => L.grid;
   /* paper sizes (inches) by SpreadsheetML paperSize code */
-  P.PAPERS = { 1: ['Letter', 8.5, 11], 3: ['Tabloid', 11, 17], 5: ['Legal', 8.5, 14], 7: ['Executive', 7.25, 10.5], 8: ['A3', 11.69, 16.54], 9: ['A4', 8.27, 11.69], 11: ['A5', 5.83, 8.27], 13: ['B5 (JIS)', 7.17, 10.12], 20: ['Envelope #10', 4.125, 9.5], 27: ['Envelope DL', 4.33, 8.66], 34: ['B5 (ISO)', 6.93, 9.84] };
+  /* paper sizes: [name (shown translated), width, height in inches] */
+  P.PAPERS = { 1: [L.N('Letter'), 8.5, 11], 3: [L.N('Tabloid'), 11, 17], 5: [L.N('Legal'), 8.5, 14], 7: [L.N('Executive'), 7.25, 10.5], 8: ['A3', 11.69, 16.54], 9: ['A4', 8.27, 11.69], 11: ['A5', 5.83, 8.27], 13: [L.N('B5 (JIS)'), 7.17, 10.12], 20: [L.N('Envelope #10'), 4.125, 9.5], 27: [L.N('Envelope DL'), 4.33, 8.66], 34: [L.N('B5 (ISO)'), 6.93, 9.84] };
   P.paperSize = (p) => { const x = P.PAPERS[p.paper] || P.PAPERS[1]; return p.orientation === 'landscape' ? { w: x[2] * 72, h: x[1] * 72, name: x[0] } : { w: x[1] * 72, h: x[2] * 72, name: x[0] }; };
 
   /* ------------------------------------------------------------ print area */
@@ -341,7 +342,7 @@
       ui.busy(false);
       const name = (A.books[A.cur] ? A.books[A.cur].name : 'Book1').replace(/\.[^.]+$/, '') + '.pdf';
       const res = await L.saveFile(name, pdf);
-      if (res === 'saved' && !opts.quiet) ui.toast(`${pages.length} page${pages.length === 1 ? '' : 's'} saved as ${name}. Open it to print.`);
+      if (res === 'saved' && !opts.quiet) ui.toast(pages.length === 1 ? L.t('{0} page saved as {1}. Open it to print.', pages.length, name) : L.t('{0} pages saved as {1}. Open it to print.', pages.length, name));
     } catch (e) { ui.busy(false); A.error(e); }
     finally { ui.busy(false); }
   };
@@ -359,7 +360,7 @@
     ov.append(bar, view, status);
     document.body.appendChild(ov);
     let i = 0, zoomed = false, showMargins = false;
-    const btn = (label, fn, tip) => { const b = h('button', { type: 'button', class: 'tb-btn with-label', html: `<span class="tb-lbl">${L.esc(label).replace(/&amp;(\w)/, '<u>$1</u>')}</span>`, 'data-tip': tip || label.replace('&', '') }); b.addEventListener('click', fn); bar.appendChild(b); return b; };
+    const btn = (label, fn, tip) => { const b = h('button', { type: 'button', class: 'tb-btn with-label', html: `<span class="tb-lbl">${ui.ampHTML(label)}</span>`, 'data-tip': tip || ui.stripAmp(label) }); b.addEventListener('click', fn); bar.appendChild(b); return b; };
     const bNext = btn('&Next', () => go(1));
     const bPrev = btn('&Previous', () => go(-1));
     btn('&Zoom', () => { zoomed = !zoomed; draw(); });
@@ -380,7 +381,7 @@
       const my = ++token;
       bNext.disabled = i >= items.length - 1; bPrev.disabled = i <= 0;
       if (!items.length) { view.textContent = ''; view.appendChild(h('div', { class: 'pp-empty', text: 'Ledger did not find anything to print.' })); status.textContent = ''; return; }
-      status.textContent = `Preview: Page ${i + 1} of ${items.length}`;
+      status.textContent = L.t('Preview: Page {0} of {1}', i + 1, items.length);
       const r = await renderAny(items[i], i, items.length, 1.6);
       if (my !== token) return;
       view.textContent = '';

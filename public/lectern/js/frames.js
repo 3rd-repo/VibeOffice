@@ -147,10 +147,17 @@
     pres.keep.frames = records;
   };
   F.consumes = (pres, part, rel) => (pres.keep?.frames || []).some(f => f.part === part && f.rels.includes(rel.id));
-  // What the user is told when a kept object can only be saved as its preview
-  const savedAs = (label, why) => 'This ' + (({ 'New chart': 'chart', Ink: 'ink drawing', 'Embedded object': 'embedded object' })[label] || label) +
-    ' will be saved as ' + (label === 'Embedded object' ? 'a picture' : 'ordinary shapes') + why;
-  const slidePlace = (pres, part) => { const i = pres.slides.findIndex(s => s.keep?.part === part); return i < 0 ? undefined : 'Slide ' + (i + 1); };
+  // What the user is told when a kept object can only be saved as its preview: whole sentences (the Compatibility
+  // Checker shows them in the UI's language), [edited here, the original couldn't be kept]
+  const SAVED_AS = {
+    IntelliArt: ['This IntelliArt will be saved as ordinary shapes, because it was edited here.', 'This IntelliArt will be saved as ordinary shapes, because the original couldn\'t be kept.'],
+    'Embedded object': ['This embedded object will be saved as a picture, because it was edited here.', 'This embedded object will be saved as a picture, because the original couldn\'t be kept.'],
+    Ink: ['This ink drawing will be saved as ordinary shapes, because it was edited here.', 'This ink drawing will be saved as ordinary shapes, because the original couldn\'t be kept.'],
+    '3-D model': ['This 3-D model will be saved as ordinary shapes, because it was edited here.', 'This 3-D model will be saved as ordinary shapes, because the original couldn\'t be kept.'],
+    'New chart': ['This chart will be saved as ordinary shapes, because it was edited here.', 'This chart will be saved as ordinary shapes, because the original couldn\'t be kept.'],
+  };
+  const savedAs = (label, notKept) => (SAVED_AS[label] || SAVED_AS.IntelliArt)[notKept ? 1 : 0];
+  const slidePlace = (pres, part) => { const i = pres.slides.findIndex(s => s.keep?.part === part); return i < 0 ? undefined : L.t ? L.t('Slide {0}', i + 1) : 'Slide ' + (i + 1); };
   F.prepare = function (pres, writer) {
     const groups = new Map(), seen = new Set(), converted = new Map();
     containers(pres, list => {
@@ -171,7 +178,7 @@
     }
     for (const record of [...(pres.keep?.frames || []), ...converted.values()]) if (!seen.has(record.key)) {
       // Removed objects were deleted by the user; converted ones were ungrouped or edited
-      if (converted.has(record.key)) writer.loss({ id: 'frame:' + record.key, what: savedAs(record.label, ', because it was edited here.'), where: record.part, place: slidePlace(pres, record.part), action: 'conversion', notify: true });
+      if (converted.has(record.key)) writer.loss({ id: 'frame:' + record.key, what: savedAs(record.label, false), where: record.part, place: slidePlace(pres, record.part), action: 'conversion', notify: true });
       else writer.loss({ id: 'frame:' + record.key, what: record.label + ' was removed.', where: record.part, action: 'drop', notify: false });
     }
     return groups;
@@ -300,7 +307,7 @@
     const record = shape.keep?.frame; if (!record) return null;
     const group = ctx.frames?.get(key(record.fragment));
     const loss = (what, error) => ctx.writer.loss({ id: 'frame:' + key(record.fragment), what, detail: error?.message, where: ctx.part, place: ctx.place, action: 'conversion', notify: !K.sourceMissing(error) });
-    if (!group?.intact) { loss(savedAs(record.label, ', because it was edited here.')); return null; }
+    if (!group?.intact) { loss(savedAs(record.label, false)); return null; }
     if (group.emitted) return '';
     try {
       const fragment = dependencies(record, shape, ctx, group.moved || ctx.inGroup);
@@ -311,7 +318,7 @@
       }
       xml = L.comments.shapeIdentity(shape, ctx, xml);
       group.emitted = true; return xml;
-    } catch (error) { group.intact = false; loss(savedAs(record.label, ', because the original couldn\'t be kept.'), error); return null; }
+    } catch (error) { group.intact = false; loss(savedAs(record.label, true), error); return null; }
   };
   F.references = function (item) {
     const refs = [];

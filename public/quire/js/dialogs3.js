@@ -13,6 +13,9 @@
   const A = () => L.app;
 
   /* ================= Format Object ================= */
+  /* the line dashes (drawing.js DASH) and fills as shown */
+  const DASH_NAMES = { solid: L.N('Solid'), sysDot: L.N('Round Dot'), sysDash: L.N('Square Dot'), dot: L.N('Dot'), dash: L.N('Dash'), dashDot: L.N('Dash Dot'), lgDash: L.N('Long Dash'), lgDashDot: L.N('Long Dash Dot'), lgDashDotDot: L.N('Long Dash Dot Dot'), sysDashDot: L.N('Short Dash Dot'), sysDashDotDot: L.N('Short Dash Dot Dot') };
+  const FILL_NAMES = { none: L.N('No Fill'), grad: L.N('Gradient'), patt: L.N('Pattern'), img: L.N('Picture'), solid: L.N('Color') };
   G.formatObject = function (tab) {
     const it0 = L.drawing.selectedItem();
     if (!it0) return;
@@ -21,14 +24,14 @@
     const title = isImg ? 'Format Picture' : isTb ? 'Format Text Box' : isWA ? 'Format LettersArt' : it.t === 'chart' ? 'Format Object' : 'Format AutoShape';
     /* Colors and Lines */
     let fill = it.fill ? L.clone(it.fill) : { t: 'none' };
-    const fillBtn = G.color(fill.t === 'solid' ? String(fill.c || '#FFFFFF').replace('#', '') : null, { id: 'fo-fill', mode: 'fill', automatic: false, noneText: fill.t === 'none' ? 'No Fill' : fill.t === 'grad' ? 'Gradient' : fill.t === 'patt' ? 'Pattern' : fill.t === 'img' ? 'Picture' : 'No Fill', onChange: (v) => { fill = v ? { t: 'solid', c: '#' + v, a: 1 - transp.get() / 100 } : { t: 'none' }; } });
-    const fx = ui.button('Fill &Effects...', async () => { const f = await G.fillEffects(fill); if (f) { fill = f; fillBtn.set(null); fillBtn.querySelector('.cpk-l').textContent = { grad: 'Gradient', patt: 'Pattern', img: 'Picture', solid: 'Color' }[f.t] || 'Fill'; } }, { class: 'btn small' });
+    const fillBtn = G.color(fill.t === 'solid' ? String(fill.c || '#FFFFFF').replace('#', '') : null, { id: 'fo-fill', mode: 'fill', automatic: false, noneText: L.t(FILL_NAMES[fill.t] && fill.t !== 'solid' ? FILL_NAMES[fill.t] : 'No Fill'), onChange: (v) => { fill = v ? { t: 'solid', c: '#' + v, a: 1 - transp.get() / 100 } : { t: 'none' }; } });
+    const fx = ui.button('Fill &Effects...', async () => { const f = await G.fillEffects(fill); if (f) { fill = f; fillBtn.set(null); fillBtn.querySelector('.cpk-l').textContent = L.t(f.t !== 'none' && FILL_NAMES[f.t] || L.N('Fill')); } }, { class: 'btn small' });
     const transp = ui.spin({ value: Math.round((1 - (fill.a == null ? 1 : fill.a)) * 100), min: 0, max: 100, step: 5, dec: 0, unit: ' %', id: 'fo-tr', onChange: (v) => { if (fill.t === 'solid') fill.a = 1 - v / 100; } });
     const ln = isImg ? (it.border ? { c: '#' + (it.border.color || '000000'), w: it.border.sz || 0.75, dash: 'solid' } : { t: 'none' }) : it.line ? L.clone(it.line) : { t: 'none' };
-    const lineBtn = G.color(ln.t === 'none' || !ln.c ? null : String(ln.c).replace('#', ''), { id: 'fo-line', mode: 'line', automatic: false, noneText: 'No Line' });
-    const dash = ui.select(Object.keys(L.drawing.DASH).map((k) => [k, k.replace(/([A-Z])/g, ' $1').toLowerCase()]), ln.dash || 'solid', null, { id: 'fo-dash' });
+    const lineBtn = G.color(ln.t === 'none' || !ln.c ? null : String(ln.c).replace('#', ''), { id: 'fo-line', mode: 'line', automatic: false, noneText: L.t('No Line') });
+    const dash = ui.select(Object.keys(L.drawing.DASH).map((k) => [k, DASH_NAMES[k] || k]), ln.dash || 'solid', null, { id: 'fo-dash' });
     const weight = ui.spin({ value: ln.w || 0.75, min: 0, max: 1584, step: 0.25, dec: 2, unit: ' pt', id: 'fo-wt' });
-    const arrows = ['none', 'triangle', 'stealth', 'diamond', 'oval', 'arrow'].map((x) => [x, x === 'none' ? '(none)' : x]);
+    const arrows = [['none', L.N('(none)')], ['triangle', L.N('Triangle')], ['stealth', L.N('Stealth')], ['diamond', L.N('Diamond')], ['oval', L.N('Oval')], ['arrow', L.N('Arrow')]];
     const head = ui.select(arrows, (ln.head && ln.head.type) || 'none', null, { id: 'fo-ah' });
     const tail = ui.select(arrows, (ln.tail && ln.tail.type) || 'none', null, { id: 'fo-at' });
     /* Size */
@@ -44,8 +47,8 @@
     let wrap = it.float ? it.float.wrap || 'none' : 'inline';
     const wrapBox = h('div', { class: 'preset-grid' });
     const wrapSvg = { inline: '<svg width="40" height="36"><path d="M2 6h36M2 12h8M30 12h8M2 18h36M2 24h36M2 30h36" stroke="#999"/><rect x="12" y="8" width="16" height="10" fill="#9cf" stroke="#333"/></svg>', square: '<svg width="40" height="36"><path d="M2 6h36M2 12h10M28 12h10M2 18h10M28 18h10M2 24h10M28 24h10M2 30h36" stroke="#999"/><rect x="13" y="10" width="14" height="16" fill="#9cf" stroke="#333"/></svg>', tight: '<svg width="40" height="36"><path d="M2 6h36M2 12h12M26 12h12M2 18h9M29 18h9M2 24h12M26 24h12M2 30h36" stroke="#999"/><circle cx="20" cy="18" r="8" fill="#9cf" stroke="#333"/></svg>', behind: '<svg width="40" height="36"><rect x="10" y="8" width="20" height="20" fill="#9cf" stroke="#333"/><path d="M2 6h36M2 12h36M2 18h36M2 24h36M2 30h36" stroke="#555"/></svg>', none: '<svg width="40" height="36"><path d="M2 6h36M2 12h36M2 18h36M2 24h36M2 30h36" stroke="#999"/><rect x="10" y="8" width="20" height="20" fill="#9cf" stroke="#333"/></svg>' };
-    for (const [k, l] of [['inline', 'In l<u>i</u>ne with text'], ['square', '<u>S</u>quare'], ['tight', '<u>T</u>ight'], ['behind', '<u>B</u>ehind text'], ['none', 'I<u>n</u> front of text']]) {
-      const b = h('button', { type: 'button', class: wrap === k ? 'on' : '' }, h('span', { html: wrapSvg[k] }), h('span', { html: l }));
+    for (const [k, l] of [['inline', L.N('In l&ine with text')], ['square', L.N('&Square')], ['tight', L.N('&Tight')], ['behind', L.N('&Behind text')], ['none', L.N('I&n front of text')]]) {
+      const b = h('button', { type: 'button', class: wrap === k ? 'on' : '' }, h('span', { html: wrapSvg[k] }), h('span', { html: ui.ampHTML(l) }));
       b.addEventListener('click', () => { wrap = k; L.$$('button', wrapBox).forEach((x) => x.classList.toggle('on', x === b)); });
       wrapBox.appendChild(b);
     }
@@ -55,8 +58,8 @@
     let dist = it.float ? L.clone(it.float.dist || { t: 0, b: 0, l: 9, r: 9 }) : { t: 0, b: 0, l: 9, r: 9 };
     let moveWith = it.float ? it.float.posV.rel === 'paragraph' : true, overlap = it.float ? it.float.allowOverlap !== false : true;
     function advanced() {
-      const rels = [['column', 'Column'], ['margin', 'Margin'], ['page', 'Page'], ['character', 'Character']];
-      const vrels = [['paragraph', 'Paragraph'], ['margin', 'Margin'], ['page', 'Page'], ['line', 'Line']];
+      const rels = [['column', L.N('Column|layout')], ['margin', L.N('Margin')], ['page', L.N('Page')], ['character', L.N('Character')]];
+      const vrels = [['paragraph', L.N('Paragraph')], ['margin', L.N('Margin')], ['page', L.N('Page')], ['line', L.N('Line')]];
       const hMode = G.radios('fa-hm', [['align', 'Ali&gnment'], ['abs', 'Absolute &position']], posH.align ? 'align' : 'abs');
       const hAl = ui.select([['left', 'Left'], ['center', 'Centered'], ['right', 'Right']], posH.align || 'left', null, { id: 'fa-ha' });
       const hRel = ui.select(rels, posH.rel || 'column', null, { id: 'fa-hr' });
@@ -92,12 +95,12 @@
     alt.value = it.alt || it.descr || '';
     const tabsDef = [
       { label: 'Colors and Lines', body: h('div', { class: 'col' }, isImg ? null : ui.group('Fill', G.row(G.f('C&olor:', fillBtn), fx), G.f('&Transparency:', transp)), ui.group('Line', G.row(G.f('Co&lor:', lineBtn), G.f('&Dashed:', dash)), G.f('&Weight:', weight)), isLine || (isShape && !isTb && !isWA) ? ui.group('Arrows', G.row(G.f('&Begin style:', head), G.f('&End style:', tail))) : null) },
-      { label: 'Size', body: h('div', { class: 'col' }, ui.group('Size and rotate', G.row(G.f('H&eight:', hgt, 'narrow'), G.f('Wi&dth:', wid, 'narrow')), G.f('Ro&tation:', rot)), ui.group('Scale', G.row(G.f('&Height:', scH, 'narrow'), G.f('&Width:', scW, 'narrow')), lock), it.natW ? h('div', { class: 'tp-note', text: `Original size — Height: ${D.fmtLen(it.natH)}, Width: ${D.fmtLen(it.natW)}` }) : null, h('div', { class: 'tp-btns' }, reset)) },
+      { label: 'Size', body: h('div', { class: 'col' }, ui.group('Size and rotate', G.row(G.f('H&eight:', hgt, 'narrow'), G.f('Wi&dth:', wid, 'narrow')), G.f('Ro&tation:', rot)), ui.group('Scale', G.row(G.f('&Height:', scH, 'narrow'), G.f('&Width:', scW, 'narrow')), lock), it.natW ? h('div', { class: 'tp-note', text: L.t('Original size — Height: {0}, Width: {1}', D.fmtLen(it.natH), D.fmtLen(it.natW)) }) : null, h('div', { class: 'tp-btns' }, reset)) },
       { label: 'Layout', body: h('div', { class: 'col' }, ui.group('Wrapping style', wrapBox), ui.group('Horizontal alignment', h('div', { class: 'row' }, ...hAlign.querySelectorAll('.ck'))), h('div', { class: 'tp-btns' }, adv)) },
     ];
     if (isImg) tabsDef.push({ label: 'Picture', body: h('div', { class: 'col' }, ui.group('Crop from', G.row(G.f('&Left:', cropL, 'narrow'), G.f('T&op:', cropT, 'narrow')), G.row(G.f('Ri&ght:', cropR, 'narrow'), G.f('&Bottom:', cropB, 'narrow'))), ui.group('Image control', G.f('&Color:', color), G.f('Brig&htness:', bright), G.f('Co&ntrast:', contrast))) });
     if (isTb) tabsDef.push({ label: 'Text Box', body: h('div', { class: 'col' }, ui.group('Internal margin', G.row(G.f('&Left:', iL, 'narrow'), G.f('&Top:', iT, 'narrow')), G.row(G.f('&Right:', iR, 'narrow'), G.f('&Bottom:', iB, 'narrow'))), G.f('&Vertical alignment:', anchor), autofit) });
-    tabsDef.push({ label: 'Web', body: h('div', { class: 'col' }, h('label', { for: 'fo-alt', html: '<u>A</u>lternative text:' }), alt, h('div', { class: 'tp-note', text: 'Web browsers display alternative text while pictures are loading or if they are missing. Screen readers read it aloud.' })) });
+    tabsDef.push({ label: 'Web', body: h('div', { class: 'col' }, h('label', { for: 'fo-alt', html: ui.ampHTML('&Alternative text:') }), alt, h('div', { class: 'tp-note', text: 'Web browsers display alternative text while pictures are loading or if they are missing. Screen readers read it aloud.' })) });
     const tabIdx = tab === 'picture' ? tabsDef.findIndex((t) => t.label === 'Picture') : tab === 'layout' ? 2 : tab === 'size' ? 1 : 0;
     ui.dialog({
       title, width: 470, body: ui.tabs(tabsDef, Math.max(0, tabIdx)),
@@ -141,11 +144,12 @@
       const c2 = G.color(cur.t === 'grad' && cur.stops ? String(cur.stops[cur.stops.length - 1].c).replace('#', '') : 'FFFFFF', { id: 'fe-c2', automatic: false });
       const colors = G.radios('fe-cols', [['one', 'O&ne color'], ['two', '&Two colors'], ['preset', 'Pr&eset']], 'two');
       const PRESETS = { 'Early Sunset': ['#000082', '#66008F', '#BA0066', '#FF0000', '#FF8200'], Horizon: ['#DCEBF5', '#83A7C3', '#768FB9', '#83A7C3', '#FFFFFF'], Ocean: ['#03D4A8', '#21D6E0', '#0087E6', '#005CBF'], Fire: ['#FFF200', '#FF7A00', '#FF0300', '#4D0808'], Silver: ['#FFFFFF', '#E6E6E6', '#7D8496', '#E6E6E6'], Gold: ['#E6DCAC', '#E6D78A', '#C7AC4C', '#E6D78A', '#E6DCAC'], Rainbow: ['#A603AB', '#0819FB', '#1A8D48', '#FFFF00', '#EE3F17', '#E81766'] };
-      const preset = ui.select(Object.keys(PRESETS).map((k) => [k, k]), 'Early Sunset', null, { id: 'fe-pre' });
+      const preset = ui.select([L.N('Early Sunset'), L.N('Horizon'), L.N('Ocean'), L.N('Fire'), L.N('Silver'), L.N('Gold'), L.N('Rainbow')], 'Early Sunset', null, { id: 'fe-pre' });   // PRESETS' names
       const style = G.radios('fe-st', [['h', 'Hori&zontal'], ['v', '&Vertical'], ['du', 'Diagonal &up'], ['dd', 'Dia&gonal down'], ['corner', '&From corner'], ['center', 'From ce&nter']], 'h');
       const pattGrid = h('div', { class: 'shape-grid', style: 'grid-template-columns:repeat(8,26px)' });
       let patt = cur.t === 'patt' ? cur.prst : 'pct50';
-      for (const k of Object.keys(L.drawing.PATTERNS)) { const b = h('button', { type: 'button', class: k === patt ? 'on' : '', 'data-tip': k, 'aria-label': k, html: L.drawing.patternSVG(k, '#000', '#fff', 22) }); b.addEventListener('click', () => { patt = k; L.$$('button', pattGrid).forEach((x) => x.classList.toggle('on', x === b)); }); pattGrid.appendChild(b); }
+      const pattName = (k) => (L.geom.PATTERN_NAMES || {})[k] || k;   // the pattern's name as shown (common/geometry.js), else its OOXML name
+      for (const k of Object.keys(L.drawing.PATTERNS)) { const b = h('button', { type: 'button', class: k === patt ? 'on' : '', 'data-tip': pattName(k), 'aria-label': pattName(k), html: L.drawing.patternSVG(k, '#000', '#fff', 22) }); b.addEventListener('click', () => { patt = k; L.$$('button', pattGrid).forEach((x) => x.classList.toggle('on', x === b)); }); pattGrid.appendChild(b); }
       const fg = G.color('000000', { id: 'fe-fg', automatic: false }), bg = G.color('FFFFFF', { id: 'fe-bg', automatic: false });
       let pic = cur.t === 'img' ? cur.media : null;
       const picName = h('div', { class: 'tp-note', text: pic ? 'Picture selected' : 'No picture selected' });
@@ -186,8 +190,8 @@
       const cfg = {}; for (const k in opts) cfg[k] = opts[k].input.checked;
       if (kind.value === 'letter') cfg.headings = false;
       const n = autoFormat(cfg);
-      if (mode.get() === 'review') ui.dialog({ title: 'AutoFormat', width: 380, body: h('div', { class: 'tp-note', text: `Formatting completed: ${n} change${n === 1 ? '' : 's'}. You can accept all of them, or reject all and return the document to its previous state.` }), buttons: [{ label: '&Accept All', primary: true }, { label: '&Reject All', onClick: () => { D.undo(); LY.update(); E.restoreDom(true); } }] });
-      else A().status(`AutoFormat made ${n} change${n === 1 ? '' : 's'}.`, 6000);
+      if (mode.get() === 'review') ui.dialog({ title: 'AutoFormat', width: 380, body: h('div', { class: 'tp-note', text: n === 1 ? L.t('Formatting completed: {0} change. You can accept all of them, or reject all and return the document to its previous state.', n) : L.t('Formatting completed: {0} changes. You can accept all of them, or reject all and return the document to its previous state.', n) }), buttons: [{ label: '&Accept All', primary: true }, { label: '&Reject All', onClick: () => { D.undo(); LY.update(); E.restoreDom(true); } }] });
+      else A().status(n === 1 ? L.t('AutoFormat made {0} change.', n) : L.t('AutoFormat made {0} changes.', n), 6000);
     } }, { label: 'Cancel' }] });
   };
   function autoFormat(cfg) {
@@ -315,11 +319,11 @@
       const st = D.stats(paras);
       let lines = 0;
       if (LY.pages.length) for (const pg of LY.pages) for (const f of pg.el.querySelectorAll('.pg-body .p')) { if (f.closest('.balloons')) continue; lines += LY.lineCount(f); }
-      const rows = [['Pages', selOnly ? '' : LY.pages.length || 1], ['Words', st.words], ['Characters (no spaces)', st.charsNoSp], ['Characters (with spaces)', st.chars], ['Paragraphs', st.paras], ['Lines', selOnly ? '' : lines || st.paras]];
+      const rows = [[L.N('Pages'), selOnly ? '' : LY.pages.length || 1], [L.N('Words'), st.words], ['Characters (no spaces)', st.charsNoSp], ['Characters (with spaces)', st.chars], [L.N('Paragraphs'), st.paras], [L.N('Lines'), selOnly ? '' : lines || st.paras]];
       for (const [k, v] of rows) if (v !== '') tbl.appendChild(h('tr', null, h('td', { text: k }), h('td', { text: Number(v).toLocaleString() })));
     };
     draw();
-    ui.dialog({ title: 'Word Count', width: 300, body: h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Statistics:' + (selOnly ? ' (selection)' : '') }), tbl, incl), buttons: [{ label: 'Close', primary: true }] });
+    ui.dialog({ title: 'Word Count', width: 300, body: h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: selOnly ? L.t('Statistics: (selection)') : 'Statistics:' }), tbl, incl), buttons: [{ label: 'Close', primary: true }] });
   };
 
   /* ================= AutoSummarize ================= */
@@ -362,7 +366,9 @@
         else { const set = new Set(pick); for (const s of sents) if (!set.has(s)) O.setRunProps(D.pos(s.p, s.a), D.pos(s.p, s.b), { hidden: true }); }
         return E.sel;
       });
-      A().status(`${pick.length} key sentence${pick.length === 1 ? '' : 's'} ${kind === 'highlight' ? 'highlighted' : 'kept visible; the rest is hidden text'}. Undo to restore.`, 8000);
+      const n = pick.length;
+      A().status(kind === 'highlight' ? (n === 1 ? L.t('{0} key sentence highlighted. Undo to restore.', n) : L.t('{0} key sentences highlighted. Undo to restore.', n))
+        : n === 1 ? L.t('{0} key sentence kept visible; the rest is hidden text. Undo to restore.', n) : L.t('{0} key sentences kept visible; the rest is hidden text. Undo to restore.', n), 8000);
     } else if (kind === 'top') {
       E.edit('AutoSummarize', () => {
         const cont = D.touchList(d.main);
@@ -385,7 +391,7 @@
     const auto = ui.check('&Automatically hyphenate document', !!d.settings.autoHyphen, null);
     const caps = ui.check('Hyphenate words in &CAPS', d.settings.hyphenCaps !== false, null);
     const zone = G.len(d.settings.hyphenZone || 18, { id: 'hy-z', min: 0 });
-    const limit = G.num(d.settings.consecHyphen || null, { id: 'hy-l', min: 0, autoLabel: 'No limit' });
+    const limit = G.num(d.settings.consecHyphen || null, { id: 'hy-l', min: 0, autoLabel: L.t('No limit') });
     ui.dialog({ title: 'Hyphenation', width: 320, body: h('div', { class: 'col' }, auto, caps, G.f('Hyphenation &zone:', zone, 'wide'), G.f('&Limit consecutive hyphens to:', limit, 'wide')), buttons: [{ label: 'OK', primary: true, onClick: () => { E.edit('Hyphenation', () => { D.touchKey(d, 'settings'); d.settings.autoHyphen = auto.input.checked; d.settings.hyphenCaps = caps.input.checked; d.settings.hyphenZone = zone.get(); d.settings.consecHyphen = limit.get() || undefined; return E.sel; }); LY.root.classList.toggle('hyphens', auto.input.checked); } }, { label: '&Manual...', onClick: () => { ui.msg('Manual hyphenation: place the insertion point inside a long word and press Ctrl+- to insert an optional hyphen.', { icon: 'info' }); return false; } }, { label: 'Cancel' }] });
   };
 
@@ -407,8 +413,8 @@
     const row = G.num(1, { min: 1, max: 30, id: 'el-row' }), colN = G.num(1, { min: 1, max: 4, id: 'el-col' });
     let cur = tab === 'labels' ? 1 : 0;
     const tabs = ui.tabs([
-      { label: '&Envelopes', body: h('div', { class: 'col' }, h('label', { for: 'el-addr', html: '<u>D</u>elivery address:' }), addr, G.row(h('label', { for: 'el-ret', html: '<u>R</u>eturn address:' }), omit), ret, G.f('Envelope si&ze:', size)), onShow: () => { cur = 0; } },
-      { label: '&Labels', body: h('div', { class: 'col' }, h('label', { for: 'el-laddr', html: '<u>A</u>ddress:' }), laddr, G.f('Label &product:', lprod), ui.group('Print', full, G.row(G.f('Ro&w:', row, 'narrow'), G.f('Colu&mn:', colN, 'narrow')))), onShow: () => { cur = 1; } },
+      { label: '&Envelopes', body: h('div', { class: 'col' }, h('label', { for: 'el-addr', html: ui.ampHTML('&Delivery address:') }), addr, G.row(h('label', { for: 'el-ret', html: ui.ampHTML('&Return address:') }), omit), ret, G.f('Envelope si&ze:', size)), onShow: () => { cur = 0; } },
+      { label: '&Labels', body: h('div', { class: 'col' }, h('label', { for: 'el-laddr', html: ui.ampHTML('&Address:') }), laddr, G.f('Label &product:', lprod), ui.group('Print', full, G.row(G.f('Ro&w:', row, 'narrow'), G.f('Colu&mn:', colN, 'narrow')))), onShow: () => { cur = 1; } },
     ], cur);
     ui.dialog({ title: 'Envelopes and Labels', width: 420, body: tabs, buttons: [{ label: '&Add to Document', primary: true, onClick: () => { if (cur === 0) addEnvelope(); else newLabels(); } }, { label: cur === 0 ? '&Print (PDF)...' : 'New &Document', onClick: () => { if (cur === 0) { addEnvelope(); setTimeout(() => A().printPDF(), 100); } else newLabels(); } }, { label: 'Cancel' }] });
     function addEnvelope() {
@@ -457,7 +463,7 @@
   /* ================= Letter Wizard ================= */
   G.letterWizard = function () {
     const date = ui.check('&Date line:', true, null);
-    const datePic = ui.select(L.fields.DATE_PICTURES.slice(0, 6).map((p) => [p, L.fields.formatDate(new Date(), p)]), 'MMMM d, yyyy', null, { id: 'lw-date' });
+    const datePic = ui.select(L.fields.DATE_PICTURES.slice(0, 6).map((p) => [p, L.fields.formatDate(new Date(), p)]), 'MMMM d, yyyy', null, { id: 'lw-date', translate: 'no' });
     const style = ui.select([['full', 'Full block'], ['modified', 'Modified block'], ['semi', 'Semi-block']], 'full', null, { id: 'lw-style' });
     const rname = h('input', { type: 'text', id: 'lw-rn', style: 'width:100%' });
     const raddr = h('textarea', { rows: 4, id: 'lw-ra', style: 'width:100%' });
@@ -511,17 +517,17 @@
     const d = doc();
     const auto = ui.check('Automatically &update document styles', !!d.settings.attachedTemplateUpdate, null);
     const name = h('input', { type: 'text', value: d.props.template || 'Normal', style: 'width:100%', readonly: true });
-    ui.dialog({ title: 'Templates and Add-ins', width: 400, body: h('div', { class: 'col' }, ui.group('Document template', name, auto, h('div', { class: 'tp-btns' }, ui.button('&Attach...', async () => { const f = (await L.pickFiles('.dotx,.dotm,.docx'))[0]; if (!f) return; const res = await L.docx.read(await L.readAsArrayBuffer(f)); d.props.template = f.name; name.value = f.name; if (auto.input.checked) A().mergeStylesFrom(res.doc, true); A().status('Template attached: ' + f.name); }, { class: 'btn small' }), ui.button('&Organizer...', () => G.organizer(), { class: 'btn small' }))), h('div', { class: 'tp-note', text: 'Attaching a template with "Automatically update document styles" copies its styles into this document.' })), buttons: [{ label: 'OK', primary: true, onClick: () => { d.settings.attachedTemplateUpdate = auto.input.checked || undefined; } }, { label: 'Cancel' }] });
+    ui.dialog({ title: 'Templates and Add-ins', width: 400, body: h('div', { class: 'col' }, ui.group('Document template', name, auto, h('div', { class: 'tp-btns' }, ui.button('&Attach...', async () => { const f = (await L.pickFiles('.dotx,.dotm,.docx'))[0]; if (!f) return; const res = await L.docx.read(await L.readAsArrayBuffer(f)); d.props.template = f.name; name.value = f.name; if (auto.input.checked) A().mergeStylesFrom(res.doc, true); A().status(L.t('Template attached: {0}', f.name)); }, { class: 'btn small' }), ui.button('&Organizer...', () => G.organizer(), { class: 'btn small' }))), h('div', { class: 'tp-note', text: 'Attaching a template with "Automatically update document styles" copies its styles into this document.' })), buttons: [{ label: 'OK', primary: true, onClick: () => { d.settings.attachedTemplateUpdate = auto.input.checked || undefined; } }, { label: 'Cancel' }] });
   };
   G.organizer = function () {
     const d = doc();
     let other = null, otherName = '';
-    const mine = h('select', { size: 12, multiple: true, style: 'width:100%' });
-    const theirs = h('select', { size: 12, multiple: true, style: 'width:100%' });
-    const fillSel = (sel, dd) => { L.clear(sel); if (!dd) return; for (const k of Object.keys(dd.styles).sort()) sel.appendChild(h('option', { value: k, text: D.styleDisplayName(dd.styles[k]) })); };
+    const mine = h('select', { size: 12, multiple: true, style: 'width:100%', translate: 'no' });
+    const theirs = h('select', { size: 12, multiple: true, style: 'width:100%', translate: 'no' });
+    const fillSel = (sel, dd) => { L.clear(sel); if (!dd) return; for (const k of Object.keys(dd.styles).sort()) sel.appendChild(h('option', { value: k }, document.createTextNode(D.styleDisplayName(dd.styles[k])))); };
     fillSel(mine, d);
     const lblOther = h('div', { class: 'cd-cap', text: 'In (no file):' });
-    ui.dialog({ title: 'Organizer', width: 560, body: G.row(h('div', { class: 'col', style: 'flex:1' }, h('div', { class: 'cd-cap', text: 'In ' + A().fileName + ':' }), mine), h('div', { class: 'col', style: 'width:110px;justify-content:center' }, ui.button('<- &Copy', () => { if (!other) return; for (const o of theirs.selectedOptions) { E.edit('Copy Style', () => { D.touchKey(d, 'styles'); d.styles[o.value] = L.clone(other.styles[o.value]); D.stylesChanged(); return E.sel; }); } fillSel(mine, d); }), ui.button('&Delete', () => { E.edit('Delete Styles', () => { D.touchKey(d, 'styles'); for (const o of mine.selectedOptions) if (!d.styles[o.value].builtin && o.value !== 'Normal') delete d.styles[o.value]; D.stylesChanged(); return E.sel; }); fillSel(mine, d); }), ui.button('&Rename...', async () => { const o = mine.selectedOptions[0]; if (!o) return; const n = await ui.prompt('New name:', D.styleDisplayName(d.styles[o.value]), 'Rename'); if (!n) return; E.edit('Rename Style', () => { D.touchKey(d, 'styles'); d.styles[o.value].name = n; return E.sel; }); fillSel(mine, d); })), h('div', { class: 'col', style: 'flex:1' }, lblOther, theirs, ui.button('Open &File...', async () => { const f = (await L.pickFiles('.docx,.dotx,.docm,.dotm'))[0]; if (!f) return; other = (await L.docx.read(await L.readAsArrayBuffer(f))).doc; otherName = f.name; lblOther.textContent = 'In ' + otherName + ':'; fillSel(theirs, other); }))), buttons: [{ label: 'Close', primary: true }] });
+    ui.dialog({ title: 'Organizer', width: 560, body: G.row(h('div', { class: 'col', style: 'flex:1' }, h('div', { class: 'cd-cap', text: L.t('In {0}:', A().fileName) }), mine), h('div', { class: 'col', style: 'width:110px;justify-content:center' }, ui.button('<- &Copy', () => { if (!other) return; for (const o of theirs.selectedOptions) { E.edit('Copy Style', () => { D.touchKey(d, 'styles'); d.styles[o.value] = L.clone(other.styles[o.value]); D.stylesChanged(); return E.sel; }); } fillSel(mine, d); }), ui.button('&Delete', () => { E.edit('Delete Styles', () => { D.touchKey(d, 'styles'); for (const o of mine.selectedOptions) if (!d.styles[o.value].builtin && o.value !== 'Normal') delete d.styles[o.value]; D.stylesChanged(); return E.sel; }); fillSel(mine, d); }), ui.button('&Rename...', async () => { const o = mine.selectedOptions[0]; if (!o) return; const n = await ui.prompt('New name:', D.styleDisplayName(d.styles[o.value]), 'Rename'); if (!n) return; E.edit('Rename Style', () => { D.touchKey(d, 'styles'); d.styles[o.value].name = n; return E.sel; }); fillSel(mine, d); })), h('div', { class: 'col', style: 'flex:1' }, lblOther, theirs, ui.button('Open &File...', async () => { const f = (await L.pickFiles('.docx,.dotx,.docm,.dotm'))[0]; if (!f) return; other = (await L.docx.read(await L.readAsArrayBuffer(f))).doc; otherName = f.name; lblOther.textContent = L.t('In {0}:', otherName); fillSel(theirs, other); }))), buttons: [{ label: 'Close', primary: true }] });
   };
 
   /* ================= AutoCorrect ================= */
@@ -530,18 +536,18 @@
     const ac = L.autocorrect;
     const chk = (k, l, def) => ui.check(l, o[k] !== undefined ? o[k] !== false : def !== false, (v) => { o[k] = v; A().saveOpts(); });
     const from = h('input', { type: 'text', id: 'ac-from', style: 'width:110px' }), to = h('input', { type: 'text', id: 'ac-to', style: 'flex:1;min-width:0' });
-    const list = G.listBox([], null, { height: 150, onChange: (v) => { from.value = v; to.value = ac.list().get(v) || ''; } });
+    const list = G.listBox([], null, { height: 150, translate: 'no', onChange: (v) => { from.value = v; to.value = ac.list().get(v) || ''; } });
     const fill = () => { const m = ac.list(); list.setItems(Array.from(m.keys()).sort((a, b) => a.localeCompare(b)).map((k) => ({ value: k, label: `${k}  →  ${m.get(k)}` }))); };
     fill();
     from.addEventListener('input', () => { const m = ac.list(); if (m.has(from.value)) to.value = m.get(from.value); });
     const exc = () => { const ta = h('textarea', { rows: 10, style: 'width:100%' }); ta.value = ac.exceptions().join('\n'); ui.dialog({ title: 'AutoCorrect Exceptions', width: 300, body: h('div', { class: 'col' }, h('div', { text: "Don't capitalize after:" }), ta), buttons: [{ label: 'OK', primary: true, onClick: () => ac.setExceptions(ta.value.split(/\s+/).filter(Boolean)) }, { label: 'Cancel' }] }); };
     const atName = h('input', { type: 'text', id: 'at-name', style: 'width:100%' });
-    const atList = G.listBox(L.store.get('autoText', []).map((x) => x.name), null, { height: 120, onChange: (v) => { const e = L.store.get('autoText', []).find((x) => x.name === v); atName.value = v; atPv.textContent = e ? e.text : ''; } });
-    const atPv = h('div', { class: 'tp-box', style: 'min-height:40px;white-space:pre-wrap' });
+    const atList = G.listBox(L.store.get('autoText', []).map((x) => x.name), null, { height: 120, translate: 'no', onChange: (v) => { const e = L.store.get('autoText', []).find((x) => x.name === v); atName.value = v; atPv.textContent = e ? e.text : ''; } });
+    const atPv = h('div', { class: 'tp-box', style: 'min-height:40px;white-space:pre-wrap', translate: 'no' });
     const tabs = ui.tabs([
       { label: '&AutoCorrect', body: h('div', { class: 'col' }, chk('acButtons', 'Show Auto&Correct Options buttons'), chk('twoCaps', 'Correct TWo INitial &CApitals'), chk('capSentence', 'Capitalize first letter of &sentences'), chk('capCells', 'Capitalize first letter of table &cells'), chk('capDays', 'Capitalize &names of days'), chk('capsLock', 'Correct accidental usage of cAPS &LOCK key'), ui.button('&Exceptions...', exc, { class: 'btn small' }), chk('autocorrect', 'Replace &text as you type'), G.row(G.f('&Replace:', from), G.f('&With:', to)), list, h('div', { class: 'tp-btns' }, ui.button('&Add', () => { if (!from.value) return; ac.setEntry(from.value, to.value); fill(); }, { class: 'btn small' }), ui.button('&Delete', () => { if (!from.value) return; ac.setEntry(from.value, null); fill(); from.value = ''; to.value = ''; }, { class: 'btn small' }))) },
-      { label: 'AutoFormat As You T&ype', body: h('div', { class: 'col' }, ui.group('Replace as you type', chk('smartQuotes', '"&Straight quotes" with “smart quotes”'), chk('ordinals', '&Ordinals (1st) with superscript'), chk('fractions', '&Fractions (1/2) with fraction character (½)'), chk('dashes', '&Hyphens (--) with dash (—)'), chk('autoFormat', '*&Bold* and _italic_ with real formatting'), chk('autoUrl', '&Internet and network paths with hyperlinks')), ui.group('Apply as you type', chk('autoBullets', 'Automatic b&ulleted lists'), chk('autoBorders', 'Border &lines'), chk('autoTables', '&Tables'), chk('autoNumbers', 'Automatic &numbered lists'), chk('autoHeadings', 'Built-in Heading st&yles', false))) },
-      { label: 'Auto&Text', body: h('div', { class: 'col' }, chk('autoComplete', 'Show &AutoComplete suggestions'), h('label', { for: 'at-name', text: 'Enter AutoText entries here:' }), atName, atList, h('div', { class: 'cd-cap', text: 'Preview' }), atPv, h('div', { class: 'tp-btns' }, ui.button('&Add', () => { const t = E.sel && !E.collapsed() ? O.textRange(...E.range(), '\n') : ''; if (!t) { ui.msg('Select the text you want to store as AutoText first.', { icon: 'info' }); return; } const n = atName.value.trim() || t.slice(0, 32); ac.addAutoText(n, t); atList.setItems(L.store.get('autoText', []).map((x) => x.name)); }, { class: 'btn small' }), ui.button('&Delete', () => { ac.deleteAutoText(atName.value); atList.setItems(L.store.get('autoText', []).map((x) => x.name)); atPv.textContent = ''; }, { class: 'btn small' }), ui.button('&Insert', () => { const e = L.store.get('autoText', []).find((x) => x.name === atName.value); if (e) E.insertTextAt(e.text, 'AutoText'); }, { class: 'btn small' }))) },
+      { label: 'AutoFormat As You T&ype', body: h('div', { class: 'col' }, ui.group('Replace as you type', chk('smartQuotes', L.N('"&Straight quotes" with “smart quotes”')), chk('ordinals', '&Ordinals (1st) with superscript'), chk('fractions', '&Fractions (1/2) with fraction character (½)'), chk('dashes', '&Hyphens (--) with dash (—)'), chk('autoFormat', L.N('*&Bold* and _italic_ with real formatting')), chk('autoUrl', '&Internet and network paths with hyperlinks')), ui.group('Apply as you type', chk('autoBullets', 'Automatic b&ulleted lists'), chk('autoBorders', 'Border &lines'), chk('autoTables', '&Tables'), chk('autoNumbers', 'Automatic &numbered lists'), chk('autoHeadings', 'Built-in Heading st&yles', false))) },
+      { label: 'Auto&Text', body: h('div', { class: 'col' }, chk('autoComplete', 'Show &AutoComplete suggestions'), h('label', { for: 'at-name', text: 'Enter AutoText entries here:' }), atName, atList, h('div', { class: 'cd-cap', text: 'Preview' }), atPv, h('div', { class: 'tp-btns' }, ui.button('&Add', () => { const t = E.sel && !E.collapsed() ? O.textRange(...E.range(), '\n') : ''; if (!t) { ui.msg('Select the text you want to store as AutoText first.', { icon: 'info' }); return; } const n = atName.value.trim() || t.slice(0, 32); ac.addAutoText(n, t); atList.setItems(L.store.get('autoText', []).map((x) => x.name)); }, { class: 'btn small' }), ui.button('&Delete', () => { ac.deleteAutoText(atName.value); atList.setItems(L.store.get('autoText', []).map((x) => x.name)); atPv.textContent = ''; }, { class: 'btn small' }), ui.button('&Insert', () => { const e = L.store.get('autoText', []).find((x) => x.name === atName.value); if (e) E.insertTextAt(e.text, L.N('AutoText')); }, { class: 'btn small' }))) },
     ], tab === 'autotext' ? 2 : tab === 'format' ? 1 : 0);
     ui.dialog({ title: 'AutoCorrect: English (U.S.)', width: 460, body: tabs, buttons: [{ label: 'OK', primary: true }, { label: 'Cancel' }] });
   };
@@ -550,9 +556,10 @@
   G.customize = function () {
     const tbs = ['standard', 'formatting', 'drawing', 'tables', 'reviewing', 'picture', 'outlining', 'headerFooter', 'mailMerge', 'wordart'].map((k) => ui.check(ui.cmds['tb_' + k].label, A().tbShown(k), () => A().toggleToolbar(k)));
     const cmds = Object.values(ui.cmds).filter((c) => c.label && !c.id.startsWith('tb_')).sort((a, b) => ui.stripAmp(a.label).localeCompare(ui.stripAmp(b.label)));
-    const cmdList = G.listBox(cmds.map((c) => ({ value: c.id, label: ui.stripAmp(c.menuLabel || c.label) + (c.key ? '   ' + c.key : '') })), null, { height: 220 });
-    const keys = h('table', { class: 'kbd-table' });
-    for (const [k, id] of Object.entries(A().SHORTCUTS).sort((a, b) => a[1].localeCompare(b[1]))) { const c = ui.cmds[id]; if (c) keys.appendChild(h('tr', null, h('td', { text: k }), h('td', { text: ui.stripAmp(c.menuLabel || c.label) }))); }
+    /* the commands' names as shown (stripAmp translates them) and their keys */
+    const cmdList = G.listBox(cmds.map((c) => ({ value: c.id, label: ui.stripAmp(c.menuLabel || c.label) + (c.key ? '   ' + ui.keyText(c.key) : '') })), null, { height: 220, translate: 'no' });
+    const keys = h('table', { class: 'kbd-table', translate: 'no' });
+    for (const [k, id] of Object.entries(A().SHORTCUTS).sort((a, b) => a[1].localeCompare(b[1]))) { const c = ui.cmds[id]; if (c) keys.appendChild(h('tr', null, h('td', null, document.createTextNode(ui.keyText(k))), h('td', null, document.createTextNode(ui.stripAmp(c.menuLabel || c.label))))); }
     const o = A().opts;
     ui.dialog({ title: 'Customize', width: 460, body: ui.tabs([
       { label: 'Tool&bars', body: h('div', { class: 'col' }, ...tbs) },
@@ -585,13 +592,13 @@
     const autoRec = G.num(o.autoSaveMin || 10, { min: 1, max: 120, id: 'op-asr' });
     const look = ui.lookField();
     const tabs = ui.tabs([
-      { label: 'View', body: h('div', { class: 'col' }, ui.group('Show', h('div', { class: 'grid2' }, opt('startupPane', 'Startup Task Pane', true), opt('paneFollows', 'Task pane follows the selected object', true), opt('highlightShow', 'Highlight', true), lyo('showBookmarks', 'Bookmarks'), opt('statusBar', 'Status bar', true), opt('screenTips', 'ScreenTips', true), lyo('fieldCodes', 'Field codes'), opt('smartTags', 'Smart tags', false), opt('animText', 'Animated text', false)), G.f('Field shading:', fieldShade)), ui.group('Formatting marks', h('div', { class: 'grid2' }, lyo('showMarks', 'All'), lyo('showHidden', 'Hidden text'))), ui.group('Print and Web Layout options', h('div', { class: 'grid2' }, lyo('textBoundaries', 'Text boundaries'), opt('vruler', 'Vertical ruler (Print view only)', true), opt('whiteSpace', 'White space between pages (Print view only)', true)))) },
+      { label: 'View', body: h('div', { class: 'col' }, ui.group('Show', h('div', { class: 'grid2' }, opt('startupPane', 'Startup Task Pane', true), opt('paneFollows', 'Task pane follows the selected object', true), opt('highlightShow', L.N('Highlight'), true), lyo('showBookmarks', L.N('Bookmarks')), opt('statusBar', 'Status bar', true), opt('screenTips', L.N('ScreenTips'), true), lyo('fieldCodes', 'Field codes'), opt('smartTags', 'Smart tags', false), opt('animText', 'Animated text', false)), G.f('Field shading:', fieldShade)), ui.group('Formatting marks', h('div', { class: 'grid2' }, lyo('showMarks', L.N('All')), lyo('showHidden', 'Hidden text'))), ui.group('Print and Web Layout options', h('div', { class: 'grid2' }, lyo('textBoundaries', 'Text boundaries'), opt('vruler', 'Vertical ruler (Print view only)', true), opt('whiteSpace', 'White space between pages (Print view only)', true)))) },
       { label: 'General', body: h('div', { class: 'col' }, look && look.el, opt('bgRepag', 'Background repagination', true), opt('blueBg', 'Blue background, white text', false), opt('sound', 'Provide feedback with sound', false), G.row(opt('recentOn', 'Recently used file list:', true), recentN, h('span', { text: 'entries' })), G.f('Measurement units:', units, 'wide')) },
       { label: 'Edit', body: h('div', { class: 'col' }, ui.group('Editing options', opt('typingReplaces', 'Typing replaces selection', true), opt('dragDrop', 'Drag-and-drop text editing', true), opt('ctrlClick', 'Use CTRL + Click to follow hyperlink', true), opt('smartPara', 'Use smart paragraph selection', true), chk('Overtype mode', () => E.overtype, (v) => { E.overtype = v; }), opt('smartCut', 'Smart cut and paste', true)), ui.group('Cut and paste options', opt('pasteOptions', 'Show Paste Options buttons', true))) },
       { label: 'Print', body: h('div', { class: 'col' }, ui.group('Printing options', opt('updateFieldsOnPrint', 'Update fields', false), opt('printBg', 'Background colors and images', true)), ui.group('Include with document', opt('printProps', 'Document properties', false), opt('printCodes', 'Field codes', false), opt('printHidden', 'Hidden text', false), opt('printDrawings', 'Drawing objects', true))) },
       { label: 'Save', body: h('div', { class: 'col' }, opt('promptProps', 'Prompt for document properties', false), G.row(opt('autoRecover', 'Save AutoRecover info every:', true), autoRec, h('span', { text: 'minutes' })), h('div', { class: 'tp-note', text: 'AutoRecover keeps a copy in this browser only; it is offered when Quire opens after an unexpected close.' }), G.f('Save Word files as:', ui.select([['docx', 'Word Document (*.docx)'], ['dotx', 'Word Template (*.dotx)']], 'docx', null, { id: 'op-fmt' }), 'wide')) },
       { label: 'Security', body: h('div', { class: 'col' }, ui.group('Privacy options', opt('removePersonal', 'Remove personal information from file properties on save', false), opt('warnTracked', 'Warn before printing, saving or sending a file that contains tracked changes or comments', false)), ui.group('File encryption options for this document', h('div', { class: 'col' }, h('label', { for: 'op-pw', text: 'Password to open:' }), pwInp, h('div', { class: 'tp-note', text: 'Saved .docx files are encrypted with AES-256, as Word 2010 and later do. Passwords are case-sensitive; if you forget it, the document cannot be recovered.' }))), h('div', { class: 'tp-note', text: 'To restrict editing instead, use Tools ▸ Protect Document.' })) },
-      { label: 'Spelling & Grammar', body: h('div', { class: 'col' }, ui.group('Spelling', opt('spell', 'Check spelling as you type', true), chk('Hide spelling and grammar errors in this document', () => !!(L.spell && L.spell.hidden), (v) => { if (L.spell) L.spell.hidden = v; }), opt('ignoreUpper', 'Ignore words in UPPERCASE', true), opt('ignoreNum', 'Ignore words with numbers', true), opt('ignoreUrl', 'Ignore Internet and file addresses', true), ui.button('Custom Dictionaries...', () => { const ta = h('textarea', { rows: 12, style: 'width:100%' }); ta.value = L.store.get('customDict', []).join('\n'); ui.dialog({ title: 'CUSTOM.DIC', width: 300, body: ta, buttons: [{ label: 'OK', primary: true, onClick: () => { L.store.set('customDict', ta.value.split(/\s+/).filter(Boolean).map((x) => x.toLowerCase())); if (L.spell) L.spell.reloadCustom(); } }, { label: 'Cancel' }] }); }, { class: 'btn small' })), ui.group('Grammar', opt('grammarAsType', 'Check grammar as you type', true), opt('grammar', 'Check grammar with spelling', true), ui.button('Readability Statistics...', () => { const r = L.spell.readability(); ui.msg(`Words: ${r.words}\nCharacters: ${r.chars}\nParagraphs: ${r.paras}\nSentences: ${r.sentences}\n\nSentences per Paragraph: ${r.sPerPara}\nWords per Sentence: ${r.wPerS}\nCharacters per Word: ${r.cPerW}\n\nPassive Sentences: ${r.passive}%\nFlesch Reading Ease: ${r.ease}\nFlesch-Kincaid Grade Level: ${r.grade}`, { icon: 'info', title: 'Readability Statistics' }); }, { class: 'btn small' })), ui.button('Recheck Document', () => { if (L.spell) { L.spell.ignoredOnce.clear(); L.spell.refreshSoon(0); } }, { class: 'btn small' })) },
+      { label: 'Spelling & Grammar', body: h('div', { class: 'col' }, ui.group('Spelling', opt('spell', 'Check spelling as you type', true), chk('Hide spelling and grammar errors in this document', () => !!(L.spell && L.spell.hidden), (v) => { if (L.spell) L.spell.hidden = v; }), opt('ignoreUpper', 'Ignore words in UPPERCASE', true), opt('ignoreNum', 'Ignore words with numbers', true), opt('ignoreUrl', 'Ignore Internet and file addresses', true), ui.button('Custom Dictionaries...', () => { const ta = h('textarea', { rows: 12, style: 'width:100%' }); ta.value = L.store.get('customDict', []).join('\n'); ui.dialog({ title: 'CUSTOM.DIC', width: 300, body: ta, buttons: [{ label: 'OK', primary: true, onClick: () => { L.store.set('customDict', ta.value.split(/\s+/).filter(Boolean).map((x) => x.toLowerCase())); if (L.spell) L.spell.reloadCustom(); } }, { label: 'Cancel' }] }); }, { class: 'btn small' })), ui.group('Grammar', opt('grammarAsType', 'Check grammar as you type', true), opt('grammar', 'Check grammar with spelling', true), ui.button('Readability Statistics...', () => { const r = L.spell.readability(); ui.msg(L.t('Words: {0}\nCharacters: {1}\nParagraphs: {2}\nSentences: {3}\n\nSentences per Paragraph: {4}\nWords per Sentence: {5}\nCharacters per Word: {6}\n\nPassive Sentences: {7}%\nFlesch Reading Ease: {8}\nFlesch-Kincaid Grade Level: {9}', r.words, r.chars, r.paras, r.sentences, r.sPerPara, r.wPerS, r.cPerW, r.passive, r.ease, r.grade), { icon: 'info', title: 'Readability Statistics' }); }, { class: 'btn small' })), ui.button('Recheck Document', () => { if (L.spell) { L.spell.ignoredOnce.clear(); L.spell.refreshSoon(0); } }, { class: 'btn small' })) },
       { label: 'Track Changes', body: h('div', { class: 'col' }, ui.group('Markup', G.f('Insertions color:', insColor, 'wide')), ui.group('Balloons', G.f('Use Balloons (Print and Web Layout):', balloons, 'wide'))) },
       { label: 'User Information', body: h('div', { class: 'col' }, G.f('Name:', uname, 'wide'), G.f('Initials:', uinit, 'wide'), h('label', { for: 'op-ua', text: 'Mailing address:' }), uaddr) },
       { label: 'Compatibility', body: h('div', { class: 'col' }, G.f('Lay out this document as if created in:', compat, 'wide'), h('div', { class: 'tp-note', text: 'Word 2003 layout positions tables by their cell margins and keeps legacy spacing rules; later versions align tables with the text.' })) },
@@ -600,7 +607,7 @@
     ui.dialog({ title: 'Options', width: 560, body: tabs, buttons: [{ label: 'OK', primary: true, onClick: () => {
       const newPw = pwInp.value;
       if (newPw !== (d.openPassword || '')) {
-        if (!newPw) { d.openPassword = null; A().status('The password to open was removed; the next save is not encrypted.'); }
+        if (!newPw) { d.openPassword = null; A().status(L.N('The password to open was removed; the next save is not encrypted.')); }
         else {
           /* Word asks for the password a second time before using it */
           const again = h('input', { type: 'password', id: 'op-pw2', style: 'width:100%' });
@@ -641,25 +648,28 @@
     for (const [k, v] of [['Pages:', LY.pages.length || 1], ['Paragraphs:', st.paras], ['Lines:', A().docStats().lines], ['Words:', st.words], ['Characters:', st.charsNoSp], ['Characters (with spaces):', st.chars]]) statT.appendChild(h('tr', null, h('td', { text: k }), h('td', { text: Number(v).toLocaleString() })));
     const heads = h('div', { class: 'tp-box', style: 'max-height:200px;overflow:auto' });
     D.reindex(d);
-    for (const q of d.main.paras) { const lv = D.headingLevel(d, q); if (lv) heads.appendChild(h('div', { text: D.plainText(q).trim(), style: `padding-left:${(lv - 1) * 12}px` })); }
-    if (!heads.childNodes.length) heads.textContent = '(no headings)';
+    heads.setAttribute('translate', 'no');   // the document's own headings
+    for (const q of d.main.paras) { const lv = D.headingLevel(d, q); if (lv) heads.appendChild(h('div', { style: `padding-left:${(lv - 1) * 12}px` }, document.createTextNode(D.plainText(q).trim()))); }
+    if (!heads.childNodes.length) heads.textContent = L.t('(no headings)');
     /* custom */
     const cName = h('input', { type: 'text', id: 'pr-cn', list: 'pr-cnl', style: 'width:100%' });
     const cnl = h('datalist', { id: 'pr-cnl' }, ...['Checked by', 'Client', 'Date completed', 'Department', 'Destination', 'Disposition', 'Division', 'Document number', 'Editor', 'Forward to', 'Group', 'Language', 'Mailstop', 'Matter', 'Office', 'Owner', 'Project', 'Publisher', 'Purpose', 'Received from', 'Recorded by', 'Recorded date', 'Reference', 'Source', 'Status', 'Telephone number', 'Typist'].map((x) => h('option', { value: x })));
     const cType = ui.select([['text', 'Text'], ['date', 'Date'], ['number', 'Number'], ['bool', 'Yes or no']], 'text', null, { id: 'pr-ct' });
     const cVal = h('input', { type: 'text', id: 'pr-cv', style: 'width:100%' });
     const custom = Object.assign({}, d.custom || {});
-    const cList = G.listBox([], null, { height: 110, onChange: (v) => { const c = custom[v]; cName.value = v; cVal.value = c && c.v != null ? c.v : c; cType.value = (c && c.type) || 'text'; } });
+    const cList = G.listBox([], null, { height: 110, translate: 'no', onChange: (v) => { const c = custom[v]; cName.value = v; cVal.value = c && c.v != null ? c.v : c; cType.value = (c && c.type) || 'text'; } });
     const fillC = () => cList.setItems(Object.keys(custom).map((k) => ({ value: k, label: `${k}: ${custom[k] && custom[k].v != null ? custom[k].v : custom[k]}` })));
     fillC();
+    /* a label and its value as shown (translated where it is set, else the document's own) */
+    const prop = ([a, b]) => h('tr', null, h('td', { text: a }), h('td', { translate: 'no' }, document.createTextNode(b)));
     const tabs = ui.tabs([
-      { label: 'General', body: h('div', { class: 'col' }, h('div', { class: 'row', style: 'align-items:center' }, h('span', { html: L.icons.get('new') }), h('b', { text: A().fileName + '.docx' })), h('table', { class: 'wc-table' }, ...[['Type:', 'Microsoft Word Document'], ['Created:', fmt(p.created)], ['Modified:', fmt(p.modified)], ['Last printed:', fmt(p.printed)]].map(([a, b]) => h('tr', null, h('td', { text: a }), h('td', { text: b }))))) },
-      { label: 'Summary', body: h('div', { class: 'col' }, ...fields.map((f) => f.el), h('label', { for: 'pr-desc', html: 'Co<u>m</u>ments:' }), comments, hb.el, h('div', { class: 'tp-note', text: 'Template: ' + (p.template || 'Normal') })) },
-      { label: 'Statistics', body: h('div', { class: 'col' }, h('table', { class: 'wc-table' }, ...[['Created:', fmt(p.created)], ['Modified:', fmt(p.modified)], ['Last saved by:', p.lastModifiedBy || ''], ['Revision number:', String(p.revision || 1)], ['Total editing time:', (p.totalTime || 0) + ' Minutes']].map(([a, b]) => h('tr', null, h('td', { text: a }), h('td', { text: b })))), h('div', { class: 'cd-cap', text: 'Statistics:' }), statT) },
+      { label: 'General', body: h('div', { class: 'col' }, h('div', { class: 'row', style: 'align-items:center' }, h('span', { html: L.icons.get('new') }), h('b', { translate: 'no' }, document.createTextNode(A().fileName + '.docx'))), h('table', { class: 'wc-table' }, ...[['Type:', L.t('Microsoft Word Document')], ['Created:', fmt(p.created)], ['Modified:', fmt(p.modified)], ['Last printed:', fmt(p.printed)]].map(prop))) },
+      { label: 'Summary', body: h('div', { class: 'col' }, ...fields.map((f) => f.el), h('label', { for: 'pr-desc', html: ui.ampHTML('Co&mments:') }), comments, hb.el, h('div', { class: 'tp-note', text: L.t('Template: {0}', p.template || 'Normal') })) },
+      { label: 'Statistics', body: h('div', { class: 'col' }, h('table', { class: 'wc-table' }, ...[['Created:', fmt(p.created)], ['Modified:', fmt(p.modified)], ['Last saved by:', p.lastModifiedBy || ''], ['Revision number:', String(p.revision || 1)], ['Total editing time:', L.t('{0} Minutes', p.totalTime || 0)]].map(prop)), h('div', { class: 'cd-cap', text: 'Statistics:' }), statT) },
       { label: 'Contents', body: h('div', { class: 'col' }, h('div', { text: 'Document contents:' }), heads) },
       { label: 'Custom', body: h('div', { class: 'col' }, cnl, G.f('&Name:', cName, 'wide'), G.f('&Type:', cType, 'wide'), G.f('&Value:', cVal, 'wide'), h('div', { class: 'tp-btns' }, ui.button('&Add', () => { if (!cName.value.trim()) return; custom[cName.value.trim()] = { type: cType.value, v: cType.value === 'number' ? +cVal.value : cType.value === 'bool' ? /^(y|yes|true|1)$/i.test(cVal.value) : cVal.value }; fillC(); }, { class: 'btn small' }), ui.button('&Delete', () => { delete custom[cName.value.trim()]; fillC(); }, { class: 'btn small' })), h('label', { text: 'Properties:' }), cList) },
     ], 1);
-    ui.dialog({ title: A().fileName + ' Properties', width: 420, body: tabs, buttons: [{ label: 'OK', primary: true, onClick: () => {
+    ui.dialog({ title: L.t('{0} Properties', A().fileName), width: 420, body: tabs, buttons: [{ label: 'OK', primary: true, onClick: () => {
       E.edit('Properties', () => { D.touchKey(d, 'props'); D.touchKey(d, 'custom'); for (const f of fields) d.props[f.k] = f.inp.value; d.props.description = comments.value; d.props.hyperlinkBase = hb.inp.value || undefined; d.custom = custom; return E.sel; });
       A().updateTitle();
     } }, { label: 'Cancel' }] });
@@ -670,7 +680,7 @@
     const cur = Math.round(LY.zoom * 100);
     const r = G.radios('zm', [['200', '&200%'], ['100', '&100%'], ['75', '&75%'], ['pw', '&Page width'], ['tw', '&Text width'], ['wp', '&Whole page'], ['many', '&Many pages']], [200, 100, 75].includes(cur) ? String(cur) : 'pct', (v) => { const n = { 200: 200, 100: 100, 75: 75 }[v]; if (n) pct.set(n); });
     const pct = ui.spin({ value: cur, min: 10, max: 500, step: 10, dec: 0, unit: '%', id: 'zm-pct' });
-    const pv = h('div', { class: 'preview-box', style: 'width:150px;height:110px', text: 'AaBbCcDdEeXxYyZz' });
+    const pv = h('div', { class: 'preview-box', style: 'width:150px;height:110px', translate: 'no' }, document.createTextNode('AaBbCcDdEeXxYyZz'));
     ui.dialog({ title: 'Zoom', width: 360, body: G.row(ui.group('Zoom to', r), h('div', { class: 'col' }, G.f('Percen&t:', pct), h('div', { class: 'cd-cap', text: 'Preview' }), pv)), buttons: [{ label: 'OK', primary: true, onClick: () => { const v = r.get(); if (v === 'pw') A().zoomTo('Page Width'); else if (v === 'tw') A().zoomTo('Text Width'); else if (v === 'wp') A().zoomTo('Whole Page'); else if (v === 'many') A().zoomTo('Two Pages'); else A().zoomTo(pct.get() + '%'); } }, { label: 'Cancel' }] });
   };
 
@@ -706,17 +716,19 @@
         L.ui.busy(false);
         doc().props.printed = new Date().toISOString();
         await L.saveFile(`${A().fileName}.pdf`, blob);
-      } catch (e) { L.ui.busy(false); ui.msg('The PDF could not be created: ' + (e.message || e), { icon: 'error' }); }
+      } catch (e) { L.ui.busy(false); ui.msg(L.t('The PDF could not be created: {0}', e.message || e), { icon: 'error' }); }
       finally { if (LY.opts.markup !== prevMarkup) { LY.opts.markup = prevMarkup; LY.render(); E.restoreDom(true); } }
     }
+    /* the printed lists in the UI's language: style kinds and revision kinds as shown */
+    const KINDS = { paragraph: L.N('Paragraph'), character: L.N('Character'), table: L.N('Table'), numbering: L.N('List'), ins: L.N('Inserted'), del: L.N('Deleted'), chg: L.N('Formatted'), pchg: L.N('Formatted'), mins: L.N('Inserted'), mdel: L.N('Deleted') };
     function printList(kind) {
       const d = doc();
       const lines = [];
       if (kind === 'props') { for (const [k, v] of Object.entries(d.props)) if (v) lines.push(`${k}: ${v}`); }
-      else if (kind === 'styles') { for (const k of Object.keys(d.styles).sort()) { const s = d.styles[k]; lines.push(`${D.styleDisplayName(s)} (${s.type})${s.basedOn ? ' — based on ' + s.basedOn : ''}`); } }
+      else if (kind === 'styles') { for (const k of Object.keys(d.styles).sort()) { const s = d.styles[k], ty = L.t(KINDS[s.type] || s.type); lines.push(s.basedOn ? L.t('{0} ({1}) — based on {2}', D.styleDisplayName(s), ty, s.basedOn) : `${D.styleDisplayName(s)} (${ty})`); } }
       else if (kind === 'autotext') { for (const e of L.autocorrect.autoTextEntries()) lines.push(`${e.cat}: ${e.name}`); }
-      else if (kind === 'keys') { for (const [k, id] of Object.entries(A().SHORTCUTS)) if (ui.cmds[id]) lines.push(`${k}\t${ui.stripAmp(ui.cmds[id].label)}`); }
-      else if (kind === 'list') { for (const r of L.review.list(d.main)) lines.push(`${r.type} — ${r.stamp.author || ''}: ${r.text}`); for (const k in d.comments) lines.push(`Comment ${d.comments[k].author}: ${d.comments[k].blocks.map((b) => (b.t === 'p' ? D.plainText(b) : '')).join(' ')}`); }
+      else if (kind === 'keys') { for (const [k, id] of Object.entries(A().SHORTCUTS)) if (ui.cmds[id]) lines.push(`${ui.keyText(k)}\t${ui.stripAmp(ui.cmds[id].label)}`); }
+      else if (kind === 'list') { for (const r of L.review.list(d.main)) lines.push(`${L.t(KINDS[r.type] || r.type)} — ${r.stamp.author || ''}: ${r.text}`); for (const k in d.comments) lines.push(L.t('Comment {0}: {1}', d.comments[k].author, d.comments[k].blocks.map((b) => (b.t === 'p' ? D.plainText(b) : '')).join(' '))); }
       const nd = D.newDoc();
       nd.main.blocks = [D.para([D.text(A().fileName + ' — ' + what.selectedOptions[0].text, { b: true, sz: 14 })])].concat(lines.map((l) => D.para([D.text(l)])));
       const keep = D.doc;
@@ -744,8 +756,8 @@
     } }, { label: 'Cancel' }] });
   };
   G.about = () => ui.about({ name: 'Quire', office: 'Word', text: [
-    'A word processor in the style of Microsoft Office Word 2003 that runs entirely in your browser. Documents are read and written as Office Open XML (.docx, .docm), RTF, HTML, text and Markdown; nothing is uploaded.',
-    'Spelling, AutoCorrect and the thesaurus work offline, in English (U.S.) and English (U.K.).'] });
+    L.N('A word processor in the style of Microsoft Office Word 2003 that runs entirely in your browser. Documents are read and written as Office Open XML (.docx, .docm), RTF, HTML, text and Markdown; nothing is uploaded.'),
+    L.N('Spelling, AutoCorrect and the thesaurus work offline, in English (U.S.) and English (U.K.).')] });
   G.newFromTemplate = function () {
     const cats = L.templates.categories();
     let pick = 'blank';

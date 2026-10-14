@@ -242,7 +242,7 @@
     const body = h('div', { class: 'tiw' });
     const title = h('div', { class: 'tiw-step' });
     const content = h('div', { class: 'tiw-content' });
-    const preview = h('div', { class: 'tiw-preview', tabindex: '0' });
+    const preview = h('div', { class: 'tiw-preview', tabindex: '0', translate: 'no' });
     body.append(title, content, h('div', { class: 'tiw-cap', text: 'Preview of selected data:' }), preview);
     let selCol = 0;
     function renderPreview() {
@@ -262,7 +262,7 @@
         const ruler = h('div', { class: 'tiw-ruler' });
         for (let i = 0; i <= w; i += 10) ruler.appendChild(h('span', { style: `left:${i * cw}px`, text: String(i) }));
         box.appendChild(ruler);
-        const pre = h('pre', { class: 'tiw-pre', text: ls.join('\n') });
+        const pre = h('pre', { class: 'tiw-pre', translate: 'no', text: ls.join('\n') });
         box.appendChild(pre);
         for (const b of st.breaks || []) box.appendChild(h('div', { class: 'tiw-break', style: `left:${b * cw + 4}px` }));
         box.addEventListener('click', (e) => {
@@ -284,7 +284,7 @@
         const hr = h('tr');
         for (let c = 0; c < ncol; c++) {
           const f = st.formats[c] || 'general';
-          const th = h('th', { class: c === selCol ? 'on' : '', text: f === 'general' ? 'General' : f === 'text' ? 'Text' : f === 'skip' ? 'Skip Column' : f });
+          const th = h('th', { class: c === selCol ? 'on' : '', text: f === 'general' ? 'General|number format' : f === 'text' ? 'Text|number format' : f === 'skip' ? 'Skip Column' : f });
           th.addEventListener('click', () => { selCol = c; sync3(); renderPreview(); });
           hr.appendChild(th);
         }
@@ -293,7 +293,7 @@
       for (const r of rows) {
         const tr = h('tr');
         for (let c = 0; c < ncol; c++) {
-          const td = h('td', { text: r[c] == null ? '' : r[c] });
+          const td = h('td', { translate: 'no', text: r[c] == null ? '' : r[c] });
           if (st.step === 3) { if (c === selCol) td.classList.add('on'); if (st.formats[c] === 'skip') td.classList.add('skip'); td.addEventListener('click', () => { selCol = c; sync3(); renderPreview(); }); }
           tr.appendChild(td);
         }
@@ -303,21 +303,21 @@
     }
     let sync3 = () => {};
     function step1() {
-      title.textContent = 'Text Import Wizard - Step 1 of 3';
+      title.textContent = L.t('Text Import Wizard - Step {0} of {1}', 1, 3);
       content.textContent = '';
-      content.appendChild(h('p', { text: 'The Text Wizard has determined that your data is ' + (st.fixed ? 'Fixed Width.' : 'Delimited.') }));
+      content.appendChild(h('p', { text: st.fixed ? L.t('The Text Wizard has determined that your data is Fixed Width.') : L.t('The Text Wizard has determined that your data is Delimited.') }));
       content.appendChild(h('p', { text: 'If this is correct, choose Next, or choose the data type that best describes your data.' }));
       const g = ui.group('Original data type',
         h('div', { class: 'tiw-dt' }, ui.radio('tiw-type', '&Delimited', !st.fixed, () => { st.fixed = false; renderPreview(); }), h('span', { class: 'tiw-hint', text: '- Characters such as commas or tabs separate each field.' })),
         h('div', { class: 'tiw-dt' }, ui.radio('tiw-type', 'Fixed &width', st.fixed, () => { st.fixed = true; renderPreview(); }), h('span', { class: 'tiw-hint', text: '- Fields are aligned in columns with spaces between each field.' })));
       content.appendChild(g);
       const start = ui.spin({ value: st.start, min: 1, max: Math.max(1, lines().length), step: 1, dec: 0, onChange: (v) => { st.start = Math.round(v); renderPreview(); } });
-      const encSel = ui.select([['auto', 'Detect automatically (' + decoded.encoding + ')'], ['utf-8', 'Unicode (UTF-8)'], ['windows-1252', 'Windows (ANSI)'], ['utf-16le', 'Unicode (UTF-16 LE)'], ['utf-16be', 'Unicode (UTF-16 BE)'], ['iso-8859-1', 'Western European (ISO)'], ['shift_jis', 'Japanese (Shift-JIS)'], ['gb18030', 'Chinese Simplified (GB18030)'], ['big5', 'Chinese Traditional (Big5)'], ['euc-kr', 'Korean (EUC-KR)'], ['windows-1251', 'Cyrillic (Windows)'], ['ibm866', 'MS-DOS (OEM 866)']], enc, (v) => { enc = v; decoded = CSV.decode(bytes, v === 'auto' ? null : v); renderPreview(); });
+      const encSel = ui.select([['auto', L.t('Detect automatically ({0})', decoded.encoding)], ['utf-8', 'Unicode (UTF-8)'], ['windows-1252', 'Windows (ANSI)'], ['utf-16le', 'Unicode (UTF-16 LE)'], ['utf-16be', 'Unicode (UTF-16 BE)'], ['iso-8859-1', 'Western European (ISO)'], ['shift_jis', 'Japanese (Shift-JIS)'], ['gb18030', 'Chinese Simplified (GB18030)'], ['big5', 'Chinese Traditional (Big5)'], ['euc-kr', 'Korean (EUC-KR)'], ['windows-1251', 'Cyrillic (Windows)'], ['ibm866', 'MS-DOS (OEM 866)']], enc, (v) => { enc = v; decoded = CSV.decode(bytes, v === 'auto' ? null : v); renderPreview(); });
       content.appendChild(h('div', { class: 'row' }, ui.field('Start import at &row:', start), ui.field('File &origin:', encSel)));
       renderPreview();
     }
     function step2() {
-      title.textContent = 'Text Import Wizard - Step 2 of 3';
+      title.textContent = L.t('Text Import Wizard - Step {0} of {1}', 2, 3);
       content.textContent = '';
       if (st.fixed) {
         if (!st.breaks) st.breaks = CSV.guessBreaks(decoded.text);
@@ -337,11 +337,11 @@
       renderPreview();
     }
     function step3() {
-      title.textContent = 'Text Import Wizard - Step 3 of 3';
+      title.textContent = L.t('Text Import Wizard - Step {0} of {1}', 3, 3);
       content.textContent = '';
       content.appendChild(h('p', { text: "This screen lets you select each column and set the Data Format. 'General' converts numeric values to numbers, date values to dates, and all remaining values to text." }));
       const radios = [];
-      const dateSel = ui.select(['MDY', 'DMY', 'YMD', 'MYD', 'DYM', 'YDM'], 'MDY', (v) => { if (/^[MDY]{3}$/.test(st.formats[selCol] || '')) { st.formats[selCol] = v; renderPreview(); } });
+      const dateSel = ui.select(['MDY', 'DMY', 'YMD', 'MYD', 'DYM', 'YDM'], 'MDY', (v) => { if (/^[MDY]{3}$/.test(st.formats[selCol] || '')) { st.formats[selCol] = v; renderPreview(); } }, { translate: 'no' });
       const set = (f) => { st.formats[selCol] = f === 'date' ? dateSel.value : f; renderPreview(); };
       radios.push(ui.radio('tiw-fmt', '&General', true, () => set('general')));
       radios.push(ui.radio('tiw-fmt', '&Text', false, () => set('text')));
@@ -357,7 +357,7 @@
     return new Promise((resolve) => {
       let result = null;
       const d = ui.dialog({
-        title: 'Text Import Wizard - Step 1 of 3', body, width: 620,
+        title: L.t('Text Import Wizard - Step {0} of {1}', 1, 3), body, width: 620,
         buttons: [
           { label: 'Cancel' },
           { label: '< &Back', onClick: () => { if (st.step > 1) { st.step--; steps[st.step - 1](); upd(); } return false; } },

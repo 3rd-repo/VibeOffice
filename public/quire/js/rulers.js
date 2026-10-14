@@ -31,7 +31,7 @@
     V.appendChild(h('canvas', { class: 'r-canvas' }));
     const sel = h('button', { class: 'tabsel', type: 'button', 'aria-label': 'Tab type', 'data-tip': TAB_KINDS[0][1], html: SVG.left });
     sel.addEventListener('pointerdown', (e) => e.preventDefault());
-    sel.addEventListener('click', () => { tabKind = (tabKind + 1) % TAB_KINDS.length; sel.innerHTML = SVG[TAB_KINDS[tabKind][0]]; sel.setAttribute('data-tip', TAB_KINDS[tabKind][1]); sel.setAttribute('aria-label', TAB_KINDS[tabKind][1]); });
+    sel.addEventListener('click', () => { tabKind = (tabKind + 1) % TAB_KINDS.length; sel.innerHTML = SVG[TAB_KINDS[tabKind][0]]; sel.setAttribute('data-tip', L.t(TAB_KINDS[tabKind][1])); sel.setAttribute('aria-label', L.t(TAB_KINDS[tabKind][1])); });
     corner.appendChild(sel);
     H.addEventListener('pointerdown', onRulerDown);
     H.addEventListener('dblclick', (e) => { if (e.target.closest('.rmark.tabstop')) { L.dlg && L.dlg.tabs(); return; } L.dlg && (state && e.clientX > state.x0 && e.clientX < state.x0 + state.w ? L.dlg.tabs() : L.dlg.pageSetup()); });
@@ -129,7 +129,7 @@
     /* tab stops (custom ones) */
     for (const t of pp.tabs || []) {
       if (t.al === 'clear' || t.al === 'num') continue;
-      const m = h('div', { class: 'rmark tabstop', 'data-tip': ({ left: 'Left Tab', center: 'Center Tab', right: 'Right Tab', decimal: 'Decimal Tab', bar: 'Bar Tab', start: 'Left Tab', end: 'Right Tab' }[t.al] || 'Tab'), html: SVG[{ start: 'left', end: 'right' }[t.al] || t.al] || SVG.left });
+      const m = h('div', { class: 'rmark tabstop', 'data-tip': ({ left: 'Left Tab', center: 'Center Tab', right: 'Right Tab', decimal: 'Decimal Tab', bar: 'Bar Tab', start: 'Left Tab', end: 'Right Tab' }[t.al] || L.N('Tab')), html: SVG[{ start: 'left', end: 'right' }[t.al] || t.al] || SVG.left });
       m.style.left = base + t.pos * pxPt - 1 + 'px';
       m.dataset.kind = 'tab';
       m.dataset.pos = t.pos;
@@ -272,7 +272,7 @@
         case 'col': {
           const s = L.app.curSect();
           const dx = (ev.clientX - e.clientX) / st.pxPt;
-          E.edit('Columns', () => { D.touchKey(s.holder, s.key); const sect = s.holder === doc() ? doc().sect : s.holder.sect; sect.cols = Object.assign({}, sect.cols, { space: L.round(Math.max(0, (sect.cols.space || 36) - dx * 2 / Math.max(1, sect.cols.n - 1)), 2), eq: true }); return E.sel; });
+          E.edit(L.N('Columns'), () => { D.touchKey(s.holder, s.key); const sect = s.holder === doc() ? doc().sect : s.holder.sect; sect.cols = Object.assign({}, sect.cols, { space: L.round(Math.max(0, (sect.cols.space || 36) - dx * 2 / Math.max(1, sect.cols.n - 1)), 2), eq: true }); return E.sel; });
           break;
         }
         default: break;

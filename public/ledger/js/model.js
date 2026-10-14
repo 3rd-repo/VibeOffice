@@ -191,7 +191,7 @@
       this.baseColW = 8;
       this.defRowH = null; /* points; null → from default font */
       this.view = { freeze: null, zoom: 100, grid: true, headings: true, zeros: true, rtl: false, top: { r: 0, c: 0 }, sel: null, formulas: false, gridColor: null, pageBreakPreview: false };
-      this.print = { margins: { l: 0.75, r: 0.75, t: 1, b: 1, header: 0.5, footer: 0.5 }, orientation: 'portrait', paper: 1, scale: 100, fitW: null, fitH: null, fit: false, hCenter: false, vCenter: false, gridLines: false, headings: false, header: '', footer: '', firstPage: null, pageOrder: 'downThenOver', rowBreaks: [], colBreaks: [], area: null, titleRows: null, titleCols: null, bw: false, draft: false, comments: 'none', errors: 'displayed' };
+      this.print = { margins: { l: 0.75, r: 0.75, t: 1, b: 1, header: 0.5, footer: 0.5 }, orientation: 'portrait', paper: wb.paper || 1, scale: 100, fitW: null, fitH: null, fit: false, hCenter: false, vCenter: false, gridLines: false, headings: false, header: '', footer: '', firstPage: null, pageOrder: 'downThenOver', rowBreaks: [], colBreaks: [], area: null, titleRows: null, titleCols: null, bw: false, draft: false, comments: 'none', errors: 'displayed' };
       this.protection = null;
       this.outline = { below: true, right: true };
       this.maxR = -1; this.maxC = -1; /* used range bounds (cells with content or style) */
@@ -272,11 +272,11 @@
     if (wb && wb._mdw) return wb._mdw;
     const f = wb ? wb.defaultFont : { name: 'Arial', sz: 10 };
     let w = 7;
-    const name = String(f.name || '').toLowerCase();
+    const name = L.fontKey ? L.fontKey(f.name) : String(f.name || '').toLowerCase();
     const sz = f.sz || 11;
     if (L.measureDigit) w = L.measureDigit(f);
     else {
-      const k = { calibri: 7 / 11, arial: 7 / 10, 'aptos narrow': 7 / 11, aptos: 7.5 / 11, cambria: 7 / 11, 'times new roman': 7 / 12, verdana: 8 / 10, tahoma: 7 / 10, 'courier new': 8 / 10, 'segoe ui': 7 / 10 }[name] || 7 / 11;
+      const k = { calibri: 7 / 11, arial: 7 / 10, 'aptos narrow': 7 / 11, aptos: 7.5 / 11, cambria: 7 / 11, 'times new roman': 7 / 12, verdana: 8 / 10, tahoma: 7 / 10, 'courier new': 8 / 10, 'segoe ui': 7 / 10, 'ms pgothic': 8 / 11 }[name] || 7 / 11;
       w = Math.max(5, Math.round(k * sz));
     }
     if (wb) wb._mdw = w;
@@ -300,12 +300,15 @@
   };
   /** default row height in points for the default font */
   M.fontRowPt = function (font) {
-    const name = String((font && font.name) || 'Arial').toLowerCase();
+    const name = L.fontKey ? L.fontKey((font && font.name) || 'Arial') : String((font && font.name) || 'Arial').toLowerCase();
     const sz = (font && font.sz) || 11;
     const table = { arial: { 8: 11.25, 9: 12, 10: 12.75, 11: 14.25, 12: 15, 14: 18, 16: 20.25, 18: 23.25, 20: 25.5, 24: 30 }, calibri: { 8: 11.25, 9: 12, 10: 12.75, 11: 15, 12: 15.75, 14: 18.75, 16: 21, 18: 23.25, 20: 26.25, 24: 31.5 } };
     const t = table[name] || (/calibri|aptos|segoe/.test(name) ? table.calibri : null);
     if (t && t[sz]) return t[sz];
-    return Math.round(sz * 1.275 * 4) / 4;
+    /* East Asian fonts, from their size in a Japanese or Korean Excel's blank workbook: ＭＳ Ｐゴシック 11 has rows of 13.5
+       (the corpora's Japanese workbooks), 游ゴシック 11 of 18.75 and 맑은 고딕 11 of 16.5 (Office's; unverified) */
+    const ea = { 'ms pgothic': 13.5, 'ms gothic': 13.5, 'yu gothic': 18.75, 'malgun gothic': 16.5 }[name];
+    return Math.round(sz * (ea ? ea / 11 : 1.275) * 4) / 4;
   };
   M.defaultRowPt = (sh) => sh.defRowH ?? (sh.extra.formatKeep?.legacyNamespace ? sh.fileDefRowH : null) ?? M.fontRowPt(sh.wb.defaultFont);
   M.rowPt = function (sh, r) {

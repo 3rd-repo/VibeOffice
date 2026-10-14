@@ -14,7 +14,7 @@
   TP.mount = function (el) {
     TP.el = el;
     const nav = (icon, label) => h('button', { class: 'tp-nav', type: 'button', 'aria-label': label, 'data-tip': label, html: L.icons.get(icon) || label[0] });
-    TP.back = nav('back', 'Back'); TP.fwd = nav('forward', 'Forward'); TP.home = nav('home', 'Home');
+    TP.back = nav('back', L.N('Back')); TP.fwd = nav('forward', L.N('Forward')); TP.home = nav('home', L.N('Home'));
     TP.title = h('div', { class: 'tp-title', role: 'button', tabindex: '0', 'aria-haspopup': 'menu' }, h('span', { text: '' }), h('span', { class: 'dd-arrow' }));
     const close = h('button', { class: 'tp-nav', type: 'button', 'aria-label': 'Close task pane', 'data-tip': 'Close', html: '<svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="#000" stroke-width="1.6"/></svg>' });
     TP.body = h('div', { class: 'tp-body' });
@@ -41,7 +41,7 @@
     TP.current = id;
     const p = TP.registry[id];
     if (!p) return;
-    TP.title.firstChild.textContent = p.title;
+    TP.title.firstChild.textContent = L.t(p.title);
     TP.back.disabled = TP.pos <= 0; TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
     TP.body.textContent = '';
     p.render(TP.body);
@@ -67,9 +67,9 @@
       b.append(
         h('div', { class: 'tp-row tp-brand' }, h('span', { html: L.icons.app ? L.icons.app(32) : '' }), h('b', { text: 'Ledger 2003 Web Edition' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
-        sec('Open', window.VO ? VO.recentLinks(4) : null, link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new workbook...', () => TP.show('new'))),
-        sec('Learn', link('help', 'What Ledger can do', () => { P.helpQuery = ''; TP.show('help'); }), link('fx', 'Functions reference', () => L.dlg.insertFunction()), link('help', 'Keyboard shortcuts', () => TP.show('keys'))),
-        sec('Files', h('div', { class: 'tp-note', text: 'Opens .xlsx, .xlsm, .xltx, .csv, .txt and XML Spreadsheet 2003 files; drop a file anywhere on the window to open it. Saves .xlsx, .xlsm, .xltx, .csv, .txt, .htm, .xml and PDF.' })));
+        sec(L.N('Open'), window.VO ? VO.recentLinks(4) : null, link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new workbook...', () => TP.show('new'))),
+        sec(L.N('Learn'), link('help', 'What Ledger can do', () => { P.helpQuery = ''; TP.show('help'); }), link('fx', 'Functions reference', () => L.dlg.insertFunction()), link('help', 'Keyboard shortcuts', () => TP.show('keys'))),
+        sec(L.N('Files'), h('div', { class: 'tp-note', text: 'Opens .xlsx, .xlsm, .xltx, .csv, .txt and XML Spreadsheet 2003 files; drop a file anywhere on the window to open it. Saves .xlsx, .xlsm, .xltx, .csv, .txt, .htm, .xml and PDF.' })));
     },
   });
   /* ---------- New Workbook ---------- */
@@ -77,28 +77,28 @@
     id: 'new', title: 'New Workbook',
     render(b) {
       b.append(
-        sec('New', link('new', 'Blank workbook', () => A().newWorkbook()), link('open', 'From existing workbook...', () => A().openDialog('.xlsx,.xlsm,.xltx,.xltm'))),
-        sec('Templates', ...Object.keys(TPL).map((k) => link('sheetIcon', TPL[k].name, () => P.newFromTemplate(k)))),
+        sec(L.N('New'), link('new', 'Blank workbook', () => A().newWorkbook()), link('open', 'From existing workbook...', () => A().openDialog('.xlsx,.xlsm,.xltx,.xltm'))),
+        sec(L.N('Templates'), ...Object.keys(TPL).map((k) => link('sheetIcon', TPL[k].name, () => P.newFromTemplate(k)))),
         sec('', h('div', { class: 'tp-note', text: 'Templates open as new, unsaved workbooks.' })));
     },
   });
   /* ---------- Help ---------- */
   const HELP = [
-    ['Entering data', 'Click a cell and type, then press Enter (moves down), Tab (moves right) or an arrow key. F2 edits the active cell; Alt+Enter starts a new line inside a cell. Ctrl+Enter fills the typed entry into every selected cell. Numbers, dates (3/14/2026, 14-Mar), times (9:30 AM), percentages (12%) and currency ($1,200) are recognised and formatted automatically. Start an entry with an apostrophe to keep it as text.'],
-    ['Formulas', 'Start with = and use cell references (A1, $A$1, Sheet2!B3, named ranges, table references like Sales[Amount]). While typing a formula, click or drag on the sheet to insert references, and press F4 to cycle absolute and relative references. Ctrl+Shift+Enter enters an array formula; dynamic-array functions such as FILTER, SORT, UNIQUE and SEQUENCE spill their results. Insert ▸ Function (Shift+F3) lists more than 450 functions with argument help.'],
-    ['AutoFill and series', 'Drag the fill handle (the square at the bottom-right of the selection) to copy cells or extend a series: 1, 2 → 3, 4…; Mon → Tue; Jan → Feb; Q1 → Q2; dates by day, weekday, month or year. Double-click the handle to fill down beside your data. Edit ▸ Fill ▸ Series gives full control; Ctrl+D and Ctrl+R fill down and right.'],
-    ['Formatting cells', 'Format ▸ Cells (Ctrl+1) has Number, Alignment, Font, Border, Patterns and Protection tabs. Custom number formats use Excel codes such as #,##0.00;[Red](#,##0.00), 0%, d-mmm-yy, [h]:mm and "text"@. The Formatting toolbar sets fonts, alignment, Merge and Center, currency, percent, comma style, decimals, indents, borders, fill and font colours. The Format Painter copies formats.'],
-    ['Rows, columns and sheets', 'Drag a header border to resize; double-click it to AutoFit. Right-click a header to insert, delete, hide or unhide. Window ▸ Freeze Panes keeps headings in view. Right-click a sheet tab to insert, delete, rename, move or copy sheets, or to set a tab colour; Ctrl+Page Up / Page Down switch sheets.'],
-    ['Sorting and filtering', 'Data ▸ Sort sorts by up to three keys, ascending or descending, with or without a header row; the Sort buttons sort by the active column. Data ▸ Filter ▸ AutoFilter adds drop-down arrows to the header row: pick a value, (Top 10...), (Custom...), (Blanks) or (NonBlanks). Advanced Filter uses a criteria range and can copy unique records elsewhere. Data ▸ Subtotals inserts SUBTOTAL rows at each change in a column and outlines the list.'],
-    ['Lists (tables)', 'Data ▸ List ▸ Create List (Ctrl+L) turns a range into a list with a header row, AutoFilter and an optional Total Row. Formulas can refer to it by name: =SUM(Table1[Amount]).'],
-    ['Conditional formatting and validation', 'Format ▸ Conditional Formatting applies up to three conditions per range (cell value between, greater than…, or a formula), plus data bars, colour scales and icon sets read from newer workbooks. Data ▸ Validation restricts entries to whole numbers, decimals, lists, dates, times, text length or a custom formula, with input messages and error alerts.'],
-    ['Charts and pictures', 'Insert ▸ Chart (F11) opens the Chart Wizard: column, bar, line, pie, XY scatter, area and doughnut charts, embedded in the sheet or on their own chart sheet. Charts follow their data as it changes. Insert ▸ Picture adds images and AutoShapes; drag to move, drag a handle to resize, double-click to format.'],
-    ['Names, comments and hyperlinks', 'Type a name in the Name Box to name the selection, or use Insert ▸ Name ▸ Define (Ctrl+F3). Insert ▸ Comment (Shift+F2) attaches a note; cells with comments show a red triangle. Insert ▸ Hyperlink (Ctrl+K) links to web pages, e-mail addresses or places in the workbook.'],
-    ['Formula auditing', 'Tools ▸ Formula Auditing traces precedents and dependents with arrows, evaluates a formula step by step and shows a Watch Window. Ctrl+` shows formulas instead of results. Error Checking walks through cells with errors.'],
-    ['Printing and PDF', 'File ▸ Page Setup sets orientation, scaling (fit to N pages), paper size, margins, centering, headers and footers (&[Page], &[Pages], &[Date], &[File], &[Tab]), print area, rows to repeat and gridlines. View ▸ Page Break Preview shows the pages; Insert ▸ Page Break adds manual breaks. File ▸ Print and Print Preview produce a PDF you can print anywhere.'],
-    ['Files and compatibility', 'Ledger reads and writes Office Open XML workbooks (.xlsx, macro-enabled .xlsm and templates), keeping formulas, styles, merged cells, comments, lists, conditional formats, validation, charts, pictures, defined names, page setup and macros. It also opens CSV and text files through the Text Import Wizard, opens password-protected workbooks and can save with a password (Save As ▸ Tools ▸ General Options). Binary .xls files must be converted to .xlsx first.'],
-    ['Protection', 'Tools ▸ Protection ▸ Protect Sheet locks every cell whose Locked box (Format ▸ Cells ▸ Protection) is checked; choose what users may still do, and set an optional password. Protect Workbook locks the sheet structure.'],
-    ['What-if analysis', 'Tools ▸ Goal Seek finds the input that makes a formula reach a target. Data ▸ Table builds one- and two-variable data tables. Tools ▸ Scenarios stores sets of input values to compare.'],
+    ['Entering data', L.N('Click a cell and type, then press Enter (moves down), Tab (moves right) or an arrow key. F2 edits the active cell; Alt+Enter starts a new line inside a cell. Ctrl+Enter fills the typed entry into every selected cell. Numbers, dates (3/14/2026, 14-Mar), times (9:30 AM), percentages (12%) and currency ($1,200) are recognised and formatted automatically. Start an entry with an apostrophe to keep it as text.')],
+    [L.N('Formulas'), L.N('Start with = and use cell references (A1, $A$1, Sheet2!B3, named ranges, table references like Sales[Amount]). While typing a formula, click or drag on the sheet to insert references, and press F4 to cycle absolute and relative references. Ctrl+Shift+Enter enters an array formula; dynamic-array functions such as FILTER, SORT, UNIQUE and SEQUENCE spill their results. Insert ▸ Function (Shift+F3) lists more than 450 functions with argument help.')],
+    ['AutoFill and series', L.N('Drag the fill handle (the square at the bottom-right of the selection) to copy cells or extend a series: 1, 2 → 3, 4…; Mon → Tue; Jan → Feb; Q1 → Q2; dates by day, weekday, month or year. Double-click the handle to fill down beside your data. Edit ▸ Fill ▸ Series gives full control; Ctrl+D and Ctrl+R fill down and right.')],
+    ['Formatting cells', L.N('Format ▸ Cells (Ctrl+1) has Number, Alignment, Font, Border, Patterns and Protection tabs. Custom number formats use Excel codes such as #,##0.00;[Red](#,##0.00), 0%, d-mmm-yy, [h]:mm and "text"@. The Formatting toolbar sets fonts, alignment, Merge and Center, currency, percent, comma style, decimals, indents, borders, fill and font colours. The Format Painter copies formats.')],
+    ['Rows, columns and sheets', L.N('Drag a header border to resize; double-click it to AutoFit. Right-click a header to insert, delete, hide or unhide. Window ▸ Freeze Panes keeps headings in view. Right-click a sheet tab to insert, delete, rename, move or copy sheets, or to set a tab colour; Ctrl+Page Up / Page Down switch sheets.')],
+    ['Sorting and filtering', L.N('Data ▸ Sort sorts by up to three keys, ascending or descending, with or without a header row; the Sort buttons sort by the active column. Data ▸ Filter ▸ AutoFilter adds drop-down arrows to the header row: pick a value, (Top 10...), (Custom...), (Blanks) or (NonBlanks). Advanced Filter uses a criteria range and can copy unique records elsewhere. Data ▸ Subtotals inserts SUBTOTAL rows at each change in a column and outlines the list.')],
+    ['Lists (tables)', L.N('Data ▸ List ▸ Create List (Ctrl+L) turns a range into a list with a header row, AutoFilter and an optional Total Row. Formulas can refer to it by name: =SUM(Table1[Amount]).')],
+    ['Conditional formatting and validation', L.N('Format ▸ Conditional Formatting applies up to three conditions per range (cell value between, greater than…, or a formula), plus data bars, colour scales and icon sets read from newer workbooks. Data ▸ Validation restricts entries to whole numbers, decimals, lists, dates, times, text length or a custom formula, with input messages and error alerts.')],
+    ['Charts and pictures', L.N('Insert ▸ Chart (F11) opens the Chart Wizard: column, bar, line, pie, XY scatter, area and doughnut charts, embedded in the sheet or on their own chart sheet. Charts follow their data as it changes. Insert ▸ Picture adds images and AutoShapes; drag to move, drag a handle to resize, double-click to format.')],
+    ['Names, comments and hyperlinks', L.N('Type a name in the Name Box to name the selection, or use Insert ▸ Name ▸ Define (Ctrl+F3). Insert ▸ Comment (Shift+F2) attaches a note; cells with comments show a red triangle. Insert ▸ Hyperlink (Ctrl+K) links to web pages, e-mail addresses or places in the workbook.')],
+    ['Formula auditing', L.N('Tools ▸ Formula Auditing traces precedents and dependents with arrows, evaluates a formula step by step and shows a Watch Window. Ctrl+` shows formulas instead of results. Error Checking walks through cells with errors.')],
+    ['Printing and PDF', L.N('File ▸ Page Setup sets orientation, scaling (fit to N pages), paper size, margins, centering, headers and footers (&[Page], &[Pages], &[Date], &[File], &[Tab]), print area, rows to repeat and gridlines. View ▸ Page Break Preview shows the pages; Insert ▸ Page Break adds manual breaks. File ▸ Print and Print Preview produce a PDF you can print anywhere.')],
+    ['Files and compatibility', L.N('Ledger reads and writes Office Open XML workbooks (.xlsx, macro-enabled .xlsm and templates), keeping formulas, styles, merged cells, comments, lists, conditional formats, validation, charts, pictures, defined names, page setup and macros. It also opens CSV and text files through the Text Import Wizard, opens password-protected workbooks and can save with a password (Save As ▸ Tools ▸ General Options). Binary .xls files must be converted to .xlsx first.')],
+    [L.N('Protection'), L.N('Tools ▸ Protection ▸ Protect Sheet locks every cell whose Locked box (Format ▸ Cells ▸ Protection) is checked; choose what users may still do, and set an optional password. Protect Workbook locks the sheet structure.')],
+    ['What-if analysis', L.N('Tools ▸ Goal Seek finds the input that makes a formula reach a target. Data ▸ Table builds one- and two-variable data tables. Tools ▸ Scenarios stores sets of input values to compare.')],
   ];
   TP.register({
     id: 'help', title: 'Ledger Help',
@@ -109,11 +109,11 @@
         res.textContent = '';
         const words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
         const hit = (t) => words.every((w) => t.toLowerCase().includes(w));
-        for (const [t, d] of HELP.filter(([t, d]) => !words.length || hit(t + ' ' + d))) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: t }), h('p', { text: d })));
+        for (const [t, d] of HELP.filter(([t, d]) => !words.length || hit(L.t(t) + ' ' + L.t(d)))) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: t }), h('p', { text: d })));
         if (words.length) {
-          const fns = L.fninfo ? L.fninfo.all().filter((f) => hit(f.name + ' ' + f.desc)).slice(0, 12) : [];
-          if (fns.length) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: 'Functions' }), ...fns.map((f) => { const x = h('div', { class: 'help-fn' }, h('b', { text: L.fninfo.syntax(f.name) }), h('div', { text: f.desc })); x.addEventListener('click', () => L.dlg.insertFunction(f.name)); return x; })));
-          const keys = KEYS.filter(([k, d]) => hit(k + ' ' + d));
+          const fns = L.fninfo ? L.fninfo.all().filter((f) => hit(f.name + ' ' + L.t(f.desc))).slice(0, 12) : [];
+          if (fns.length) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: 'Functions' }), ...fns.map((f) => { const x = h('div', { class: 'help-fn' }, h('b', { translate: 'no', text: L.fninfo.syntax(f) }), h('div', { text: f.desc })); x.addEventListener('click', () => L.dlg.insertFunction(f.name)); return x; })));
+          const keys = KEYS.filter(([k, d]) => hit(L.t(k) + ' ' + L.t(d)));
           if (keys.length) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: 'Keyboard shortcuts' }), h('table', { class: 'kbd-table' }, ...keys.map(([k, d]) => h('tr', null, h('td', { text: k }), h('td', { text: d }))))));
         }
         if (!res.childNodes.length) res.appendChild(h('div', { class: 'tp-note', text: 'No help topics match your search.' }));
@@ -126,15 +126,15 @@
     },
   });
   const KEYS = [
-    ['Ctrl+N / O / S / P', 'New, Open, Save, Print'], ['F12', 'Save As'], ['Ctrl+Z / Ctrl+Y', 'Undo / Redo'], ['F4', 'Repeat; in a formula, cycle $ references'],
-    ['Ctrl+X / C / V', 'Cut, Copy, Paste'], ['Ctrl+Alt+V', 'Paste Special'], ['Ctrl+F / H', 'Find, Replace'], ['F5 / Ctrl+G', 'Go To'],
-    ['F2', 'Edit the active cell'], ['Esc', 'Cancel an entry'], ['Alt+Enter', 'New line in a cell'], ['Ctrl+Enter', 'Fill the selection with the entry'], ['Ctrl+Shift+Enter', 'Enter an array formula'],
-    ['Ctrl+D / Ctrl+R', 'Fill down / right'], ['Ctrl+; / Ctrl+Shift+:', 'Insert the date / time'], ["Ctrl+' / Ctrl+Shift+\"", 'Copy formula / value from the cell above'], ['Alt+=', 'AutoSum'], ['Shift+F3', 'Insert Function'], ['Ctrl+A (in a formula)', 'Function Arguments'], ['F9', 'Calculate now'],
-    ['Arrow keys', 'Move one cell'], ['Ctrl+Arrow', 'Move to the edge of the data region'], ['Home / Ctrl+Home', 'Start of row / A1'], ['Ctrl+End', 'Last used cell'], ['End, Arrow', 'End mode jump'], ['Page Up / Down', 'Move one screen'], ['Alt+Page Up / Down', 'Move one screen left / right'], ['Ctrl+Page Up / Down', 'Previous / next sheet'],
-    ['Shift+Arrow', 'Extend the selection'], ['Ctrl+Shift+Arrow', 'Extend to the edge of the data'], ['Ctrl+Space / Shift+Space', 'Select column / row'], ['Ctrl+A', 'Select the current region, then the whole sheet'], ['Ctrl+Shift+*', 'Select the current region'], ['Ctrl+/', 'Select the current array'],
-    ['Ctrl+1', 'Format Cells'], ['Ctrl+B / I / U / 5', 'Bold, Italic, Underline, Strikethrough'], ['Ctrl+Shift+~ $ % ^ # @ !', 'General, Currency, Percent, Scientific, Date, Time, Number formats'], ['Ctrl+Shift+& / _', 'Outline border / remove borders'],
-    ['Ctrl+9 / Ctrl+Shift+(', 'Hide / unhide rows'], ['Ctrl+0 / Ctrl+Shift+)', 'Hide / unhide columns'], ['Ctrl+- / Ctrl+Shift++', 'Delete / insert cells'], ['Shift+F11', 'Insert worksheet'], ['F11', 'Chart'], ['Shift+F2', 'Insert or edit comment'], ['Ctrl+K', 'Hyperlink'], ['Ctrl+F3 / F3', 'Define / paste name'], ['Ctrl+L', 'Create List'],
-    ['Alt+Down', 'Pick from drop-down list'], ['Ctrl+`', 'Show formulas'], ['F7', 'Spelling'], ['Shift+F10', 'Shortcut menu'], ['Ctrl+F1', 'Task pane'], ['F1', 'Help'], ['Ctrl+Scroll', 'Zoom'],
+    [L.N('Ctrl+N / O / S / P'), 'New, Open, Save, Print'], ['F12', 'Save As'], [L.N('Ctrl+Z / Ctrl+Y'), 'Undo / Redo'], ['F4', L.N('Repeat; in a formula, cycle $ references')],
+    [L.N('Ctrl+X / C / V'), 'Cut, Copy, Paste'], [L.N('Ctrl+Alt+V'), 'Paste Special'], [L.N('Ctrl+F / H'), 'Find, Replace'], [L.N('F5 / Ctrl+G'), 'Go To'],
+    ['F2', 'Edit the active cell'], [L.N('Esc'), 'Cancel an entry'], [L.N('Alt+Enter'), 'New line in a cell'], [L.N('Ctrl+Enter'), 'Fill the selection with the entry'], [L.N('Ctrl+Shift+Enter'), 'Enter an array formula'],
+    [L.N('Ctrl+D / Ctrl+R'), 'Fill down / right'], [L.N('Ctrl+; / Ctrl+Shift+:'), 'Insert the date / time'], [L.N("Ctrl+' / Ctrl+Shift+\""), 'Copy formula / value from the cell above'], [L.N('Alt+='), L.N('AutoSum')], [L.N('Shift+F3'), 'Insert Function'], [L.N('Ctrl+A (in a formula)'), 'Function Arguments'], ['F9', 'Calculate now'],
+    [L.N('Arrow keys'), 'Move one cell'], [L.N('Ctrl+Arrow'), 'Move to the edge of the data region'], [L.N('Home / Ctrl+Home'), 'Start of row / A1'], [L.N('Ctrl+End'), 'Last used cell'], [L.N('End, Arrow'), 'End mode jump'], [L.N('Page Up / Down'), 'Move one screen'], [L.N('Alt+Page Up / Down'), 'Move one screen left / right'], [L.N('Ctrl+Page Up / Down'), 'Previous / next sheet'],
+    [L.N('Shift+Arrow'), 'Extend the selection'], [L.N('Ctrl+Shift+Arrow'), 'Extend to the edge of the data'], [L.N('Ctrl+Space / Shift+Space'), 'Select column / row'], [L.N('Ctrl+A'), 'Select the current region, then the whole sheet'], [L.N('Ctrl+Shift+*'), 'Select the current region'], [L.N('Ctrl+/'), 'Select the current array'],
+    [L.N('Ctrl+1'), 'Format Cells'], [L.N('Ctrl+B / I / U / 5'), 'Bold, Italic, Underline, Strikethrough'], [L.N('Ctrl+Shift+~ $ % ^ # @ !'), 'General, Currency, Percent, Scientific, Date, Time, Number formats'], [L.N('Ctrl+Shift+& / _'), 'Outline border / remove borders'],
+    [L.N('Ctrl+9 / Ctrl+Shift+('), 'Hide / unhide rows'], [L.N('Ctrl+0 / Ctrl+Shift+)'), 'Hide / unhide columns'], [L.N('Ctrl+- / Ctrl+Shift++'), 'Delete / insert cells'], [L.N('Shift+F11'), 'Insert worksheet'], ['F11', L.N('Chart')], [L.N('Shift+F2'), 'Insert or edit comment'], [L.N('Ctrl+K'), L.N('Hyperlink')], [L.N('Ctrl+F3 / F3'), 'Define / paste name'], [L.N('Ctrl+L'), 'Create List'],
+    [L.N('Alt+Down'), 'Pick from drop-down list'], [L.N('Ctrl+`'), 'Show formulas'], ['F7', L.N('Spelling')], [L.N('Shift+F10'), 'Shortcut menu'], [L.N('Ctrl+F1'), 'Task pane'], ['F1', L.N('Help')], [L.N('Ctrl+Scroll'), L.N('Zoom')],
   ];
   P.KEYS = KEYS;
   TP.register({
@@ -153,9 +153,9 @@
     render(b) {
       const items = P.clips;
       b.append(h('div', { class: 'tp-btns' }, ui.button('Paste All', () => { for (const it of items.slice().reverse()) { L.clip.set(it.clip); L.clip.pasteInternal({}); } }, { class: 'btn small' }), ui.button('Clear All', () => { items.length = 0; TP.refresh('clip'); }, { class: 'btn small' })),
-        h('div', { class: 'tp-note', text: `${items.length} of 24 - Clipboard. Click an item to paste.` }));
+        h('div', { class: 'tp-note', text: L.t('{0} of 24 - Clipboard. Click an item to paste.', items.length) }));
       for (const it of items) {
-        const el = h('button', { class: 'cb-item', type: 'button' }, h('span', { html: L.icons.get('sheetIcon') || '' }), h('span', { class: 'cb-t', text: it.text || '[cells]' }));
+        const el = h('button', { class: 'cb-item', type: 'button' }, h('span', { html: L.icons.get('sheetIcon') || '' }), h('span', { class: 'cb-t', translate: 'no', text: it.text || '[cells]' }));
         el.addEventListener('click', () => { L.clip.set(it.clip); L.clip.pasteInternal({}); G().paint(); });
         b.appendChild(el);
       }

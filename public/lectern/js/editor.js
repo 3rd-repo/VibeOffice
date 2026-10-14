@@ -551,7 +551,7 @@
         mdx = dx; mdy = dy;
         els.forEach((el) => { if (el) el.style.translate = `${dx}px ${dy}px`; });
         L.$$('.sel-frame,.hd-end', E.overlay).forEach((el) => { el.style.translate = `${dx * E.scale}px ${dy * E.scale}px`; });
-        L.app && L.app.status && L.app.status(`Position: ${L.fmtIn(o0().x + dx)} from left, ${L.fmtIn(o0().y + dy)} from top`);
+        L.app && L.app.status && L.app.status(L.t('Position: {0} from left, {1} from top', L.fmtIn(o0().x + dx), L.fmtIn(o0().y + dy)));
       },
       up(ev, d) {
         if (!d.moved) {
@@ -566,7 +566,7 @@
         unmove();
         if (ev.ctrlKey && !dx && !dy) return;
         if (ev.ctrlKey) {
-          L.hist.push('Duplicate');
+          L.hist.push(L.N('Duplicate'));
           const sl = E.slide();
           const copies = shapes.map((f) => { const c = M.dup(f.shape); M.translate(c, dx, dy); f.list.push(c); return c.id; });
           if (E.view === 'master') E.syncMaster();
@@ -612,7 +612,7 @@
       cancel(d) { if (d.moved) { edit.revert(); E.render(); } },
     });
     if (hd === 'p1' || hd === 'p2') {
-      handle('Resize', (ev) => {
+      handle(L.N('Resize'), (ev) => {
         let p = E.toSlide(ev.clientX, ev.clientY);
         const [a, b] = L.geom.lineEnds(orig);
         const fixed = hd === 'p1' ? b : a;
@@ -629,7 +629,7 @@
     }
     if (hd === 'rot') {
       const cx = orig.x + orig.w / 2, cy = orig.y + orig.h / 2;
-      handle('Rotate', (ev) => {
+      handle(L.N('Rotate'), (ev) => {
         const p = E.toSlide(ev.clientX, ev.clientY);
         let ang = (Math.atan2(p.y - cy, p.x - cx) * 180) / Math.PI + 90;
         if (ev.shiftKey) ang = Math.round(ang / 15) * 15;
@@ -638,13 +638,13 @@
         sh.rot = L.round(ang, 2);
         for (const o of others) o.f.shape.rot = L.round((((o.o.rot || 0) + turn) % 360 + 360) % 360, 2);
         live();
-        L.app && L.app.status && L.app.status(`Rotation: ${Math.round(ang)}°`);
+        L.app && L.app.status && L.app.status(L.t('Rotation: {0}°', Math.round(ang)));
       });
       return;
     }
     if (hd.startsWith('adj')) {
       const hdef = L.geom.handles(sh)[+hd.slice(3)];
-      handle('Adjust', (ev) => {
+      handle(L.N('Adjust'), (ev) => {
         const p = E.toSlide(ev.clientX, ev.clientY);
         const c = { x: orig.x + orig.w / 2, y: orig.y + orig.h / 2 };
         let [lx, ly] = L.rotPt(p.x, p.y, c.x, c.y, -(orig.rot || 0));
@@ -663,7 +663,7 @@
     const c0 = { x: orig.x + orig.w / 2, y: orig.y + orig.h / 2 };
     const ar = orig.h ? orig.w / orig.h : 1;
     const isCorner = hd.length === 2;
-    handle('Resize', (ev) => {
+    handle(L.N('Resize'), (ev) => {
       const p = E.toSlide(ev.clientX, ev.clientY);
       let [lx, ly] = L.rotPt(p.x, p.y, c0.x, c0.y, -rot);
       lx -= c0.x; ly -= c0.y;
@@ -708,7 +708,7 @@
         if (s2.type === 'table') E.scaleTable(s2, o2);
       }
       live();
-      L.app && L.app.status && L.app.status(`Size: ${L.fmtIn(sh.w)} × ${L.fmtIn(sh.h)}`);
+      L.app && L.app.status && L.app.status(L.t('Size: {0} × {1}', L.fmtIn(sh.w), L.fmtIn(sh.h)));
     }, () => { if (f.parent) E.fitGroup(f.parent); });
   }
   E.scaleTable = function (sh, orig) {
@@ -836,7 +836,7 @@
     E.tool = tool;
     E.scroller.classList.toggle('drawing', !!tool);
     L.ui.refresh();
-    if (tool) L.app && L.app.status && L.app.status(tool.kind === 'freeform' ? 'Click to add points; double-click to finish' : tool.kind === 'curve' ? 'Click to add points; double-click to finish' : 'Drag to draw; hold Shift to constrain');
+    if (tool) L.app && L.app.status && L.app.status(tool.kind === 'freeform' || tool.kind === 'curve' ? L.N('Click to add points; double-click to finish') : L.N('Drag to draw; hold Shift to constrain'));
   };
   function startTool(e) {
     e.preventDefault();
@@ -1008,7 +1008,7 @@
     sh.path = { paths: [{ w, h: hh, cmds, fill: closed ? 'norm' : 'none', stroke: true }] };
     if (!closed) { sh.fill = { t: 'none' }; delete sh.tx; }
     if (opts && opts.line) sh.line = opts.line;
-    if (!(opts && opts.noHistory)) L.hist.push('Freeform');
+    if (!(opts && opts.noHistory)) L.hist.push(L.N('Freeform'));
     sl.shapes.push(sh);
     if (opts && opts.noRender) return sh;
     E.sel = [sh.id];
@@ -1089,14 +1089,14 @@
     };
     const shapes = deco.slice();
     if (titleKind) {
-      shapes.push(mk('ctrTitle', ph.ctrTitle, [L.txt.para('Click to edit Master title style')]));
-      shapes.push(mk('subTitle', ph.subTitle, [L.txt.para('Click to edit Master subtitle style')]));
+      shapes.push(mk('ctrTitle', ph.ctrTitle, [L.txt.para(L.t('Click to edit Master title style'))]));
+      shapes.push(mk('subTitle', ph.subTitle, [L.txt.para(L.t('Click to edit Master subtitle style'))]));
     } else {
-      shapes.push(mk('title', ph.title, [L.txt.para('Click to edit Master title style')]));
-      shapes.push(mk('body', ph.body, ['Click to edit Master text styles', 'Second level', 'Third level', 'Fourth level', 'Fifth level'].map((t, i) => L.txt.para(t, null, null, i))));
+      shapes.push(mk('title', ph.title, [L.txt.para(L.t('Click to edit Master title style'))]));
+      shapes.push(mk('body', ph.body, ['Click to edit Master text styles', 'Second level', 'Third level', 'Fourth level', 'Fifth level'].map((t, i) => L.txt.para(L.t(t), null, null, i))));
     }
     const ft = (type, text) => { const s = mk(type, ph[type], [L.txt.para(text)]); return s; };
-    shapes.push(ft('dt', '<date/time>'), ft('ftr', '<footer>'), ft('sldNum', '<#>'));
+    shapes.push(ft('dt', L.t('<date/time>')), ft('ftr', L.t('<footer>')), ft('sldNum', '<#>'));
     E.masterSlide = { id: 'master', layout: titleKind ? 'title' : 'text', design: d.id, shapes, hideMaster: true, bg: titleKind && d.titleBg ? d.titleBg : d.bg, anims: [], trans: {}, notes: '', isMaster: true, titleKind: !!titleKind };
   };
   /** fold master-view edits back into the design */

@@ -33,8 +33,8 @@
   C('exitApp', { label: 'E&xit', icon: 'exit', run: () => A().exit() });
 
   /* ---------- Edit ---------- */
-  C('undo', { label: '&Undo', icon: 'undo', key: 'Ctrl+Z', get menuLabel() { return L.hist.undo.length ? '&Undo ' + L.hist.undo[L.hist.undo.length - 1].label : "&Can't Undo"; }, enabled: () => L.hist.undo.length > 0, run: () => A().undo() });
-  C('redo', { label: '&Redo', icon: 'redo', key: 'Ctrl+Y', get menuLabel() { return L.hist.redo.length ? '&Redo ' + L.hist.redo[L.hist.redo.length - 1].label : "&Can't Redo"; }, enabled: () => L.hist.redo.length > 0, run: () => A().redo() });
+  C('undo', { label: '&Undo', icon: 'undo', key: 'Ctrl+Z', get menuLabel() { return L.hist.undo.length ? L.t('&Undo {0}', L.t(L.hist.undo[L.hist.undo.length - 1].label)) : "&Can't Undo"; }, enabled: () => L.hist.undo.length > 0, run: () => A().undo() });
+  C('redo', { label: '&Redo', icon: 'redo', key: 'Ctrl+Y', get menuLabel() { return L.hist.redo.length ? L.t('&Redo {0}', L.t(L.hist.redo[L.hist.redo.length - 1].label)) : "&Can't Redo"; }, enabled: () => L.hist.redo.length > 0, run: () => A().redo() });
   C('cut', { label: 'Cu&t', icon: 'cut', key: 'Ctrl+X', enabled: () => editing() || hasSel() || slideCtx(), run: () => A().cmdClipboard('cut') });
   C('copy', { label: '&Copy', icon: 'copy', key: 'Ctrl+C', enabled: () => editing() || hasSel() || slideCtx(), run: () => A().cmdClipboard('copy') });
   C('paste', { label: '&Paste', icon: 'paste', key: 'Ctrl+V', enabled: () => !!A().clip, run: () => A().paste() });

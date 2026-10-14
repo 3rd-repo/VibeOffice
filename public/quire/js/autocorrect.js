@@ -26,9 +26,11 @@
     if ((ch !== '"' && ch !== "'") || !opt('smartQuotes') || !E.sel) return ch;
     const pos = E.collapsed() ? E.sel.f : E.range()[0];
     const prev = pos.o > 0 ? D.ptext(pos.p, pos.o - 1, pos.o) : '';
-    const opening = !prev || /[\s([{—–\-\/“‘"']/.test(prev) && !(ch === "'" && /[\p{L}\p{N}]/u.test(prev));
-    if (ch === '"') return opening ? '“' : '”';
-    return opening ? '‘' : '’';
+    const opening = !prev || /[\s([{—–\-\/“‘"'«„‚]/.test(prev) && !(ch === "'" && /[\p{L}\p{N}]/u.test(prev));
+    /* the quotes of the paragraph's language: « » in French, „ “ in German (common/locales.js) */
+    const q = L.locale && L.spell && L.spell.paraLang ? L.locale.quotes(L.spell.paraLang(pos.p)) : ['“', '”', '‘', '’'];
+    if (ch === '"') return opening ? q[0] : q[1];
+    return opening ? q[2] : q[3];
   };
 
   /* ---------- after typing a character ---------- */
@@ -269,7 +271,7 @@
   }
   function showTip(text, p, o, typed) {
     if (!tip) { tip = L.h('div', { class: 'tooltip ac-tip' }); document.body.appendChild(tip); }
-    tip.textContent = `${text} (Press ENTER to Insert)`;
+    tip.textContent = L.t('{0} (Press ENTER to Insert)', text);
     tip.hidden = false;
     const r = E.caretRect();
     if (r) { tip.style.left = Math.max(4, r.left - 10) + 'px'; tip.style.top = Math.max(4, r.top - 24) + 'px'; }
@@ -283,7 +285,7 @@
     if (E.sel.f.p !== st.p || E.sel.f.o !== st.o) { hideTip(); return false; }
     hideTip();
     const p = st.p;
-    E.edit('AutoComplete', () => {
+    E.edit(L.N('AutoComplete'), () => {
       const a = st.o - st.typed;
       const it = D.itemBefore(p, st.o);
       O.deleteRange(D.pos(p, a), D.pos(p, st.o));
@@ -299,7 +301,7 @@
   AC.AUTOTEXT = {
     'Attention Line': ['ATTENTION:', 'Attention:'],
     Closing: ['Best regards,', 'Best wishes,', 'Cordially,', 'Love,', 'Regards,', 'Respectfully yours,', 'Respectfully,', 'Sincerely yours,', 'Sincerely,', 'Take care,', 'Thank you,', 'Thanks,', 'Yours truly,'],
-    'Header/Footer': [{ name: '- PAGE -', fields: ['- ', { f: 'PAGE' }, ' -'] }, { name: 'Author, Page #, Date', fields: [{ f: 'AUTHOR' }, ', Page ', { f: 'PAGE' }, ', ', { f: 'DATE \\@ "M/d/yyyy"' }] }, { name: 'Confidential, Page #, Date', fields: ['Confidential, Page ', { f: 'PAGE' }, ', ', { f: 'DATE \\@ "M/d/yyyy"' }] }, { name: 'Created by', fields: ['Created by ', { f: 'AUTHOR' }] }, { name: 'Created on', fields: ['Created on ', { f: 'CREATEDATE \\@ "M/d/yyyy h:mm:ss am/pm"' }] }, { name: 'Filename', fields: [{ f: 'FILENAME' }] }, { name: 'Filename and path', fields: [{ f: 'FILENAME \\p' }] }, { name: 'Last printed', fields: ['Last printed ', { f: 'PRINTDATE \\@ "M/d/yyyy h:mm:ss am/pm"' }] }, { name: 'Last saved by', fields: ['Last saved by ', { f: 'LASTSAVEDBY' }] }, { name: 'Page X of Y', fields: ['Page ', { f: 'PAGE' }, ' of ', { f: 'NUMPAGES' }] }],
+    'Header/Footer': [{ name: L.N('- PAGE -'), fields: ['- ', { f: 'PAGE' }, ' -'] }, { name: L.N('Author, Page #, Date'), fields: [{ f: 'AUTHOR' }, ', Page ', { f: 'PAGE' }, ', ', { f: 'DATE \\@ "M/d/yyyy"' }] }, { name: L.N('Confidential, Page #, Date'), fields: ['Confidential, Page ', { f: 'PAGE' }, ', ', { f: 'DATE \\@ "M/d/yyyy"' }] }, { name: L.N('Created by'), fields: ['Created by ', { f: 'AUTHOR' }] }, { name: L.N('Created on'), fields: ['Created on ', { f: 'CREATEDATE \\@ "M/d/yyyy h:mm:ss am/pm"' }] }, { name: L.N('Filename'), fields: [{ f: 'FILENAME' }] }, { name: L.N('Filename and path'), fields: [{ f: 'FILENAME \\p' }] }, { name: L.N('Last printed'), fields: ['Last printed ', { f: 'PRINTDATE \\@ "M/d/yyyy h:mm:ss am/pm"' }] }, { name: L.N('Last saved by'), fields: ['Last saved by ', { f: 'LASTSAVEDBY' }] }, { name: L.N('Page X of Y'), fields: ['Page ', { f: 'PAGE' }, ' of ', { f: 'NUMPAGES' }] }],
     'Mailing Instructions': ['CERTIFIED MAIL', 'CONFIDENTIAL', 'PERSONAL', 'REGISTERED MAIL', 'SPECIAL DELIVERY', 'VIA AIRMAIL', 'VIA FACSIMILE', 'VIA OVERNIGHT MAIL'],
     'Reference Initials': [() => userInitials() + '/' + userInitials().toLowerCase()],
     'Reference Line': ['In reply to:', 'RE:', 'Reference:'],
@@ -307,6 +309,9 @@
     Signature: [() => userName()],
     'Subject Line': ['Subject:'],
   };
+  /* the categories as the AutoText menu shows them */
+  const CAT_LABEL = { 'Attention Line': L.N('&Attention Line'), Closing: L.N('&Closing'), 'Header/Footer': L.N('&Header/Footer'), 'Mailing Instructions': L.N('&Mailing Instructions'), 'Reference Initials': L.N('&Reference Initials'),
+    'Reference Line': L.N('&Reference Line'), Salutation: L.N('&Salutation'), Signature: L.N('&Signature'), 'Subject Line': L.N('&Subject Line') };
   AC.autoTextEntries = function () {
     const out = [];
     for (const cat in AC.AUTOTEXT) for (const e of AC.AUTOTEXT[cat]) { if (typeof e === 'string') out.push({ cat, text: e, name: e }); else if (typeof e === 'function') out.push({ cat, text: e(), name: e() }); }
@@ -314,9 +319,9 @@
     return out;
   };
   function insertEntry(e) {
-    if (typeof e === 'string' || typeof e === 'function') { E.insertTextAt(typeof e === 'function' ? e() : e, 'AutoText'); return; }
-    if (e.text) { E.insertTextAt(e.text, 'AutoText'); return; }
-    E.edit('AutoText', () => {
+    if (typeof e === 'string' || typeof e === 'function') { E.insertTextAt(typeof e === 'function' ? e() : e, L.N('AutoText')); return; }
+    if (e.text) { E.insertTextAt(e.text, L.N('AutoText')); return; }
+    E.edit(L.N('AutoText'), () => {
       let pos = E.deleteSelection();
       for (const part of e.fields) {
         if (typeof part === 'string') pos = O.insertText(pos, part, O.inheritRPr(pos));
@@ -329,7 +334,7 @@
   AC.insertEntry = insertEntry;
   AC.autoTextMenu = function () {
     const items = [{ label: 'Auto&Text...', run: () => L.dlg && L.dlg.autocorrect && L.dlg.autocorrect('autotext') }, '-'];
-    for (const cat in AC.AUTOTEXT) items.push({ label: cat.replace(/^(\w)/, '&$1'), sub: AC.AUTOTEXT[cat].map((e) => ({ label: (typeof e === 'string' ? e : typeof e === 'function' ? e() : e.name).replace(/&/g, '&&'), run: () => insertEntry(e) })) });
+    for (const cat in AC.AUTOTEXT) items.push({ label: CAT_LABEL[cat] || cat.replace(/^(\w)/, '&$1'), sub: AC.AUTOTEXT[cat].map((e) => ({ label: (typeof e === 'string' ? e : typeof e === 'function' ? e() : e.name).replace(/&/g, '&&'), run: () => insertEntry(e) })) });
     const user = L.store.get('autoText', []);
     if (user.length) items.push({ label: '&Normal', sub: user.map((u) => ({ label: u.name, run: () => insertEntry({ text: u.text }) })) });
     return items;
@@ -345,7 +350,7 @@
     if (!m) return false;
     const e = AC.autoTextEntries().find((x) => x.name.toLowerCase() === m[1].toLowerCase() || x.name.toLowerCase().startsWith(m[1].toLowerCase()) && m[1].length >= 4);
     if (!e) return false;
-    E.edit('AutoText', () => { O.deleteRange(D.pos(p, o - m[1].length), D.pos(p, o)); return O.insertText(D.pos(p, o - m[1].length), e.text, O.inheritRPr(D.pos(p, o - m[1].length))); });
+    E.edit(L.N('AutoText'), () => { O.deleteRange(D.pos(p, o - m[1].length), D.pos(p, o)); return O.insertText(D.pos(p, o - m[1].length), e.text, O.inheritRPr(D.pos(p, o - m[1].length))); });
     return true;
   };
 })();

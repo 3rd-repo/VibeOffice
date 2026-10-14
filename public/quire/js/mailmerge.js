@@ -61,7 +61,7 @@
         setData(f.name, Array.from(t.rows).map((r) => Array.from(r.cells).map((c) => c.textContent.trim())));
       } else setData(f.name, parseDelimited(await L.readAsText(f)));
       MM.recipientsDialog();
-    } catch (e) { ui.msg('The data source could not be opened. ' + (e.message || ''), { icon: 'error' }); }
+    } catch (e) { ui.msg(L.t('The data source could not be opened. {0}', e.message || ''), { icon: 'error' }); }
   };
   /** Type a New Address List */
   MM.typeList = function () {
@@ -69,17 +69,18 @@
     const rows = MM.data && MM.data.typed ? MM.data.rows.map((r) => r.slice()) : [fields.map(() => '')];
     let cur = 0;
     const inputs = fields.map((f, i) => { const inp = h('input', { type: 'text', id: 'mm-f' + i, style: 'width:100%' }); inp.addEventListener('input', () => { rows[cur][i] = inp.value; }); return inp; });
-    const grid = h('div', { style: 'display:grid;grid-template-columns:120px 1fr;gap:3px 8px;max-height:300px;overflow:auto;padding-right:4px' });
-    fields.forEach((f, i) => grid.append(h('label', { for: 'mm-f' + i, text: f }), inputs[i]));
+    /* the fields' names are the data's own (they become MERGEFIELD names): not translated */
+    const grid = h('div', { style: 'display:grid;grid-template-columns:120px 1fr;gap:3px 8px;max-height:300px;overflow:auto;padding-right:4px', translate: 'no' });
+    fields.forEach((f, i) => grid.append(h('label', { for: 'mm-f' + i }, document.createTextNode(f)), inputs[i]));
     const info = h('span');
-    const load = () => { inputs.forEach((inp, i) => { inp.value = rows[cur][i] || ''; }); info.textContent = `Entry ${cur + 1} of ${rows.length}`; };
+    const load = () => { inputs.forEach((inp, i) => { inp.value = rows[cur][i] || ''; }); info.textContent = L.t('Entry {0} of {1}', cur + 1, rows.length); };
     const nav = h('div', { class: 'tp-btns' },
       ui.button('&New Entry', () => { rows.push(fields.map(() => '')); cur = rows.length - 1; load(); inputs[0].focus(); }, { class: 'btn small' }),
       ui.button('&Delete Entry', () => { if (rows.length > 1) { rows.splice(cur, 1); cur = Math.min(cur, rows.length - 1); load(); } }, { class: 'btn small' }),
       ui.button('<', () => { if (cur > 0) { cur--; load(); } }, { class: 'btn small' }), ui.button('>', () => { if (cur < rows.length - 1) { cur++; load(); } }, { class: 'btn small' }), info);
     load();
     ui.dialog({
-      title: 'New Address List', width: 440, body: h('div', { class: 'col' }, grid, nav), buttons: [{ label: 'OK', primary: true, onClick: () => { const data = [fields].concat(rows.filter((r) => r.some(Boolean))); if (setData('Address list', data)) MM.data.typed = true; } }, { label: 'Cancel' }],
+      title: 'New Address List', width: 440, body: h('div', { class: 'col' }, grid, nav), buttons: [{ label: 'OK', primary: true, onClick: () => { const data = [fields].concat(rows.filter((r) => r.some(Boolean))); if (setData(L.t('Address list'), data)) MM.data.typed = true; } }, { label: 'Cancel' }],
     });
   };
   MM.recipientsDialog = function () {
@@ -91,20 +92,20 @@
       L.clear(box);
       const order = d.rows.map((_, i) => i);
       if (sortCol >= 0) order.sort((a, b) => { const r = String(d.rows[a][sortCol]).localeCompare(String(d.rows[b][sortCol]), undefined, { numeric: true }); return desc ? -r : r; });
-      const t = h('table', { class: 'mm-table' });
+      const t = h('table', { class: 'mm-table', translate: 'no' });   // the data's own fields and values
       const hr = h('tr', null, h('th', null, (() => { const c = h('input', { type: 'checkbox', 'aria-label': 'Include all' }); c.checked = d.included.size === d.rows.length; c.addEventListener('change', () => { d.included = c.checked ? new Set(d.rows.map((_, i) => i)) : new Set(); draw(); }); return c; })()));
-      d.fields.forEach((f, i) => { const th = h('th', { text: f + (sortCol === i ? (desc ? ' ▼' : ' ▲') : ''), style: 'cursor:pointer' }); th.addEventListener('click', () => { if (sortCol === i) desc = !desc; else { sortCol = i; desc = false; } draw(); }); hr.appendChild(th); });
+      d.fields.forEach((f, i) => { const th = h('th', { style: 'cursor:pointer' }, document.createTextNode(f + (sortCol === i ? (desc ? ' ▼' : ' ▲') : ''))); th.addEventListener('click', () => { if (sortCol === i) desc = !desc; else { sortCol = i; desc = false; } draw(); }); hr.appendChild(th); });
       t.appendChild(hr);
       for (const i of order) {
         const c = h('input', { type: 'checkbox', 'aria-label': 'Include' });
         c.checked = d.included.has(i);
         c.addEventListener('change', () => { if (c.checked) d.included.add(i); else d.included.delete(i); });
-        t.appendChild(h('tr', null, h('td', null, c), ...d.rows[i].map((v) => h('td', { text: v }))));
+        t.appendChild(h('tr', null, h('td', null, c), ...d.rows[i].map((v) => h('td', null, document.createTextNode(v)))));
       }
       box.appendChild(t);
     };
     draw();
-    ui.dialog({ title: 'Mail Merge Recipients', width: 620, body: h('div', { class: 'col' }, h('div', { text: `Data source: ${d.name}. Click a column heading to sort; clear a check box to leave a recipient out.` }), box), buttons: [{ label: 'OK', primary: true, onClick: () => { MM.order = null; refreshPane(); } }] });
+    ui.dialog({ title: 'Mail Merge Recipients', width: 620, body: h('div', { class: 'col' }, h('div', { text: L.t('Data source: {0}. Click a column heading to sort; clear a check box to leave a recipient out.', d.name) }), box), buttons: [{ label: 'OK', primary: true, onClick: () => { MM.order = null; refreshPane(); } }] });
   };
   MM.records = () => (MM.data ? MM.data.rows.map((r, i) => i).filter((i) => MM.data.included.has(i)) : []);
   MM.value = function (name) {
@@ -162,8 +163,8 @@
   };
   MM.fieldDialog = function () {
     if (!MM.data) return;
-    const sel = h('select', { size: 10, id: 'mm-fields', style: 'width:100%' });
-    for (const f of MM.data.fields) sel.appendChild(h('option', { value: f, text: f }));
+    const sel = h('select', { size: 10, id: 'mm-fields', style: 'width:100%', translate: 'no' });
+    for (const f of MM.data.fields) sel.appendChild(h('option', { value: f }, document.createTextNode(f)));
     sel.selectedIndex = 0;
     sel.addEventListener('dblclick', () => { MM.insertField(sel.value); });
     ui.dialog({ title: 'Insert Merge Field', width: 300, body: h('div', { class: 'col' }, h('label', { for: 'mm-fields', text: 'Fields:' }), sel), buttons: [{ label: '&Insert', primary: true, onClick: () => { MM.insertField(sel.value); return false; } }, { label: 'Close' }] });
@@ -243,7 +244,8 @@
     refreshFields();
     A().loadDoc(d, 'Letters' + A().untitled, { newWindow: true });
     MM.preview = false;
-    A().status(`Merged ${MM.records().length} record(s) into a new document.`);
+    const n = MM.records().length;
+    A().status(n === 1 ? L.t('Merged {0} record into a new document.', n) : L.t('Merged {0} records into a new document.', n));
   };
   MM.mergeToPDF = async function () {
     const merged = MM.buildMerged();
@@ -259,17 +261,19 @@
       LY.render();
       E.restoreDom(true);
       await L.saveFile(A().fileName + ' (merged).pdf', blob);
-    } catch (e) { D.doc = keep; LY.render(); L.ui.busy(false); ui.msg('The merge could not be printed. ' + (e.message || ''), { icon: 'error' }); }
+    } catch (e) { D.doc = keep; LY.render(); L.ui.busy(false); ui.msg(L.t('The merge could not be printed. {0}', e.message || ''), { icon: 'error' }); }
   };
 
   /* ---------- wizard (task pane) ---------- */
+  /* the wizard's six steps */
+  const STEPS = [L.N('Select document type'), L.N('Starting document'), L.N('Select recipients'), L.N('Write your letter'), L.N('Preview your letters'), L.N('Complete the merge')];
   function refreshPane() { if (L.panes && L.panes.task.current === 'mailmerge') L.panes.task.render(); }
   MM.renderWizard = function (b) {
     const { sec, link } = L.panes;
     const step = MM.wstep;
-    const nav = h('div', { class: 'tp-btns', style: 'margin-top:14px' }, h('div', { class: 'tp-note', text: `Step ${step} of 6` }));
-    if (step < 6) nav.appendChild(link('nextChange', 'Next: ' + ['Starting document', 'Select recipients', 'Write your letter', 'Preview your letters', 'Complete the merge'][step - 1], () => { MM.wstep++; if (MM.wstep === 5 && MM.data) MM.go(MM.rec); refreshPane(); }, { disabled: step === 3 && !MM.data }));
-    if (step > 1) nav.appendChild(link('prevChange', 'Previous: ' + ['Select document type', 'Starting document', 'Select recipients', 'Write your letter', 'Preview your letters'][step - 2], () => { MM.wstep--; refreshPane(); }));
+    const nav = h('div', { class: 'tp-btns', style: 'margin-top:14px' }, h('div', { class: 'tp-note', text: L.t('Step {0} of 6', step) }));
+    if (step < 6) nav.appendChild(link('nextChange', L.t('Next: {0}', L.t(STEPS[step])), () => { MM.wstep++; if (MM.wstep === 5 && MM.data) MM.go(MM.rec); refreshPane(); }, { disabled: step === 3 && !MM.data }));
+    if (step > 1) nav.appendChild(link('prevChange', L.t('Previous: {0}', L.t(STEPS[step - 2])), () => { MM.wstep--; refreshPane(); }));
     if (step === 1) {
       const rad = (v, l) => ui.radio('mm-type', l, MM.type === v, () => { MM.type = v; });
       b.append(sec('Select document type', h('div', { class: 'tp-note', text: 'What type of document are you working on?' }), rad('letters', '&Letters'), rad('envelopes', '&Envelopes'), rad('labels', 'La&bels'), rad('directory', '&Directory')), h('div', { class: 'tp-note', text: 'Letters: send letters to a group of people. You can personalize the letter that each person receives.' }));
@@ -279,13 +283,13 @@
       if (MM.type === 'labels') b.appendChild(link('labels', 'Label options...', () => L.dlg.envelopes('labels')));
     } else if (step === 3) {
       b.append(sec('Select recipients', ui.radio('mm-src', 'Use an existing &list', !MM.data || !MM.data.typed, () => {}), ui.radio('mm-src', 'T&ype a new list', !!(MM.data && MM.data.typed), () => MM.typeList()),
-        MM.data ? h('div', { class: 'tp-note', text: `Currently, your recipients are selected from: ${MM.data.name} (${MM.records().length} of ${MM.data.rows.length})` }) : h('div', { class: 'tp-note', text: 'Use names and addresses from a file or a database.' }),
+        MM.data ? h('div', { class: 'tp-note', text: L.t('Currently, your recipients are selected from: {0} ({1} of {2})', MM.data.name, MM.records().length, MM.data.rows.length) }) : h('div', { class: 'tp-note', text: 'Use names and addresses from a file or a database.' }),
         link('open', 'Browse...', () => MM.openSource()), MM.data ? link('mmRecipients', 'Edit recipient list...', () => MM.recipientsDialog()) : null, link('new', 'Type a new list...', () => MM.typeList())));
     } else if (step === 4) {
       b.append(sec('Write your letter', h('div', { class: 'tp-note', text: 'Write your letter now, then click a location in the document and choose one of the items below.' }), link('mmAddress', 'Address block...', () => MM.insertBlock('address')), link('mmGreeting', 'Greeting line...', () => MM.insertBlock('greeting')), link('mmField', 'More items...', () => MM.fieldDialog())));
     } else if (step === 5) {
       const n = MM.records().length;
-      b.append(sec('Preview your letters', h('div', { class: 'tp-note', text: 'One of the merged letters is previewed here. To preview another letter, click one of the following:' }), h('div', { class: 'tp-row' }, ui.button('<<', () => MM.step(-1), { class: 'btn small' }), h('span', { text: `Recipient: ${MM.rec + 1} of ${n}` }), ui.button('>>', () => MM.step(1), { class: 'btn small' })), link('find', 'Find a recipient...', async () => { const q = await ui.prompt('Find:', '', 'Find Entry'); if (!q) return; const recs = MM.records(); const k = recs.findIndex((ri) => MM.data.rows[ri].some((v) => String(v).toLowerCase().includes(q.toLowerCase()))); if (k >= 0) MM.go(k); }), link('mmRecipients', 'Edit recipient list...', () => MM.recipientsDialog()), ui.button('Exclude this recipient', () => { const recs = MM.records(); MM.data.included.delete(recs[MM.rec]); MM.go(MM.rec); }, { class: 'btn small' })));
+      b.append(sec('Preview your letters', h('div', { class: 'tp-note', text: 'One of the merged letters is previewed here. To preview another letter, click one of the following:' }), h('div', { class: 'tp-row' }, ui.button('<<', () => MM.step(-1), { class: 'btn small' }), h('span', { text: L.t('Recipient: {0} of {1}', MM.rec + 1, n) }), ui.button('>>', () => MM.step(1), { class: 'btn small' })), link('find', 'Find a recipient...', async () => { const q = await ui.prompt('Find:', '', 'Find Entry'); if (!q) return; const recs = MM.records(); const k = recs.findIndex((ri) => MM.data.rows[ri].some((v) => String(v).toLowerCase().includes(q.toLowerCase()))); if (k >= 0) MM.go(k); }), link('mmRecipients', 'Edit recipient list...', () => MM.recipientsDialog()), ui.button('Exclude this recipient', () => { const recs = MM.records(); MM.data.included.delete(recs[MM.rec]); MM.go(MM.rec); }, { class: 'btn small' })));
     } else {
       b.append(sec('Complete the merge', h('div', { class: 'tp-note', text: 'Quire is ready to produce your letters.' }), link('mmMergePrint', 'Print... (PDF)', () => MM.mergeToPDF()), link('mmMergeNew', 'Edit individual letters...', () => MM.mergeToNew())));
     }

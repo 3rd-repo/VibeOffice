@@ -532,22 +532,23 @@ WEBSERVICE|url|Returns data from a web service.`,
   }
   FI.get = (name) => map.get(String(name).toUpperCase()) || null;
   FI.all = () => Array.from(map.values());
-  FI.categories = ['Most Recently Used', 'All', 'Financial', 'Date & Time', 'Math & Trig', 'Statistical', 'Lookup & Reference', 'Database', 'Text', 'Logical', 'Information', 'Engineering', 'Cube', 'Web'];
+  /* the categories are ids (f.cat, Insert Function's 'All' and 'Most Recently Used') shown translated */
+  FI.categories = [L.N('Most Recently Used'), L.N('All'), L.N('Financial'), L.N('Date & Time'), L.N('Math & Trig'), L.N('Statistical'), L.N('Lookup & Reference'), L.N('Database'), L.N('Text'), L.N('Logical'), L.N('Information'), L.N('Engineering'), L.N('Cube'), L.N('Web')];
   FI.syntax = (f) => f.name + '(' + f.args.join(',') + ')';
-  /* argument help shown in the Function Arguments dialog */
+  /* argument help shown in the Function Arguments dialog (translated there) */
   const ARGHELP = {
-    number: 'is a number, or a reference to a cell that contains a number.', number1: 'number1,number2,... are 1 to 255 numbers or arguments you want to process.',
-    value1: 'value1,value2,... are 1 to 255 values or ranges.', logical1: 'logical1,logical2,... are 1 to 255 conditions you want to test that can be either TRUE or FALSE.',
-    logical_test: 'is any value or expression that can be evaluated to TRUE or FALSE.', value_if_true: 'is the value that is returned if Logical_test is TRUE. If omitted, TRUE is returned.', value_if_false: 'is the value that is returned if Logical_test is FALSE. If omitted, FALSE is returned.',
-    lookup_value: 'is the value to be found in the first column (or row) of the table, and can be a value, a reference, or a text string.', table_array: 'is a table of text, numbers, or logical values, in which data is retrieved. Table_array can be a reference to a range or a range name.',
-    col_index_num: 'is the column number in table_array from which the matching value should be returned. The first column of values in the table is column 1.', row_index_num: 'is the row number in table_array from which the matching value should be returned.',
-    range_lookup: 'is a logical value: to find the closest match in the first column (sorted in ascending order) = TRUE or omitted; find an exact match = FALSE.',
-    range: 'is the range of cells you want evaluated.', criteria: 'is the condition or criteria in the form of a number, expression, or text that defines which cells will be added.', sum_range: 'are the actual cells to sum. If omitted, the cells in range are used.',
-    text: 'is the text string you want processed.', num_chars: 'specifies how many characters you want.', rate: 'is the interest rate per period. For example, use 6%/4 for quarterly payments at 6% APR.',
-    nper: 'is the total number of payment periods in an investment.', pv: 'is the present value: the total amount that a series of future payments is worth now.', fv: 'is the future value, or a cash balance you want to attain after the last payment is made.', type: 'is a logical value: payment at the beginning of the period = 1; payment at the end of the period = 0 or omitted.',
-    num_digits: 'is the number of digits to which you want to round. Negative rounds to the left of the decimal point; zero to the nearest integer.', serial_number: 'is a number in the date-time code used by Ledger.',
-    array: 'is a range of cells or an array constant.', k: 'is the position (from the largest or smallest) in the array or cell range of data to return.', reference: 'is the cell or range of cells.',
-    database: 'is the range of cells that makes up the list or database. A database is a list of related data.', field: 'is either the label of the column in double quotation marks or a number that represents the column\'s position in the list.', criteria_range1: 'is the range of cells you want evaluated for the particular condition.',
+    number: L.N('is a number, or a reference to a cell that contains a number.'), number1: L.N('number1,number2,... are 1 to 255 numbers or arguments you want to process.'),
+    value1: L.N('value1,value2,... are 1 to 255 values or ranges.'), logical1: L.N('logical1,logical2,... are 1 to 255 conditions you want to test that can be either TRUE or FALSE.'),
+    logical_test: L.N('is any value or expression that can be evaluated to TRUE or FALSE.'), value_if_true: L.N('is the value that is returned if Logical_test is TRUE. If omitted, TRUE is returned.'), value_if_false: L.N('is the value that is returned if Logical_test is FALSE. If omitted, FALSE is returned.'),
+    lookup_value: L.N('is the value to be found in the first column (or row) of the table, and can be a value, a reference, or a text string.'), table_array: L.N('is a table of text, numbers, or logical values, in which data is retrieved. Table_array can be a reference to a range or a range name.'),
+    col_index_num: L.N('is the column number in table_array from which the matching value should be returned. The first column of values in the table is column 1.'), row_index_num: L.N('is the row number in table_array from which the matching value should be returned.'),
+    range_lookup: L.N('is a logical value: to find the closest match in the first column (sorted in ascending order) = TRUE or omitted; find an exact match = FALSE.'),
+    range: L.N('is the range of cells you want evaluated.'), criteria: L.N('is the condition or criteria in the form of a number, expression, or text that defines which cells will be added.'), sum_range: L.N('are the actual cells to sum. If omitted, the cells in range are used.'),
+    text: L.N('is the text string you want processed.'), num_chars: L.N('specifies how many characters you want.'), rate: L.N('is the interest rate per period. For example, use 6%/4 for quarterly payments at 6% APR.'),
+    nper: L.N('is the total number of payment periods in an investment.'), pv: L.N('is the present value: the total amount that a series of future payments is worth now.'), fv: L.N('is the future value, or a cash balance you want to attain after the last payment is made.'), type: L.N('is a logical value: payment at the beginning of the period = 1; payment at the end of the period = 0 or omitted.'),
+    num_digits: L.N('is the number of digits to which you want to round. Negative rounds to the left of the decimal point; zero to the nearest integer.'), serial_number: L.N('is a number in the date-time code used by Ledger.'),
+    array: L.N('is a range of cells or an array constant.'), k: L.N('is the position (from the largest or smallest) in the array or cell range of data to return.'), reference: L.N('is the cell or range of cells.'),
+    database: L.N('is the range of cells that makes up the list or database. A database is a list of related data.'), field: L.N('is either the label of the column in double quotation marks or a number that represents the column\'s position in the list.'), criteria_range1: L.N('is the range of cells you want evaluated for the particular condition.'),
   };
   FI.argHelp = (name) => ARGHELP[String(name).replace(/[[\]]|\.\.\./g, '')] || '';
 })(typeof window !== 'undefined' ? window : globalThis);

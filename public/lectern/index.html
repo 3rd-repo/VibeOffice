@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<script>try{var d=document.documentElement,l=localStorage.getItem('vibeoffice.look')||'classic';d.dataset.look=l;d.dataset.layout=l==='paper2016'?'ribbon':'bars'}catch(e){}</script>
+<script>try{var d=document.documentElement,l=localStorage.getItem('vibeoffice.look')||'classic';d.dataset.look=l;d.dataset.layout=l==='paper2016'?'ribbon':'bars';var u=['en','ja','ko','fr','de','qps'],g=(location.search.match(/[?&]lang=([a-z]+)/)||[])[1]||localStorage.getItem('vibeoffice.lang');if(u.indexOf(g)<0)g=(navigator.languages||[navigator.language]).map(function(x){return String(x).toLowerCase().split('-')[0]}).filter(function(x){return x!=='qps'&&u.indexOf(x)>=0})[0]||'en';d.lang=g==='qps'?'qps-ploc':g}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lectern 2003</title>
 <meta name="theme-color" content="#2a64c8">
@@ -26,7 +26,7 @@
 .main { flex: 1; display: flex; min-height: 0; min-width: 0; background: var(--dock-b); }
 .leftpane { flex: none; width: 196px; display: flex; flex-direction: column; background: var(--surface); border-right: 1px solid var(--chrome-line); min-height: 0; }
 .lp-tabs { flex: none; display: flex; align-items: flex-end; gap: 2px; padding: 4px 4px 0 6px; background: linear-gradient(var(--tb-a), var(--tb-b)); border-bottom: 1px solid var(--tab-line-2); }
-.lp-tab { border: 1px solid var(--tab-line-2); border-bottom: 0; background: linear-gradient(var(--tab2-a), var(--tab2-b)); padding: 2px 9px 3px; border-radius: 3px 3px 0 0; margin-bottom: -1px; cursor: default; }
+.lp-tab { border: 1px solid var(--tab-line-2); border-bottom: 0; background: linear-gradient(var(--tab2-a), var(--tab2-b)); padding: 2px 9px 3px; border-radius: 3px 3px 0 0; margin-bottom: -1px; cursor: default; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .lp-tab.on { background: var(--surface); font-weight: bold; padding-bottom: 4px; }
 .lp-close { margin-left: auto; align-self: center; border: 0; background: none; width: 16px; height: 16px; padding: 0; margin-bottom: 3px; }
 .lp-close:hover { background: var(--menu-hot); outline: 1px solid var(--hot-border); }
@@ -301,6 +301,8 @@
 <script src="../common/suite.js"></script>
 <script>window.L = { APP_ID: 'lectern', APP_NAME: 'Lectern', APP: 'Lectern 2003' };</script>
 <script src="../common/core.js"></script>
+<script src="../common/i18n.js"></script>
+<script src="../common/locales.js"></script>
 <script src="../common/sha.js"></script>
 <script src="../common/crypto.js"></script>
 <script src="../common/xml.js"></script>

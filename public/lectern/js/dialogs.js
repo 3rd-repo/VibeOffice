@@ -19,7 +19,7 @@
     const sw = h('span', { class: 'fp-sw', style: 'display:inline-block;width:70px;height:14px;border:1px solid #555;vertical-align:middle' });
     const btn = h('button', { type: 'button', class: 'btn small', style: 'min-width:100px;display:inline-flex;align-items:center;gap:6px' }, sw, h('span', { class: 'dd-arrow' }));
     const paint = () => {
-      if (!cur || cur.t === 'none') { sw.style.background = 'repeating-linear-gradient(45deg,#fff 0 4px,#eee 4px 8px)'; sw.title = mode === 'line' ? 'No Line' : 'No Fill'; }
+      if (!cur || cur.t === 'none') { sw.style.background = 'repeating-linear-gradient(45deg,#fff 0 4px,#eee 4px 8px)'; sw.title = mode === 'line' ? L.t('No Line') : L.t('No Fill'); }
       else sw.style.background = mode === 'line' ? L.model.resolveColor(cur.c, design()) : fillCSS(cur);
     };
     paint();
@@ -50,9 +50,9 @@
   }
   D.colorPick = colorPick;
   const LINE_WEIGHTS = [0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6];
-  const DASHES = [['solid', 'Solid'], ['sysDot', 'Round Dot'], ['sysDash', 'Square Dot'], ['dash', 'Dash'], ['dashDot', 'Dash Dot'], ['lgDash', 'Long Dash'], ['lgDashDot', 'Long Dash Dot'], ['lgDashDotDot', 'Long Dash Dot Dot']];
-  const ARROWS = [['none', 'None'], ['triangle', 'Arrow'], ['arrow', 'Open Arrow'], ['stealth', 'Stealth Arrow'], ['diamond', 'Diamond Arrow'], ['oval', 'Oval Arrow']];
-  const SIZES = [['sm', 'Small'], ['med', 'Medium'], ['lg', 'Large']];
+  const DASHES = [['solid', L.N('Solid')], ['sysDot', L.N('Round Dot')], ['sysDash', L.N('Square Dot')], ['dash', L.N('Dash')], ['dashDot', L.N('Dash Dot')], ['lgDash', L.N('Long Dash')], ['lgDashDot', L.N('Long Dash Dot')], ['lgDashDotDot', L.N('Long Dash Dot Dot')]];
+  const ARROWS = [['none', L.N('None')], ['triangle', L.N('Arrow')], ['arrow', L.N('Open Arrow')], ['stealth', L.N('Stealth Arrow')], ['diamond', L.N('Diamond Arrow')], ['oval', L.N('Oval Arrow')]];
+  const SIZES = [['sm', L.N('Small')], ['med', L.N('Medium')], ['lg', L.N('Large')]];
   D.LINE_WEIGHTS = LINE_WEIGHTS; D.DASHES = DASHES; D.ARROWS = ARROWS;
 
   /* ---------- Font ---------- */
@@ -61,15 +61,15 @@
     if (!st) { ui.msg('Select some text or a text object first.'); return; }
     const o = { font: st.font, sz: st.sz, b: st.b, i: st.i, u: st.u, shd: st.shd, emb: !!(st.r && st.r.emb), base: (st.r && st.r.base) || 0, color: st.r ? st.r.color : null };
     const fontList = h('select', { id: 'fd-font', size: 7, style: 'width:180px' });
-    L.FONT_LIST.forEach((f) => { const op = h('option', { value: f, text: f }); if (f === o.font) op.selected = true; fontList.appendChild(op); });
-    if (!L.FONT_LIST.includes(o.font)) fontList.insertBefore(h('option', { value: o.font, text: o.font, selected: true }), fontList.firstChild);
+    L.FONT_LIST.forEach((f) => { const op = h('option', { value: f, text: f, translate: 'no' }); if (f === o.font) op.selected = true; fontList.appendChild(op); });
+    if (!L.FONT_LIST.includes(o.font)) fontList.insertBefore(h('option', { value: o.font, text: o.font, selected: true, translate: 'no' }), fontList.firstChild);
     const fontIn = h('input', { type: 'text', id: 'fd-font-in', value: o.font, style: 'width:180px' });
-    const styleSel = h('select', { id: 'fd-style', size: 4, style: 'width:110px' }, ...['Regular', 'Italic', 'Bold', 'Bold Italic'].map((s) => h('option', { value: s, text: s })));
+    const styleSel = h('select', { id: 'fd-style', size: 4, style: 'width:110px' }, ...[L.N('Regular'), L.N('Italic'), L.N('Bold'), 'Bold Italic'].map((s) => h('option', { value: s, text: s })));
     styleSel.value = o.b && o.i ? 'Bold Italic' : o.b ? 'Bold' : o.i ? 'Italic' : 'Regular';
     const sizeIn = h('input', { type: 'text', id: 'fd-size', value: o.sz, style: 'width:60px' });
     const sizeSel = h('select', { size: 4, style: 'width:60px' }, ...L.SIZE_LIST.map((s) => h('option', { value: s, text: s })));
     sizeSel.value = String(o.sz);
-    const preview = h('div', { class: 'preview-box font-preview', text: 'AaBbYyZz' });
+    const preview = h('div', { class: 'preview-box font-preview', text: 'AaBbYyZz', translate: 'no' });
     const upd = () => {
       const r = preview.style;
       r.fontFamily = L.fontStack(fontIn.value);
@@ -91,12 +91,12 @@
     const col = colorPick(o.color, upd, { automatic: true });
     const body = h('div', { class: 'col' },
       h('div', { class: 'row' },
-        h('div', { class: 'col' }, h('label', { for: 'fd-font-in', html: '<u>F</u>ont:' }), fontIn, fontList),
-        h('div', { class: 'col' }, h('label', { for: 'fd-style', html: 'F<u>o</u>nt style:' }), styleSel),
-        h('div', { class: 'col' }, h('label', { for: 'fd-size', html: '<u>S</u>ize:' }), sizeIn, sizeSel)),
+        h('div', { class: 'col' }, h('label', { for: 'fd-font-in', html: ui.ampHTML('&Font:') }), fontIn, fontList),
+        h('div', { class: 'col' }, h('label', { for: 'fd-style', html: ui.ampHTML('F&ont style:') }), styleSel),
+        h('div', { class: 'col' }, h('label', { for: 'fd-size', html: ui.ampHTML('&Size:') }), sizeIn, sizeSel)),
       h('div', { class: 'row' },
         ui.group('Effects', h('div', { class: 'row' }, h('div', { class: 'col' }, u, s, emb), h('div', { class: 'col' }, sup, sub, h('div', { class: 'field' }, h('label', { text: 'Offset:' }), off)))),
-        h('div', { class: 'col' }, h('label', { html: '<u>C</u>olor:' }), col)),
+        h('div', { class: 'col' }, h('label', { html: ui.ampHTML('&Color:') }), col)),
       preview,
       h('div', { class: 'tp-note', text: 'This is a TrueType font. The same font will be used on both your printer and your screen.' }));
     upd();
@@ -108,7 +108,7 @@
             u: u.input.checked ? 'sng' : undefined, shd: s.input.checked || undefined, emb: emb.input.checked || undefined,
             base: sup.input.checked ? off.get() * 1000 : sub.input.checked ? -off.get() * 1000 : undefined, color: col.get() || undefined,
           };
-          L.fmt.run((r) => { const n = Object.assign({}, r, props); for (const k in props) if (props[k] === undefined) delete n[k]; if (props.color) delete n.fill; return n; }, 'Font', (wa) => { wa.font = props.font; wa.b = props.b; wa.i = props.i; });
+          L.fmt.run((r) => { const n = Object.assign({}, r, props); for (const k in props) if (props[k] === undefined) delete n[k]; if (props.color) delete n.fill; return n; }, L.N('Font'), (wa) => { wa.font = props.font; wa.b = props.b; wa.i = props.i; });
         },
       }, { label: 'Cancel' }],
     });
@@ -191,7 +191,7 @@
   /* ---------- Change Case ---------- */
   D.changeCase = function () {
     let mode = 'sentence';
-    const opts = [['sentence', '&Sentence case.'], ['lower', '&lowercase'], ['upper', '&UPPERCASE'], ['title', '&Title Case'], ['toggle', 't&OGGLE cASE']];
+    const opts = [['sentence', '&Sentence case.'], ['lower', L.N('&lowercase')], ['upper', L.N('&UPPERCASE')], ['title', '&Title Case'], ['toggle', L.N('t&OGGLE cASE')]];
     const body = h('div', { class: 'col' }, ...opts.map(([k, l], i) => ui.radio('cc', l, i === 0, () => { mode = k; })));
     ui.dialog({ title: 'Change Case', body, width: 240, buttons: [{ label: 'OK', primary: true, onClick: () => D.applyCase(mode) }, { label: 'Cancel' }] });
   };
@@ -224,30 +224,30 @@
 
   /* ---------- Fill Effects ---------- */
   const GRAD_PRESETS = [
-    ['Early Sunset', [[0, '#000082'], [0.3, '#66008F'], [0.65, '#BA0066'], [1, '#FF8200']]],
-    ['Late Sunset', [[0, '#000000'], [0.5, '#000040'], [1, '#FF8C00']]],
-    ['Nightfall', [[0, '#000000'], [0.6, '#0A128C'], [1, '#181CC7']]],
-    ['Daybreak', [[0, '#5E9EFF'], [0.4, '#85C2FF'], [0.7, '#C4D6EB'], [1, '#FFEBFA']]],
-    ['Horizon', [[0, '#DCEBF5'], [0.4, '#83A7C3'], [0.5, '#768FB9'], [0.6, '#83A7C3'], [1, '#FFFFFF']]],
-    ['Desert', [[0, '#9C3500'], [0.3, '#E8A15C'], [0.6, '#FFDF9C'], [1, '#FFFFFF']]],
-    ['Ocean', [[0, '#03D4A8'], [0.5, '#21D6E0'], [1, '#0087E6']]],
-    ['Calm Water', [[0, '#CCCCFF'], [0.5, '#99CCFF'], [1, '#CCCCFF']]],
-    ['Fire', [[0, '#FFF200'], [0.45, '#FF7A00'], [0.7, '#FF0300'], [1, '#4D0808']]],
-    ['Fog', [[0, '#8488C4'], [0.5, '#D4DEFF'], [1, '#96AB94']]],
-    ['Moss', [[0, '#DDEBCF'], [0.5, '#9CB86E'], [1, '#156B13']]],
-    ['Peacock', [[0, '#3399FF'], [0.2, '#00CCCC'], [0.5, '#9999FF'], [0.8, '#2E6792'], [1, '#3333CC']]],
-    ['Wheat', [[0, '#FBEAC7'], [0.2, '#FEE7F2'], [0.5, '#FAC77D'], [0.8, '#FBA97D'], [1, '#FBD49C']]],
-    ['Parchment', [[0, '#FFEFD1'], [0.65, '#F0EBD5'], [1, '#D1C39F']]],
-    ['Mahogany', [[0, '#D6B19C'], [0.3, '#D49E6C'], [0.7, '#A65528'], [1, '#663012']]],
-    ['Rainbow', [[0, '#A603AB'], [0.2, '#0819FB'], [0.4, '#1A8D48'], [0.6, '#FFFF00'], [0.8, '#EE3F17'], [1, '#E81766']]],
-    ['Gold', [[0, '#E6DCAC'], [0.15, '#E6D78A'], [0.4, '#C7AC4C'], [0.6, '#E6D78A'], [1, '#E6DCAC']]],
-    ['Brass', [[0, '#825600'], [0.15, '#FFA800'], [0.35, '#825600'], [0.55, '#FFA800'], [0.8, '#825600'], [1, '#FFA800']]],
-    ['Chrome', [[0, '#FFFFFF'], [0.2, '#000000'], [0.4, '#FFFFFF'], [0.6, '#000000'], [0.8, '#FFFFFF'], [1, '#000000']]],
-    ['Silver', [[0, '#FFFFFF'], [0.3, '#E6E6E6'], [0.6, '#7D8496'], [1, '#FFFFFF']]],
-    ['Sapphire', [[0, '#000082'], [0.5, '#0047FF'], [1, '#000082']]],
+    [L.N('Early Sunset'), [[0, '#000082'], [0.3, '#66008F'], [0.65, '#BA0066'], [1, '#FF8200']]],
+    [L.N('Late Sunset'), [[0, '#000000'], [0.5, '#000040'], [1, '#FF8C00']]],
+    [L.N('Nightfall'), [[0, '#000000'], [0.6, '#0A128C'], [1, '#181CC7']]],
+    [L.N('Daybreak'), [[0, '#5E9EFF'], [0.4, '#85C2FF'], [0.7, '#C4D6EB'], [1, '#FFEBFA']]],
+    [L.N('Horizon'), [[0, '#DCEBF5'], [0.4, '#83A7C3'], [0.5, '#768FB9'], [0.6, '#83A7C3'], [1, '#FFFFFF']]],
+    [L.N('Desert'), [[0, '#9C3500'], [0.3, '#E8A15C'], [0.6, '#FFDF9C'], [1, '#FFFFFF']]],
+    [L.N('Ocean'), [[0, '#03D4A8'], [0.5, '#21D6E0'], [1, '#0087E6']]],
+    [L.N('Calm Water'), [[0, '#CCCCFF'], [0.5, '#99CCFF'], [1, '#CCCCFF']]],
+    [L.N('Fire'), [[0, '#FFF200'], [0.45, '#FF7A00'], [0.7, '#FF0300'], [1, '#4D0808']]],
+    [L.N('Fog'), [[0, '#8488C4'], [0.5, '#D4DEFF'], [1, '#96AB94']]],
+    [L.N('Moss'), [[0, '#DDEBCF'], [0.5, '#9CB86E'], [1, '#156B13']]],
+    [L.N('Peacock'), [[0, '#3399FF'], [0.2, '#00CCCC'], [0.5, '#9999FF'], [0.8, '#2E6792'], [1, '#3333CC']]],
+    [L.N('Wheat'), [[0, '#FBEAC7'], [0.2, '#FEE7F2'], [0.5, '#FAC77D'], [0.8, '#FBA97D'], [1, '#FBD49C']]],
+    [L.N('Parchment'), [[0, '#FFEFD1'], [0.65, '#F0EBD5'], [1, '#D1C39F']]],
+    [L.N('Mahogany'), [[0, '#D6B19C'], [0.3, '#D49E6C'], [0.7, '#A65528'], [1, '#663012']]],
+    [L.N('Rainbow'), [[0, '#A603AB'], [0.2, '#0819FB'], [0.4, '#1A8D48'], [0.6, '#FFFF00'], [0.8, '#EE3F17'], [1, '#E81766']]],
+    [L.N('Gold'), [[0, '#E6DCAC'], [0.15, '#E6D78A'], [0.4, '#C7AC4C'], [0.6, '#E6D78A'], [1, '#E6DCAC']]],
+    [L.N('Brass'), [[0, '#825600'], [0.15, '#FFA800'], [0.35, '#825600'], [0.55, '#FFA800'], [0.8, '#825600'], [1, '#FFA800']]],
+    [L.N('Chrome'), [[0, '#FFFFFF'], [0.2, '#000000'], [0.4, '#FFFFFF'], [0.6, '#000000'], [0.8, '#FFFFFF'], [1, '#000000']]],
+    [L.N('Silver'), [[0, '#FFFFFF'], [0.3, '#E6E6E6'], [0.6, '#7D8496'], [1, '#FFFFFF']]],
+    [L.N('Sapphire'), [[0, '#000082'], [0.5, '#0047FF'], [1, '#000082']]],
   ];
   /* procedural textures (generated tiles) */
-  const TEXTURES = ['Canvas', 'Denim', 'Paper bag', 'Newsprint', 'Recycled paper', 'Parchment', 'Granite', 'White marble', 'Green marble', 'Sand', 'Cork', 'Oak', 'Walnut', 'Water droplets', 'Blue tissue paper', 'Woven mat', 'Stationery', 'Fabric'];
+  const TEXTURES = [L.N('Canvas'), L.N('Denim'), L.N('Paper bag'), L.N('Newsprint'), L.N('Recycled paper'), L.N('Parchment'), L.N('Granite'), L.N('White marble'), L.N('Green marble'), L.N('Sand'), L.N('Cork'), L.N('Oak'), L.N('Walnut'), L.N('Water droplets'), L.N('Blue tissue paper'), L.N('Woven mat'), L.N('Stationery'), L.N('Fabric')];
   const texCache = {};
   function texture(name) {
     if (texCache[name]) return texCache[name];
@@ -350,7 +350,7 @@
       let texSel = null;
       TEXTURES.forEach((n) => {
         const b = h('button', { type: 'button', 'data-tip': n, 'aria-label': n, style: `background-image:url(${texture(n)});background-size:44px 44px` });
-        b.addEventListener('click', async () => { L.$$('button', texGrid).forEach((x) => x.classList.remove('on')); b.classList.add('on'); texSel = n; texName.textContent = n; const id = await textureMedia(n); current = { t: 'img', media: id, tile: true }; paintSample(); });
+        b.addEventListener('click', async () => { L.$$('button', texGrid).forEach((x) => x.classList.remove('on')); b.classList.add('on'); texSel = n; texName.textContent = L.t(n); const id = await textureMedia(n); current = { t: 'img', media: id, tile: true }; paintSample(); });
         texGrid.appendChild(b);
       });
       const texName = h('div', { class: 'tp-note', text: ' ' });
@@ -359,12 +359,13 @@
       /* pattern */
       let pfg = '#000000', pbg = '#FFFFFF', pprst = initial && initial.t === 'patt' ? initial.prst : 'pct50';
       const pattGrid = h('div', { class: 'patt-grid' });
-      const pattName = h('div', { class: 'tp-note', text: pprst });
+      const pattLabel = (k) => (L.geom.PATTERN_NAMES || {})[k] || k;   /* Office's name of a preset pattern */
+      const pattName = h('div', { class: 'tp-note', text: pattLabel(pprst) });
       const drawPatt = () => {
         L.clear(pattGrid);
         Object.keys(L.render.PATTERNS).forEach((k) => {
-          const b = h('button', { type: 'button', 'aria-label': k, 'data-tip': k, class: k === pprst ? 'on' : '', style: `background:${L.render.patternURL(k, L.model.resolveColor(pfg, d0), L.model.resolveColor(pbg, d0))}` });
-          b.addEventListener('click', () => { pprst = k; pattName.textContent = k; current = { t: 'patt', prst: k, fg: pfg, bg: pbg }; paintSample(); drawPatt(); });
+          const b = h('button', { type: 'button', 'aria-label': pattLabel(k), 'data-tip': pattLabel(k), class: k === pprst ? 'on' : '', style: `background:${L.render.patternURL(k, L.model.resolveColor(pfg, d0), L.model.resolveColor(pbg, d0))}` });
+          b.addEventListener('click', () => { pprst = k; pattName.textContent = L.t(pattLabel(k)); current = { t: 'patt', prst: k, fg: pfg, bg: pbg }; paintSample(); drawPatt(); });
           pattGrid.appendChild(b);
         });
       };
@@ -418,7 +419,7 @@
     const lock = ui.check('Lock &aspect ratio', !!s0.lockAspect, (v) => { ch.lockAspect = v; });
     let natW = 0, natH = 0;
     const origLbl = h('div', { class: 'tp-note' });
-    if (isPic && L.media.has(s0.media)) L.loadImage(L.media.url(s0.media)).then((im) => { natW = im.naturalWidth * 0.75; natH = im.naturalHeight * 0.75; origLbl.textContent = `Original size: Height ${IN(natH)}"  Width ${IN(natW)}"`; }).catch(() => {});
+    if (isPic && L.media.has(s0.media)) L.loadImage(L.media.url(s0.media)).then((im) => { natW = im.naturalWidth * 0.75; natH = im.naturalHeight * 0.75; origLbl.textContent = L.t('Original size: Height {0}"  Width {1}"', IN(natH), IN(natW)); }).catch(() => {});
     const sizeTab = h('div', { class: 'col' },
       ui.group('Size and rotate', h('div', { class: 'row' }, ui.field('H&eight:', hS), ui.field('Wi&dth:', wS)), ui.field('Rota&tion:', rS)),
       ui.group('Scale', lock),
@@ -543,7 +544,7 @@
     const om = ui.check('Omit background &graphics from master', omit, (v) => { omit = v; paint(); });
     paint();
     const apply = (all) => {
-      L.hist.push('Background');
+      L.hist.push(L.N('Background'));
       const targets = all ? L.pres.slides : (L.app.selectedSlides && L.app.selectedSlides().length > 1 ? L.app.selectedSlides() : [slide]);
       if (E().view === 'master') { const ms = E().masterSlide; ms.bg = fill; E().syncMaster(); }
       else if (all) { for (const s of L.pres.slides) { delete s.bg; s.hideMaster = omit || undefined; } for (const id in L.pres.designs) { if (L.pres.slides.some((s) => s.design === id)) L.pres.designs[id].bg = L.clone(fill); } }
@@ -587,7 +588,7 @@
     const hf = Object.assign({}, L.pres.hf, slide && slide.hf);
     const dt = ui.check('&Date and time', !!hf.dt, () => sync());
     const auto = ui.radio('hf-dt', 'Update &automatically', hf.dtAuto !== false, () => sync());
-    const fmt = ui.select(L.DATE_FORMATS.map((f) => [f, L.fmtDate(new Date(), f)]), hf.dtFmt || 'datetime1');
+    const fmt = ui.select(L.DATE_FORMATS.map((f) => [f, L.fmtDate(new Date(), f)]), hf.dtFmt || 'datetime1', null, { translate: 'no' });
     const fixed = ui.radio('hf-dt', 'Fi&xed', hf.dtAuto === false, () => sync());
     const fixedIn = h('input', { type: 'text', id: 'hf-fixed', value: hf.dtText || L.fmtDate(new Date(), 'datetime1'), style: 'width:220px' });
     const num = ui.check('Slide &number', !!hf.num);
@@ -653,11 +654,11 @@
     const mc = ui.check('Matc&h case', findState.mc), ww = ui.check('Find &whole words only', findState.ww);
     const read = () => { findState.what = what.value; findState.with = repl.value; findState.mc = mc.input.checked; findState.ww = ww.input.checked; };
     const body = h('div', { class: 'col' }, ui.field('Fi&nd what:', what, { cls: 'wide' }), replace ? ui.field('Re&place with:', repl, { cls: 'wide' }) : null, mc, ww);
-    const notFound = () => ui.msg(`${L.APP} has finished searching the presentation. The search item wasn't found.`, { icon: 'info' });
+    const notFound = () => ui.msg(L.t('{0} has finished searching the presentation. The search item wasn\'t found.', L.APP), { icon: 'info' });
     const btns = [{ label: '&Find Next', primary: true, onClick: () => { read(); if (!findNext(findState)) notFound(); return false; } }];
     if (replace) {
       btns.push({ label: '&Replace', onClick: () => { read(); doReplaceOne(); return false; } });
-      btns.push({ label: 'Replace &All', onClick: () => { read(); const n = replaceAll(); ui.msg(n ? `${L.APP} has finished searching the presentation and made ${n} replacement${n === 1 ? '' : 's'}.` : 'The search item wasn\'t found.', { icon: 'info' }); return false; } });
+      btns.push({ label: 'Replace &All', onClick: () => { read(); const n = replaceAll(); ui.msg(n > 1 ? L.t('{0} has finished searching the presentation and made {1} replacements.', L.APP, n) : n ? L.t('{0} has finished searching the presentation and made 1 replacement.', L.APP) : 'The search item wasn\'t found.', { icon: 'info' }); return false; } });
     } else btns.push({ label: 'Re&place...', onClick: (close) => { read(); close(null); setTimeout(() => D.find(true), 0); return false; } });
     btns.push({ label: 'Close' });
     ui.dialog({ title: replace ? 'Replace' : 'Find', body, width: 440, buttons: btns });
@@ -665,7 +666,7 @@
       if (L.te.active()) {
         const sel = L.te.selectedText();
         const match = findState.mc ? sel === findState.what : sel.toLowerCase() === findState.what.toLowerCase();
-        if (match && sel) { L.hist.push('Replace'); L.te.insertText(findState.with); }
+        if (match && sel) { L.hist.push(L.N('Replace')); L.te.insertText(findState.with); }
       }
       if (!findNext(findState)) notFound();
     }
@@ -700,34 +701,34 @@
     const existing = editing ? (L.te.target() && (() => { const t = L.te.target(); const s = L.te.currentSel(); const p = t.tx.ps[s.p0]; let acc = 0; for (const r of p.rs) { acc += r.t.length; if (acc >= s.o0 && r.link) return r.link; } return null; })()) : sh.link;
     void runProps;
     let kind = existing && existing.slide ? 'place' : existing && existing.url && /^mailto:/.test(existing.url) ? 'mail' : existing && existing.action ? 'place' : 'web';
-    const disp = h('input', { type: 'text', id: 'hl-disp', value: editing ? L.te.selectedText() : '<<Selection in Document>>', style: 'width:100%' });
+    const disp = h('input', { type: 'text', id: 'hl-disp', value: editing ? L.te.selectedText() : L.t('<<Selection in Document>>'), style: 'width:100%' });
     if (!editing) disp.disabled = true;
     const addr = h('input', { type: 'text', id: 'hl-addr', value: existing && existing.url && !/^mailto:/.test(existing.url) ? existing.url : 'https://', style: 'width:100%' });
     const tip = h('input', { type: 'text', id: 'hl-tip', value: (existing && existing.tip) || '', style: 'width:100%' });
     const mail = h('input', { type: 'text', id: 'hl-mail', value: existing && existing.url && /^mailto:/.test(existing.url) ? existing.url.replace(/^mailto:/, '').split('?')[0] : '', style: 'width:100%' });
     const subj = h('input', { type: 'text', id: 'hl-subj', value: '', style: 'width:100%' });
-    const places = [['a:first', 'First Slide'], ['a:last', 'Last Slide'], ['a:next', 'Next Slide'], ['a:prev', 'Previous Slide']].concat(L.pres.slides.map((s, i) => ['s:' + s.id, `${i + 1}. ${M.slideTitle(s) || 'Slide ' + (i + 1)}`]));
-    const placeSel = h('select', { id: 'hl-place', size: 10, style: 'width:100%' }, ...places.map(([v, l]) => h('option', { value: v, text: l })));
+    const places = [['a:first', 'First Slide'], ['a:last', 'Last Slide'], ['a:next', 'Next Slide'], ['a:prev', 'Previous Slide']].concat(L.pres.slides.map((s, i) => ['s:' + s.id, `${i + 1}. ${M.slideTitle(s) || L.t('Slide {0}', i + 1)}`]));
+    const placeSel = h('select', { id: 'hl-place', size: 10, style: 'width:100%' }, ...places.map(([v, l], i) => h('option', { value: v, text: l, translate: i < 4 ? null : 'no' })));
     if (existing && existing.slide) placeSel.value = 's:' + existing.slide; else if (existing && existing.action) placeSel.value = 'a:' + existing.action; else placeSel.selectedIndex = 2;
     const panes = {
-      web: h('div', { class: 'col' }, h('label', { for: 'hl-addr', html: 'Addr<u>e</u>ss:' }), addr, h('label', { for: 'hl-tip', text: 'ScreenTip:' }), tip),
-      place: h('div', { class: 'col' }, h('label', { for: 'hl-place', html: 'Select a place in this d<u>o</u>cument:' }), placeSel),
-      mail: h('div', { class: 'col' }, h('label', { for: 'hl-mail', html: '<u>E</u>-mail address:' }), mail, h('label', { for: 'hl-subj', html: 'Su<u>b</u>ject:' }), subj),
+      web: h('div', { class: 'col' }, h('label', { for: 'hl-addr', html: ui.ampHTML('Addr&ess:') }), addr, h('label', { for: 'hl-tip', text: 'ScreenTip:' }), tip),
+      place: h('div', { class: 'col' }, h('label', { for: 'hl-place', html: ui.ampHTML('Select a place in this d&ocument:') }), placeSel),
+      mail: h('div', { class: 'col' }, h('label', { for: 'hl-mail', html: ui.ampHTML('&E-mail address:') }), mail, h('label', { for: 'hl-subj', html: ui.ampHTML('Su&bject:') }), subj),
     };
     const host = h('div', { style: 'flex:1;min-width:0' });
     const side = h('div', { class: 'list-box', style: 'width:130px;min-height:180px' });
     const show = (k) => { kind = k; L.clear(host).appendChild(panes[k]); L.$$('.li', side).forEach((x) => x.classList.toggle('on', x.dataset.k === k)); };
     [['web', 'Existing File or Web Page'], ['place', 'Place in This Document'], ['mail', 'E-mail Address']].forEach(([k, l]) => { const it = h('div', { class: 'li', 'data-k': k, text: l, style: 'white-space:normal;padding:8px 6px' }); it.addEventListener('click', () => show(k)); side.appendChild(it); });
     show(kind);
-    const body = h('div', { class: 'col' }, h('div', { class: 'field' }, h('label', { for: 'hl-disp', html: '<u>T</u>ext to display:' }), disp), h('div', { class: 'row', style: 'flex-wrap:nowrap' }, h('div', { class: 'col' }, h('label', { text: 'Link to:' }), side), host));
+    const body = h('div', { class: 'col' }, h('div', { class: 'field' }, h('label', { for: 'hl-disp', html: ui.ampHTML('&Text to display:') }), disp), h('div', { class: 'row', style: 'flex-wrap:nowrap' }, h('div', { class: 'col' }, h('label', { text: 'Link to:' }), side), host));
     const apply = (link) => {
       if (editing) {
         const t = L.te.target();
         const s = L.te.currentSel();
-        if (s && L.txt.collapsed(s) && disp.value) { L.hist.push('Hyperlink'); L.te.insertText(disp.value); const s2 = L.te.currentSel(); L.te.applyRun((r) => { const n = Object.assign({}, r); if (link) n.link = link; else delete n.link; return n; }, 'Hyperlink', { p0: s2.p0, o0: s2.o0 - disp.value.length, p1: s2.p1, o1: s2.o1 }); }
+        if (s && L.txt.collapsed(s) && disp.value) { L.hist.push(L.N('Hyperlink')); L.te.insertText(disp.value); const s2 = L.te.currentSel(); L.te.applyRun((r) => { const n = Object.assign({}, r); if (link) n.link = link; else delete n.link; return n; }, 'Hyperlink', { p0: s2.p0, o0: s2.o0 - disp.value.length, p1: s2.p1, o1: s2.o1 }); }
         else L.te.applyRun((r) => { const n = Object.assign({}, r); if (link) n.link = link; else delete n.link; return n; }, 'Hyperlink');
         void t;
-      } else ed.commit('Hyperlink', () => { for (const x of ed.selected()) { if (link) x.link = link; else delete x.link; } });
+      } else ed.commit(L.N('Hyperlink'), () => { for (const x of ed.selected()) { if (link) x.link = link; else delete x.link; } });
     };
     const buttons = [{
       label: 'OK', primary: true, onClick: () => {
@@ -748,9 +749,9 @@
     if (!shapes.length) { ui.msg('Select an object first.'); return; }
     const cur = shapes[0].link;
     let none = !cur;
-    const opts = [['next', 'Next Slide'], ['prev', 'Previous Slide'], ['first', 'First Slide'], ['last', 'Last Slide'], ['lastViewed', 'Last Slide Viewed'], ['end', 'End Show'], ['slide', 'Slide...'], ['url', 'URL...']];
+    const opts = [['next', 'Next Slide'], ['prev', 'Previous Slide'], ['first', 'First Slide'], ['last', 'Last Slide'], ['lastViewed', 'Last Slide Viewed'], ['end', 'End Show'], ['slide', 'Slide...'], ['url', L.N('URL...')]];
     const sel = ui.select(opts, cur ? (cur.slide ? 'slide' : cur.url ? 'url' : cur.action) : 'next', () => sync());
-    const slideSel = ui.select(L.pres.slides.map((s, i) => [s.id, `${i + 1}. ${M.slideTitle(s) || 'Slide ' + (i + 1)}`]), cur && cur.slide);
+    const slideSel = ui.select(L.pres.slides.map((s, i) => [s.id, `${i + 1}. ${M.slideTitle(s) || L.t('Slide {0}', i + 1)}`]), cur && cur.slide, null, { translate: 'no' });
     const url = h('input', { type: 'text', id: 'as-url', value: (cur && cur.url) || 'https://', style: 'width:240px' });
     const rn = ui.radio('as-k', '&None', none, () => { none = true; sync(); }), rl = ui.radio('as-k', '&Hyperlink to:', !none, () => { none = false; sync(); });
     const sync = () => { sel.disabled = none; slideSel.hidden = none || sel.value !== 'slide'; url.hidden = none || sel.value !== 'url'; };
@@ -769,25 +770,25 @@
 
   /* ---------- Symbol ---------- */
   const SYM_SETS = [
-    ['Latin-1 Supplement', 0x00a1, 0x00ff], ['Latin Extended-A', 0x0100, 0x017f], ['Greek and Coptic', 0x0391, 0x03c9], ['General Punctuation', 0x2010, 0x2044],
-    ['Currency Symbols', 0x20a0, 0x20bf], ['Letterlike Symbols', 0x2100, 0x214f], ['Number Forms', 0x2150, 0x218b], ['Arrows', 0x2190, 0x21ff], ['Mathematical Operators', 0x2200, 0x22ff],
-    ['Box Drawing', 0x2500, 0x257f], ['Geometric Shapes', 0x25a0, 0x25ff], ['Miscellaneous Symbols', 0x2600, 0x26ff], ['Dingbats', 0x2700, 0x27bf],
+    [L.N('Latin-1 Supplement'), 0x00a1, 0x00ff], [L.N('Latin Extended-A'), 0x0100, 0x017f], [L.N('Greek and Coptic'), 0x0391, 0x03c9], [L.N('General Punctuation'), 0x2010, 0x2044],
+    [L.N('Currency Symbols'), 0x20a0, 0x20bf], [L.N('Letterlike Symbols'), 0x2100, 0x214f], [L.N('Number Forms'), 0x2150, 0x218b], [L.N('Arrows'), 0x2190, 0x21ff], [L.N('Mathematical Operators'), 0x2200, 0x22ff],
+    [L.N('Box Drawing'), 0x2500, 0x257f], [L.N('Geometric Shapes'), 0x25a0, 0x25ff], [L.N('Miscellaneous Symbols'), 0x2600, 0x26ff], [L.N('Dingbats'), 0x2700, 0x27bf],
   ];
   const recentSyms = ['€', '£', '¥', '©', '®', '™', '±', '≠', '≤', '≥', '÷', '×', '∞', 'µ', 'α', 'β'];
   D.symbol = function (cb) {
     let pick = null;
-    const grid = h('div', { class: 'sym-grid' });
-    const font = ui.select(['(normal text)', 'Arial', 'Times New Roman', 'Georgia', 'Verdana', 'Segoe UI Symbol'], '(normal text)', () => fill(sub.value));
+    const grid = h('div', { class: 'sym-grid', translate: 'no' });
+    const font = ui.select([['normal', '(normal text)'], 'Arial', 'Times New Roman', 'Georgia', 'Verdana', 'Segoe UI Symbol'], 'normal', () => fill(sub.value));
     const sub = ui.select(SYM_SETS.map((s, i) => [i, s[0]]), 0, (v) => fill(v));
     const code = h('input', { type: 'text', id: 'sym-code', style: 'width:70px', readonly: true });
     const recent = h('div', { class: 'row', style: 'gap:2px' });
     const fill = (si) => {
       const [, a, b] = SYM_SETS[+si];
       L.clear(grid);
-      grid.style.fontFamily = font.value === '(normal text)' ? '' : L.fontStack(font.value);
+      grid.style.fontFamily = font.value === 'normal' ? '' : L.fontStack(font.value);
       for (let c = a; c <= b; c++) {
         const ch = String.fromCodePoint(c);
-        const btn = h('button', { type: 'button', text: ch, 'aria-label': 'U+' + c.toString(16).toUpperCase() });
+        const btn = h('button', { type: 'button', text: ch, 'aria-label': 'U+' + c.toString(16).toUpperCase(), translate: 'no' });
         btn.addEventListener('click', () => { L.$$('button.on', grid).forEach((x) => x.classList.remove('on')); btn.classList.add('on'); pick = ch; code.value = c.toString(16).toUpperCase().padStart(4, '0'); });
         btn.addEventListener('dblclick', () => { pick = ch; insertBtn.click(); });
         grid.appendChild(btn);
@@ -811,11 +812,11 @@
 
   /* ---------- Date and Time ---------- */
   D.dateTime = function () {
-    const list = h('select', { id: 'dt-list', size: 12, style: 'width:260px' }, ...L.DATE_FORMATS.map((f) => h('option', { value: f, text: L.fmtDate(new Date(), f) })));
+    const list = h('select', { id: 'dt-list', size: 12, style: 'width:260px', translate: 'no' }, ...L.DATE_FORMATS.map((f) => h('option', { value: f, text: L.fmtDate(new Date(), f), translate: 'no' })));
     list.selectedIndex = 0;
     const upd = ui.check('&Update automatically', false);
     ui.dialog({
-      title: 'Date and Time', body: h('div', { class: 'col' }, h('label', { for: 'dt-list', html: '<u>A</u>vailable formats:' }), list, upd), width: 300, buttons: [{
+      title: 'Date and Time', body: h('div', { class: 'col' }, h('label', { for: 'dt-list', html: ui.ampHTML('&Available formats:') }), list, upd), width: 300, buttons: [{
         label: 'OK', primary: true, onClick: () => {
           const f = list.value || 'datetime1';
           if (!L.te.active()) { L.app.ensureTextTarget(); }
@@ -877,7 +878,7 @@
     const AC = L.te.AUTOCORRECT;
     const list = h('div', { class: 'list-box', style: 'height:150px' });
     const rep = h('input', { type: 'text', id: 'ac-rep', style: 'width:120px' }), wit = h('input', { type: 'text', id: 'ac-with', style: 'width:200px' });
-    const draw = () => { L.clear(list); Object.keys(AC).sort().forEach((k) => { const li = h('div', { class: 'li' }, h('span', { text: k, style: 'width:110px;display:inline-block' }), h('span', { text: AC[k] })); li.addEventListener('click', () => { L.$$('.li', list).forEach((x) => x.classList.remove('on')); li.classList.add('on'); rep.value = k; wit.value = AC[k]; }); list.appendChild(li); }); };
+    const draw = () => { L.clear(list); Object.keys(AC).sort().forEach((k) => { const li = h('div', { class: 'li', translate: 'no' }, h('span', { text: k, style: 'width:110px;display:inline-block', translate: 'no' }), h('span', { text: AC[k], translate: 'no' })); li.addEventListener('click', () => { L.$$('.li', list).forEach((x) => x.classList.remove('on')); li.classList.add('on'); rep.value = k; wit.value = AC[k]; }); list.appendChild(li); }); };
     draw();
     const body = ui.tabs([{
       label: 'AutoCorrect', body: h('div', { class: 'col' },
@@ -898,16 +899,16 @@
     const words = L.pres.slides.reduce((a, s) => a + (M.allText(s).match(/\S+/g) || []).length, 0);
     const tabs = ui.tabs([
       { label: 'Summary', body: h('div', { class: 'col' }, f('title', '&Title:'), f('subject', '&Subject:'), f('author', '&Author:'), f('company', 'C&ompany:'), f('category', 'Ca&tegory:'), f('keywords', '&Keywords:'), ui.field('&Comments:', cm, { cls: 'wide' })) },
-      { label: 'Statistics', body: h('table', { class: 'kbd-table' }, ...[['Created:', p.created ? new Date(p.created).toLocaleString() : '—'], ['Slides:', L.pres.slides.length], ['Hidden slides:', L.pres.slides.filter((s) => s.hidden).length], ['Notes:', L.pres.slides.filter((s) => s.notes).length], ['Words:', words], ['Pictures:', L.media.all().size]].map(([a, b]) => h('tr', null, h('td', { text: a }), h('td', { text: String(b) })))) },
+      { label: 'Statistics', body: h('table', { class: 'kbd-table' }, ...[['Created:', p.created ? new Date(p.created).toLocaleString() : '—'], ['Slides:', L.pres.slides.length], ['Hidden slides:', L.pres.slides.filter((s) => s.hidden).length], ['Notes:', L.pres.slides.filter((s) => s.notes).length], ['Words:', words], ['Pictures:', L.media.all().size]].map(([a, b]) => h('tr', null, h('td', { text: a }), h('td', { text: String(b), translate: 'no' })))) },
     ]);
-    ui.dialog({ title: (L.app.fileName || 'Presentation') + ' Properties', body: tabs, width: 430, buttons: [{ label: 'OK', primary: true }] });
+    ui.dialog({ title: L.t('{0} Properties', L.app.fileName || 'Presentation'), body: tabs, width: 430, buttons: [{ label: 'OK', primary: true }] });
   };
 
   /* ---------- Save As ---------- */
   D.saveAs = function (cb) {
     const base = (L.app.fileName || 'Presentation1').replace(/\.[^.]+$/, '');
     const name = h('input', { type: 'text', id: 'sa-name', value: base, style: 'width:300px' });
-    const types = [['pptx', 'PowerPoint Presentation (*.pptx)'], ['pptm', 'Macro-Enabled Presentation (*.pptm)'], ['ppsx', 'PowerPoint Show (*.ppsx)'], ['ppsm', 'Macro-Enabled Show (*.ppsm)'], ['potx', 'Design Template (*.potx)'], ['potm', 'Macro-Enabled Template (*.potm)'], ['pdf', 'PDF, one slide per page (*.pdf)'], ['html', 'Single File Web Page (*.html)'], ['png', 'PNG Graphics Format, current slide (*.png)'], ['txt', 'Outline (*.txt)']];
+    const types = [['pptx', L.N('PowerPoint Presentation (*.pptx)')], ['pptm', L.N('Macro-Enabled Presentation (*.pptm)')], ['ppsx', L.N('PowerPoint Show (*.ppsx)')], ['ppsm', L.N('Macro-Enabled Show (*.ppsm)')], ['potx', L.N('Design Template (*.potx)')], ['potm', L.N('Macro-Enabled Template (*.potm)')], ['pdf', L.N('PDF, one slide per page (*.pdf)')], ['html', L.N('Single File Web Page (*.html)')], ['png', L.N('PNG Graphics Format, current slide (*.png)')], ['txt', L.N('Outline (*.txt)')]];
     const cur = types.some(([k]) => k === L.app.fileType) ? L.app.fileType : 'pptx';
     const type = ui.select(types, cur);
     return ui.dialog({ title: 'Save As', body: h('div', { class: 'col' }, ui.field('File &name:', name, { cls: 'wide' }), ui.field('Save as &type:', type, { cls: 'wide' }), h('div', { class: 'tp-note', text: 'Your browser decides where downloaded files go.' })), width: 470, buttons: [{ label: '&Save', primary: true, onClick: () => cb((name.value.trim() || base).replace(/\.(pptx|pptm|ppsx|ppsm|potx|potm)$/i, ''), type.value) }, { label: 'Cancel' }] });
@@ -915,7 +916,7 @@
 
   /* ---------- Zoom ---------- */
   D.zoom = function () {
-    const presets = [['fit', 'Fit'], [4, '400%'], [2, '200%'], [1, '100%'], [0.66, '66%'], [0.5, '50%'], [0.33, '33%']];
+    const presets = [['fit', L.N('Fit')], [4, '400%'], [2, '200%'], [1, '100%'], [0.66, '66%'], [0.5, '50%'], [0.33, '33%']];
     let pick = E().zoom;
     const pct = ui.spin({ value: E().zoomPct(), min: 10, max: 400, step: 1, unit: '%', dec: 0, onChange: (v) => { pick = v / 100; } });
     const body = h('div', { class: 'row' }, ui.group('Zoom to', h('div', { class: 'col' }, ...presets.map(([v, l]) => ui.radio('zm', l, String(v) === String(E().zoom), () => { pick = v; if (v !== 'fit') pct.set(Math.round(v * 100)); })))), h('div', { class: 'col' }, ui.field('&Percent:', pct)));
@@ -953,7 +954,7 @@
     let pick = current != null ? current : 0;
     const grid = h('div', { class: 'wa-grid' });
     WA_STYLES.forEach((st, i) => {
-      const b = h('button', { type: 'button', 'aria-label': 'LettersArt style ' + (i + 1), class: i === pick ? 'on' : '' });
+      const b = h('button', { type: 'button', 'aria-label': L.t('LettersArt style {0}', i + 1), class: i === pick ? 'on' : '' });
       const sh = { w: 66, h: 46, wa: Object.assign({}, st, { text: 'LettersArt', vert: false }) };
       b.appendChild(L.render.wordart(sh, design(), {}));
       b.addEventListener('click', () => { L.$$('button', grid).forEach((x) => x.classList.remove('on')); b.classList.add('on'); pick = i; });
@@ -972,7 +973,7 @@
     const sync = () => { ta.style.fontFamily = L.fontStack(font.value); ta.style.fontWeight = b.input.checked ? '700' : '400'; ta.style.fontStyle = i.input.checked ? 'italic' : 'normal'; };
     font.addEventListener('change', sync); b.input.addEventListener('change', sync); i.input.addEventListener('change', sync);
     sync();
-    ui.dialog({ title: 'Edit LettersArt Text', body: h('div', { class: 'col' }, h('div', { class: 'row' }, ui.field('&Font:', font), ui.field('&Size:', size), b, i), h('label', { for: 'wa-text', html: '<u>T</u>ext:' }), ta), width: 470, focus: '#wa-text', buttons: [{ label: 'OK', primary: true, onClick: () => cb({ text: ta.value, font: font.value, b: b.input.checked, i: i.input.checked, size: +size.value }) }, { label: 'Cancel' }] });
+    ui.dialog({ title: 'Edit LettersArt Text', body: h('div', { class: 'col' }, h('div', { class: 'row' }, ui.field('&Font:', font), ui.field('&Size:', size), b, i), h('label', { for: 'wa-text', html: ui.ampHTML('&Text:') }), ta), width: 470, focus: '#wa-text', buttons: [{ label: 'OK', primary: true, onClick: () => cb({ text: ta.value, font: font.value, b: b.input.checked, i: i.input.checked, size: +size.value }) }, { label: 'Cancel' }] });
   };
 
   /* ---------- Photo Album ---------- */
@@ -983,7 +984,7 @@
     let sel = -1;
     const draw = () => {
       L.clear(list);
-      pics.forEach((p, i) => { const li = h('div', { class: 'li' + (i === sel ? ' on' : ''), text: `${i + 1}  ${p.name}` }); li.addEventListener('click', () => { sel = i; draw(); prev.style.background = `url(${p.url}) center/contain no-repeat`; }); list.appendChild(li); });
+      pics.forEach((p, i) => { const li = h('div', { class: 'li' + (i === sel ? ' on' : ''), text: `${i + 1}  ${p.name}`, translate: 'no' }); li.addEventListener('click', () => { sel = i; draw(); prev.style.background = `url(${p.url}) center/contain no-repeat`; }); list.appendChild(li); });
     };
     const layout = ui.select([['fit', 'Fit to slide'], ['1', '1 picture'], ['2', '2 pictures'], ['4', '4 pictures'], ['1t', '1 picture with title'], ['2t', '2 pictures with title'], ['4t', '4 pictures with title']], '1');
     const frame = ui.select([['rect', 'Rectangle'], ['roundRect', 'Rounded Rectangle'], ['simple', 'Simple Frame, White'], ['black', 'Simple Frame, Black'], ['shadow', 'Soft Shadow']], 'rect');
@@ -1002,9 +1003,9 @@
   D.slideFinder = async function () {
     const files = await L.pickFiles('.pptx,.ppsx,.potx,.pptm');
     if (!files[0]) return;
-    ui.busy(true, 'Opening ' + files[0].name + '...');
+    ui.busy(true, L.t('Opening {0}...', files[0].name));
     let src;
-    try { src = await L.pptx.read(await L.readAsArrayBuffer(files[0])); } catch (e) { ui.busy(false); ui.msg(`${files[0].name} could not be opened: ${e.message}`, { icon: 'error' }); return; }
+    try { src = await L.pptx.read(await L.readAsArrayBuffer(files[0])); } catch (e) { ui.busy(false); ui.msg(L.t('{0} could not be opened: {1}', files[0].name, e.message), { icon: 'error' }); return; }
     ui.busy(false);
     const picked = new Set();
     const grid = h('div', { style: 'display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;max-height:320px;overflow:auto;padding:4px;background:#fff;border:1px solid #888' });
@@ -1014,7 +1015,7 @@
       ck.addEventListener('change', () => { if (ck.checked) picked.add(i); else picked.delete(i); });
       const th = L.render.thumb(src, s, 124);
       th.style.border = '1px solid #999';
-      cell.append(th, h('span', { style: 'display:flex;gap:4px;align-items:center' }, ck, h('span', { text: `${i + 1}. ${(M.slideTitle(s) || 'Slide').slice(0, 24)}` })));
+      cell.append(th, h('span', { style: 'display:flex;gap:4px;align-items:center' }, ck, h('span', { text: `${i + 1}. ${(M.slideTitle(s) || L.t('Slide')).slice(0, 24)}`, translate: 'no' })));
       grid.appendChild(cell);
     });
     const keep = ui.check('&Keep source formatting', false);
@@ -1023,7 +1024,7 @@
       if (!idxs.length) { ui.msg('Select at least one slide.'); return false; }
       L.app.insertSlidesFrom(src, idxs, keep.input.checked);
     };
-    ui.dialog({ title: 'Slide Finder', body: h('div', { class: 'col' }, h('div', { text: 'Presentation: ' + files[0].name }), grid, keep), width: 640, buttons: [{ label: '&Insert', primary: true, onClick: () => doInsert(false) }, { label: 'Insert &All', onClick: () => doInsert(true) }, { label: 'Close' }] });
+    ui.dialog({ title: 'Slide Finder', body: h('div', { class: 'col' }, h('div', { text: L.t('Presentation: {0}', files[0].name), translate: 'no' }), grid, keep), width: 640, buttons: [{ label: '&Insert', primary: true, onClick: () => doInsert(false) }, { label: 'Insert &All', onClick: () => doInsert(true) }, { label: 'Close' }] });
   };
 
   /* ---------- Custom Animation effect options ---------- */
@@ -1032,8 +1033,8 @@
     const dir = info.dirs ? ui.select(info.dirs.map((d) => [d[0], d[1]]), a.dir || info.dirs[0][0]) : null;
     const amt = a.cls === 'emph' && (a.eff === 'growShrink' || a.eff === 'spin') ? ui.spin({ value: a.amount || (a.eff === 'spin' ? 360 : 150), min: 10, max: 1440, step: 10, unit: a.eff === 'spin' ? '°' : '%', dec: 0 }) : null;
     const start = ui.select([['click', 'On Click'], ['with', 'With Previous'], ['after', 'After Previous']], a.start);
-    const delay = ui.spin({ value: (a.delay || 0) / 1000, min: 0, max: 60, step: 0.5, unit: ' seconds', dec: 1 });
-    const speed = ui.select(L.anim.SPEEDS.map(([n, ms]) => [ms, `${n} (${ms / 1000} seconds)`]), L.anim.SPEEDS.reduce((best, s) => (Math.abs(s[1] - (a.dur || 500)) < Math.abs(best - (a.dur || 500)) ? s[1] : best), 500));
+    const delay = ui.spin({ value: (a.delay || 0) / 1000, min: 0, max: 60, step: 0.5, fmt: (v) => L.t('{0} seconds', L.round(v, 1)) });
+    const speed = ui.select(L.anim.SPEEDS.map(([n, ms]) => [ms, L.t('{0} ({1} seconds)', L.t(n), ms / 1000)]), L.anim.SPEEDS.reduce((best, s) => (Math.abs(s[1] - (a.dur || 500)) < Math.abs(best - (a.dur || 500)) ? s[1] : best), 500));
     const repeat = ui.select([[1, '(none)'], [2, '2'], [3, '3'], [4, '4'], [5, '5'], [10, '10']], a.repeat || 1);
     const sh = M.shapeById(E().slide(), a.sid);
     const grp = ui.select([['all', 'As One Object'], ['para', 'By 1st Level Paragraphs']], a.by || 'all');
@@ -1080,6 +1081,6 @@
 
   /* ---------- About ---------- */
   D.about = () => ui.about({ name: 'Lectern', office: 'PowerPoint', text: [
-    'A presentation editor in the style of Microsoft Office PowerPoint 2003 that runs entirely in your browser. Presentations are read and written as Office Open XML (.pptx, .pptm); nothing is uploaded.',
+    L.N('A presentation editor in the style of Microsoft Office PowerPoint 2003 that runs entirely in your browser. Presentations are read and written as Office Open XML (.pptx, .pptm); nothing is uploaded.'),
     'Slide shows play in the browser, and presentations export to PDF, PNG pictures and web pages.'] });
 })();

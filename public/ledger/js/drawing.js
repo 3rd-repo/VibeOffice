@@ -115,15 +115,15 @@
             Object.assign(img.style, { position: 'absolute', width: sx * 100 + '%', height: sy * 100 + '%', left: -crop.l / 100 * sx * 100 + '%', top: -crop.t / 100 * sy * 100 + '%', maxWidth: 'none' });
           }
           content.appendChild(img);
-        } else content.appendChild(h('div', { class: 'gobj-ph', text: (d.name || 'Picture') }));
+        } else content.appendChild(h('div', { class: 'gobj-ph', translate: 'no', text: d.name || L.t('Picture') }));
       }
     } else if (d.kind === 'chart') {
       const key = `c${w}x${hh}@${z}#${wb().version}:${d.chart ? JSON.stringify([d.chart.kind, d.chart.title, d.chart.legend, d.chart.labels, d.chart.gridY, d.chart.series && d.chart.series.length]) : ''}`;
       if (el._key !== key) {
         el._key = key;
         content.textContent = '';
-        if (d.chart) { try { content.appendChild(L.xchart.render(d.chart, wb(), s, w, hh, z)); } catch (e) { console.error(e); content.appendChild(h('div', { class: 'gobj-ph', text: d.name || 'Chart' })); } }
-        else content.appendChild(h('div', { class: 'gobj-ph', text: (d.name || 'Chart') + '\n(this chart type is not displayed)' }));
+        if (d.chart) { try { content.appendChild(L.xchart.render(d.chart, wb(), s, w, hh, z)); } catch (e) { console.error(e); content.appendChild(h('div', { class: 'gobj-ph', translate: 'no', text: d.name || L.t('Chart') })); } }
+        else content.appendChild(h('div', { class: 'gobj-ph', translate: 'no', text: L.t('{0}\n(this chart type is not displayed)', d.name || L.t('Chart')) }));
       }
     } else {
       const p = shapeProps(d);
@@ -177,7 +177,7 @@
   function textBox(d, p, z) {
     const text = d.dirty || !p.paras ? (d.text != null ? d.text : p.text) : null;
     if (!text && !(p.paras && p.paras.some((q) => q.runs.length))) return null;
-    const box = h('div', { class: 'gobj-t v-' + (p.vAlign || 't') });
+    const box = h('div', { class: 'gobj-t v-' + (p.vAlign || 't'), translate: 'no' });
     const f = d.font || {};
     box.style.fontSize = ((f.sz || 10) * z) + 'pt';
     box.style.fontFamily = LY.fontStack(f.name || 'Arial');
@@ -194,7 +194,7 @@
       if (!para.runs.length) pe.appendChild(h('br'));
       for (const r of para.runs) {
         if (r.t === '\n') { pe.appendChild(h('br')); continue; }
-        const sp = h('span', { text: r.t });
+        const sp = h('span', { translate: 'no', text: r.t });
         if (r.sz) sp.style.fontSize = r.sz * z + 'pt';
         if (r.b) sp.style.fontWeight = 'bold';
         if (r.i) sp.style.fontStyle = 'italic';
@@ -357,7 +357,7 @@
       const text = box.innerText.replace(/\n$/, '');
       /* Esc leaves the shape selected; a press elsewhere (a cell, which has already deselected it) doesn't select it again */
       const select = G().selectedObject() === d;
-      if (text !== (p.text || '')) replace(d, { text, dirty: true, geom: p.geom, fill: p.fill, line: p.line, lineW: p.lineW, font: d.font || { name: 'Arial', sz: 10 } }, 'Typing', { select });
+      if (text !== (p.text || '')) replace(d, { text, dirty: true, geom: p.geom, fill: p.fill, line: p.line, lineW: p.lineW, font: d.font || { name: 'Arial', sz: 10 } }, L.N('Typing'), { select });
       else { el._key = null; G().syncObjects(); }
       G().focus();
     };
@@ -394,7 +394,7 @@
       if (a.to) a.to = Object.assign({}, a.to, same ? { r: a.to.r + 1, c: a.to.c + 1 } : { r: a.to.r + dr, c: a.to.c + dc });
     }
     if (d.chart) d.chart.dirty = true;
-    O.tx(wb(), 'Paste', () => O.setDrawings(s, s.drawings.concat([d])));
+    O.tx(wb(), L.N('Paste'), () => O.setDrawings(s, s.drawings.concat([d])));
     G().selectObject(d);
     G().syncObjects(true);
   };
@@ -406,7 +406,7 @@
     const s = sh();
     const rest = s.drawings.filter((x) => x !== d);
     const list = where === 'front' ? rest.concat([d]) : where === 'back' ? [d].concat(rest) : (() => { const i = s.drawings.indexOf(d); const l = s.drawings.slice(); const j = where === 'forward' ? Math.min(l.length - 1, i + 1) : Math.max(0, i - 1); l.splice(i, 1); l.splice(j, 0, d); return l; })();
-    O.tx(wb(), 'Order', () => O.setDrawings(s, list));
+    O.tx(wb(), L.N('Order'), () => O.setDrawings(s, list));
     G().syncObjects(true);
   };
   DR.contextMenu = function (e, d) {
@@ -477,7 +477,7 @@
     const ov = h('div', { class: 'draw-overlay', 'aria-label': 'Drag to draw' });
     wrap.appendChild(ov);
     tool = { kind, ov };
-    L.app.status('Drag in the worksheet to insert the ' + (kind === 'textbox' ? 'text box' : 'AutoShape') + '. Press Esc to cancel.');
+    L.app.status(kind === 'textbox' ? L.t('Drag in the worksheet to insert the text box. Press Esc to cancel.') : L.t('Drag in the worksheet to insert the AutoShape. Press Esc to cancel.'));
     const esc = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); DR.cancelTool(); } };
     document.addEventListener('keydown', esc, true);
     tool.esc = esc;
@@ -528,7 +528,7 @@
     const isText = kind === 'textbox';
     const d = { kind: 'shape', id, name: (isText ? 'Text Box ' : (kind === 'ellipse' ? 'Oval ' : kind === 'line' || kind === 'arrow' ? 'Line ' : 'Rectangle ')) + id, geom: isText ? 'rect' : kind === 'arrow' ? 'straightConnector1' : kind === 'line' ? 'line' : kind, txBox: isText, fill: kind === 'line' || kind === 'arrow' ? null : '#FFFFFF', line: '#000000', lineW: 0.75, text: '', font: { name: 'Arial', sz: 10 }, dirty: true };
     d.anchor = G().rectToAnchor(s, rect.x, rect.y, rect.w, rect.h, { editAs: 'twoCell' });
-    O.tx(wb(), 'Insert ' + (isText ? 'Text Box' : 'AutoShape'), () => O.setDrawings(s, s.drawings.concat([d])));
+    O.tx(wb(), isText ? 'Insert Text Box' : 'Insert AutoShape', () => O.setDrawings(s, s.drawings.concat([d])));
     G().selectObject(d);
     G().syncObjects(true);
     if (isText) setTimeout(() => DR.editText(d), 0);
@@ -539,7 +539,7 @@
     const groups = L.geom ? L.geom.MENU : { 'Basic Shapes': ['rect', 'ellipse'] };
     ui.openMenu([{ label: '&Lines', sub: [{ label: 'Line', run: () => DR.startTool('line') }, { label: 'Arrow', run: () => DR.startTool('arrow') }] }].concat(Object.keys(groups).map((g) => ({ label: g, sub: [{ custom: (close) => {
       const grid = h('div', { class: 'shape-grid' });
-      for (const k of groups[g]) { const b = h('button', { type: 'button', html: L.geom ? L.geom.preview(k, 20) : k, 'data-tip': k, 'aria-label': k }); b.addEventListener('click', () => { close(); DR.startTool(k); }); grid.appendChild(b); }
+      for (const k of groups[g]) { const nm = (L.geom && L.geom.get(k) && L.geom.get(k).label) || k; const b = h('button', { type: 'button', html: L.geom ? L.geom.preview(k, 20) : k, 'data-tip': nm, 'aria-label': nm }); b.addEventListener('click', () => { close(); DR.startTool(k); }); grid.appendChild(b); }
       return grid;
     } }] }))), at);
   };

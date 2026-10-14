@@ -31,7 +31,7 @@
     LY.root.spellcheck = false;
     LY.root.setAttribute('role', 'textbox');
     LY.root.setAttribute('aria-multiline', 'true');
-    LY.root.setAttribute('aria-label', 'Document');
+    LY.root.setAttribute('aria-label', L.t('Document'));
     LY.sizer.appendChild(LY.root);
     scroller.appendChild(LY.sizer);
   };

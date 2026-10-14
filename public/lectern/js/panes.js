@@ -13,7 +13,7 @@
   LP.mount = function (el) {
     LP.el = el;
     LP.tabs = h('div', { class: 'lp-tabs', role: 'tablist' });
-    LP.tabOutline = h('div', { class: 'lp-tab', role: 'tab', tabindex: '0', text: 'Outline' });
+    LP.tabOutline = h('div', { class: 'lp-tab', role: 'tab', tabindex: '0', text: 'Outline|pane' });
     LP.tabSlides = h('div', { class: 'lp-tab', role: 'tab', tabindex: '0', text: 'Slides' });
     const close = h('button', { class: 'lp-close', type: 'button', 'aria-label': 'Close pane', html: L.icons.get('close', 12) });
     close.addEventListener('click', () => L.app.toggleLeft(false));
@@ -67,7 +67,7 @@
       star.addEventListener('click', (e) => { e.stopPropagation(); const fr = (e.currentTarget.closest('.th') || it).querySelector('.th-frame');   /* the thumbnail shown: refreshThumb moves the star into it */ L.show.previewTransition(fr, L.pres, s, L.pres.slides[i - 1]); });
       meta.appendChild(star);
     }
-    const frame = h('button', { class: 'th-frame', type: 'button', 'aria-label': `Slide ${i + 1}` });
+    const frame = h('button', { class: 'th-frame', type: 'button', 'aria-label': L.t('Slide {0}', i + 1) });
     frame.appendChild(L.render.thumb(L.pres, s, w, { index: i }));
     it.append(meta, frame);
     it.addEventListener('pointerdown', (e) => onThumbDown(e, i));
@@ -137,7 +137,7 @@
     kinds.forEach(([k, label], i) => {
       E().masterKind = E().masterKind === 'title' && !d.titleDeco ? 'slide' : E().masterKind;
       const it = h('div', { class: 'th' + (E().masterKind === k ? ' cur' : '') });
-      const frame = h('button', { class: 'th-frame', type: 'button', 'aria-label': label, 'data-tip': `${d.name} ${label}` });
+      const frame = h('button', { class: 'th-frame', type: 'button', 'aria-label': label, 'data-tip': L.t(k === 'title' ? '{0} Title Master' : '{0} Slide Master', M.designName(d)) });
       const saveKind = E().masterKind;
       E().masterKind = k; E().buildMaster();
       frame.appendChild(L.render.thumb(L.pres, E().masterSlide, thumbWidth(), { prompts: false }));
@@ -153,7 +153,7 @@
   /* --- outline --- */
   let olDirty = false, olHistPushed = false;
   function renderOutline() {
-    const ol = h('div', { class: 'outline' + (L.app.opts.outlinePlain ? ' plain' : ''), contenteditable: 'true', spellcheck: String(!!L.app.opts.spell), role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Outline' });
+    const ol = h('div', { class: 'outline' + (L.app.opts.outlinePlain ? ' plain' : ''), contenteditable: 'true', spellcheck: String(!!L.app.opts.spell), role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Outline|pane' });
     L.pres.slides.forEach((s, i) => {
       const title = s.shapes.find((x) => x.ph && (x.ph.type === 'title' || x.ph.type === 'ctrTitle'));
       const row = h('div', { class: 'ol-row title', 'data-slide': s.id });
@@ -288,12 +288,12 @@
   const NP = (P.notes = {});
   NP.mount = function (el) {
     NP.el = el;
-    NP.ed = h('div', { class: 'notes-in', contenteditable: 'true', spellcheck: 'true', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Speaker notes', 'data-ph': 'Click to add notes' });
+    NP.ed = h('div', { class: 'notes-in', contenteditable: 'true', spellcheck: 'true', role: 'textbox', 'aria-multiline': 'true', 'aria-label': 'Speaker notes', 'data-ph': L.t('Click to add notes') });
     el.appendChild(NP.ed);
     NP.ed.addEventListener('input', () => {
       const s = E().slide();
       if (!s || s.isMaster) return;
-      L.hist.push('Notes', 'notes:' + s.id);
+      L.hist.push(L.N('Notes'), 'notes:' + s.id);
       s.notes = NP.ed.innerText.replace(/\n$/, '');
       if (!NP.ed.textContent) NP.ed.innerHTML = '';
     });
@@ -322,7 +322,7 @@
     const w = Math.max(90, Math.round(SO.el.clientWidth ? Math.min(260, (SO.el.clientWidth - 60) / 4) : 180));
     L.pres.slides.forEach((s, i) => {
       const it = h('div', { class: 'so-it' + (L.app.slideSel.has(i) ? ' sel' : '') + (s.hidden ? ' hiddenslide' : ''), 'data-i': i });
-      const fr = h('button', { class: 'so-frame', type: 'button', 'aria-label': `Slide ${i + 1}` });
+      const fr = h('button', { class: 'so-frame', type: 'button', 'aria-label': L.t('Slide {0}', i + 1) });
       fr.appendChild(L.render.thumb(L.pres, s, w, { index: i }));
       const foot = h('div', { class: 'so-foot' });
       if (s.trans && s.trans.type && s.trans.type !== 'none') {
@@ -395,7 +395,7 @@
     const ny = ph * 0.075 + shh + ph * 0.05;
     const notes = h('div', { class: 'np-notes', contenteditable: 'true', spellcheck: 'true', style: `left:${pw * 0.1}px;top:${ny}px;width:${pw * 0.8}px;height:${ph - ny - ph * 0.08}px;font-size:${Math.max(11, pw / 48)}px`, role: 'textbox', 'aria-label': 'Notes' });
     notes.textContent = s.notes || '';
-    notes.addEventListener('input', () => { L.hist.push('Notes', 'notes:' + s.id); s.notes = notes.innerText.replace(/\n$/, ''); });
+    notes.addEventListener('input', () => { L.hist.push(L.N('Notes'), 'notes:' + s.id); s.notes = notes.innerText.replace(/\n$/, ''); });
     notes.addEventListener('paste', (e) => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData && e.clipboardData.getData('text/plain')) || ''); });
     page.append(sb, notes, h('div', { class: 'pv-hdr', style: `right:${pw * 0.05}px;bottom:${ph * 0.03}px`, text: String(E().idx + (L.pres.firstNum || 1)) }));
     NV.el.appendChild(page);
@@ -509,7 +509,7 @@
     TP.current = id;
     const p = TP.registry[id];
     if (!p) return;
-    TP.title.firstChild.textContent = p.title;
+    TP.title.firstChild.textContent = L.t(p.title);
     TP.back.disabled = TP.pos <= 0; TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
     L.clear(TP.body);
     p.render(TP.body);
@@ -534,8 +534,8 @@
       b.append(
         h('div', { class: 'tp-row' }, h('span', { html: L.icons.app(32) }), h('b', { text: 'Lectern 2003 Web Edition', style: 'color:var(--pane-ink)' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
-        sec('Open', window.VO ? VO.recentLinks(4) : null, link('open', 'Open a presentation (.pptx)...', () => ui.exec('open')), link('new', 'Create a new presentation...', () => TP.show('new')), link('slideshow', 'View the sample presentation', () => L.app.loadSample())),
-        sec('Learn', link('help', 'Keyboard shortcuts and help', () => TP.show('help')), link('design', 'Apply a design template', () => TP.show('design')), link('animation', 'Animate your slides', () => TP.show('customAnim'))));
+        sec(L.N('Open'), window.VO ? VO.recentLinks(4) : null, link('open', L.N('Open a presentation (.pptx)...'), () => ui.exec('open')), link('new', 'Create a new presentation...', () => TP.show('new')), link('slideshow', 'View the sample presentation', () => L.app.loadSample())),
+        sec(L.N('Learn'), link('help', 'Keyboard shortcuts and help', () => TP.show('help')), link('design', 'Apply a design template', () => TP.show('design')), link('animation', 'Animate your slides', () => TP.show('customAnim'))));
     },
   });
 
@@ -544,24 +544,24 @@
     id: 'new', title: 'New Presentation',
     render(b) {
       b.append(
-        sec('New', link('new', 'Blank presentation', () => L.app.newPresentation()), link('design', 'From design template', () => { L.app.newPresentation(); TP.show('design'); }), link('properties', 'From AutoContent wizard...', () => L.app.autoContent()), link('open', 'From existing presentation...', () => ui.exec('open')), link('photoAlbum', 'Photo album...', () => ui.exec('photoAlbum'))),
-        sec('Templates', link('slideshow', 'Sample: café expansion plan', () => L.app.loadSample())));
+        sec(L.N('New'), link('new', 'Blank presentation', () => L.app.newPresentation()), link('design', 'From design template', () => { L.app.newPresentation(); TP.show('design'); }), link('properties', 'From AutoContent wizard...', () => L.app.autoContent()), link('open', 'From existing presentation...', () => ui.exec('open')), link('photoAlbum', 'Photo album...', () => ui.exec('photoAlbum'))),
+        sec(L.N('Templates'), link('slideshow', 'Sample: café expansion plan', () => L.app.loadSample())));
     },
   });
 
   /* --- Help --- */
   const HELP = [
-    ['Get around', 'Use the Slides tab on the left to move between slides; drag thumbnails to reorder. The Outline tab lets you type titles and bullets — press Tab to demote and Shift+Tab to promote. Enter on a title line starts a new slide.'],
-    ['Add text', 'Click a placeholder ("Click to add title") and type. Use the Text Box tool on the Drawing toolbar to add text anywhere. Click a box once to start typing; drag its border to move it.'],
-    ['Format text', 'Select text, then use the Formatting toolbar or Format ▸ Font. Bullets and numbering live under Format ▸ Bullets and Numbering. Press Tab at the start of a bullet to demote it.'],
-    ['Draw shapes', 'Choose AutoShapes on the Drawing toolbar, then drag on the slide. Hold Shift for perfect squares, circles and 15° angles; hold Ctrl to draw from the center. Yellow diamonds adjust a shape\'s proportions; the green dot rotates.'],
-    ['Pictures, tables and charts', 'Use the Insert menu or the icons inside a content placeholder. Double-click a chart to edit its datasheet. Double-click a picture to crop or recolor it.'],
-    ['Design templates', 'Format ▸ Slide Design shows the design gallery. Color Schemes and Animation Schemes are linked at the top of that pane.'],
-    ['Animation', 'Slide Show ▸ Custom Animation. Select an object, choose Add Effect, then set Start, Direction and Speed. Use By 1st Level Paragraphs (Effect Options ▸ Text Animation) to build bullets one at a time.'],
-    ['Slide show', 'Press F5 to start from the first slide or Shift+F5 from the current slide. Click, Space or → advances; ← goes back; B blacks the screen; Ctrl+P switches to the pen; Esc ends the show.'],
-    ['Files', 'File ▸ Open reads .pptx, .ppsx and .potx files. File ▸ Save writes a .pptx that opens in PowerPoint, Keynote, Google Slides and LibreOffice. Save As also offers .ppsx, .potx, a single-file web page, a PNG of the current slide and a text outline.'],
+    [L.N('Get around'), L.N('Use the Slides tab on the left to move between slides; drag thumbnails to reorder. The Outline tab lets you type titles and bullets — press Tab to demote and Shift+Tab to promote. Enter on a title line starts a new slide.')],
+    [L.N('Add text'), L.N('Click a placeholder ("Click to add title") and type. Use the Text Box tool on the Drawing toolbar to add text anywhere. Click a box once to start typing; drag its border to move it.')],
+    [L.N('Format text'), L.N('Select text, then use the Formatting toolbar or Format ▸ Font. Bullets and numbering live under Format ▸ Bullets and Numbering. Press Tab at the start of a bullet to demote it.')],
+    [L.N('Draw shapes'), L.N('Choose AutoShapes on the Drawing toolbar, then drag on the slide. Hold Shift for perfect squares, circles and 15° angles; hold Ctrl to draw from the center. Yellow diamonds adjust a shape\'s proportions; the green dot rotates.')],
+    [L.N('Pictures, tables and charts'), L.N('Use the Insert menu or the icons inside a content placeholder. Double-click a chart to edit its datasheet. Double-click a picture to crop or recolor it.')],
+    [L.N('Design templates'), L.N('Format ▸ Slide Design shows the design gallery. Color Schemes and Animation Schemes are linked at the top of that pane.')],
+    [L.N('Animation'), L.N('Slide Show ▸ Custom Animation. Select an object, choose Add Effect, then set Start, Direction and Speed. Use By 1st Level Paragraphs (Effect Options ▸ Text Animation) to build bullets one at a time.')],
+    [L.N('Slide show'), L.N('Press F5 to start from the first slide or Shift+F5 from the current slide. Click, Space or → advances; ← goes back; B blacks the screen; Ctrl+P switches to the pen; Esc ends the show.')],
+    [L.N('Files'), L.N('File ▸ Open reads .pptx, .ppsx and .potx files. File ▸ Save writes a .pptx that opens in PowerPoint, Keynote, Google Slides and LibreOffice. Save As also offers .ppsx, .potx, a single-file web page, a PNG of the current slide and a text outline.')],
   ];
-  const KEYS = [['Ctrl+N / Ctrl+O / Ctrl+S', 'New, Open, Save'], ['Ctrl+M', 'New slide'], ['Ctrl+D', 'Duplicate'], ['Ctrl+Z / Ctrl+Y', 'Undo / Redo'], ['Ctrl+X / C / V', 'Cut, Copy, Paste'], ['Ctrl+A', 'Select all'], ['Ctrl+G / Ctrl+Shift+G', 'Group / Ungroup'], ['Ctrl+B / I / U', 'Bold, Italic, Underline'], ['Ctrl+E / L / R / J', 'Center, Left, Right, Justify'], ['Ctrl+Shift+> / <', 'Grow / Shrink font'], ['Ctrl+T', 'Font dialog'], ['Shift+F3', 'Change case'], ['Ctrl+K', 'Hyperlink'], ['Ctrl+F / Ctrl+H', 'Find / Replace'], ['Tab / Shift+Tab', 'Demote / Promote; next object'], ['Arrow keys', 'Nudge (Ctrl for fine nudge)'], ['F2', 'Toggle between text and object selection'], ['F5 / Shift+F5', 'Slide show from start / current'], ['Page Up / Page Down', 'Previous / next slide'], ['Ctrl+F1', 'Task pane']];
+  const KEYS = [['Ctrl+N / Ctrl+O / Ctrl+S', L.N('New, Open, Save')], ['Ctrl+M', L.N('New slide')], ['Ctrl+D', L.N('Duplicate')], ['Ctrl+Z / Ctrl+Y', L.N('Undo / Redo')], ['Ctrl+X / C / V', L.N('Cut, Copy, Paste')], ['Ctrl+A', L.N('Select all')], ['Ctrl+G / Ctrl+Shift+G', L.N('Group / Ungroup')], ['Ctrl+B / I / U', L.N('Bold, Italic, Underline')], ['Ctrl+E / L / R / J', L.N('Center, Left, Right, Justify')], ['Ctrl+Shift+> / <', L.N('Grow / Shrink font')], ['Ctrl+T', L.N('Font dialog')], ['Shift+F3', L.N('Change case')], ['Ctrl+K', L.N('Hyperlink')], ['Ctrl+F / Ctrl+H', L.N('Find / Replace')], ['Tab / Shift+Tab', L.N('Demote / Promote; next object')], [L.N('Arrow keys'), L.N('Nudge (Ctrl for fine nudge)')], ['F2', L.N('Toggle between text and object selection')], ['F5 / Shift+F5', L.N('Slide show from start / current')], ['Page Up / Page Down', L.N('Previous / next slide')], ['Ctrl+F1', L.N('Task pane')]];
   TP.register({
     id: 'help', title: 'Help',
     render(b) {
@@ -571,10 +571,12 @@
         L.clear(res);
         const words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
         const hit = (t) => words.every((w) => t.toLowerCase().includes(w));
-        const topics = HELP.filter(([t, d]) => !words.length || hit(t + ' ' + d));
+        /* searched as shown: the topics in the UI's language, the keys with their names there (Strg+M) */
+        const topics = HELP.map(([t, d]) => [L.t(t), L.t(d)]).filter(([t, d]) => !words.length || hit(t + ' ' + d));
         for (const [t, d] of topics) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: t }), h('p', { text: d })));
-        const keys = KEYS.filter(([k, d]) => !words.length || hit(k + ' ' + d));
-        if (keys.length) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: 'Keyboard shortcuts' }), h('table', { class: 'kbd-table' }, ...keys.map(([k, d]) => h('tr', null, h('td', { text: k }), h('td', { text: d }))))));
+        const keyName = (k) => k.split(' / ').map((x) => (/ [a-z]/.test(x) ? L.t(x) : ui.keyText(x))).join(' / ');
+        const keys = KEYS.map(([k, d]) => [keyName(k), L.t(d)]).filter(([k, d]) => !words.length || hit(k + ' ' + d));
+        if (keys.length) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: 'Keyboard shortcuts' }), h('table', { class: 'kbd-table' }, ...keys.map(([k, d]) => h('tr', null, h('td', { text: k, translate: 'no' }), h('td', { text: d }))))));
         if (!res.children.length) res.appendChild(h('div', { class: 'tp-note', text: 'No topics match. Try a different word.' }));
       };
       q.addEventListener('input', draw);
@@ -600,7 +602,7 @@
         if (!list.length) grid.appendChild(h('div', { class: 'tp-note', text: 'No clips found.' }));
       };
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') draw(); });
-      b.append(sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', draw, { class: 'btn small' }))), sec('Results', grid), h('div', { class: 'tp-note', text: 'Click a clip to insert it on the current slide.' }));
+      b.append(sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', draw, { class: 'btn small' }))), sec(L.N('Results'), grid), h('div', { class: 'tp-note', text: 'Click a clip to insert it on the current slide.' }));
       draw();
     },
   });
@@ -610,9 +612,9 @@
     id: 'clipboard', title: 'Clipboard', live: true,
     render(b) {
       const items = L.app.clipHistory;
-      b.append(h('div', { class: 'tp-btns' }, ui.button('Paste All', () => { for (const it of items.slice().reverse()) L.app.pasteItem(it); }, { class: 'btn small' }), ui.button('Clear All', () => { items.length = 0; TP.refresh(); }, { class: 'btn small' })), h('div', { class: 'tp-note', text: `${items.length} of 24 — Click an item to paste.` }));
+      b.append(h('div', { class: 'tp-btns' }, ui.button('Paste All', () => { for (const it of items.slice().reverse()) L.app.pasteItem(it); }, { class: 'btn small' }), ui.button('Clear All', () => { items.length = 0; TP.refresh(); }, { class: 'btn small' })), h('div', { class: 'tp-note', text: L.t('{0} of 24 — Click an item to paste.', items.length) }));
       for (const it of items) {
-        const el = h('button', { class: 'cb-item', type: 'button' }, h('span', { class: 'cb-ico', html: L.icons.get(it.kind === 'slides' ? 'sorterView' : it.kind === 'text' ? 'font' : 'autoshapes') }), h('span', { class: 'cb-t', text: it.label }));
+        const el = h('button', { class: 'cb-item', type: 'button' }, h('span', { class: 'cb-ico', html: L.icons.get(it.kind === 'slides' ? 'sorterView' : it.kind === 'text' ? 'font' : 'autoshapes') }), h('span', { class: 'cb-t', text: it.label, translate: 'no' }));
         el.addEventListener('click', () => L.app.pasteItem(it));
         b.appendChild(el);
       }
@@ -637,6 +639,8 @@
     return `<svg width="${w}" height="${hh}" viewBox="0 0 ${w} ${hh}">${body}</svg>`;
   }
   P.layoutSVG = layoutSVG;
+  /* the headings of M.LAYOUTS' groups */
+  const LAYOUT_GROUPS = { 'Text Layouts': L.N('Text Layouts:'), 'Content Layouts': L.N('Content Layouts:'), 'Text and Content Layouts': L.N('Text and Content Layouts:'), 'Other Layouts': L.N('Other Layouts:') };
   TP.register({
     id: 'layout', title: 'Slide Layout',
     render(b) {
@@ -647,16 +651,16 @@
       for (const g in groups) {
         const grid = h('div', { class: 'lay-grid' });
         for (const l of groups[g]) {
-          const it = h('button', { class: 'lay-it' + (l.key === cur ? ' on' : ''), type: 'button', 'data-tip': l.name, 'aria-label': l.name, html: layoutSVG(l.key, 64) });
+          const it = h('button', { class: 'lay-it' + (l.key === cur ? ' on' : ''), type: 'button', 'data-key': l.key, 'data-tip': l.name, 'aria-label': l.name, html: layoutSVG(l.key, 64) });
           it.addEventListener('click', () => L.app.applyLayoutToSel(l.key));
           it.addEventListener('contextmenu', (e) => { e.preventDefault(); ui.openMenu([{ label: 'Apply to &Selected Slides', run: () => L.app.applyLayoutToSel(l.key) }, { label: '&Reapply Master Style', run: () => L.app.applyLayoutToSel(l.key, true) }, '-', { label: 'Insert &New Slide', run: () => L.app.insertSlide(l.key) }], { x: e.clientX, y: e.clientY }); });
           grid.appendChild(it);
         }
-        b.appendChild(sec(g + ':', grid));
+        b.appendChild(sec(LAYOUT_GROUPS[g] || g, grid));
       }
       b.appendChild(ui.check('Show when inserting new slides', !!L.app.opts.layoutPaneOnNew, (v) => { L.app.opts.layoutPaneOnNew = v; L.app.saveOpts(); }));
     },
-    refresh(b) { L.$$('.lay-it', b).forEach((el) => el.classList.toggle('on', E().slide() && el.getAttribute('aria-label') === M.layoutInfo(E().slide().layout).name)); },
+    refresh(b) { L.$$('.lay-it', b).forEach((el) => el.classList.toggle('on', !!E().slide() && el.dataset.key === M.layoutInfo(E().slide().layout).key)); },
   });
 
   /* --- Slide Design --- */
@@ -668,9 +672,9 @@
     const did = Object.keys(pres.designs)[0];
     const s = M.newSlide(pres, 'text', did);
     const t = s.shapes.find((x) => x.ph.type === 'title');
-    L.txt.setPlain(t.tx, 'Title');
+    L.txt.setPlain(t.tx, L.t('Title'));
     const b = s.shapes.find((x) => x.ph.type === 'body');
-    b.tx.ps = [L.txt.para('Bullet text'), L.txt.para('Second line')];
+    b.tx.ps = [L.txt.para(L.t('Bullet text')), L.txt.para(L.t('Second line'))];
     pres.slides.push(s);
     const el = L.render.thumb(pres, s, w);
     previewCache[ck] = el;
@@ -703,7 +707,7 @@
         grid.appendChild(it);
       }
       b.appendChild(sec('Available For Use', grid));
-      b.appendChild(link('open', 'Browse... (use the design of another .pptx/.potx)', () => L.app.browseDesign()));
+      b.appendChild(link('open', L.N('Browse... (use the design of another .pptx/.potx)'), () => L.app.browseDesign()));
     },
     refresh(b, reason) { if (reason === 'slides' || reason === 'design') { L.clear(b); this.render(b); } },
   });
@@ -717,7 +721,7 @@
       const d0 = E().design();
       const schemes = [d0.colors].concat(M.COLOR_SCHEMES);
       schemes.forEach((cs, i) => {
-        const it = h('button', { class: 'scheme-it', type: 'button', 'aria-label': i === 0 ? 'Current scheme' : 'Color scheme ' + i, 'data-tip': i === 0 ? 'Current color scheme' : 'Apply this color scheme' });
+        const it = h('button', { class: 'scheme-it', type: 'button', 'aria-label': i === 0 ? L.t('Current scheme') : L.t('Color scheme {0}', i), 'data-tip': i === 0 ? L.N('Current color scheme') : 'Apply this color scheme' });
         for (const k of ['lt1', 'dk1', 'lt2', 'dk2', 'accent1', 'accent2', 'hlink', 'folHlink']) it.appendChild(h('span', { style: `background:${cs[k]}` }));
         it.addEventListener('click', () => L.app.applyColorScheme(cs, true));
         it.addEventListener('contextmenu', (e) => { e.preventDefault(); ui.openMenu([{ label: 'Apply to &All Slides', run: () => L.app.applyColorScheme(cs, true) }, { label: 'Apply to &Selected Slides', run: () => L.app.applyColorScheme(cs, false) }], { x: e.clientX, y: e.clientY }); });
@@ -730,20 +734,20 @@
 
   /* --- Animation Schemes --- */
   const AS = [
-    ['No Animation', null], ['Subtle', 'group'],
-    ['Appear', { tr: { type: 'cut' }, title: ['appear'], body: ['appear'] }], ['Appear and dim', { tr: { type: 'fade' }, title: ['appear'], body: ['appear'] }],
-    ['Fade in all', { tr: { type: 'fade' }, title: ['fade'], body: ['fade', null, 'all'] }], ['Fade in one by one', { tr: { type: 'fade' }, title: ['fade'], body: ['fade'] }],
-    ['Faded wipe', { tr: { type: 'fade' }, title: ['fade'], body: ['wipe', 'b'] }], ['Faded zoom', { tr: { type: 'fade' }, title: ['fade'], body: ['zoom'] }],
-    ['Dissolve in', { tr: { type: 'dissolve' }, title: ['dissolve'], body: ['dissolve'] }], ['Random bars', { tr: { type: 'randomBar', dir: 'horz' }, title: ['randomBars', 'horz'], body: ['randomBars', 'horz'] }],
-    ['Wipe', { tr: { type: 'wipe', dir: 'r' }, title: ['wipe', 'l'], body: ['wipe', 't'] }], ['Blinds', { tr: { type: 'blinds', dir: 'horz' }, title: ['blinds', 'horz'], body: ['blinds', 'horz'] }],
-    ['Moderate', 'group'],
-    ['Ascend', { tr: { type: 'fade' }, title: ['ascend'], body: ['ascend'] }], ['Descend', { tr: { type: 'fade' }, title: ['descend'], body: ['descend'] }],
-    ['Zoom', { tr: { type: 'zoom', dir: 'out' }, title: ['zoom'], body: ['zoom'] }], ['Expand', { tr: { type: 'fade' }, title: ['expand'], body: ['expand'] }],
-    ['Spinner', { tr: { type: 'fade' }, title: ['spinner'], body: ['spinner'] }], ['Peek in', { tr: { type: 'cover', dir: 'u' }, title: ['peekIn', 'b'], body: ['peekIn', 'b'] }],
-    ['Exciting', 'group'],
-    ['Fly in', { tr: { type: 'push', dir: 'u' }, title: ['flyIn', 't'], body: ['flyIn', 'l'] }], ['Checkerboard', { tr: { type: 'checker', dir: 'horz' }, title: ['checkerboard', 'across'], body: ['checkerboard', 'across'] }],
-    ['Wheel', { tr: { type: 'wheel', spokes: 4 }, title: ['wheel', '4'], body: ['wheel', '1'] }], ['Plus', { tr: { type: 'plus' }, title: ['plus', 'out'], body: ['plus', 'out'] }],
-    ['Diamond', { tr: { type: 'diamond' }, title: ['diamond', 'out'], body: ['diamond', 'out'] }], ['Box out', { tr: { type: 'zoom', dir: 'out' }, title: ['box', 'out'], body: ['box', 'out'] }],
+    [L.N('No Animation'), null], [L.N('Subtle'), 'group'],
+    [L.N('Appear'), { tr: { type: 'cut' }, title: ['appear'], body: ['appear'] }], [L.N('Appear and dim'), { tr: { type: 'fade' }, title: ['appear'], body: ['appear'] }],
+    [L.N('Fade in all'), { tr: { type: 'fade' }, title: ['fade'], body: ['fade', null, 'all'] }], [L.N('Fade in one by one'), { tr: { type: 'fade' }, title: ['fade'], body: ['fade'] }],
+    [L.N('Faded wipe'), { tr: { type: 'fade' }, title: ['fade'], body: ['wipe', 'b'] }], [L.N('Faded zoom'), { tr: { type: 'fade' }, title: ['fade'], body: ['zoom'] }],
+    [L.N('Dissolve in'), { tr: { type: 'dissolve' }, title: ['dissolve'], body: ['dissolve'] }], [L.N('Random bars'), { tr: { type: 'randomBar', dir: 'horz' }, title: ['randomBars', 'horz'], body: ['randomBars', 'horz'] }],
+    [L.N('Wipe'), { tr: { type: 'wipe', dir: 'r' }, title: ['wipe', 'l'], body: ['wipe', 't'] }], [L.N('Blinds'), { tr: { type: 'blinds', dir: 'horz' }, title: ['blinds', 'horz'], body: ['blinds', 'horz'] }],
+    [L.N('Moderate'), 'group'],
+    [L.N('Ascend'), { tr: { type: 'fade' }, title: ['ascend'], body: ['ascend'] }], [L.N('Descend'), { tr: { type: 'fade' }, title: ['descend'], body: ['descend'] }],
+    [L.N('Zoom'), { tr: { type: 'zoom', dir: 'out' }, title: ['zoom'], body: ['zoom'] }], [L.N('Expand'), { tr: { type: 'fade' }, title: ['expand'], body: ['expand'] }],
+    [L.N('Spinner'), { tr: { type: 'fade' }, title: ['spinner'], body: ['spinner'] }], [L.N('Peek in'), { tr: { type: 'cover', dir: 'u' }, title: ['peekIn', 'b'], body: ['peekIn', 'b'] }],
+    [L.N('Exciting'), 'group'],
+    [L.N('Fly in'), { tr: { type: 'push', dir: 'u' }, title: ['flyIn', 't'], body: ['flyIn', 'l'] }], [L.N('Checkerboard'), { tr: { type: 'checker', dir: 'horz' }, title: ['checkerboard', 'across'], body: ['checkerboard', 'across'] }],
+    [L.N('Wheel'), { tr: { type: 'wheel', spokes: 4 }, title: ['wheel', '4'], body: ['wheel', '1'] }], [L.N('Plus'), { tr: { type: 'plus' }, title: ['plus', 'out'], body: ['plus', 'out'] }],
+    [L.N('Diamond'), { tr: { type: 'diamond' }, title: ['diamond', 'out'], body: ['diamond', 'out'] }], [L.N('Box out'), { tr: { type: 'zoom', dir: 'out' }, title: ['box', 'out'], body: ['box', 'out'] }],
   ];
   P.ANIM_SCHEMES = AS;
   TP.register({
@@ -799,7 +803,7 @@
     const start = ui.select([['click', 'On Click'], ['with', 'With Previous'], ['after', 'After Previous']], sel ? sel.start : 'click', (v) => upd('start', v), { disabled: !sel });
     const dir = ui.select(info && info.dirs ? info.dirs.map((d) => [d[0], d[1]]) : [['', '']], sel && sel.dir, (v) => upd('dir', v), { disabled: !(info && info.dirs) });
     const spd = ui.select(L.anim.SPEEDS.map(([n, ms]) => [ms, n]), sel ? L.anim.SPEEDS.reduce((best, s) => (Math.abs(s[1] - sel.dur) < Math.abs(best - sel.dur) ? s[1] : best), 500) : 1000, (v) => upd('dur', +v), { disabled: !sel || (sel.eff === 'appear' || sel.eff === 'disappear') });
-    b.append(sec(sel ? 'Modify: ' + L.anim.name(sel) : 'Modify effect', h('div', { class: 'tp-row' }, h('label', { text: 'Start:' }), start), h('div', { class: 'tp-row' }, h('label', { text: 'Direction:' }), dir), h('div', { class: 'tp-row' }, h('label', { text: 'Speed:' }), spd)));
+    b.append(sec(sel ? L.t('Modify: {0}', L.t(L.anim.name(sel))) : 'Modify effect', h('div', { class: 'tp-row' }, h('label', { text: 'Start:' }), start), h('div', { class: 'tp-row' }, h('label', { text: 'Direction:' }), dir), h('div', { class: 'tp-row' }, h('label', { text: 'Speed:' }), spd)));
     const list = h('div', { class: 'list-box', style: 'min-height:150px' });
     let step = 0;
     anims.forEach((a, i) => {
@@ -807,11 +811,11 @@
       if (a.start === 'click' || i === 0) step += a.start === 'click' ? 1 : 0;
       const label = (sh ? sh.name : '?') + (sh && sh.tx ? ': ' + L.txt.plain(sh.tx).slice(0, 24) : '');
       const col = { entr: '#2f9a3a', emph: '#c9a100', exit: '#d33a2c', path: '#555' }[a.cls];
-      const li = h('div', { class: 'li' + (a.id === CA.selId ? ' on' : ''), 'data-tip': `${L.anim.name(a)} — ${label}` },
+      const li = h('div', { class: 'li' + (a.id === CA.selId ? ' on' : ''), 'data-tip': `${L.t(L.anim.name(a))} — ${label}` },
         h('span', { class: 'li-num', text: a.start === 'click' ? String(step) : '' }),
         h('span', { class: 'li-ico', html: a.start === 'click' ? '<svg width="10" height="14" viewBox="0 0 10 14"><rect x="1" y="1" width="8" height="12" rx="4" fill="#fff" stroke="#555"/><path d="M5 1v5" stroke="#555"/></svg>' : a.start === 'after' ? '<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="#fff" stroke="#555"/><path d="M6 3v3l2 1" stroke="#555" fill="none"/></svg>' : '' }),
         h('span', { class: 'li-ico', html: `<span style="color:${col}">★</span>` }),
-        h('span', { class: 'li-n', text: `${L.anim.name(a)}${a.by === 'para' ? ' ¶' : ''} — ${label}` }));
+        h('span', { class: 'li-n', text: `${L.t(L.anim.name(a))}${a.by === 'para' ? ' ¶' : ''} — ${label}` }));
       li.addEventListener('click', () => { CA.selId = a.id; if (sh && E().topOf(a.sid)) E().select([E().topOf(a.sid).id]); renderCA(b); });
       li.addEventListener('dblclick', () => openOptions(a));
       li.addEventListener('contextmenu', (e) => {

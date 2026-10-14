@@ -572,8 +572,8 @@
     E.edit('Heading Rows Repeat', () => { D.touchTbl(t); for (let r = 0; r <= rg.r1; r++) { if (on) t.rows[r].trPr.header = true; else delete t.rows[r].trPr.header; } return E.sel; });
   };
   T.shade = function (fill) {
-    if (!T.inTable()) { E.formatPara((pPr) => { pPr.shd = fill ? { val: 'clear', fill, color: 'auto' } : undefined; }, 'Shading'); return; }
-    forCells('Shading', (c) => { if (fill) c.tcPr.shd = { val: 'clear', fill, color: 'auto' }; else delete c.tcPr.shd; });
+    if (!T.inTable()) { E.formatPara((pPr) => { pPr.shd = fill ? { val: 'clear', fill, color: 'auto' } : undefined; }, L.N('Shading')); return; }
+    forCells(L.N('Shading'), (c) => { if (fill) c.tcPr.shd = { val: 'clear', fill, color: 'auto' }; else delete c.tcPr.shd; });
   };
   /** border buttons applied to the selected cells */
   T.applyBorder = function (k) {
@@ -609,7 +609,7 @@
     /* toggle: if every target edge already shows a border, the button removes them */
     let allOn = k !== 'none';
     for (const [c, p] of pos) { const e = edgesFor(p); for (const s in e) if (e[s] && !R.hasBorder(effective(c, s, p))) allOn = false; }
-    E.edit('Borders', () => {
+    E.edit(L.N('Borders'), () => {
       D.touchTbl(t);
       for (const [c, p] of pos) {
         const e = edgesFor(p);
@@ -669,7 +669,7 @@
     const d = doc();
     const avail = availWidth(D.pos(D.firstPara(t.rows[0].cells[0].blocks) || E.sel.f.p, 0)) ;
     const outer = (() => { const tb = D.tblInfo(d, t); if (!tb || !tb.parents.length) { const s = D.sectFor(d, E.sel.f.p); return s.pgW - s.ml - s.mr - (s.gutter || 0); } return avail; })();
-    E.edit('AutoFit', () => {
+    E.edit(L.N('AutoFit'), () => {
       D.touchTbl(t);
       const { tp } = R.tblProps(d, t);
       const mar = (tp.cellMar.l || 0) + (tp.cellMar.r || 0);
@@ -767,7 +767,7 @@
     let hdr = 0;
     if (opts.header) hdr = 1;
     else while (hdr < t.rows.length && t.rows[hdr].trPr.header) hdr++;
-    E.edit('Sort', () => {
+    E.edit(L.N('Sort'), () => {
       D.touchTbl(t);
       const body = t.rows.slice(hdr);
       const textAt = (row, col) => { const m = R.tblMap({ rows: [row], tblPr: t.tblPr })[0].find((x) => x.c0 <= col && col < x.c0 + x.span); return m ? cellText(m.cell) : ''; };
@@ -938,7 +938,7 @@
     if (!ci) return;
     let dir = 'ABOVE';
     try { const v = T.evalFormula('SUM(ABOVE)', E.sel.f.p); const left = T.evalFormula('SUM(LEFT)', E.sel.f.p); if (!v && left) dir = 'LEFT'; } catch (e) { /* default above */ }
-    A().insertFieldNow('=SUM(' + dir + ')', 'AutoSum');
+    A().insertFieldNow('=SUM(' + dir + ')', L.N('AutoSum'));
   };
 
   /* ================= conversion ================= */

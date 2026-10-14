@@ -43,7 +43,7 @@
     const r = inp.getBoundingClientRect();
     scout.stop();
     scout.gestureAt(r.left + r.width / 2, r.top + r.height / 2);
-    scout.speak('Type what you want to do in Search commands, up there.');
+    scout.speak(L.t('Type what you want to do in Search commands, up there.'));
     inp.focus();
   }
   /* the welcome's choices; a command's only where the app has it */
@@ -62,7 +62,7 @@
   }
   function make() {
     scout = new L.Scout({
-      size: SIZE, label: 'Scout, the assistant. Click him for help; right-click for more.',
+      size: SIZE, label: L.t('Scout, the assistant. Click him for help; right-click for more.'),
       onclick: () => { if (scout.hidden) return; if (balloonOpen()) scout.stop(); else ask('What would you like to do?'); },
       onmenu: (x, y) => ui.openMenu([
         { label: '&Animate!', run: () => { scout.stop(); scout.animate(); } },
@@ -83,7 +83,7 @@
   function ask(text, wait) {
     if (!wait) scout.stop();
     const list = CHOICES.filter((c) => (c.cmd ? can(c.cmd) : !c.when || c.when()));
-    scout.ask(text, list.map((c) => ({ label: c.label, value: c }))).then((c) => {
+    scout.ask(L.t(text), list.map((c) => ({ label: L.t(c.label), value: c }))).then((c) => {
       if (!c) return;
       if (c.cmd) ui.exec(c.cmd);
       else if (c.run) c.run();
@@ -95,7 +95,8 @@
     if (get(GREETED) === today()) return '';
     put(GREETED, today());
     const h = new Date().getHours();
-    return (h >= 5 && h < 12 ? 'Good morning!' : h >= 12 && h < 18 ? 'Good afternoon!' : 'Good evening!') + ' I\'m Scout, your soon-to-be-AI assistant. For now, I mostly fetch.';
+    return h >= 5 && h < 12 ? L.t('Good morning! I\'m Scout, your soon-to-be-AI assistant. For now, I mostly fetch.')
+      : h >= 12 && h < 18 ? L.t('Good afternoon! I\'m Scout, your soon-to-be-AI assistant. For now, I mostly fetch.') : L.t('Good evening! I\'m Scout, your soon-to-be-AI assistant. For now, I mostly fetch.');
   }
 
   /** Bring him in. The first time today he waves (Greeting), introduces himself and asks what the user would like
@@ -108,7 +109,7 @@
     scout.play(asked || intro ? 'Greeting' : 'Show', { interrupt: true });
     if (!intro) return;
     scout.delay(900);
-    ask(intro + ' What would you like to do?', true);
+    ask(L.t('{0} What would you like to do?', intro), true);
   }
   /** He waves goodbye and drops through his mat, and stays away today; quiet: gone at once (hidden in another window). */
   function hide(quiet) {

@@ -50,6 +50,10 @@ Classic must not change when only the theme machinery changes: compare screensho
 
 `node --test tests/scout.test.mjs` checks the assistant in each app (docs/suite.md, The assistant): that he comes in by himself on a desktop (waving the first time each day, popping in after) and not on an iPhone or on a day the user hid him (scripts in `tests/scout/` run before the page's own), Help ▸ Show the Assistant (a wave; the introduction and choices the first time each day), a click on him, acting out Print, Find and saving (once the file is written; the test holds back the download), working along with a long wait, the welcome's choices, the right-click menu, no frames drawn while the window is in the background or once he is hidden. Showing or hiding him writes `localStorage['vibeoffice.assistant']`, which other open app pages follow, `scout.lastGreetedDay` and `scout.lastHiddenDay`; a UI check that shows him sets them back at the end, as the test does.
 
+## Languages
+
+Tests open the apps in English (`lang=en`), whatever the browser's language (docs/i18n.md). `node --test tests/i18n.test.mjs` checks that the English catalog is current (`node tools/i18n.mjs gather`) and that text which can't be translated only gets less; `node tools/i18n.mjs harvest` opens each app in the pseudo-locale and lists the English still on screen. `node --test tests/fonts.test.mjs` checks the East Asian font table, and `node --test tests/locales.test.mjs` (Chromium) saves a blank file of each app in each language and checks its defaults. Neither reads the translations.
+
 ## Mouse, selection, drag and focus: tests/ui/
 
 Two sizes. After each change, `node tools/quick.mjs` (the uncommitted changes, or the last commit; `node tools/quick.mjs

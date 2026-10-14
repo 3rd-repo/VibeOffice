@@ -461,7 +461,8 @@
   const CAT_ORDER = ['list', 'process', 'cycle', 'hierarchy', 'relationship', 'matrix', 'pyramid'];
   LAYOUTS.sort((p, q) => CAT_ORDER.indexOf(p.cat) - CAT_ORDER.indexOf(q.cat));
   SA.LAYOUTS = LAYOUTS;
-  SA.CATEGORIES = [['list', 'List'], ['process', 'Process'], ['cycle', 'Cycle'], ['hierarchy', 'Hierarchy'], ['relationship', 'Relationship'], ['matrix', 'Matrix'], ['pyramid', 'Pyramid']];
+  const N = (x) => x;   // UI text, translated where it is shown (common/i18n.js)
+  SA.CATEGORIES = [['list', N('List')], ['process', N('Process')], ['cycle', N('Cycle')], ['hierarchy', N('Hierarchy')], ['relationship', N('Relationship')], ['matrix', N('Matrix')], ['pyramid', N('Pyramid')]];
   SA.get = (id) => LAYOUTS.find((l) => l.id === id) || null;
 
   /** the shapes of a diagram: layout id, items, box in points */

@@ -46,7 +46,7 @@
     TP.current = id;
     const p = TP.registry[id];
     if (!p) return;
-    TP.title.firstChild.textContent = p.title;
+    TP.title.firstChild.textContent = L.t(p.title);
     TP.back.disabled = TP.pos <= 0; TP.fwd.disabled = TP.pos >= TP.stack.length - 1;
     L.clear(TP.body);
     p.render(TP.body);
@@ -72,8 +72,8 @@
       b.append(
         h('div', { class: 'tp-row' }, h('span', { html: L.icons.app ? L.icons.app(32) : '' }), h('b', { text: 'Quire 2003 Web Edition', style: 'color:var(--pane-ink)' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
-        sec('Open', window.VO ? VO.recentLinks(4) : null, link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new document...', () => TP.show('new')), link('sample', 'Open the welcome document', () => A().newDocument({ build: (d) => Object.assign(d, A().buildSample()) }))),
-        sec('Learn', link('help', 'Keyboard shortcuts and help', () => { P.helpTopic = 'keys'; TP.show('help'); }), link('stylesPane', 'Styles and Formatting', () => TP.show('styles')), link('mailMerge', 'Mail Merge wizard', () => TP.show('mailmerge'))));
+        sec(L.N('Open'), window.VO ? VO.recentLinks(4) : null, link('open', 'More...', () => ui.exec('open')), link('new', 'Create a new document...', () => TP.show('new')), link('sample', 'Open the welcome document', () => A().newDocument({ build: (d) => Object.assign(d, A().buildSample()) }))),
+        sec(L.N('Learn'), link('help', 'Keyboard shortcuts and help', () => { P.helpTopic = 'keys'; TP.show('help'); }), link('stylesPane', 'Styles and Formatting', () => TP.show('styles')), link('mailMerge', 'Mail Merge wizard', () => TP.show('mailmerge'))));
     },
   });
   /* ---------- New Document ---------- */
@@ -82,29 +82,29 @@
     render(b) {
       const tpl = L.templates ? L.templates.list() : [];
       b.append(
-        sec('New', link('new', 'Blank document', () => A().newDocument()), link('webPage', 'Web page', () => A().newDocument({ build: (d) => { d.webPage = true; } }).then(() => A().setView('web'))), link('mail', 'E-mail message', () => A().newDocument({ build: (d) => { d.main.blocks = [D.para([D.text('To: ')]), D.para([D.text('Subject: ')]), D.para()]; } })), link('open', 'From existing document...', () => A().newFromExisting())),
-        sec('Templates', link('templates', 'On my computer...', () => L.dlg.newFromTemplate()), ...tpl.slice(0, 6).map((t) => link('new', t.name, () => L.templates.create(t.id)))));
+        sec(L.N('New'), link('new', 'Blank document', () => A().newDocument()), link('webPage', 'Web page', () => A().newDocument({ build: (d) => { d.webPage = true; } }).then(() => A().setView('web'))), link('mail', 'E-mail message', () => A().newDocument({ build: (d) => { d.main.blocks = [D.para([D.text('To: ')]), D.para([D.text('Subject: ')]), D.para()]; } })), link('open', 'From existing document...', () => A().newFromExisting())),
+        sec(L.N('Templates'), link('templates', 'On my computer...', () => L.dlg.newFromTemplate()), ...tpl.slice(0, 6).map((t) => link('new', t.name, () => L.templates.create(t.id)))));
     },
   });
   /* ---------- Help ---------- */
   const HELP = [
-    ['Typing and selecting', 'Click to place the insertion point and type. Double-click selects a word, triple-click a paragraph; click in the left margin to select a line, double-click there for a paragraph, Ctrl+click for the whole document. Ctrl+click in text selects a sentence. F8 extends the selection step by step (word, sentence, paragraph, document); Esc stops.'],
-    ['Formatting text', 'Use the Formatting toolbar or Format ▸ Font (Ctrl+D). Ctrl+B, Ctrl+I, Ctrl+U toggle bold, italic and underline; Ctrl+Space removes character formatting and Ctrl+Q paragraph formatting. Shift+F3 cycles UPPER, lower and Title case. The Format Painter copies formatting: click it once for one use, double-click to keep it on, then drag over text or click a word.'],
-    ['Styles', 'Pick a style in the Style box at the left of the Formatting toolbar, or open Format ▸ Styles and Formatting for the full list with Modify, New Style and Select All Instances. Type a new name into the Style box to create a style from the current paragraph.'],
-    ['Paragraphs, tabs and indents', 'Format ▸ Paragraph sets alignment, indents, spacing, line spacing and pagination options (keep with next, widow control, page break before). Drag the markers on the ruler to change indents; click the ruler to add a tab of the kind shown in the box at its left end; drag a tab off the ruler to remove it.'],
-    ['Bullets and numbering', 'Use the toolbar buttons or Format ▸ Bullets and Numbering for bulleted, numbered and outline-numbered lists. Tab and Shift+Tab at the start of a list item change its level. Typing "1. " or "* " and text, then Enter, starts a list automatically.'],
-    ['Tables', 'Table ▸ Insert ▸ Table, or drag in the Insert Table grid on the Standard toolbar. Tab moves to the next cell (and adds a row at the end). Drag cell borders to resize columns. The Tables and Borders toolbar draws, erases, merges and splits cells, sets borders, shading and alignment, sorts and sums.'],
-    ['Pictures and drawing', 'Insert ▸ Picture ▸ From File, Clip Art, AutoShapes, LettersArt or Chart. Choose a wrapping style from Format ▸ Picture ▸ Layout or the Text Wrapping button. Drag floating objects to move them; drag handles to resize; the green handle rotates shapes.'],
-    ['Headers, footers and page numbers', 'View ▸ Header and Footer (or double-click the top or bottom of a page). The Header and Footer toolbar inserts page numbers, the number of pages, date and time, switches between header and footer and links or unlinks sections. Insert ▸ Page Numbers adds a numbered frame for you.'],
-    ['Sections, columns and page setup', 'Insert ▸ Break adds page, column and section breaks. Each section can have its own margins, orientation, paper size, columns and headers. File ▸ Page Setup sets margins, paper, layout (different first page, odd and even, vertical alignment, line numbers) for the current section or the whole document.'],
-    ['References', 'Insert ▸ Reference ▸ Footnote (Ctrl+Alt+F footnote, Ctrl+Alt+D endnote), Caption, Cross-reference and Index and Tables (table of contents, figures, index). Right-click a field and choose Update Field, or press F9. Alt+F9 shows field codes.'],
-    ['Track changes and comments', 'Tools ▸ Track Changes (Ctrl+Shift+E) marks insertions, deletions and formatting changes. The Reviewing toolbar accepts or rejects changes and moves between them. Insert ▸ Comment adds a comment balloon in Print Layout. Tools ▸ Compare and Merge Documents marks the differences with another .docx.'],
-    ['Find and replace', 'Edit ▸ Find (Ctrl+F), Replace (Ctrl+H) and Go To (Ctrl+G). More options: match case, whole words, wildcards (? any character, * any text, [abc], <word starts, word ends>), sounds like, all word forms, formatting and special characters (^p paragraph mark, ^t tab, ^m manual page break, ^l line break, ^? any character, ^# any digit, ^$ any letter).'],
-    ['Mail merge', 'Tools ▸ Letters and Mailings ▸ Mail Merge opens a six-step wizard: choose letters, envelopes, labels or a directory; open a .csv, .txt or .docx data source or type a new list; insert the address block, greeting line and merge fields; preview each record; then merge to a new document or to a PDF.'],
-    ['Files', 'File ▸ Open reads .docx, .docm, .dotx, .dotm, .htm, .txt, .rtf and Markdown (.md, or a .zip holding a .md and its pictures) files. File ▸ Save writes a .docx that opens in Word, LibreOffice, Pages and Google Docs, or keeps a Markdown file Markdown (what you did not edit stays exactly as it was). Save As also offers Word Template (.dotx), Web Page, Rich Text Format, Plain Text, Markdown and PDF. File ▸ Print renders every page to a PDF you can print anywhere.'],
-    ['Views', 'Normal shows the text in one continuous column with page breaks as dotted lines. Web Layout wraps text to the window. Print Layout shows the pages exactly as they print, with headers, footers and balloons. Outline shows heading levels to promote, demote and rearrange. Reading Layout shows two pages side by side for reading. Print Preview (Ctrl+F2) shows one or several whole pages.'],
+    [L.N('Typing and selecting'), L.N('Click to place the insertion point and type. Double-click selects a word, triple-click a paragraph; click in the left margin to select a line, double-click there for a paragraph, Ctrl+click for the whole document. Ctrl+click in text selects a sentence. F8 extends the selection step by step (word, sentence, paragraph, document); Esc stops.')],
+    [L.N('Formatting text'), L.N('Use the Formatting toolbar or Format ▸ Font (Ctrl+D). Ctrl+B, Ctrl+I, Ctrl+U toggle bold, italic and underline; Ctrl+Space removes character formatting and Ctrl+Q paragraph formatting. Shift+F3 cycles UPPER, lower and Title case. The Format Painter copies formatting: click it once for one use, double-click to keep it on, then drag over text or click a word.')],
+    [L.N('Styles'), L.N('Pick a style in the Style box at the left of the Formatting toolbar, or open Format ▸ Styles and Formatting for the full list with Modify, New Style and Select All Instances. Type a new name into the Style box to create a style from the current paragraph.')],
+    [L.N('Paragraphs, tabs and indents'), L.N('Format ▸ Paragraph sets alignment, indents, spacing, line spacing and pagination options (keep with next, widow control, page break before). Drag the markers on the ruler to change indents; click the ruler to add a tab of the kind shown in the box at its left end; drag a tab off the ruler to remove it.')],
+    [L.N('Bullets and numbering'), L.N('Use the toolbar buttons or Format ▸ Bullets and Numbering for bulleted, numbered and outline-numbered lists. Tab and Shift+Tab at the start of a list item change its level. Typing "1. " or "* " and text, then Enter, starts a list automatically.')],
+    [L.N('Tables'), L.N('Table ▸ Insert ▸ Table, or drag in the Insert Table grid on the Standard toolbar. Tab moves to the next cell (and adds a row at the end). Drag cell borders to resize columns. The Tables and Borders toolbar draws, erases, merges and splits cells, sets borders, shading and alignment, sorts and sums.')],
+    [L.N('Pictures and drawing'), L.N('Insert ▸ Picture ▸ From File, Clip Art, AutoShapes, LettersArt or Chart. Choose a wrapping style from Format ▸ Picture ▸ Layout or the Text Wrapping button. Drag floating objects to move them; drag handles to resize; the green handle rotates shapes.')],
+    [L.N('Headers, footers and page numbers'), L.N('View ▸ Header and Footer (or double-click the top or bottom of a page). The Header and Footer toolbar inserts page numbers, the number of pages, date and time, switches between header and footer and links or unlinks sections. Insert ▸ Page Numbers adds a numbered frame for you.')],
+    [L.N('Sections, columns and page setup'), L.N('Insert ▸ Break adds page, column and section breaks. Each section can have its own margins, orientation, paper size, columns and headers. File ▸ Page Setup sets margins, paper, layout (different first page, odd and even, vertical alignment, line numbers) for the current section or the whole document.')],
+    [L.N('References'), L.N('Insert ▸ Reference ▸ Footnote (Ctrl+Alt+F footnote, Ctrl+Alt+D endnote), Caption, Cross-reference and Index and Tables (table of contents, figures, index). Right-click a field and choose Update Field, or press F9. Alt+F9 shows field codes.')],
+    [L.N('Track changes and comments'), L.N('Tools ▸ Track Changes (Ctrl+Shift+E) marks insertions, deletions and formatting changes. The Reviewing toolbar accepts or rejects changes and moves between them. Insert ▸ Comment adds a comment balloon in Print Layout. Tools ▸ Compare and Merge Documents marks the differences with another .docx.')],
+    [L.N('Find and replace'), L.N('Edit ▸ Find (Ctrl+F), Replace (Ctrl+H) and Go To (Ctrl+G). More options: match case, whole words, wildcards (? any character, * any text, [abc], <word starts, word ends>), sounds like, all word forms, formatting and special characters (^p paragraph mark, ^t tab, ^m manual page break, ^l line break, ^? any character, ^# any digit, ^$ any letter).')],
+    [L.N('Mail merge'), L.N('Tools ▸ Letters and Mailings ▸ Mail Merge opens a six-step wizard: choose letters, envelopes, labels or a directory; open a .csv, .txt or .docx data source or type a new list; insert the address block, greeting line and merge fields; preview each record; then merge to a new document or to a PDF.')],
+    [L.N('Files'), L.N('File ▸ Open reads .docx, .docm, .dotx, .dotm, .htm, .txt, .rtf and Markdown (.md, or a .zip holding a .md and its pictures) files. File ▸ Save writes a .docx that opens in Word, LibreOffice, Pages and Google Docs, or keeps a Markdown file Markdown (what you did not edit stays exactly as it was). Save As also offers Word Template (.dotx), Web Page, Rich Text Format, Plain Text, Markdown and PDF. File ▸ Print renders every page to a PDF you can print anywhere.')],
+    [L.N('Views'), L.N('Normal shows the text in one continuous column with page breaks as dotted lines. Web Layout wraps text to the window. Print Layout shows the pages exactly as they print, with headers, footers and balloons. Outline shows heading levels to promote, demote and rearrange. Reading Layout shows two pages side by side for reading. Print Preview (Ctrl+F2) shows one or several whole pages.')],
   ];
-  const KEYS = [['Ctrl+N / O / S / P', 'New, Open, Save, Print'], ['F12 / Shift+F12', 'Save As / Save'], ['Ctrl+Z / Ctrl+Y', 'Undo / Redo (F4 repeats)'], ['Ctrl+X / C / V', 'Cut, Copy, Paste'], ['Ctrl+A', 'Select all'], ['Ctrl+F / H / G', 'Find, Replace, Go To'], ['Ctrl+B / I / U', 'Bold, Italic, Underline'], ['Ctrl+Shift+D / W', 'Double / word underline'], ['Ctrl+= / Ctrl+Shift++', 'Subscript / Superscript'], ['Ctrl+Shift+A / K', 'All caps / Small caps'], ['Ctrl+Shift+> / <', 'Grow / Shrink font'], ['Ctrl+] / [', 'Font size ±1 point'], ['Ctrl+D', 'Font dialog'], ['Ctrl+Space / Ctrl+Q', 'Remove character / paragraph formatting'], ['Shift+F3', 'Change case'], ['Ctrl+L / E / R / J', 'Left, Center, Right, Justify'], ['Ctrl+1 / 2 / 5', 'Single, double, 1.5 line spacing'], ['Ctrl+0', 'Add/remove 12 pt space before'], ['Ctrl+M / Ctrl+Shift+M', 'Indent / outdent'], ['Ctrl+T / Ctrl+Shift+T', 'Hanging indent / reduce'], ['Ctrl+Shift+N', 'Normal style'], ['Ctrl+Alt+1 / 2 / 3', 'Heading 1, 2, 3'], ['Ctrl+Shift+L', 'List Bullet style'], ['Ctrl+Shift+S', 'Style box'], ['Ctrl+Enter', 'Page break'], ['Ctrl+Shift+Enter', 'Column break'], ['Shift+Enter', 'Line break'], ['Ctrl+Shift+Space', 'Nonbreaking space'], ['Ctrl+- / Ctrl+Shift+-', 'Optional / nonbreaking hyphen'], ['Ctrl+Alt+- ', 'Em dash'], ['Ctrl+Alt+C / R / T', '©, ®, ™'], ['Ctrl+K', 'Hyperlink'], ['Ctrl+Alt+F / D', 'Footnote / Endnote'], ['Ctrl+Alt+M', 'Comment'], ['Ctrl+Shift+E', 'Track changes'], ['F7', 'Spelling and Grammar'], ['Shift+F7', 'Thesaurus'], ['F9 / Alt+F9', 'Update field / toggle field codes'], ['Ctrl+Shift+F9', 'Unlink fields'], ['Alt+Shift+D / T / P', 'Date, time, page number field'], ['F8', 'Extend selection'], ['Shift+F5', 'Go back to previous edit'], ['Alt+Shift+↑ / ↓', 'Move paragraph up / down'], ['Alt+Shift+← / →', 'Promote / demote'], ['Ctrl+Alt+P / N / O', 'Print Layout, Normal, Outline view'], ['Ctrl+*', 'Show/Hide ¶'], ['Ctrl+F1 / Shift+F1', 'Task pane / Reveal Formatting'], ['F1', 'Help'], ['Tab / Shift+Tab', 'Next / previous cell; list level']];
+  const KEYS = [['Ctrl+N / O / S / P', L.N('New, Open, Save, Print')], ['F12 / Shift+F12', L.N('Save As / Save')], ['Ctrl+Z / Ctrl+Y', L.N('Undo / Redo (F4 repeats)')], ['Ctrl+X / C / V', L.N('Cut, Copy, Paste')], ['Ctrl+A', L.N('Select all')], ['Ctrl+F / H / G', L.N('Find, Replace, Go To')], ['Ctrl+B / I / U', L.N('Bold, Italic, Underline')], ['Ctrl+Shift+D / W', L.N('Double / word underline')], ['Ctrl+= / Ctrl+Shift++', L.N('Subscript / Superscript')], ['Ctrl+Shift+A / K', L.N('All caps / Small caps')], ['Ctrl+Shift+> / <', L.N('Grow / Shrink font')], ['Ctrl+] / [', L.N('Font size ±1 point')], ['Ctrl+D', L.N('Font dialog')], ['Ctrl+Space / Ctrl+Q', L.N('Remove character / paragraph formatting')], ['Shift+F3', L.N('Change case')], ['Ctrl+L / E / R / J', L.N('Left, Center, Right, Justify')], ['Ctrl+1 / 2 / 5', L.N('Single, double, 1.5 line spacing')], ['Ctrl+0', L.N('Add/remove 12 pt space before')], ['Ctrl+M / Ctrl+Shift+M', L.N('Indent / outdent')], ['Ctrl+T / Ctrl+Shift+T', L.N('Hanging indent / reduce')], ['Ctrl+Shift+N', L.N('Normal style')], ['Ctrl+Alt+1 / 2 / 3', L.N('Heading 1, 2, 3')], ['Ctrl+Shift+L', L.N('List Bullet style')], ['Ctrl+Shift+S', L.N('Style box')], ['Ctrl+Enter', L.N('Page break')], ['Ctrl+Shift+Enter', L.N('Column break')], ['Shift+Enter', L.N('Line break')], ['Ctrl+Shift+Space', L.N('Nonbreaking space')], ['Ctrl+- / Ctrl+Shift+-', L.N('Optional / nonbreaking hyphen')], ['Ctrl+Alt+- ', L.N('Em dash')], ['Ctrl+Alt+C / R / T', L.N('©, ®, ™')], ['Ctrl+K', L.N('Hyperlink')], ['Ctrl+Alt+F / D', L.N('Footnote / Endnote')], ['Ctrl+Alt+M', L.N('Comment')], ['Ctrl+Shift+E', L.N('Track changes')], ['F7', L.N('Spelling and Grammar')], ['Shift+F7', L.N('Thesaurus')], ['F9 / Alt+F9', L.N('Update field / toggle field codes')], ['Ctrl+Shift+F9', L.N('Unlink fields')], ['Alt+Shift+D / T / P', L.N('Date, time, page number field')], ['F8', L.N('Extend selection')], ['Shift+F5', L.N('Go back to previous edit')], ['Alt+Shift+↑ / ↓', L.N('Move paragraph up / down')], ['Alt+Shift+← / →', L.N('Promote / demote')], ['Ctrl+Alt+P / N / O', L.N('Print Layout, Normal, Outline view')], ['Ctrl+*', L.N('Show/Hide ¶')], ['Ctrl+F1 / Shift+F1', L.N('Task pane / Reveal Formatting')], ['F1', L.N('Help')], ['Tab / Shift+Tab', L.N('Next / previous cell; list level')]];
   TP.register({
     id: 'help', title: 'Quire Help',
     render(b) {
@@ -114,9 +114,12 @@
         L.clear(res);
         const words = q.value.toLowerCase().split(/\s+/).filter(Boolean);
         const hit = (t) => words.every((w) => t.toLowerCase().includes(w));
-        if (P.helpTopic !== 'keys' || words.length) for (const [t, d] of HELP.filter(([t, d]) => !words.length || hit(t + ' ' + d))) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: t }), h('p', { text: d })));
-        const keys = KEYS.filter(([k, d]) => !words.length || hit(k + ' ' + d));
-        if (keys.length) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: 'Keyboard shortcuts' }), h('table', { class: 'kbd-table' }, ...keys.map(([k, d]) => h('tr', null, h('td', { text: k }), h('td', { text: d }))))));
+        /* the topics as shown (and in English) */
+        if (P.helpTopic !== 'keys' || words.length) for (const [t, d] of HELP.filter(([t, d]) => !words.length || hit(t + ' ' + d + ' ' + L.t(t) + ' ' + L.t(d)))) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: t }), h('p', { text: d })));
+        const keys = KEYS.filter(([k, d]) => !words.length || hit(k + ' ' + d + ' ' + L.t(d)));
+        /* the keys with their names as shown (Strg in German) */
+        const keyNames = (k) => k.replace(/\b(Ctrl|Shift|Alt|Enter|Tab|Space)\b/g, (m) => ui.keyText(m));
+        if (keys.length) res.appendChild(h('div', { class: 'help-topic' }, h('h4', { text: 'Keyboard shortcuts' }), h('table', { class: 'kbd-table' }, ...keys.map(([k, d]) => h('tr', null, h('td', { translate: 'no' }, document.createTextNode(keyNames(k))), h('td', { text: d }))))));
         if (!res.childNodes.length) res.appendChild(h('div', { class: 'tp-note', text: 'No help topics match your search.' }));
         if (P.helpTopic === 'keys' && !words.length) res.appendChild(link('help', 'Show all help topics', () => { P.helpTopic = null; draw(); }));
       };
@@ -146,15 +149,15 @@
           while (i >= 0 && n < 200) {
             n++;
             const a = Math.max(0, i - 30), e = Math.min(t.length, i + needle.length + 40);
-            const hit = h('div', { class: 'search-hit' });
-            hit.append(document.createTextNode((a > 0 ? '…' : '') + t.slice(a, i)), h('b', { text: t.slice(i, i + needle.length) }), document.createTextNode(t.slice(i + needle.length, e) + (e < t.length ? '…' : '')));
+            const hit = h('div', { class: 'search-hit', translate: 'no' });
+            hit.append(document.createTextNode((a > 0 ? '…' : '') + t.slice(a, i)), h('b', null, document.createTextNode(t.slice(i, i + needle.length))), document.createTextNode(t.slice(i + needle.length, e) + (e < t.length ? '…' : '')));
             const off = i;
             hit.addEventListener('click', () => A().gotoPos(D.pos(p, off), D.pos(p, off + needle.length)));
             res.appendChild(hit);
             i = t.toLowerCase().indexOf(needle, i + needle.length);
           }
         }
-        res.prepend(h('div', { class: 'tp-note', text: n ? `${n} match${n === 1 ? '' : 'es'} in ${A().fileName}` : 'No matches were found in this document.' }));
+        res.prepend(h('div', { class: 'tp-note', text: n === 1 ? L.t('{0} match in {1}', n, A().fileName) : n ? L.t('{0} matches in {1}', n, A().fileName) : 'No matches were found in this document.' }));
       };
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); e.stopPropagation(); });
       b.append(sec('Search for', h('div', { class: 'tp-row' }, h('label', { for: 'srch-q', text: 'Search text:' })), h('div', { class: 'tp-row' }, q, ui.button('Go', go, { class: 'btn small' })), h('div', { class: 'tp-note', text: 'Searches the text of the open document, including headers, footers, notes and comments.' })), res);
@@ -193,9 +196,9 @@
     id: 'clipboard', title: 'Clipboard', live: true,
     render(b) {
       const items = A().clipItems || [];
-      b.append(h('div', { class: 'tp-btns' }, ui.button('Paste All', () => { for (const it of items.slice().reverse()) E.pasteBlocks(it.blocks); }, { class: 'btn small' }), ui.button('Clear All', () => { items.length = 0; TP.refresh('doc'); }, { class: 'btn small' })), h('div', { class: 'tp-note', text: `${items.length} of 24 - Clipboard. Click an item to paste.` }));
+      b.append(h('div', { class: 'tp-btns' }, ui.button('Paste All', () => { for (const it of items.slice().reverse()) E.pasteBlocks(it.blocks); }, { class: 'btn small' }), ui.button('Clear All', () => { items.length = 0; TP.refresh('doc'); }, { class: 'btn small' })), h('div', { class: 'tp-note', text: L.t('{0} of 24 - Clipboard. Click an item to paste.', items.length) }));
       for (const it of items) {
-        const el = h('button', { class: 'cb-item', type: 'button' }, h('span', { html: L.icons.get(it.blocks.some((x) => x.t === 'tbl') ? 'table' : 'font') }), h('span', { class: 'cb-t', text: (it.text || '').slice(0, 160) || '[object]' }));
+        const el = h('button', { class: 'cb-item', type: 'button' }, h('span', { html: L.icons.get(it.blocks.some((x) => x.t === 'tbl') ? 'table' : 'font') }), h('span', { class: 'cb-t', translate: 'no' }, document.createTextNode((it.text || '').slice(0, 160) || L.t('[object]'))));
         el.addEventListener('click', () => E.pasteBlocks(it.blocks));
         b.appendChild(el);
       }
@@ -269,7 +272,7 @@
           const status = h('div', { class: 'tp-note', text: 'Searching...' });
           out.appendChild(status);
           try { await TH.load(); }
-          catch (e) { status.textContent = 'The thesaurus could not be loaded (' + (e.message || e) + '). Serve Quire from a web server rather than opening index.html as a local file.'; return; }
+          catch (e) { status.textContent = L.t('The thesaurus could not be loaded ({0}). Serve Quire from a web server rather than opening index.html as a local file.', e.message || e); return; }
           status.remove();
           renderThesaurus(out, text, (w) => go(w));
         }
@@ -282,7 +285,7 @@
     },
   });
   function wordMenuButton(w, onLookUp) {
-    const btn = h('button', { class: 'tp-link th-word', type: 'button' }, h('span', { text: w }), h('span', { class: 'dd-arrow' }));
+    const btn = h('button', { class: 'tp-link th-word', type: 'button', translate: 'no' }, h('span', null, document.createTextNode(w)), h('span', { class: 'dd-arrow' }));
     btn.addEventListener('click', (e) => {
       ui.openMenu([
         { label: '&Insert', run: () => { if (E.sel && E.collapsed()) { const wd = O.wordAt(E.sel.f); if (wd) E.setSel(wd[0], wd[1]); } E.insertTextAt(w, 'Insert'); } },
@@ -299,18 +302,19 @@
     const box = h('div', { class: 'help-topic' }, h('h4', { text: 'Thesaurus: English' }));
     out.appendChild(box);
     if (!r) {
-      box.appendChild(h('p', { class: 'tp-note', text: `No results were found for "${text}". Alphabetical list:` }));
+      box.appendChild(h('p', { class: 'tp-note', text: L.t('No results were found for "{0}". Alphabetical list:', text) }));
       for (const k of TH.near(text, 12)) box.appendChild(wordMenuButton(k, onLookUp));
       return;
     }
-    if (r.base) box.appendChild(h('p', { class: 'tp-note', text: `Showing results for "${r.head}".` }));
+    if (r.base) box.appendChild(h('p', { class: 'tp-note', text: L.t('Showing results for "{0}".', r.head) }));
     for (const s of r.senses) {
-      const head = h('div', { class: 'th-sense' }, h('b', { text: `${s.syns[0]} (${POS[s.pos] || s.pos})` }));
+      /* the English thesaurus's own word and part of speech */
+      const head = h('div', { class: 'th-sense', translate: 'no' }, h('b', null, document.createTextNode(`${s.syns[0]} (${POS[s.pos] || s.pos})`)));
       box.appendChild(head);
       for (const w of s.syns) box.appendChild(wordMenuButton(w, onLookUp));
     }
     if (r.ants.length) {
-      box.appendChild(h('div', { class: 'th-sense' }, h('b', { text: `${r.ants[0]} (Antonym)` })));
+      box.appendChild(h('div', { class: 'th-sense' }, h('b', { text: L.t('{0} (Antonym)', r.ants[0]) })));
       for (const w of r.ants) box.appendChild(wordMenuButton(w, onLookUp));
     }
   }
@@ -327,7 +331,7 @@
       while (i >= 0 && n < 50) {
         const a = i, bEnd = i + needle.length;
         const snip = (a > 30 ? '…' : '') + t.slice(Math.max(0, a - 30), a);
-        const hit = h('button', { class: 'search-hit', type: 'button' }, document.createTextNode(snip.replace(/[￼\t]/g, ' ')), h('b', { text: t.slice(a, bEnd) }), document.createTextNode(t.slice(bEnd, bEnd + 40).replace(/[￼\t]/g, ' ') + (t.length > bEnd + 40 ? '…' : '')));
+        const hit = h('button', { class: 'search-hit', type: 'button', translate: 'no' }, document.createTextNode(snip.replace(/[￼\t]/g, ' ')), h('b', null, document.createTextNode(t.slice(a, bEnd))), document.createTextNode(t.slice(bEnd, bEnd + 40).replace(/[￼\t]/g, ' ') + (t.length > bEnd + 40 ? '…' : '')));
         hit.addEventListener('click', () => A().gotoPos(D.pos(p, a), D.pos(p, bEnd)));
         box.appendChild(hit);
         n++;
@@ -361,13 +365,16 @@
           if (!s) continue;
           const r = s.type === 'paragraph' ? (d.styles[id] ? D.styleProps(d, id).rPr : s.rPr || {}) : s.type === 'character' ? D.mergeRPr(d.defaults.rPr, d.styles[id] ? D.charStyleProps(d, id) : s.rPr) : d.defaults.rPr;
           const css = `font-family:${L.fontStack(r.font)};font-size:${Math.min(16, Math.max(8, (r.sz || 12)))}px;${r.b ? 'font-weight:bold;' : ''}${r.i ? 'font-style:italic;' : ''}${r.color && r.color !== 'auto' ? 'color:#' + r.color + ';' : ''}${r.u && r.u !== 'none' ? 'text-decoration:underline;' : ''}`;
-          const it = h('div', { class: 'sf-item' + (id === curId ? ' on' : ''), role: 'button', tabindex: '0', 'data-tip': styleDescription(d, id) }, h('span', { class: 'sf-n', text: D.styleDisplayName(s), style: css }), h('span', { class: 'sf-k', text: s.type === 'paragraph' ? '¶' : s.type === 'character' ? 'a' : s.type === 'table' ? '⊞' : '≡' }));
+          /* the style's own name (not translated); its description as shown in the tip */
+          const it = h('div', { class: 'sf-item' + (id === curId ? ' on' : ''), role: 'button', tabindex: '0', translate: 'no', 'data-style': id }, h('span', { class: 'sf-n', style: css }, document.createTextNode(D.styleDisplayName(s))), h('span', { class: 'sf-k', text: s.type === 'paragraph' ? '¶' : s.type === 'character' ? 'a' : s.type === 'table' ? '⊞' : '≡' }));
+          it.dataset.tip = styleDescription(d, id);
           it.addEventListener('click', () => { if (s.type === 'table') { if (L.tables.inTable()) L.tables.applyStyle(s.name || id); return; } if (s.type === 'numbering') return; A().applyStyle(id); E.refocus(); });
           it.addEventListener('contextmenu', (e) => { e.preventDefault(); styleMenu(id, { x: e.clientX, y: e.clientY }); });
           list.appendChild(it);
         }
       };
       P.refreshCur = () => { cur.textContent = A().styleState ? A().styleState() + describeDirect() : ''; };
+      cur.setAttribute('translate', 'no');   // the style's name, then its direct formatting as shown
       b.append(
         sec('Formatting of selected text', cur, h('div', { class: 'tp-btns' }, ui.button('Select All', () => selectAllLike(), { class: 'btn small' }), ui.button('New Style...', () => L.dlg.style(null), { class: 'btn small' }))),
         sec('Pick formatting to apply', list),
@@ -376,7 +383,7 @@
       P.refreshCur();
       this._draw = draw;
     },
-    refresh(b, reason) { if (P.refreshCur) P.refreshCur(); if (reason !== 'sel' && this._draw) this._draw(); else if (reason === 'sel') { const curId = E.sel ? E.sel.f.p.pPr.style || 'Normal' : ''; L.$$('.sf-item', b).forEach((x) => x.classList.toggle('on', x.firstChild && x.firstChild.textContent === D.styleDisplayName(doc().styles[curId]))); } },
+    refresh(b, reason) { if (P.refreshCur) P.refreshCur(); if (reason !== 'sel' && this._draw) this._draw(); else if (reason === 'sel') { const curId = E.sel ? E.sel.f.p.pPr.style || 'Normal' : ''; L.$$('.sf-item', b).forEach((x) => x.classList.toggle('on', x.dataset.style === curId)); } },
   });
   function describeDirect() {
     if (!E.sel) return '';
@@ -385,15 +392,17 @@
     const parts = [];
     if (r.font) parts.push(r.font);
     if (r.sz) parts.push(r.sz + ' pt');
-    if (r.b) parts.push('Bold');
-    if (r.i) parts.push('Italic');
-    if (r.u && r.u !== 'none') parts.push('Underline');
-    if (r.color && r.color !== 'auto') parts.push('Font color: #' + r.color);
+    if (r.b) parts.push(L.t('Bold'));
+    if (r.i) parts.push(L.t('Italic'));
+    if (r.u && r.u !== 'none') parts.push(L.t('Underline'));
+    if (r.color && r.color !== 'auto') parts.push(L.t('Font color: #{0}', r.color));
     const pp = E.sel.f.p.pPr;
-    if (pp.jc) parts.push({ center: 'Centered', right: 'Right', both: 'Justified', left: 'Left' }[pp.jc] || pp.jc);
-    if (pp.ind && (pp.ind.l || pp.ind.fl)) parts.push('Indent');
+    if (pp.jc) parts.push(L.t(JC[pp.jc] || pp.jc));
+    if (pp.ind && (pp.ind.l || pp.ind.fl)) parts.push(L.t('Indent'));
     return parts.length ? ' + ' + parts.join(', ') : '';
   }
+  /* paragraph alignments as shown */
+  const JC = { center: L.N('Centered'), right: L.N('Right'), both: L.N('Justified'), left: L.N('Left'), distribute: L.N('Distributed') };
   function styleDescription(d, id) {
     const s = d.styles[id] || D.builtinStyles()[id];
     if (!s) return id;
@@ -403,25 +412,25 @@
     if (s.basedOn) parts.push((d.styles[s.basedOn] ? D.styleDisplayName(d.styles[s.basedOn]) : s.basedOn) + ' +');
     if (r.font) parts.push(r.font);
     if (r.sz) parts.push(r.sz + ' pt');
-    if (r.b) parts.push('Bold');
-    if (r.i) parts.push('Italic');
-    if (p.jc) parts.push(p.jc === 'both' ? 'Justified' : p.jc);
-    if (p.sp && p.sp.b) parts.push('Before: ' + p.sp.b + ' pt');
-    if (p.sp && p.sp.a) parts.push('After: ' + p.sp.a + ' pt');
-    if (p.keepNext) parts.push('Keep with next');
-    if (p.outline != null && p.outline < 9) parts.push('Level ' + (p.outline + 1));
+    if (r.b) parts.push(L.t('Bold'));
+    if (r.i) parts.push(L.t('Italic'));
+    if (p.jc) parts.push(L.t(JC[p.jc] || p.jc));
+    if (p.sp && p.sp.b) parts.push(L.t('Before: {0} pt', p.sp.b));
+    if (p.sp && p.sp.a) parts.push(L.t('After: {0} pt', p.sp.a));
+    if (p.keepNext) parts.push(L.t('Keep with next'));
+    if (p.outline != null && p.outline < 9) parts.push(L.t('Level {0}', p.outline + 1));
     return parts.join(', ') || D.styleDisplayName(s);
   }
   function styleMenu(id, at) {
     const d = doc();
     const s = d.styles[id];
     ui.openMenu([
-      { label: '&Select All ' + countUses(id) + ' Instance(s)', enabled: () => countUses(id) > 0, run: () => selectAllOfStyle(id) },
-      { label: '&Clear Formatting of ' + countUses(id) + ' Instance(s)', enabled: () => countUses(id) > 0, run: () => { selectAllOfStyle(id); ui.exec('clearFormats'); } },
+      { label: L.t('&Select All {0} Instance(s)', countUses(id)), enabled: () => countUses(id) > 0, run: () => selectAllOfStyle(id) },
+      { label: L.t('&Clear Formatting of {0} Instance(s)', countUses(id)), enabled: () => countUses(id) > 0, run: () => { selectAllOfStyle(id); ui.exec('clearFormats'); } },
       '-',
       { label: '&Update to Match Selection', enabled: () => !!s && !!E.sel, run: () => updateStyleFromSel(id) },
       { label: '&Modify...', run: () => L.dlg.style(id) },
-      { label: '&Delete...', enabled: () => !!s && !s.builtin && id !== 'Normal', run: async () => { const r = await ui.msg(`Do you want to delete style ${D.styleDisplayName(s)}?`, { icon: 'question', buttons: ['&Yes', '&No'] }); if (r === 0) deleteStyle(id); } },
+      { label: '&Delete...', enabled: () => !!s && !s.builtin && id !== 'Normal', run: async () => { const r = await ui.msg(L.t('Do you want to delete style {0}?', D.styleDisplayName(s)), { icon: 'question', buttons: ['&Yes', '&No'] }); if (r === 0) deleteStyle(id); } },
     ], at);
   }
   function countUses(id) {
@@ -435,7 +444,7 @@
     const ps = d.main.paras.filter((p) => (p.pPr.style || 'Normal') === id || p.runs.some((it) => it.rPr && it.rPr.style === id));
     if (!ps.length) return;
     E.setSel(D.pos(ps[0], 0), D.pos(ps[ps.length - 1], D.plen(ps[ps.length - 1])));
-    A().status(`${ps.length} paragraph(s) use ${D.styleDisplayName(d.styles[id])}; the selection spans all of them.`);
+    A().status(L.t('{0} paragraph(s) use {1}; the selection spans all of them.', ps.length, D.styleDisplayName(d.styles[id])));
   }
   function selectAllLike() { if (!E.sel) return; selectAllOfStyle(E.sel.f.p.pPr.style || 'Normal'); }
   function updateStyleFromSel(id) {
@@ -475,23 +484,28 @@
     id: 'reveal', title: 'Reveal Formatting',
     render(b) {
       const box = h('div', { class: 'rf-tree' });
-      b.append(sec('Selected text', h('div', { class: 'tp-box', text: E.sel ? (O.textRange(...E.range(), ' ').slice(0, 120) || 'Sample Text') : '' })), sec('Formatting of selected text', box), ui.check('Distinguish style source', !!P.distinguish, (v) => { P.distinguish = v; TP.render(); }), ui.check('Show all formatting marks', !!LY.opts.showMarks, () => ui.exec('showMarks')));
+      b.append(sec('Selected text', h('div', { class: 'tp-box', translate: 'no' }, document.createTextNode(E.sel ? (O.textRange(...E.range(), ' ').slice(0, 120) || L.t('Sample Text')) : ''))), sec('Formatting of selected text', box), ui.check('Distinguish style source', !!P.distinguish, (v) => { P.distinguish = v; TP.render(); }), ui.check('Show all formatting marks', !!LY.opts.showMarks, () => ui.exec('showMarks')));
       if (!E.sel) return;
       const d = doc();
       const p = E.sel.f.p;
       const r = E.curRun();
       const pp = E.curPara();
       const sect = D.sectFor(d, p);
-      const row = (k, v, dlgFn) => { const el = h('div', null, h('span', { text: k + ': ' }), h('span', { text: v })); if (dlgFn) { el.style.cursor = 'pointer'; el.addEventListener('click', dlgFn); } return el; };
+      /* k: the label as shown, with its colon; v: the value as shown (translated here, or the document's own: names, fonts) */
+      const row = (k, v, dlgFn) => { const el = h('div', null, h('span', { text: k }), ' ', h('span', { translate: 'no' }, document.createTextNode(v))); if (dlgFn) { el.style.cursor = 'pointer'; el.addEventListener('click', dlgFn); } return el; };
       const fl = (v) => D.fmtLen(v || 0);
       const head = (t, fn) => { const el = h('h5', null, h('a', { href: '#', text: t, onclick: (e) => { e.preventDefault(); fn(); } })); return el; };
-      box.append(head('Font', () => L.dlg.font()), row('FONT', `${r.font || ''} ${r.sz || 12} pt${r.b ? ', Bold' : ''}${r.i ? ', Italic' : ''}`), r.color && r.color !== 'auto' ? row('Font color', '#' + r.color) : null, r.u && r.u !== 'none' ? row('Underline', r.u) : null, r.hl ? row('Highlight', r.hl) : null, r.caps ? row('Effects', 'All caps') : null, r.smallCaps ? row('Effects', 'Small caps') : null, r.vert ? row('Position', r.vert) : null, r.lang ? row('Language', A().langName(r.lang)) : row('Language', 'English (U.S.)'),
-        head('Paragraph', () => L.dlg.paragraph()), row('Paragraph Style', D.styleDisplayName(d.styles[p.pPr.style || 'Normal'])), row('Alignment', { center: 'Centered', right: 'Right', both: 'Justified', left: 'Left', distribute: 'Distributed' }[pp.jc || 'left'] || pp.jc), row('Indentation', `Left: ${fl(pp.ind && pp.ind.l)}, Right: ${fl(pp.ind && pp.ind.r)}${pp.ind && pp.ind.fl ? (pp.ind.fl < 0 ? ', Hanging: ' + fl(-pp.ind.fl) : ', First line: ' + fl(pp.ind.fl)) : ''}`),
-        row('Spacing', `Before: ${L.round((pp.sp && pp.sp.b) || 0, 1)} pt, After: ${L.round((pp.sp && pp.sp.a) || 0, 1)} pt, Line spacing: ${pp.sp && pp.sp.line ? (pp.sp.rule === 'auto' || !pp.sp.rule ? (pp.sp.line === 1 ? 'single' : pp.sp.line === 2 ? 'double' : pp.sp.line + ' lines') : (pp.sp.rule === 'exact' ? 'Exactly ' : 'At least ') + pp.sp.line + ' pt') : 'single'}`),
-        pp.keepNext || pp.keepLines || pp.pageBreakBefore ? row('Line and Page Breaks', [pp.keepNext && 'Keep with next', pp.keepLines && 'Keep lines together', pp.pageBreakBefore && 'Page break before'].filter(Boolean).join(', ')) : null,
-        L.lists && L.lists.info(p) ? row('Bullets and Numbering', L.lists.info(p).fmt === 'bullet' ? 'Bulleted' : 'Numbered') : null,
-        head('Section', () => L.dlg.pageSetup()), row('Margins', `Top: ${fl(sect.mt)}, Bottom: ${fl(sect.mb)}, Left: ${fl(sect.ml)}, Right: ${fl(sect.mr)}`), row('Layout', `Section start: ${({ nextPage: 'New page', continuous: 'Continuous', evenPage: 'Even page', oddPage: 'Odd page', nextColumn: 'New column' })[sect.type || 'nextPage']}`), row('Paper', `${D.paperName(sect)} (${fl(sect.pgW)} × ${fl(sect.pgH)}), ${sect.orient === 'landscape' ? 'Landscape' : 'Portrait'}`), sect.cols && sect.cols.n > 1 ? row('Columns', String(sect.cols.n)) : null);
-      if (P.distinguish) box.appendChild(h('div', { class: 'tp-note', text: 'Paragraph style: ' + styleDescription(d, p.pPr.style || 'Normal') }));
+      const ind = pp.ind || {}, sp = pp.sp || {};
+      const lineSp = !sp.line ? L.t('single') : sp.rule === 'auto' || !sp.rule ? (sp.line === 1 ? L.t('single') : sp.line === 2 ? L.t('double') : L.t('{0} lines', sp.line)) : sp.rule === 'exact' ? L.t('Exactly {0} pt', sp.line) : L.t('At least {0} pt', sp.line);
+      const ul = (L.dlg.UNDERLINES || []).find((x) => x[0] === r.u);
+      const START = { nextPage: L.N('New page'), continuous: L.N('Continuous'), evenPage: L.N('Even page'), oddPage: L.N('Odd page'), nextColumn: L.N('New column') };
+      box.append(...[head(L.N('Font'), () => L.dlg.font()), row(L.N('FONT:'), [`${r.font || ''} ${r.sz || 12} pt`, r.b && L.t('Bold'), r.i && L.t('Italic')].filter(Boolean).join(', ')), r.color && r.color !== 'auto' ? row('Font color:', '#' + r.color) : null, r.u && r.u !== 'none' ? row('Underline:', L.t(ul ? ul[1] : r.u)) : null, r.hl ? row('Highlight:', L.t(ui.colorName(L.R.HIGHLIGHT[r.hl] || r.hl))) : null, r.caps ? row('Effects:', L.t('All caps')) : null, r.smallCaps ? row('Effects:', L.t('Small caps')) : null, r.vert ? row('Position:', L.t({ superscript: L.N('Superscript'), subscript: L.N('Subscript') }[r.vert] || r.vert)) : null, row('Language:', L.t(r.lang ? A().langName(r.lang) : 'English (U.S.)')),
+        head(L.N('Paragraph'), () => L.dlg.paragraph()), row('Paragraph Style:', D.styleDisplayName(d.styles[p.pPr.style || 'Normal'])), row('Alignment:', L.t(JC[pp.jc || 'left'] || pp.jc)), row('Indentation:', !ind.fl ? L.t('Left: {0}, Right: {1}', fl(ind.l), fl(ind.r)) : ind.fl < 0 ? L.t('Left: {0}, Right: {1}, Hanging: {2}', fl(ind.l), fl(ind.r), fl(-ind.fl)) : L.t('Left: {0}, Right: {1}, First line: {2}', fl(ind.l), fl(ind.r), fl(ind.fl))),
+        row('Spacing:', L.t('Before: {0} pt, After: {1} pt, Line spacing: {2}', L.round(sp.b || 0, 1), L.round(sp.a || 0, 1), lineSp)),
+        pp.keepNext || pp.keepLines || pp.pageBreakBefore ? row('Line and Page Breaks:', [pp.keepNext && L.t('Keep with next'), pp.keepLines && L.t('Keep lines together'), pp.pageBreakBefore && L.t('Page break before')].filter(Boolean).join(', ')) : null,
+        L.lists && L.lists.info(p) ? row('Bullets and Numbering:', L.lists.info(p).fmt === 'bullet' ? L.t('Bulleted') : L.t('Numbered')) : null,
+        head(L.N('Section'), () => L.dlg.pageSetup()), row('Margins:', L.t('Top: {0}, Bottom: {1}, Left: {2}, Right: {3}', fl(sect.mt), fl(sect.mb), fl(sect.ml), fl(sect.mr))), row('Layout:', L.t('Section start: {0}', L.t(START[sect.type || 'nextPage']))), row('Paper:', `${L.t(D.paperName(sect))} (${fl(sect.pgW)} × ${fl(sect.pgH)}), ${sect.orient === 'landscape' ? L.t('Landscape') : L.t('Portrait')}`), sect.cols && sect.cols.n > 1 ? row('Columns:', String(sect.cols.n)) : null].filter(Boolean));
+      if (P.distinguish) box.appendChild(h('div', { class: 'tp-note', text: L.t('Paragraph style: {0}', styleDescription(d, p.pPr.style || 'Normal')) }));
     },
     refresh(b, reason) { if (reason === 'sel' || reason === 'doc') { L.clear(b); this.render(b); } },
   });
@@ -523,7 +537,7 @@
         A().updateStatus();
         ui.refresh();
       }, { class: 'btn', style: 'width:100%' });
-      b.append(sec('1. Formatting restrictions', fmt), sec('2. Editing restrictions', ed, kind), sec('3. Start enforcement', h('div', { class: 'tp-note', text: on ? 'This document is protected from unintentional editing.' : 'Are you ready to apply these settings? (You can turn them off later)' }), start));
+      b.append(sec(L.N('1. Formatting restrictions'), fmt), sec(L.N('2. Editing restrictions'), ed, kind), sec(L.N('3. Start enforcement'), h('div', { class: 'tp-note', text: on ? 'This document is protected from unintentional editing.' : 'Are you ready to apply these settings? (You can turn them off later)' }), start));
     },
   });
   async function hash(s) { try { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return Array.from(new Uint8Array(buf)).map((x) => x.toString(16).padStart(2, '0')).join(''); } catch (e) { return String(s.length); } }
@@ -548,7 +562,9 @@
       const hasKids = heads[i + 1] && heads[i + 1].lv > x.lv;
       const coll = DM.collapsed.has(x.p.id);
       const tog = h('span', { class: 'dm-tog', text: hasKids ? (coll ? '+' : '−') : '' });
-      const it = h('div', { class: 'dm-item', 'data-pid': x.p.id, style: `padding-left:${4 + (x.lv - 1) * 12}px`, title: D.plainText(x.p) }, tog, h('span', { text: D.plainText(x.p).trim() || '(blank)' }));
+      /* the heading's own text, not translated */
+      const it = h('div', { class: 'dm-item', 'data-pid': x.p.id, style: `padding-left:${4 + (x.lv - 1) * 12}px`, translate: 'no' }, tog, h('span', null, document.createTextNode(D.plainText(x.p).trim() || L.t('(blank)'))));
+      it.title = D.plainText(x.p);
       tog.addEventListener('click', (e) => { e.stopPropagation(); if (coll) DM.collapsed.delete(x.p.id); else DM.collapsed.add(x.p.id); DM.render(); });
       it.addEventListener('click', () => { A().gotoPos(D.pos(x.p, 0)); const f = LY.fragFor(x.p, 0); if (f) f.scrollIntoView({ block: 'start' }); });
       el.appendChild(it);
@@ -617,11 +633,11 @@
     E.readOnly = true;
     LY.root.contentEditable = 'false';
     const bar = h('div', { class: 'toolbar preview-bar', id: 'tb-preview', role: 'toolbar', 'aria-label': 'Print Preview' });
-    const btn = (icon, label, fn, tip, on) => { const b = h('button', { class: 'tb-btn' + (label ? ' with-label' : '') + (on ? ' on' : ''), type: 'button', 'data-tip': tip || label, 'aria-label': tip || label, html: (icon ? L.icons.get(icon) : '') + (label ? `<span class="tb-lbl">${label}</span>` : '') }); b.addEventListener('pointerdown', (e) => e.preventDefault()); b.addEventListener('click', fn); return b; };
+    const btn = (icon, label, fn, tip, on) => { const b = h('button', { class: 'tb-btn' + (label ? ' with-label' : '') + (on ? ' on' : ''), type: 'button', 'data-tip': tip || label, 'aria-label': tip || label, html: (icon ? L.icons.get(icon) : '') + (label ? `<span class="tb-lbl">${L.esc(L.t(label))}</span>` : '') }); b.addEventListener('pointerdown', (e) => e.preventDefault()); b.addEventListener('click', fn); return b; };
     const zoom = ui.combo({ id: 'pv-zoom', width: 74, tip: 'Zoom', options: () => ['500%', '200%', '150%', '100%', '75%', '50%', '25%', '10%', 'Page Width', 'Text Width', 'Whole Page', 'Two Pages'], value: () => Math.round(LY.zoom * 100) + '%', onChange: (v) => A().zoomTo(v) });
-    const magBtn = btn('zoom', '', () => { PV.mag = !PV.mag; magBtn.classList.toggle('on', PV.mag); E.readOnly = PV.mag; LY.root.contentEditable = PV.mag ? 'false' : 'true'; }, 'Magnifier', true);
+    const magBtn = btn('zoom', '', () => { PV.mag = !PV.mag; magBtn.classList.toggle('on', PV.mag); E.readOnly = PV.mag; LY.root.contentEditable = PV.mag ? 'false' : 'true'; }, L.N('Magnifier'), true);
     PV.mag = true;
-    bar.append(h('span', { class: 'tb-grip' }), btn('print', '', () => A().printPDF(), 'Print'), magBtn, btn('onePage', '', () => { LY.setMultiPage(0); LY.setZoom(LY.zoomFor('wholePage')); }, 'One Page'), btn('multiPage', '', (e) => PV.multiMenu(e.currentTarget), 'Multiple Pages'), zoom, btn('ruler', '', () => ui.exec('ruler'), 'View Ruler'), btn('shrink', '', () => PV.shrink(), 'Shrink to Fit'), btn('fullScreen', '', () => ui.exec('fullScreen'), 'Full Screen'), btn('', 'Close Preview', () => A().setView(A().prevView || 'print'), 'Close Preview'), btn('help', '', () => ui.exec('help'), 'Help'));
+    bar.append(h('span', { class: 'tb-grip' }), btn('print', '', () => A().printPDF(), L.N('Print')), magBtn, btn('onePage', '', () => { LY.setMultiPage(0); LY.setZoom(LY.zoomFor('wholePage')); }, 'One Page'), btn('multiPage', '', (e) => PV.multiMenu(e.currentTarget), 'Multiple Pages'), zoom, btn('ruler', '', () => ui.exec('ruler'), 'View Ruler'), btn('shrink', '', () => PV.shrink(), 'Shrink to Fit'), btn('fullScreen', '', () => ui.exec('fullScreen'), 'Full Screen'), btn('', 'Close Preview', () => A().setView(A().prevView || 'print'), 'Close Preview'), btn('help', '', () => ui.exec('help'), L.N('Help')));
     L.$('#toolbars').appendChild(bar);
     PV.bar = bar;
     PV.prevZoom = LY.zoom;
@@ -654,7 +670,7 @@
         const lbl = h('div', { class: 'tgp-label', text: 'Cancel' });
         for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) {
           const s = h('span', { style: 'height:30px;width:24px' });
-          s.addEventListener('pointerenter', () => { L.$$('span', cells).forEach((x, k) => x.classList.toggle('on', Math.floor(k / 3) <= r && k % 3 <= c)); lbl.textContent = `${r + 1} x ${c + 1} Pages`; });
+          s.addEventListener('pointerenter', () => { L.$$('span', cells).forEach((x, k) => x.classList.toggle('on', Math.floor(k / 3) <= r && k % 3 <= c)); lbl.textContent = L.t('{0} x {1} Pages', r + 1, c + 1); });
           s.addEventListener('click', () => { close(); LY.setMultiPage(c + 1); const n = c + 1; const pg = LY.pages[0]; const avail = LY.scroller.clientWidth - 40, availH = LY.scroller.clientHeight - 30; if (pg) LY.setZoom(Math.min((avail - 16 * n) / (pg.W * n), (availH - 14 * (r + 1)) / (pg.H * (r + 1)))); });
           cells.appendChild(s);
         }
@@ -691,8 +707,8 @@
   const RL = (P.reading = {});
   RL.enter = function () {
     const bar = h('div', { class: 'readbar', role: 'toolbar', 'aria-label': 'Reading Layout' });
-    const btn = (icon, label, fn, tip) => { const b = h('button', { class: 'tb-btn' + (label ? ' with-label' : ''), type: 'button', 'data-tip': tip || label, 'aria-label': tip || label, html: (icon ? L.icons.get(icon) : '') + (label ? `<span class="tb-lbl">${label}</span>` : '') }); b.addEventListener('pointerdown', (e) => e.preventDefault()); b.addEventListener('click', fn); return b; };
-    bar.append(btn('docMap', 'Document Map', () => A().toggleDocMap()), btn('thumbnails', 'Thumbnails', () => A().toggleThumbs()), btn('find', 'Find', () => ui.exec('find')), btn('research', 'Research', () => ui.exec('research')), h('span', { class: 'tb-sep' }), btn('growFont', '', () => { LY.setZoom(LY.zoom * 1.1); }, 'Increase Text Size'), btn('shrinkFont', '', () => { LY.setZoom(LY.zoom / 1.1); }, 'Decrease Text Size'), btn('onePage', '', () => { LY.setMultiPage(0); LY.setZoom(LY.zoomFor('wholePage')); }, 'Actual Page'), btn('multiPage', '', () => { LY.setMultiPage(2); LY.setZoom(LY.zoomFor('twoPages')); }, 'Allow Multiple Pages'), h('span', { class: 'tb-sep' }), btn('', 'Close', () => A().setView(A().prevView && A().prevView !== 'reading' ? A().prevView : 'print'), 'Close'));
+    const btn = (icon, label, fn, tip) => { const b = h('button', { class: 'tb-btn' + (label ? ' with-label' : ''), type: 'button', 'data-tip': tip || label, 'aria-label': tip || label, html: (icon ? L.icons.get(icon) : '') + (label ? `<span class="tb-lbl">${L.esc(L.t(label))}</span>` : '') }); b.addEventListener('pointerdown', (e) => e.preventDefault()); b.addEventListener('click', fn); return b; };
+    bar.append(btn('docMap', 'Document Map', () => A().toggleDocMap()), btn('thumbnails', L.N('Thumbnails'), () => A().toggleThumbs()), btn('find', L.N('Find'), () => ui.exec('find')), btn('research', L.N('Research'), () => ui.exec('research')), h('span', { class: 'tb-sep' }), btn('growFont', '', () => { LY.setZoom(LY.zoom * 1.1); }, 'Increase Text Size'), btn('shrinkFont', '', () => { LY.setZoom(LY.zoom / 1.1); }, 'Decrease Text Size'), btn('onePage', '', () => { LY.setMultiPage(0); LY.setZoom(LY.zoomFor('wholePage')); }, 'Actual Page'), btn('multiPage', '', () => { LY.setMultiPage(2); LY.setZoom(LY.zoomFor('twoPages')); }, 'Allow Multiple Pages'), h('span', { class: 'tb-sep' }), btn('', L.N('Close'), () => A().setView(A().prevView && A().prevView !== 'reading' ? A().prevView : 'print'), L.N('Close')));
     L.$('#toolbars').appendChild(bar);
     RL.bar = bar;
   };

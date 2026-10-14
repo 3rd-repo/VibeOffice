@@ -194,7 +194,7 @@
   R.runStyle = function (span, rp, design, ctx, scale) {
     const sz = (rp.sz || 18) * scale;
     const st = span.style;
-    st.fontFamily = L.fontStack(L.style.font(rp.font, design));
+    st.fontFamily = L.fontStack(L.style.font(rp.font, design), L.style.fontEA(rp.fontEA, design));
     st.fontSize = L.round(sz, 2) + 'px';
     st.fontWeight = rp.b ? '700' : '400';
     st.fontStyle = rp.i ? 'italic' : 'normal';
@@ -262,7 +262,7 @@
       el.style.paddingLeft = L.round((ps.marL || 0) * scale, 2) + 'px';
       el.style.textIndent = L.round((ps.indent || 0) * scale, 2) + 'px';
       el.style.fontSize = L.round(fsz, 2) + 'px';
-      el.style.fontFamily = L.fontStack(L.style.font(firstRun.font, design));
+      el.style.fontFamily = L.fontStack(L.style.font(firstRun.font, design), L.style.fontEA(firstRun.fontEA, design));
       const lh = lineHeight(ps, scale);
       el.style.lineHeight = lh.factor ? String(L.round(lh.factor * (1 - lnRed), 3)) : lh.css;
       if (pi > 0) el.style.marginTop = L.round(spacing(ps.spcBef, fsz / scale) * scale, 2) + 'px';
@@ -436,7 +436,7 @@
     if (sh.flipH || sh.flipV) img.style.transform = `scale(${sh.flipH ? -1 : 1},${sh.flipV ? -1 : 1})`;
     if (!L.media.has(sh.media)) {
       wrap.classList.add('missing');
-      wrap.appendChild(h('div', { class: 'pic-missing', text: sh.missingLabel || 'Picture' }));
+      wrap.appendChild(h('div', { class: 'pic-missing', text: missingText(sh.missingLabel) }));
     } else {
       /* formats browsers can't decode (TIFF, HD Photo, …) degrade to a labelled frame; the original bytes still save */
       img.addEventListener('error', () => {
@@ -445,7 +445,7 @@
         const ext = m ? L.mimeToExt(m.type) : '';
         img.remove();
         wrap.classList.add('missing');
-        wrap.appendChild(h('div', { class: 'pic-missing', text: ext && ext !== 'png' ? `Picture (.${ext})` : 'Picture' }));
+        wrap.appendChild(h('div', { class: 'pic-missing', text: ext && ext !== 'png' ? L.t('Picture (.{0})', ext) : L.t('Picture') }));
       }, { once: true });
       wrap.appendChild(img);
     }
@@ -499,7 +499,7 @@
 
   /* WordArt (2003-style stretched text, optional warp) */
   R.WARPS = [
-    ['textPlain', 'Plain Text'], ['textArchUp', 'Arch Up'], ['textArchDown', 'Arch Down'], ['textCircle', 'Circle'], ['textWave1', 'Wave'],
+    ['textPlain', 'Plain Text'], ['textArchUp', 'Arch Up'], ['textArchDown', 'Arch Down'], ['textCircle', L.N('Circle')], ['textWave1', L.N('Wave')],
     ['textSlantUp', 'Slant Up'], ['textSlantDown', 'Slant Down'], ['textTriangle', 'Triangle Up'], ['textChevron', 'Chevron Up'], ['textCanUp', 'Can Up'],
   ];
   function warpPoints(warp, w, hh, fs) {
@@ -566,6 +566,9 @@
   };
 
   /* content-placeholder icon palette (2003) */
+  /* what a picture that can't be shown is (pptx-read.js, frames.js), in the UI's language */
+  const MISSING = { Picture: L.N('Picture'), 'Embedded object': L.N('Embedded object'), Ink: L.N('Ink'), '3-D model': L.N('3-D model'), 'New chart': L.N('New chart'), IntelliArt: L.N('IntelliArt') };
+  const missingText = (label) => (/^Linked picture: /.test(label || '') ? L.t('Linked picture: {0}', label.slice(16)) : L.t(MISSING[label] || label || 'Picture'));
   const CONTENT_ICONS = [['table', 'Insert Table'], ['chart', 'Insert Chart'], ['clipart', 'Insert Clip Art'], ['picture', 'Insert Picture'], ['diagram', 'Insert Diagram or Organization Chart'], ['media', 'Insert Media Clip']];
 
   /**
@@ -627,7 +630,8 @@
           }
           if (empty && (sh.ph || (sh.sa && sh.sa.role === 'node')) && ctx.mode === 'edit' && ctx.prompts !== false) {
             const ptype = sh.ph ? sh.ph.type : null;
-            const prompt = !sh.ph ? '[Text]' : L.model.PROMPTS[ptype] != null ? L.model.PROMPTS[ptype] : 'Click to add text';
+            /* the prompt in the UI's language (the file keeps the English one, pptx-write.js) */
+            const prompt = L.t(!sh.ph ? '[Text]' : L.model.PROMPTS[ptype] != null ? L.model.PROMPTS[ptype] : 'Click to add text');
             if (prompt) {
               const ptx = Object.assign({}, sh.tx, { ps: [L.txt.para(prompt, sh.tx.ps[0] && sh.tx.ps[0].pp, sh.tx.ps[0] && (sh.tx.ps[0].end || (sh.tx.ps[0].rs[0] && L.txt.runProps(sh.tx.ps[0].rs[0]))), sh.tx.ps[0] ? sh.tx.ps[0].lvl : 0)] });
               const pe = R.textBody(sh, ptx, design, ctx, rect, {});

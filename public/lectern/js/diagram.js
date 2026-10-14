@@ -24,21 +24,24 @@
   /* id: [name, colours, 'span' (item by item from the first to the last) or 'cycle', text colour (white), colour of
      arrows, lines and cards (the first)] */
   DG.PALETTES = {
-    ocean: ['Ocean', ['#0891B2', '#4F46E5'], 'span'], aurora: ['Aurora', ['#059669', '#2563EB'], 'span'], lagoon: ['Lagoon', ['#0F766E', '#0284C7'], 'span'],
-    midnight: ['Midnight', ['#1E3A8A', '#7C3AED'], 'span'], berry: ['Berry', ['#7C3AED', '#DB2777'], 'span'], sunset: ['Sunset', ['#EA580C', '#DB2777'], 'span'],
-    fire: ['Fire', ['#B91C1C', '#EA580C'], 'span'], amber: ['Amber', ['#B45309', '#CA8A04'], 'span'], forest: ['Forest', ['#166534', '#65A30D'], 'span'],
-    slate: ['Slate', ['#1E293B', '#64748B'], 'span'],
-    vivid: ['Vivid', ['#E03131', '#E8590C', '#2F9E44', '#1971C2', '#7048E8'], 'cycle'], jewel: ['Jewel', ['#0E7490', '#7E22CE', '#BE123C', '#15803D', '#1D4ED8'], 'cycle'],
-    pastel: ['Pastel', ['#FBCFE8', '#BFDBFE', '#BBF7D0', '#FDE68A', '#DDD6FE'], 'cycle', '#1F2937', '#64748B'],
+    ocean: [L.N('Ocean'), ['#0891B2', '#4F46E5'], 'span'], aurora: [L.N('Aurora'), ['#059669', '#2563EB'], 'span'], lagoon: [L.N('Lagoon'), ['#0F766E', '#0284C7'], 'span'],
+    midnight: [L.N('Midnight'), ['#1E3A8A', '#7C3AED'], 'span'], berry: [L.N('Berry'), ['#7C3AED', '#DB2777'], 'span'], sunset: [L.N('Sunset'), ['#EA580C', '#DB2777'], 'span'],
+    fire: [L.N('Fire'), ['#B91C1C', '#EA580C'], 'span'], amber: [L.N('Amber'), ['#B45309', '#CA8A04'], 'span'], forest: [L.N('Forest'), ['#166534', '#65A30D'], 'span'],
+    slate: [L.N('Slate'), ['#1E293B', '#64748B'], 'span'],
+    vivid: [L.N('Vivid'), ['#E03131', '#E8590C', '#2F9E44', '#1971C2', '#7048E8'], 'cycle'], jewel: [L.N('Jewel'), ['#0E7490', '#7E22CE', '#BE123C', '#15803D', '#1D4ED8'], 'cycle'],
+    pastel: [L.N('Pastel'), ['#FBCFE8', '#BFDBFE', '#BBF7D0', '#FDE68A', '#DDD6FE'], 'cycle', '#1F2937', '#64748B'],
   };
   const N = (a) => a.slice(6);
-  DG.colorsName = (id) => {
+  const colorsText = (id, t) => {
     const [ref, kind] = DG.colorsOf(id);
-    if (DG.PALETTES[ref]) return DG.PALETTES[ref][0];
-    return ref === 'colorful' ? 'Colorful - Accent Colors' : ref === 'dark2' ? 'Dark 2 Fill' : ACC.includes(kind) ? `Colorful Range - Accent Colors ${N(ref)} to ${N(kind)}` : `${kind === 'range' ? 'Gradient Range' : 'Colored Fill'} - Accent ${N(ref)}`;
+    if (DG.PALETTES[ref]) return t(DG.PALETTES[ref][0]);
+    return ref === 'colorful' ? t('Colorful - Accent Colors') : ref === 'dark2' ? t('Dark 2 Fill') : ACC.includes(kind) ? t('Colorful Range - Accent Colors {0} to {1}', N(ref), N(kind)) : kind === 'range' ? t('Gradient Range - Accent {0}', N(ref)) : t('Colored Fill - Accent {0}', N(ref));
   };
+  /** the colours' name as written into the file (smartart-io.js), and as shown in the UI's language */
+  DG.colorsName = (id) => colorsText(id, (s, ...a) => s.replace(/\{(\d+)\}/g, (m, i) => a[i]));
+  DG.colorsLabel = (id) => colorsText(id, L.t);
   /** the colour choices: two from the design's theme, then our palettes */
-  DG.colorChoices = (d) => ['colorful', DG.themeRange(d)].concat(Object.keys(DG.PALETTES)).map((k) => [k, DG.colorsName(k)]);
+  DG.colorChoices = (d) => ['colorful', DG.themeRange(d)].concat(Object.keys(DG.PALETTES)).map((k) => [k, DG.colorsLabel(k)]);
   /** what a new diagram is coloured with */
   DG.DEFAULT_COLORS = 'ocean';
   /** the items' colours of a colours id: { cols: [[colour, colour changes]…] (a theme slot or '#hex'), meth ('span',
@@ -59,10 +62,10 @@
      rich gradient fill, a drop shadow. PowerPoint draws them from the theme the same way. Three design languages:
      filled shapes; outlined (the slide's background inside a coloured edge, coloured text); tinted (a pale wash
      of the colour, coloured text). The last two have colours of their own (smartart-io.js colorsXML) */
-  DG.STYLES = [['simple', 'Simple Fill', [2, 1, 0]], ['flat', 'Flat', [0, 1, 0]], ['white', 'White Outline', [3, 1, 0]], ['subtle', 'Subtle Effect', [2, 1, 1]],
-    ['soft', 'Soft Gradient', [0, 2, 0]], ['moderate', 'Moderate Effect', [0, 2, 2]], ['intense', 'Intense Effect', [0, 3, 3]], ['lifted', 'Lifted', [2, 2, 3]], ['gloss', 'Gloss', [1, 3, 2]],
-    ['outline', 'Outline', [2, 1, 0], 'outline'], ['card', 'Outline Card', [1, 1, 2], 'outline'], ['tint', 'Tinted', [0, 1, 0], 'tint'], ['tintLine', 'Tinted Outline', [2, 1, 0], 'tint']];
-  DG.STYLE_GROUPS = [['fill', 'Filled'], ['outline', 'Outlined'], ['tint', 'Tinted']];
+  DG.STYLES = [['simple', L.N('Simple Fill'), [2, 1, 0]], ['flat', L.N('Flat'), [0, 1, 0]], ['white', L.N('White Outline'), [3, 1, 0]], ['subtle', L.N('Subtle Effect'), [2, 1, 1]],
+    ['soft', L.N('Soft Gradient'), [0, 2, 0]], ['moderate', L.N('Moderate Effect'), [0, 2, 2]], ['intense', L.N('Intense Effect'), [0, 3, 3]], ['lifted', L.N('Lifted'), [2, 2, 3]], ['gloss', L.N('Gloss'), [1, 3, 2]],
+    ['outline', L.N('Outline|style'), [2, 1, 0], 'outline'], ['card', L.N('Outline Card'), [1, 1, 2], 'outline'], ['tint', L.N('Tinted'), [0, 1, 0], 'tint'], ['tintLine', L.N('Tinted Outline'), [2, 1, 0], 'tint']];
+  DG.STYLE_GROUPS = [['fill', L.N('Filled')], ['outline', L.N('Outlined')], ['tint', L.N('Tinted')]];
   const styleOf = (id) => DG.STYLES.find((s) => s[0] === id) || DG.STYLES[0];
   DG.styleRefs = (id) => styleOf(id)[2];
   /** the style's design language: 'fill', 'outline' or 'tint' */
@@ -226,7 +229,7 @@
     if (!g.sa.office) return;
     delete g.sa.office;
     g.sa.converted = true;
-    ui.toast(`This IntelliArt now uses Lectern's ${(SA.get(g.sa.layout) || {}).name} layout, so it can be edited here.`, 4000);
+    ui.toast(L.t('This IntelliArt now uses Lectern\'s {0} layout, so it can be edited here.', L.t((SA.get(g.sa.layout) || {}).name)), 4000);
   }
   /** after a change: undo point, lay out, draw, keep the text pane in step */
   function change(g, label, fn, coalesce) {
@@ -341,7 +344,7 @@
     const cats = h('div', { class: 'sa-cats list-box', role: 'listbox', 'aria-label': 'Categories' });
     const grid = h('div', { class: 'sa-grid', role: 'listbox', 'aria-label': 'Layouts' });
     const big = h('div', { class: 'sa-big' }), title = h('b'), desc = h('div', { class: 'sa-desc' });
-    const show = () => { const lay = SA.get(pick); big.innerHTML = DG.thumb(pick, 190, 150); title.textContent = lay.name; desc.textContent = lay.desc; L.$$('button', grid).forEach((b) => b.classList.toggle('on', b.dataset.lay === pick)); };
+    const show = () => { const lay = SA.get(pick); big.innerHTML = DG.thumb(pick, 190, 150); title.textContent = L.t(lay.name); desc.textContent = L.t(lay.desc); L.$$('button', grid).forEach((b) => b.classList.toggle('on', b.dataset.lay === pick)); };
     const fill = () => {
       L.clear(grid);
       const shown = SA.LAYOUTS.filter((l) => cat === 'all' || l.cat === cat);
@@ -355,7 +358,7 @@
       show();
     };
     const used = new Set(SA.LAYOUTS.map((l) => l.cat));
-    for (const [k, n] of [['all', 'All']].concat(SA.CATEGORIES.filter(([k]) => used.has(k)))) {
+    for (const [k, n] of [['all', L.N('All')]].concat(SA.CATEGORIES.filter(([k]) => used.has(k)))) {
       const b = h('button', { type: 'button', class: 'sa-cat' + (k === cat ? ' on' : ''), text: n });
       b.addEventListener('click', () => { cat = k; L.$$('.sa-cat', cats).forEach((x) => x.classList.toggle('on', x === b)); fill(); });
       cats.append(b);
@@ -413,7 +416,7 @@
       return out.length ? out[Math.min(out.length - 1, Math.max(0, r.i - 1))].item.id : null;
     },
   };
-  const LABELS = { after: 'Add Shape', before: 'Add Shape', above: 'Add Shape', below: 'Add Shape', promote: 'Promote', demote: 'Demote', up: 'Move Up', down: 'Move Down', remove: 'Delete Shape' };
+  const LABELS = { after: 'Add Shape', before: 'Add Shape', above: 'Add Shape', below: 'Add Shape', promote: L.N('Promote'), demote: L.N('Demote'), up: 'Move Up', down: 'Move Down', remove: 'Delete Shape' };
   /** run an item operation on the current diagram; the pane follows the item it leaves you on */
   DG.op = (name, g, id) => {
     g = g || DG.current();
@@ -432,12 +435,12 @@
   DG.setText = (g, id, text) => {
     const r = DG.locate(g, id);
     if (!r || r.item.text === text) return;
-    change(g, 'Typing', () => { r.item.text = text; }, 'sa-type-' + id);
+    change(g, L.N('Typing'), () => { r.item.text = text; }, 'sa-type-' + id);
   };
   DG.set = (key, val, g) => {
     g = g || DG.current();
     if (!g || g.sa[key] === val) return;
-    const label = { layout: 'Change Layout', colors: 'Change Colors', style: 'IntelliArt Style' }[key];
+    const label = { layout: 'Change Layout', colors: 'Change Colors', style: L.N('IntelliArt Style') }[key];
     change(g, label, () => { g.sa[key] = val; if (key === 'layout') g.name = (SA.get(val) || {}).name + ' ' + g.name.split(' ').pop(); });
   };
   DG.reset = (g) => {
@@ -481,7 +484,7 @@
       const now = T.plain(k.tx).replace(/\s+/g, ' ').trim();
       if (!hit || now === before) return;
       officeEdited(g);
-      L.hist.push('Typing');
+      L.hist.push(L.N('Typing'));
       hit.item.text = now;
       DG.relayout(g); E().renderShape(g.id); E().touched(); refreshPane();
       return;
@@ -491,7 +494,7 @@
     const paras = (k.tx ? k.tx.ps : []).map((p) => ({ t: T.paraText(p), lvl: p.lvl || 0 }));
     const top = paras.filter((p) => !p.lvl).map((p) => p.t);
     const subs = paras.filter((p) => p.lvl).map((p) => p.t);
-    L.hist.push('Typing');
+    L.hist.push(L.N('Typing'));
     if (k.sa.role === 'child') r.item.kids = subs.concat(top).map((t, i) => Object.assign(r.item.kids[i] || newItem(), { text: t }));
     else {
       r.item.text = top.join(' ');
@@ -534,7 +537,7 @@
     b.append(h('div', { class: 'sa-tools' }, ...['diagramAddShape', 'diagramPromote', 'diagramDemote', 'diagramMoveUp', 'diagramMoveDown'].map((id) => ui.tbButton(id))));
     const list = h('div', { class: 'sa-pane', role: 'tree', 'aria-label': 'IntelliArt text' });
     for (const row of rowsOf(g)) {
-      const inp = h('input', { type: 'text', class: 'sa-row', value: row.item.text, placeholder: '[Text]', 'aria-label': 'Item, level ' + (row.level + 1), 'data-item': row.item.id, style: `margin-left:${row.level * 16}px` });
+      const inp = h('input', { type: 'text', class: 'sa-row', value: row.item.text, placeholder: '[Text]', 'aria-label': L.t('Item, level {0}', row.level + 1), 'data-item': row.item.id, style: `margin-left:${row.level * 16}px` });
       inp.addEventListener('focus', () => { paneItem = row.item.id; selectItem(g, row.item.id); L.hist.breakCoalesce(); });
       inp.addEventListener('input', () => DG.setText(g, row.item.id, inp.value));
       inp.addEventListener('keydown', (e) => paneKey(e, g, row, inp));
@@ -603,7 +606,7 @@
   /** the colour choices this design can show (an accent too pale for the slide would repeat another) */
   DG.colorsGrid = (g, cols, done) => {
     const shown = DG.colorChoices(design());
-    if (g && !shown.some(([k]) => k === g.sa.colors)) shown.unshift([g.sa.colors, DG.colorsName(g.sa.colors)]);
+    if (g && !shown.some(([k]) => k === g.sa.colors)) shown.unshift([g.sa.colors, DG.colorsLabel(g.sa.colors)]);
     return grid(cols, shown.map(([k, n]) => [k, n, DG.thumb('process', 72, 28, { colors: k, style: g && g.sa.style, items: three }), !!g && g.sa.colors === k]), 'sa-colors', (k) => { if (done) done(); DG.set('colors', k, g); });
   };
   /** the styles, a grid for each design language */

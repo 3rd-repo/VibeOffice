@@ -154,7 +154,7 @@
     const f = x.table ? x.table.filter || (x.table.filter = { cols: [] }) : s.autoFilter;
     const old = JSON.parse(JSON.stringify(f));
     const apply = (nf) => { if (x.table) x.table.filter = nf; else s.autoFilter = nf; };
-    O.structural(s, 'Filter', () => {
+    O.structural(s, L.N('Filter'), () => {
       const nf = JSON.parse(JSON.stringify(f));
       nf.cols = nf.cols.filter((q) => q.col !== col);
       if (crit) nf.cols.push(Object.assign({ col }, crit));
@@ -168,7 +168,7 @@
     G().paint(); G().syncObjects();
     L.app.updateStatus && L.app.updateStatus();
     const shown = countVisible(s, x);
-    if (L.app.status) L.app.status(crit ? `${shown.vis} of ${shown.total} records found` : '');
+    if (L.app.status) L.app.status(crit ? L.t('{0} of {1} records found', shown.vis, shown.total) : '');
   };
   function countVisible(s, x) {
     const ref = x.table ? x.table.ref : (x.table ? null : s.autoFilter && s.autoFilter.ref) || x.ref;
@@ -189,7 +189,7 @@
     const t = wb.tableAt(s, sel.r, sel.c);
     if (t) {
       const was = t.autoFilter !== false;
-      O.structural(s, 'AutoFilter', () => {
+      O.structural(s, L.N('AutoFilter'), () => {
         if (was && t.filter) { t.filter.cols = []; FL.applyRows(s, t.ref, t.filter); }
         t.autoFilter = !was;
         wb.undo.op(() => { t.autoFilter = was; }, () => { t.autoFilter = !was; });
@@ -197,7 +197,7 @@
       G().paint(); G().syncObjects(); return;
     }
     if (s.autoFilter) {
-      O.structural(s, 'AutoFilter', () => {
+      O.structural(s, L.N('AutoFilter'), () => {
         s.rows.forEach((row) => { if (row && row.filtered) { delete row.hidden; delete row.filtered; } });
         s.autoFilter = null;
         LY.invalidate(s);
@@ -213,7 +213,7 @@
       return;
     }
     if (single && !O.guessHeader(s, rg) && rg.r1 > 0) { /* Excel uses the region's first row as headers regardless */ }
-    O.structural(s, 'AutoFilter', () => { s.autoFilter = { ref: rg, cols: [] }; });
+    O.structural(s, L.N('AutoFilter'), () => { s.autoFilter = { ref: rg, cols: [] }; });
     G().paint(); G().syncObjects();
   };
   FL.showAll = function () {
@@ -256,16 +256,18 @@
     const { list, blanks, ref, col } = entries(s, x, c);
     const fc = (x.f.cols || []).find((q) => q.col === col);
     const cur = fc && fc.values && fc.values.length === 1 && !fc.blank ? fc.values[0] : fc && fc.blank && !(fc.values && fc.values.length) ? '(Blanks)' : fc && fc.custom && fc.custom.list.length === 1 && fc.custom.list[0].op === 'notEqual' && fc.custom.list[0].val === ' ' ? '(NonBlanks)' : !hasCriteria(fc) ? '(All)' : null;
-    const items = ['(Sort Ascending)', '(Sort Descending)', '(All)', '(Top 10...)', '(Custom...)'].concat(list.slice(0, 1000));
+    /* the commands at the top and bottom are ids, shown translated; the rest are the column's entries */
+    const items = [L.N('(Sort Ascending)'), L.N('(Sort Descending)'), L.N('(All)'), L.N('(Top 10...)'), L.N('(Custom...)')].concat(list.slice(0, 1000));
     if (list.length > 1000) items.push('…');
-    if (blanks) items.push('(Blanks)', '(NonBlanks)');
+    if (blanks) items.push(L.N('(Blanks)'), L.N('(NonBlanks)'));
+    const shownAs = items.map((t, i) => (i < 5 || (blanks && i >= items.length - 2) ? L.t(t) : t));
     const r = btn.getBoundingClientRect();
     const box = h('div', { class: 'af-list', role: 'listbox', tabindex: '-1' });
     const q = G().cellRect(ref.r1, c);
     box.style.minWidth = Math.max(q.w + 2, 120) + 'px';
     let act = -1;
     const rows = items.map((t, i) => {
-      const el = h('div', { class: 'af-item' + (t === cur ? ' cur' : ''), role: 'option', text: t });
+      const el = h('div', { class: 'af-item' + (t === cur ? ' cur' : ''), role: 'option', translate: 'no', text: shownAs[i] });
       el.addEventListener('pointerenter', () => setAct(i));
       el.addEventListener('click', () => choose(t));
       box.appendChild(el);
@@ -279,7 +281,7 @@
       else if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); setAct(Math.min(rows.length - 1, act + 1)); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); setAct(Math.max(0, act - 1)); }
       else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (act >= 0) choose(items[act]); }
-      else if (e.key.length === 1) { const k = e.key.toLowerCase(); const i = items.findIndex((t, j) => j > act && t.toLowerCase().startsWith(k)); const i2 = i >= 0 ? i : items.findIndex((t) => t.toLowerCase().startsWith(k)); if (i2 >= 0) setAct(i2); e.preventDefault(); e.stopPropagation(); }
+      else if (e.key.length === 1) { const k = e.key.toLowerCase(); const i = shownAs.findIndex((t, j) => j > act && t.toLowerCase().startsWith(k)); const i2 = i >= 0 ? i : shownAs.findIndex((t) => t.toLowerCase().startsWith(k)); if (i2 >= 0) setAct(i2); e.preventDefault(); e.stopPropagation(); }
     }
     function choose(t) {
       close();
@@ -304,8 +306,8 @@
   };
 
   /* ------------------------------------------------------------ dialogs */
-  const OPS = [['equal', 'equals'], ['notEqual', 'does not equal'], ['greaterThan', 'is greater than'], ['greaterThanOrEqual', 'is greater than or equal to'], ['lessThan', 'is less than'], ['lessThanOrEqual', 'is less than or equal to'],
-    ['begins', 'begins with'], ['notBegins', 'does not begin with'], ['ends', 'ends with'], ['notEnds', 'does not end with'], ['contains', 'contains'], ['notContains', 'does not contain']];
+  const OPS = [['equal', L.N('equals')], ['notEqual', L.N('does not equal')], ['greaterThan', L.N('is greater than')], ['greaterThanOrEqual', L.N('is greater than or equal to')], ['lessThan', L.N('is less than')], ['lessThanOrEqual', L.N('is less than or equal to')],
+    ['begins', L.N('begins with')], ['notBegins', L.N('does not begin with')], ['ends', L.N('ends with')], ['notEnds', L.N('does not end with')], ['contains', L.N('contains')], ['notContains', L.N('does not contain')]];
   /** stored {op,val} → dialog operator + text */
   function toDialog(cond) {
     let op = cond.op || 'equal', v = cond.val == null ? '' : String(cond.val);
@@ -346,7 +348,7 @@
     const and = ui.radio('af-andor', '&And', !(fc && fc.custom && !fc.custom.and) || !(fc && fc.custom), null);
     const or = ui.radio('af-andor', '&Or', !!(fc && fc.custom && !fc.custom.and && fc.custom.list.length > 1), null);
     const head = s.val(x.ref.r1, c);
-    const body = h('div', { class: 'col' }, h('div', { text: 'Show rows where:' }), h('b', { text: head == null ? L.formula.colName(c) : String(head) }), a.row, h('div', { class: 'row', style: 'gap:16px;margin-left:24px' }, and, or), b.row, dl,
+    const body = h('div', { class: 'col' }, h('div', { text: 'Show rows where:' }), h('b', { translate: 'no', text: head == null ? L.formula.colName(c) : String(head) }), a.row, h('div', { class: 'row', style: 'gap:16px;margin-left:24px' }, and, or), b.row, dl,
       h('div', { class: 'hint', text: 'Use ? to represent any single character\nUse * to represent any series of characters', style: 'white-space:pre-line;margin-top:6px' }));
     let res = null;
     return ui.dialog({ title: 'Custom AutoFilter', body, width: 480, buttons: [{ label: 'OK', primary: true, onClick: () => {

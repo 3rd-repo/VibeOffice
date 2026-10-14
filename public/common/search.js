@@ -47,8 +47,9 @@
   };
 
   const norm = (s) => ui.stripAmp(String(s || '')).replace(/(\.\.\.|…)$/, '').trim();
-  /* words, with compound names split as well as whole (AutoSum → autosum, auto, sum) */
-  const words = (s) => { const w = String(s).toLowerCase().split(/[^a-z0-9%$&+]+/).filter(Boolean); const parts = String(s).replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9%$&+]+/).filter(Boolean); return w.concat(parts.filter((x) => !w.includes(x))); };
+  /* words in any script, with compound names split as well as whole (AutoSum → autosum, auto, sum) */
+  const words = (s) => { const w = String(s).toLowerCase().split(/[^\p{L}\p{N}%$&+]+/u).filter(Boolean); const parts = String(s).replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^\p{L}\p{N}%$&+]+/u).filter(Boolean); return w.concat(parts.filter((x) => !w.includes(x))); };
+  const CJK = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
   const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   /* one typo: a letter wrong, missing, extra or two letters swapped */
@@ -85,18 +86,18 @@
         if (it.row) return it.row.forEach((x) => walk(x, where));
         put(it.cmd || it.split, where, it.label);
       };
-      const tabs = spec.tabs.map((t) => [t, '']).concat(...(spec.contextual || []).map((c) => c.tabs.map((t) => [t, c.set + ' ▸ '])));
+      const tabs = spec.tabs.map((t) => [t, '']).concat(...(spec.contextual || []).map((c) => c.tabs.map((t) => [t, L.t(c.set) + ' ▸ '])));
       for (const [t, pre] of tabs) for (const g of t.groups) {
-        const where = [pre + norm(t.label), g.label];
+        const where = [pre + norm(t.label), L.t(g.label)];
         g.items.forEach((it) => walk(it, where));
         put(g.launcher, where);
       }
-      (spec.qat || []).forEach((x) => walk(x, ['Quick Access Toolbar']));
-      for (const x of (spec.file ? spec.file() : [])) if (typeof x === 'string' && x !== '-') put(x, ['File']);
+      (spec.qat || []).forEach((x) => walk(x, [L.t('Quick Access Toolbar')]));
+      for (const x of (spec.file ? spec.file() : [])) if (typeof x === 'string' && x !== '-') put(x, [norm('&File')]);
     }
     /* commands only on a toolbar: 'Formatting toolbar' */
     const toolbar = new Map();
-    for (const tb of L.$$('.toolbar[aria-label]')) for (const b of L.$$('[data-cmd]', tb)) if (!toolbar.has(b.dataset.cmd)) toolbar.set(b.dataset.cmd, [tb.getAttribute('aria-label') + ' toolbar']);
+    for (const tb of L.$$('.toolbar[aria-label]')) for (const b of L.$$('[data-cmd]', tb)) if (!toolbar.has(b.dataset.cmd)) toolbar.set(b.dataset.cmd, [L.t('{0} toolbar', tb.getAttribute('aria-label'))]);
     return { menu, ribbon, toolbar, actions };
   }
 
@@ -114,7 +115,8 @@
       const label = layout === 'ribbon' && rb && rb.label ? rb.label : norm(c.label);
       const path = (layout === 'ribbon' ? rb && rb.where : mp || toolbar.get(id)) || null;
       /* c.keys: more words the command answers to */
-      const alias = [norm(c.label), c.keys || '', layout !== 'ribbon' && mp && mp.length > 1 ? mp[mp.length - 1] : ''].join(' ');
+      /* also its English name, as Office's (the UI may be in another language, common/i18n.js) */
+      const alias = [norm(c.label), ui.plainAmp(c.label).replace(/(\.\.\.|…)$/, ''), c.keys || '', layout !== 'ribbon' && mp && mp.length > 1 ? mp[mp.length - 1] : ''].join(' ');
       const key = label.toLowerCase() + '|' + (path || []).join('/');
       if (seen.has(key)) continue;
       seen.add(key);
@@ -137,6 +139,7 @@
         if (w === q) best = Math.max(best, 5);
         else if (w.startsWith(q)) best = Math.max(best, 4);
         else if (q.length >= 4 && w.length >= 4 && near(q, w)) best = Math.max(best, 2.5);
+        else if (CJK.test(q) && w.includes(q)) best = Math.max(best, 3.5);   // Japanese, Korean: no spaces between words
       }
       const text = ' ' + list.join(' ') + ' ';
       if (SYN[q] && SYN[q].split('|').some((alt) => text.includes(' ' + alt + ' ') || text.includes(' ' + alt + 's '))) best = Math.max(best, 3.5);
@@ -239,7 +242,7 @@
       L.clear(pop);
       rows = [];
       if (!q) pop.append(h('div', { class: 'm-head', text: 'Recently used' }));
-      if (q && !list.length) pop.append(h('div', { class: 'm-item dis cs-none', text: `No commands match “${q}”` }));
+      if (q && !list.length) pop.append(h('div', { class: 'm-item dis cs-none', text: L.t('No commands match “{0}”', q) }));
       const qs = words(q);
       list.forEach((r, i) => {
         const c = r.id ? ui.cmds[r.id] : null, icon = r.entry.icon;

@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VibeOffice.work</title>
+<title translate="no">VibeOffice.work</title>
 <meta name="description" content="A free office suite that runs in your browser: a word processor, a spreadsheet and a presentation editor. Your files never leave your computer.">
 <meta name="theme-color" content="#2a64c8">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<script>try{var d=document.documentElement,l=localStorage.getItem('vibeoffice.look')||'classic';d.dataset.look=l;d.dataset.layout=l==='paper2016'?'ribbon':'bars'}catch(e){}</script>
+<script>try{var d=document.documentElement,l=localStorage.getItem('vibeoffice.look')||'classic';d.dataset.look=l;d.dataset.layout=l==='paper2016'?'ribbon':'bars';var u=['en','ja','ko','fr','de','qps'],g=(location.search.match(/[?&]lang=([a-z]+)/)||[])[1]||localStorage.getItem('vibeoffice.lang');if(u.indexOf(g)<0)g=(navigator.languages||[navigator.language]).map(function(x){return String(x).toLowerCase().split('-')[0]}).filter(function(x){return x!=='qps'&&u.indexOf(x)>=0})[0]||'en';d.lang=g==='qps'?'qps-ploc':g}catch(e){}</script>
 <link rel="stylesheet" href="common/looks.css">
 <style>
   /* colours come from the look settings (common/looks.css); the app colours are the apps' own */
@@ -68,7 +68,6 @@
   .links .link:hover span, .links .link:focus-visible span { text-decoration: underline; }
   /* Update: what is new since this version, newest first */
   #updatedlg { max-width: 470px; }
-  #updatedlg .version { white-space: nowrap; }
   .news { max-height: 240px; overflow: auto; margin: 0 0 8px; padding: 6px 8px; border: 1px solid var(--chrome-line); border-radius: 3px; }
   .news b { display: block; }
   .news p { margin: 0 0 8px; white-space: pre-line; }
@@ -174,7 +173,7 @@
 <body>
 <div class="shell">
   <nav class="side" aria-label="Start">
-    <div class="brand"><img src="icons/icon.svg" alt=""><div><b>VibeOffice.work</b><small>Office suite in your browser</small></div></div>
+    <div class="brand"><img src="icons/icon.svg" alt=""><div><b translate="no">VibeOffice.work</b><small>Office suite in your browser</small></div></div>
     <div>
       <button class="big" id="open" type="button"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M1.5 5.5v11h14l3-8h-14l-3 8" fill="#ffd66b" stroke="#a5781e"/><path d="M1.5 16V3.5h5l1.5 2h6.5v3" fill="#f5c044" stroke="#a5781e"/></svg>Open File…</button>
       <button class="big on" id="recentbtn" type="button" aria-pressed="true"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="#fff" stroke="#3b619c" stroke-width="1.5"/><path d="M10 5v5l3.5 2" fill="none" stroke="#0b3fa8" stroke-width="1.6" stroke-linecap="round"/></svg>Recent Files</button>
@@ -194,7 +193,7 @@
       <button class="updated" id="cachingreload" type="button" hidden><span class="mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9.5"/><path d="M5.6 10.3l3 3 5.9-6.2"/></svg></span><span><b>Just updated successfully</b><small>Click here to reload</small></span></button>
       <a class="big" id="feedback" href="https://github.com/tcchen2026/VibeOffice" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><path fill="#24292f" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Feedback on our GitHub</a>
     </div>
-    <p class="note">Your files stay on this computer. Recent files are kept in this browser only.<br><span class="version"></span></p>
+    <p class="note">Your files stay on this computer. Recent files are kept in this browser only.<br><span class="version" translate="no"></span></p>
     <p class="note links">
       <button class="link" id="settings" type="button"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.6" fill="none" stroke="#5b6f8c" stroke-width="2.6" stroke-dasharray="2.2 2.2"/><circle cx="8" cy="8" r="4" fill="#dbe6f7" stroke="#3b619c" stroke-width="1.2"/><circle cx="8" cy="8" r="1.6" fill="#fff" stroke="#3b619c"/></svg><span>Settings</span></button>
       <button class="link" id="themes" type="button"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a6.5 6.5 0 1 0 0 13c1 0 1.4-.8 1-1.6-.5-1 .1-2 1.2-2h1.6a2.7 2.7 0 0 0 2.7-2.9C14.3 4.3 11.5 1.5 8 1.5z" fill="#fff" stroke="#a5781e"/><circle cx="5" cy="6.5" r="1.3" fill="#d9442b"/><circle cx="8.2" cy="4.6" r="1.3" fill="#f5b400"/><circle cx="11.3" cy="6.4" r="1.3" fill="#1f8a4c"/><circle cx="5.2" cy="10" r="1.3" fill="#2a6fd6"/></svg><span>Themes</span></button>
@@ -222,7 +221,7 @@
 <dialog id="updatedlg">
   <div class="dt">Update VibeOffice</div>
   <div class="db">
-    <p>A newer version of VibeOffice is available. This one is <span class="version"></span>.</p>
+    <p id="updatethis"></p>
     <div class="news" id="updatenews" hidden></div>
     <p>Download it now? Your documents and Recent Files stay as they are.</p>
     <form method="dialog"><button value="download">Download</button> <button value="later">Later</button></form>
@@ -232,6 +231,9 @@
   <div class="dt">Settings</div>
   <div class="db">
     <p>These settings apply to every app of VibeOffice.work.</p>
+    <fieldset class="st"><legend>Language</legend>
+      <p><label for="uilang">Language of menus, dialogs and new documents:</label> <select id="uilang"></select></p>
+    </fieldset>
     <fieldset class="st"><legend>UI size</legend>
       <p id="scalerow" hidden><label for="uiscale">Size of menus, toolbars, documents and everything else:</label>
         <select id="uiscale"><option value="1">100 %</option><option value="1.25">125 %</option><option value="1.5">150 %</option><option value="2">200 %</option><option value="3">300 %</option><option value="4">400 %</option></select></p>
@@ -259,10 +261,10 @@
 <dialog id="aboutdlg">
   <div class="dt">About VibeOffice.work</div>
   <div class="db">
-    <p><b>VibeOffice.work</b>: Quire (documents), Ledger (spreadsheets) and Lectern (presentations).</p>
+    <p>VibeOffice.work: Quire (documents), Ledger (spreadsheets) and Lectern (presentations).</p>
     <p>Everything runs in your browser; documents are opened and saved on your own computer. The Recent Files list keeps a copy of each file in this browser so it can be reopened; Clear Recent Documents removes them.</p>
-    <p>Version <span class="version"></span></p>
-    <p>Made possible by open source software: <a class="link" id="osslink" href="oss-licenses.html" target="_blank" rel="noopener">Open source licenses</a>.</p>
+    <p id="aboutversion"></p>
+    <p id="aboutoss"></p>
     <p>Open source under the Apache License 2.0, provided as is, without warranty. VibeOffice.work is an independent project. Product names in its documentation are trademarks of their owners; VibeOffice.work is not affiliated with them.</p>
     <form method="dialog"><button>OK</button></form>
   </div>
@@ -270,19 +272,23 @@
 
 <input type="file" id="picker" hidden>
 <script src="common/suite.js"></script>
+<script src="common/i18n.js"></script>
 <script>
-(function () {
+/* once the UI's dictionary is here (common/i18n.js) */
+VO.i18n.whenReady(function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
   /* Safari's Lockdown Mode takes IndexedDB away (the name is undefined), which Recent Files, unsaved
      versions and opening files from here need */
   const noStorage = typeof indexedDB === 'undefined';
-  if (noStorage) alert('VibeOffice.work keeps Recent Files and unsaved changes in this browser, and Safari\'s Lockdown Mode turns that off.\n\n' +
-    'To allow it for this site only: tap aA in the address bar, tap Website Settings, and turn off Lockdown Mode. Safari reloads the page.');
+  if (noStorage) alert(VO.t('VibeOffice.work keeps Recent Files and unsaved changes in this browser, and Safari\'s Lockdown Mode turns that off.\n\nTo allow it for this site only: tap aA in the address bar, tap Website Settings, and turn off Lockdown Mode. Safari reloads the page.'));
+  /* text and the attributes the user reads are shown in the UI's language (common/i18n.js), as L.h does in the apps */
+  const T = (s) => (typeof s === 'string' ? VO.t(s) : s);
+  /* translate="no": data (a file's name), shown as it is */
   const h = (tag, attrs, ...kids) => {
-    const el = document.createElement(tag);
-    for (const k in attrs || {}) if (attrs[k] != null) el.setAttribute(k, attrs[k]);
-    el.append(...kids.filter((k) => k != null));
+    const el = document.createElement(tag), tr = attrs && attrs.translate === 'no' ? (s) => s : T;
+    for (const k in attrs || {}) if (attrs[k] != null) el.setAttribute(k, k === 'title' || k === 'aria-label' || k === 'placeholder' ? tr(attrs[k]) : attrs[k]);
+    el.append(...kids.filter((k) => k != null).map(tr));
     return el;
   };
   const COLOR = { quire: 'var(--quire)', ledger: 'var(--ledger)', lectern: 'var(--lectern)' };
@@ -299,7 +305,7 @@
   }
   for (const el of document.querySelectorAll('[data-icon]')) el.innerHTML = picture(el.dataset.icon);
 
-  const status = (text) => { $('status').textContent = text || ''; };
+  const status = (text) => { $('status').textContent = VO.t(text || ''); };
 
   /* links to apps open in a new window when installed, so this start page stays */
   document.addEventListener('click', (e) => {
@@ -313,7 +319,7 @@
   async function openFile(file) {
     status('');
     if (!file) return;
-    if (!(await VO.handoff(file))) status(`VibeOffice.work can't open “${file.name}”. It opens documents (.docx, .rtf), spreadsheets (.xlsx, .csv) and presentations (.pptx).`);
+    if (!(await VO.handoff(file))) status(VO.t('VibeOffice.work can\'t open “{0}”. It opens documents (.docx, .rtf), spreadsheets (.xlsx, .csv) and presentations (.pptx).', file.name));
   }
   $('picker').accept = VO.accept();
   $('open').addEventListener('click', () => { $('picker').value = ''; $('picker').click(); });
@@ -329,15 +335,15 @@
   /* ---------- Recent Files */
   const day = (t) => new Date(t).toDateString();
   const when = (t) => {
-    const time = new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (day(t) === day(Date.now())) return 'Today, ' + time;
-    if (day(t) === day(Date.now() - 86400000)) return 'Yesterday, ' + time;
-    return new Date(t).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+    const time = new Date(t).toLocaleTimeString(VO.i18n.dates, { hour: '2-digit', minute: '2-digit' });
+    if (day(t) === day(Date.now())) return VO.t('Today, {0}', time);
+    if (day(t) === day(Date.now() - 86400000)) return VO.t('Yesterday, {0}', time);
+    return new Date(t).toLocaleDateString(VO.i18n.dates, { year: 'numeric', month: 'short', day: 'numeric' });
   };
   let urls = [];
   async function render() {
     let list = [];
-    if (!noStorage) try { list = await VO.recent.list(); } catch (e) { status('Recent Files are not available in this browser (' + e.message + ').'); }
+    if (!noStorage) try { list = await VO.recent.list(); } catch (e) { status(VO.t('Recent Files are not available in this browser ({0}).', e.message)); }
     if (view !== 'recent') return;   // switched to Create File meanwhile
     for (const u of urls) URL.revokeObjectURL(u);
     urls = [];
@@ -347,21 +353,24 @@
       if (e.thumb) { const u = URL.createObjectURL(e.thumb); urls.push(u); thumb.append(h('img', { src: u, alt: '' })); }
       else thumb.innerHTML = picture(e.app, VO.ext(e.name));
       /* a document with unsaved changes opens at its unsaved version; × then discards those changes */
-      const rm = h('button', { class: 'rm', type: 'button', title: e.draft ? 'Discard the unsaved changes' : 'Remove from list', 'aria-label': (e.draft ? 'Discard the unsaved changes to ' : 'Remove from the list: ') + e.name }, '×');
+      const rm = h('button', { class: 'rm', type: 'button', title: e.draft ? 'Discard the unsaved changes' : 'Remove from list' }, '×');
+      rm.setAttribute('aria-label', e.draft ? VO.t('Discard the unsaved changes to {0}', e.name) : VO.t('Remove from the list: {0}', e.name));
       rm.addEventListener('click', async () => {
-        if (e.draft) { if (confirm(`Discard the unsaved changes to “${e.name}”?` + (e.file ? ' The saved version stays in the list.' : ''))) await VO.recent.discardDraft(e.key); }
+        if (e.draft) { if (confirm(e.file ? VO.t('Discard the unsaved changes to “{0}”? The saved version stays in the list.', e.name) : VO.t('Discard the unsaved changes to “{0}”?', e.name))) await VO.recent.discardDraft(e.key); }
         else await VO.recent.remove(e.key);
         render();
       });
       const app = VO.APPS[e.app] || { name: e.app };
       const dot = h('i'); dot.style.background = COLOR[e.app] || '#888';
-      return h('div', { class: 'doc', title: `${e.name}\n${app.name}` + (e.file ? ` · ${(e.size / 1024).toFixed(0)} KB` : '') + ` · ${new Date(e.time).toLocaleString()}` + (e.draft ? '\nUnsaved changes' : '') },
+      const card = h('div', { class: 'doc' },
         thumb,
-        h('a', { class: 'name', href: VO.url(e.app, e.draft ? { recent: e.key, draft: true } : { recent: e.key }), 'data-go': '' }, e.name),
-        h('div', { class: 'meta' }, dot, app.name + ' · ' + when(e.time)),
+        h('a', { class: 'name', href: VO.url(e.app, e.draft ? { recent: e.key, draft: true } : { recent: e.key }), 'data-go': '', translate: 'no' }, e.name),
+        h('div', { class: 'meta', translate: 'no' }, dot, app.name + ' · ' + when(e.time)),
         e.draft ? h('span', { class: 'unsaved' }, e.file ? 'Unsaved changes' : 'Never saved') : null,
         e.draft && e.file ? h('a', { class: 'alt', href: VO.url(e.app, { recent: e.key }), 'data-go': '', title: 'Open the version saved before the changes' }, 'Saved version') : null,
         rm);
+      card.title = `${e.name}\n${app.name}` + (e.file ? ' · ' + VO.t('{0} KB', (e.size / 1024).toFixed(0)) : '') + ` · ${new Date(e.time).toLocaleString(VO.i18n.dates)}` + (e.draft ? '\n' + VO.t('Unsaved changes') : '');
+      return card;
     }));
     grid.hidden = !list.length;
     $('empty').hidden = !!list.length;
@@ -377,7 +386,8 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden && view === 'recent') render(); });
 
   /* ---------- Create File: Blank and the templates of each app (common/templates.json, made by tools/templates.mjs) */
-  const KIND = { quire: 'Documents', ledger: 'Spreadsheets', lectern: 'Presentations' };
+  const KIND = { quire: VO.N('Documents'), ledger: VO.N('Spreadsheets'), lectern: VO.N('Presentations') };
+  const NEW = { quire: [VO.N('New blank document'), VO.N('New document from “{0}”')], ledger: [VO.N('New blank spreadsheet'), VO.N('New spreadsheet from “{0}”')], lectern: [VO.N('New blank presentation'), VO.N('New presentation from “{0}”')] };
   let gallery = null;
   async function renderGallery() {
     if (gallery) return;
@@ -390,7 +400,7 @@
         h('div', { class: 'grid' }, ...list.map((t) => {
           const thumb = h('div', { class: 'thumb' });
           if (t.img) thumb.append(h('img', { src: t.img, alt: '', loading: 'lazy' })); else thumb.innerHTML = picture(app);
-          return h('div', { class: 'doc', title: t.id ? `New ${VO.APPS[app].kind.toLowerCase()} from “${t.name}”` : `New blank ${VO.APPS[app].kind.toLowerCase()}` },
+          return h('div', { class: 'doc', title: t.id ? VO.t(NEW[app][1], VO.t(t.name)) : VO.t(NEW[app][0]) },
             thumb, h('a', { class: 'name', href: VO.url(app, t.id ? { template: t.id } : { new: true }), 'data-go': '' }, t.name));
         })));
     }
@@ -401,7 +411,7 @@
   let view = '';
   function show() {
     view = location.hash === '#create' ? 'create' : 'recent';
-    $('viewtitle').textContent = view === 'create' ? 'Create File' : 'Recent Files';
+    $('viewtitle').textContent = view === 'create' ? VO.t('Create File') : VO.t('Recent Files');
     $('recentbtn').classList.toggle('on', view === 'recent'); $('recentbtn').setAttribute('aria-pressed', view === 'recent');
     $('createbtn').classList.toggle('on', view === 'create'); $('createbtn').setAttribute('aria-pressed', view === 'create');
     status('');
@@ -420,6 +430,10 @@
   window.addEventListener('appinstalled', () => { installEvent = null; $('install').hidden = true; });
   $('install').addEventListener('click', async () => { if (!installEvent) return; installEvent.prompt(); await installEvent.userChoice; installEvent = null; $('install').hidden = true; });
   document.querySelectorAll('.version').forEach((el) => { el.textContent = VO.VERSION; });
+  $('updatethis').textContent = VO.t('A newer version of VibeOffice is available. This one is {0}.', VO.VERSION);
+  $('aboutversion').textContent = VO.t('Version {0}', VO.VERSION);
+  /* the sentence whole, the link where its {0} is */
+  $('aboutoss').append(...VO.t('Made possible by open source software: {0}.').split('{0}').flatMap((part, i) => (i ? [h('a', { class: 'link', id: 'osslink', href: 'oss-licenses.html', target: '_blank', rel: 'noopener' }, 'Open source licenses'), part] : [part])));
   $('about').addEventListener('click', () => $('aboutdlg').showModal());
   $('osslink').addEventListener('click', (e) => { e.preventDefault(); VO.showLicenses(); });
   /* Themes: the suite's looks (common/looks.css); choosing one changes every open window of the suite */
@@ -467,7 +481,7 @@
   if (VO.host.kind === 'desktop') {
     VO.checkUpdate().then(({ ask, news }) => {
       if (!ask) return;
-      $('updatenews').replaceChildren(...news.flatMap((n) => [h('b', null, n.version), h('p', null, n.text)]));
+      $('updatenews').replaceChildren(...news.flatMap((n) => [h('b', { translate: 'no' }, n.version), h('p', { translate: 'no' }, n.text)]));
       $('updatenews').hidden = !news.length;
       $('update').hidden = false;
       const today = new Date().toDateString();
@@ -483,20 +497,23 @@
     const n = VO.localFonts.list().length;
     $('fontbtns').hidden = !VO.localFonts.supported();
     $('fontforget').hidden = !n;
-    $('fontload').textContent = n ? 'Reload fonts on this computer' : 'Load fonts on this computer';
-    $('fontinfo').textContent = n ? `The Font boxes also list the ${n} fonts installed on this computer.`
-      : VO.localFonts.supported() ? 'The Font boxes list the frequently used Office fonts and the document\'s own. They can also list the fonts installed on this computer, once you allow it.'
-        : 'The Font boxes list the frequently used Office fonts and the document\'s own.';
+    $('fontload').textContent = n ? VO.t('Reload fonts on this computer') : VO.t('Load fonts on this computer');
+    $('fontinfo').textContent = n ? VO.t('The Font boxes also list the {0} fonts installed on this computer.', n)
+      : VO.localFonts.supported() ? VO.t('The Font boxes list the frequently used Office fonts and the document\'s own. They can also list the fonts installed on this computer, once you allow it.')
+        : VO.t('The Font boxes list the frequently used Office fonts and the document\'s own.');
   };
   const recentInfo = async () => {
     let list = [];
     if (!noStorage) try { list = await VO.recent.list(); } catch (e) { /* shown as none */ }
     const drafts = list.filter((e) => e.draft).length;
-    let size = '';
-    try { const est = navigator.storage && await navigator.storage.estimate(); if (est && est.usage) size = `, about ${(est.usage / 1048576).toFixed(1)} MB`; } catch (e) { /* no estimate */ }
-    $('recentinfo').textContent = noStorage ? 'Recent Files are not available here.'
-      : !list.length ? 'The list is empty.'
-        : `${list.length} ${list.length === 1 ? 'file' : 'files'}${drafts ? ` (${drafts} with unsaved changes)` : ''}${size}, kept ${VO.host.kind === 'desktop' ? 'by VibeOffice on this computer' : 'in this browser'}.`;
+    let mb = '';
+    try { const est = navigator.storage && await navigator.storage.estimate(); if (est && est.usage) mb = (est.usage / 1048576).toFixed(1); } catch (e) { /* no estimate */ }
+    /* how many files (and with unsaved changes), then how much room they take and where */
+    const files = list.length === 1 ? (drafts ? VO.t('1 file, with unsaved changes') : VO.t('1 file')) : drafts ? VO.t('{0} files, {1} with unsaved changes', list.length, drafts) : VO.t('{0} files', list.length);
+    const desk = VO.host.kind === 'desktop';
+    const kept = mb ? (desk ? VO.t('About {0} MB, kept by VibeOffice on this computer.', mb) : VO.t('About {0} MB, kept in this browser.', mb)) : desk ? VO.t('Kept by VibeOffice on this computer.') : VO.t('Kept in this browser.');
+    $('recentinfo').textContent = noStorage ? VO.t('Recent Files are not available here.')
+      : !list.length ? VO.t('The list is empty.') : VO.t('{0}. {1}', files, kept);
     $('recentclear').hidden = !list.length;
   };
   $('settings').addEventListener('click', async () => {
@@ -504,19 +521,23 @@
     $('scalerow').hidden = scale === null;
     $('scaleweb').hidden = scale !== null;
     if (scale !== null) $('uiscale').value = String(scale);
+    $('uilang').replaceChildren(...VO.lang.list().map((l) => (l.id === 'auto' ? h('option', { value: l.id }, 'Auto (as the browser)') : h('option', { value: l.id, translate: 'no' }, l.name))));
+    $('uilang').value = VO.lang.get();
     fontInfo();
     await recentInfo();
     $('settingsdlg').showModal();
   });
+  /* the Start Center shows the new language at once; the apps' windows when they next open */
+  $('uilang').addEventListener('change', () => { VO.lang.set($('uilang').value); location.reload(); });
   $('uiscale').addEventListener('change', () => VO.host.setUiScale(+$('uiscale').value).catch((e) => status(String(e))));
   $('fontload').addEventListener('click', async () => {
-    try { await VO.localFonts.load(); } catch (e) { $('fontinfo').textContent = 'The fonts on this computer could not be listed' + (e.name === 'NotAllowedError' || e.name === 'SecurityError' ? ': permission was not given.' : ': ' + (e.message || e)); return; }
+    try { await VO.localFonts.load(); } catch (e) { $('fontinfo').textContent = e.name === 'NotAllowedError' || e.name === 'SecurityError' ? VO.t('The fonts on this computer could not be listed: permission was not given.') : VO.t('The fonts on this computer could not be listed: {0}', e.message || e); return; }
     fontInfo();
   });
   $('fontforget').addEventListener('click', () => { VO.localFonts.forget(); fontInfo(); });
   $('recentclear').addEventListener('click', async () => { if (await clearRecent()) recentInfo(); });
   window.addEventListener('vo-look', drawLooks);
-})();
+});
 </script>
 </body>
 </html>

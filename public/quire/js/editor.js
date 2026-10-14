@@ -342,7 +342,7 @@
     if (!E.sel) return;
     const d = doc();
     if (E.objSel && E.objSel.float) return;
-    E.edit('Typing', () => {
+    E.edit(L.N('Typing'), () => {
       let pos = E.deleteSelection();
       if (E.overtype && E.collapsed()) {
         const n = D.plen(pos.p);
@@ -373,7 +373,7 @@
     if (E.collapsed() && !D.plen(p) && LY.labels && LY.labels.get(p.id)) {
       const pp = D.pProps(d, p);
       const lvl = pp.num ? pp.num.lvl || 0 : 0;
-      E.edit('Numbering', () => {
+      E.edit(L.N('Numbering'), () => {
         D.touch(p);
         if (lvl > 0) p.pPr.num = { id: pp.num.id, lvl: lvl - 1 };
         else { p.pPr.num = { id: '0', lvl: 0 }; delete p.pPr.ind; if (D.styleProps(d, p.pPr.style || 'Normal').pPr.num) p.pPr.style = undefined; }
@@ -381,7 +381,7 @@
       });
       return;
     }
-    E.edit('Typing', () => {
+    E.edit(L.N('Typing'), () => {
       const pos = E.deleteSelection();
       const np = O.splitPara(pos);
       /* AutoFormat: "---" + Enter → border line */
@@ -390,13 +390,13 @@
     if (L.autocorrect) L.autocorrect.afterEnter();
   };
   E.insertItem = function (item, label) {
-    E.edit(label || 'Insert', () => O.insertItem(E.deleteSelection(), item));
+    E.edit(label || L.N('Insert'), () => O.insertItem(E.deleteSelection(), item));
   };
-  E.insertTextAt = (text, label) => E.edit(label || 'Insert', () => O.insertPlain(E.deleteSelection(), text, E.pending ? D.mergeRPr(O.inheritRPr(E.sel.f), E.pending) : null));
+  E.insertTextAt = (text, label) => E.edit(label || L.N('Insert'), () => O.insertPlain(E.deleteSelection(), text, E.pending ? D.mergeRPr(O.inheritRPr(E.sel.f), E.pending) : null));
   E.backspace = function (word) {
     if (!E.sel) return;
     const d = doc();
-    if (!E.collapsed()) { E.edit('Delete', () => E.deleteSelection()); return; }
+    if (!E.collapsed()) { E.edit(L.N('Delete'), () => E.deleteSelection()); return; }
     const pos = E.sel.f;
     const p = pos.p;
     if (pos.o === 0) {
@@ -404,7 +404,7 @@
       const lb = LY.labels && LY.labels.get(p.id);
       const pp = D.pProps(d, p);
       if (lb) {
-        E.edit('Numbering', () => {
+        E.edit(L.N('Numbering'), () => {
           D.touch(p);
           const ind = pp.ind || {};
           p.pPr.num = { id: '0', lvl: 0 };
@@ -414,7 +414,7 @@
         return;
       }
       if (p.pPr.ind && (p.pPr.ind.fl > 0 || p.pPr.ind.l > 0) && L.store.get('acIndentBackspace', true)) {
-        E.edit('Indent', () => { D.touch(p); if (p.pPr.ind.fl > 0) p.pPr.ind.fl = 0; else p.pPr.ind.l = Math.max(0, (p.pPr.ind.l || 0) - 36); return D.pos(p, 0); });
+        E.edit(L.N('Indent'), () => { D.touch(p); if (p.pPr.ind.fl > 0) p.pPr.ind.fl = 0; else p.pPr.ind.l = Math.max(0, (p.pPr.ind.l || 0) - 36); return D.pos(p, 0); });
         return;
       }
       const info = D.info(d, p);
@@ -423,17 +423,17 @@
       if (!prevB) return; /* start of story / cell */
       if (prevB.t === 'tbl') {
         /* empty paragraph after a table is removed; otherwise move into the table */
-        if (!D.plen(p) && info.cont.blocks[idx + 1]) { E.edit('Delete', () => { const r = O.removeBlock(p); void r; const lp = D.lastPara([prevB]); return D.pos(lp, D.plen(lp)); }); return; }
+        if (!D.plen(p) && info.cont.blocks[idx + 1]) { E.edit(L.N('Delete'), () => { const r = O.removeBlock(p); void r; const lp = D.lastPara([prevB]); return D.pos(lp, D.plen(lp)); }); return; }
         const lp = D.lastPara([prevB]);
         E.setSel(D.pos(lp, D.plen(lp)));
         return;
       }
-      if (O.tracking()) { E.edit('Delete', () => O.deleteRange(D.pos(prevB, D.plen(prevB)), pos)); return; }
-      E.edit('Delete', () => O.joinNext(prevB) || pos);
+      if (O.tracking()) { E.edit(L.N('Delete'), () => O.deleteRange(D.pos(prevB, D.plen(prevB)), pos)); return; }
+      E.edit(L.N('Delete'), () => O.joinNext(prevB) || pos);
       return;
     }
     let a = word ? wordStartBefore(p, pos.o) : prevCharOffset(p, pos.o);
-    E.edit('Delete', () => {
+    E.edit(L.N('Delete'), () => {
       const r = O.deleteRange(D.pos(p, a), pos);
       O.repairFields(D.storyOf(d, p));
       return O.tracking() ? D.pos(p, a) : r;
@@ -442,7 +442,7 @@
   E.del = function (word) {
     if (!E.sel) return;
     const d = doc();
-    if (!E.collapsed()) { E.edit('Delete', () => E.deleteSelection()); return; }
+    if (!E.collapsed()) { E.edit(L.N('Delete'), () => E.deleteSelection()); return; }
     const pos = E.sel.f;
     const p = pos.p;
     const n = D.plen(p);
@@ -452,12 +452,12 @@
       const nb = info.cont.blocks[idx + 1];
       if (!nb) return;
       if (nb.t === 'tbl') return;
-      if (O.tracking()) { E.edit('Delete', () => { O.deleteRange(pos, D.pos(nb, 0)); return pos; }); return; }
-      E.edit('Delete', () => O.joinNext(p) || pos);
+      if (O.tracking()) { E.edit(L.N('Delete'), () => { O.deleteRange(pos, D.pos(nb, 0)); return pos; }); return; }
+      E.edit(L.N('Delete'), () => O.joinNext(p) || pos);
       return;
     }
     const b = word ? wordEndAfter(p, pos.o) : nextCharOffset(p, pos.o);
-    E.edit('Delete', () => { O.deleteRange(pos, D.pos(p, b)); O.repairFields(D.storyOf(d, p)); return pos; }, { merge: word ? null : 'fdel' });
+    E.edit(L.N('Delete'), () => { O.deleteRange(pos, D.pos(p, b)); O.repairFields(D.storyOf(d, p)); return pos; }, { merge: word ? null : 'fdel' });
   };
   function prevCharOffset(p, o) {
     /* skip over surrogate pairs and zero-length markers; skip deleted (tracked) text */
@@ -506,7 +506,7 @@
     const sel = E.selectedParas();
     const atStart = E.collapsed() ? E.sel.f.o === 0 : sel.length > 1;
     if (lb && atStart) {
-      E.edit('Numbering', () => {
+      E.edit(L.N('Numbering'), () => {
         for (const q of sel.length ? sel : [p]) {
           const qp = D.pProps(d, q);
           if (!qp.num || !qp.num.id || qp.num.id === '0') continue;
@@ -521,10 +521,10 @@
     if (shift) return;
     if (!lb && atStart && E.collapsed() && D.plen(p) > 0 && L.store.get('acIndentTab', true) && !(pp.ind && pp.ind.fl > 0)) {
       /* Tab at the start of a paragraph sets the first-line indent (AutoFormat As You Type) */
-      E.edit('Indent', () => { D.touch(p); p.pPr.ind = Object.assign({}, p.pPr.ind || {}, { fl: 36 }); return E.sel.f; });
+      E.edit(L.N('Indent'), () => { D.touch(p); p.pPr.ind = Object.assign({}, p.pPr.ind || {}, { fl: 36 }); return E.sel.f; });
       return;
     }
-    E.insertItem(D.item('tab'), 'Typing');
+    E.insertItem(D.item('tab'), L.N('Typing'));
   };
 
   /* ---------- formatting ---------- */
@@ -536,7 +536,7 @@
       const w = O.wordAt(E.sel.f);
       if (w && w[0].o < E.sel.f.o && E.sel.f.o < w[1].o) {
         const keep = E.sel;
-        E.edit(label || 'Format', () => { O.setRunProps(w[0], w[1], props); return keep; });
+        E.edit(label || L.N('Format'), () => { O.setRunProps(w[0], w[1], props); return keep; });
         return;
       }
       E.pending = Object.assign({}, E.pending || {}, props);
@@ -546,7 +546,7 @@
     }
     const [a, b] = E.range();
     const keep = E.sel;
-    E.edit(label || 'Format', () => { O.setRunProps(a, b, props); return keep; });
+    E.edit(label || L.N('Format'), () => { O.setRunProps(a, b, props); return keep; });
   };
   /** toggle a boolean run property based on the first character's state */
   E.toggleRun = function (key, val, label) {
@@ -729,7 +729,7 @@
       case 'deleteWordBackward': E.backspace(true); break;
       case 'deleteWordForward': E.del(true); break;
       case 'deleteSoftLineBackward': case 'deleteHardLineBackward': case 'deleteSoftLineForward': case 'deleteHardLineForward': case 'deleteContent': case 'deleteByCut':
-        if (!E.collapsed()) E.edit('Delete', () => E.deleteSelection());
+        if (!E.collapsed()) E.edit(L.N('Delete'), () => E.deleteSelection());
         break;
       case 'historyUndo': L.ui.exec('undo'); break;
       case 'historyRedo': L.ui.exec('redo'); break;
@@ -746,7 +746,7 @@
     if (!E.sel) { const m = E.readDom(); if (m) E.sel = m; }
     if (E.sel && !E.collapsed()) {
       /* replace the selection first so the composition starts at a clean caret */
-      E.edit('Typing', () => E.deleteSelection());
+      E.edit(L.N('Typing'), () => E.deleteSelection());
     }
     E.composing = true;
     compStart = E.sel ? { p: E.sel.f.p, o: E.sel.f.o } : null;
@@ -786,7 +786,7 @@
     if (k === 'Delete') { e.preventDefault(); if (shift && !ctrl) L.ui.exec('cut'); else E.del(ctrl); return; }
     if (k === 'Tab' && !alt) {
       e.preventDefault();
-      if (ctrl) E.insertItem(D.item('tab'), 'Typing'); else E.tab(shift);
+      if (ctrl) E.insertItem(D.item('tab'), L.N('Typing')); else E.tab(shift);
       return;
     }
     if (k === 'Insert' && !ctrl && !shift) { e.preventDefault(); E.overtype = !E.overtype; L.bus.emit('sel', E.sel); return; }
@@ -850,7 +850,7 @@
       e.clipboardData.setData('application/x-quire', JSON.stringify({ blocks: data.blocks, media: data.media, preserved: data.preserved }));
     } catch (err) { /* ignore */ }
     E.clip = data;
-    if (cut) E.edit('Cut', () => E.deleteSelection());
+    if (cut) E.edit(L.N('Cut'), () => E.deleteSelection());
   }
   E.copyData = function () {
     if (!E.sel) return null;
@@ -881,14 +881,14 @@
   }
   E.pasteBlocks = function (blocks, opts) {
     if (!blocks || !blocks.length) return;
-    E.edit('Paste', () => {
+    E.edit(L.N('Paste'), () => {
       const pos = E.deleteSelection();
       return O.insertBlocks(pos, blocks, opts);
     });
     E.lastPaste = Date.now();
   };
   E.pasteText = function (text) {
-    E.edit('Paste', () => O.insertPlain(E.deleteSelection(), text.replace(/\r\n?/g, '\n').replace(/\n$/, '')));
+    E.edit(L.N('Paste'), () => O.insertPlain(E.deleteSelection(), text.replace(/\r\n?/g, '\n').replace(/\n$/, '')));
   };
   /* internal drag & drop of text: dragData is the text dragged from this page, until the drag ends (dropped
      anywhere, or cancelled); a drop carries its mark, so a drop from elsewhere never moves it */
@@ -911,7 +911,7 @@
     const blocks = O.copyRange(a, b);
     const one = D.info(d, a.p).cont === D.info(d, b.p).cont;
     E.clearObjSel();
-    return E.edit(copy ? 'Drag and Drop' : 'Move', () => {
+    return E.edit(copy ? 'Drag and Drop' : L.N('Move'), () => {
       let at = target;
       if (!copy) {
         if (D.cmp(d, target, b) >= 0 && !one) {

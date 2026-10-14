@@ -43,8 +43,9 @@
   cmd('exitApp', { label: 'E&xit', run: async () => { for (;;) { const last = A().books.length <= 1; if (!(await A().closeWorkbook())) return; if (last) break; } if (window.VO) VO.exit(); } });
 
   /* ------------------------------------------------------------ Edit */
-  cmd('undo', { label: '&Undo', icon: 'undo', key: 'Ctrl+Z', get menuLabel() { return wb() && wb().undo.canUndo() ? '&Undo ' + wb().undo.undoLabel : "Can't &Undo"; }, enabled: () => wb() && wb().undo.canUndo(), run: () => A().undo() });
-  cmd('redo', { label: '&Redo', icon: 'redo', key: 'Ctrl+Y', get menuLabel() { return wb() && wb().undo.canRedo() ? '&Redo ' + wb().undo.redoLabel : A().lastCommand ? '&Repeat ' + A().lastCommand.label : "Can't &Repeat"; }, enabled: () => wb() && (wb().undo.canRedo() || !!A().lastCommand), run: () => A().redo() });
+  /* the step's name (an English label, L.N at its O.tx) shown translated */
+  cmd('undo', { label: '&Undo', icon: 'undo', key: 'Ctrl+Z', get menuLabel() { return wb() && wb().undo.canUndo() ? L.t('&Undo {0}', L.t(wb().undo.undoLabel)) : "Can't &Undo"; }, enabled: () => wb() && wb().undo.canUndo(), run: () => A().undo() });
+  cmd('redo', { label: '&Redo', icon: 'redo', key: 'Ctrl+Y', get menuLabel() { return wb() && wb().undo.canRedo() ? L.t('&Redo {0}', L.t(wb().undo.redoLabel)) : A().lastCommand ? L.t('&Repeat {0}', ui.stripAmp(A().lastCommand.label)) : "Can't &Repeat"; }, enabled: () => wb() && (wb().undo.canRedo() || !!A().lastCommand), run: () => A().redo() });
   cmd('cut', { label: 'Cu&t', icon: 'cut', key: 'Ctrl+X', run: run(() => CL().copy(null, true)) });
   cmd('copy', { label: '&Copy', icon: 'copy', key: 'Ctrl+C', run: run(() => CL().copy(null, false)) });
   cmd('paste', { label: '&Paste', icon: 'paste', key: 'Ctrl+V', run: run(() => CL().pasteCommand()) });
@@ -146,7 +147,7 @@
   cmd('italic', { label: '&Italic', icon: 'italic', key: 'Ctrl+I', checked: () => !!(act().font && act().font.i), run: run(() => { if (guard('formatCells')) return; O.toggleFont(sh(), rgs(), 'i', act()); }) });
   cmd('underline', { label: '&Underline', icon: 'underline', key: 'Ctrl+U', checked: () => !!(act().font && act().font.u), run: run(() => { if (guard('formatCells')) return; O.toggleFont(sh(), rgs(), 'u', act()); }) });
   cmd('strike', { label: 'Stri&kethrough', icon: 'strike', key: 'Ctrl+5', checked: () => !!(act().font && act().font.strike), run: run(() => { if (guard('formatCells')) return; O.toggleFont(sh(), rgs(), 'strike', act()); }) });
-  const halign = (h) => run(() => { if (guard('formatCells')) return; const cur = act().align && act().align.h; O.format(sh(), rgs(), { align: { h: cur === h ? undefined : h } }, 'Align'); });
+  const halign = (h) => run(() => { if (guard('formatCells')) return; const cur = act().align && act().align.h; O.format(sh(), rgs(), { align: { h: cur === h ? undefined : h } }, L.N('Align')); });
   cmd('alignLeft', { label: 'Align &Left', icon: 'alignLeft', checked: () => (act().align || {}).h === 'left', run: halign('left') });
   cmd('alignCenter', { label: '&Center', icon: 'alignCenter', checked: () => (act().align || {}).h === 'center', run: halign('center') });
   cmd('alignRight', { label: 'Align &Right', icon: 'alignRight', checked: () => (act().align || {}).h === 'right', run: halign('right') });
@@ -163,18 +164,18 @@
   cmd('decDecimal', { label: '&Decrease Decimal', icon: 'decDecimal', run: run(() => { if (guard('formatCells')) return; const s = sel(); const v = sh().val(s.r, s.c); const code = NF.withDecimals(act().nf || 'General', -1, v); O.format(sh(), rgs(), { nf: code }, 'Decrease Decimal'); }) });
   cmd('incIndent', { label: 'Increase I&ndent', icon: 'incIndent', run: run(() => { if (guard('formatCells')) return; O.format(sh(), rgs(), (st) => ({ align: { indent: Math.min(15, ((st.align && st.align.indent) || 0) + 1), h: st.align && (st.align.h === 'right' || st.align.h === 'distributed') ? st.align.h : 'left' } }), 'Increase Indent'); }) });
   cmd('decIndent', { label: 'Decrease In&dent', icon: 'decIndent', run: run(() => { if (guard('formatCells')) return; O.format(sh(), rgs(), (st) => { const n = Math.max(0, ((st.align && st.align.indent) || 0) - 1); return { align: { indent: n || undefined } }; }, 'Decrease Indent'); }) });
-  cmd('wrapText', { label: '&Wrap Text', icon: 'wrapText', checked: () => !!(act().align && act().align.wrap), run: run(() => { if (guard('formatCells')) return; const on = !(act().align && act().align.wrap); O.format(sh(), rgs(), { align: { wrap: on || undefined } }, 'Wrap Text'); O.tx(wb(), 'AutoFit', () => { for (const r of A().selRows()) O.autoRow(sh(), r); }); }) });
+  cmd('wrapText', { label: '&Wrap Text', icon: 'wrapText', checked: () => !!(act().align && act().align.wrap), run: run(() => { if (guard('formatCells')) return; const on = !(act().align && act().align.wrap); O.format(sh(), rgs(), { align: { wrap: on || undefined } }, 'Wrap Text'); O.tx(wb(), L.N('AutoFit'), () => { for (const r of A().selRows()) O.autoRow(sh(), r); }); }) });
   cmd('fillColorApply', { label: 'Fill Color', tip: 'Fill Color', icon: 'fillColor', swatch: () => A().lastFill || '#FFFF00', run: run(() => A().applyFill(A().lastFill || '#FFFF00')) });
   cmd('fontColorApply', { label: 'Font Color', tip: 'Font Color', icon: 'fontColor', swatch: () => A().lastFontColor || '#FF0000', run: run(() => A().applyFontColor(A().lastFontColor || '#FF0000')) });
   cmd('bordersApply', { label: 'Borders', tip: 'Borders', icon: 'bordersBottom', run: run(() => A().applyBorderPreset(A().lastBorder || 'bottom')) });
   cmd('formatPainter', { label: 'Format Painter', tip: 'Format Painter', icon: 'painter', checked: () => A().painter.on(), run: (arg, ev) => A().painter.click(ev) });
   /* number format shortcuts */
-  cmd('fmtGeneral', { label: 'General', key: 'Ctrl+Shift+~', run: fmt({ nf: 'General' }, 'Format') });
-  cmd('fmtCurrency', { label: 'Currency', key: 'Ctrl+Shift+$', run: fmt({ nf: '"$"#,##0.00_);[Red]\\("$"#,##0.00\\)' }, 'Format') });
-  cmd('fmtExp', { label: 'Scientific', key: 'Ctrl+Shift+^', run: fmt({ nf: '0.00E+00' }, 'Format') });
-  cmd('fmtDate', { label: 'Date', key: 'Ctrl+Shift+#', run: fmt({ nf: 'd-mmm-yy' }, 'Format') });
-  cmd('fmtTime', { label: 'Time', key: 'Ctrl+Shift+@', run: fmt({ nf: 'h:mm AM/PM' }, 'Format') });
-  cmd('fmtNumber', { label: 'Number', key: 'Ctrl+Shift+!', run: fmt({ nf: '#,##0.00' }, 'Format') });
+  cmd('fmtGeneral', { label: 'General|number format', key: 'Ctrl+Shift+~', run: fmt({ nf: 'General' }, L.N('Format')) });
+  cmd('fmtCurrency', { label: 'Currency', key: 'Ctrl+Shift+$', run: fmt({ nf: '"$"#,##0.00_);[Red]\\("$"#,##0.00\\)' }, L.N('Format')) });
+  cmd('fmtExp', { label: 'Scientific', key: 'Ctrl+Shift+^', run: fmt({ nf: '0.00E+00' }, L.N('Format')) });
+  cmd('fmtDate', { label: 'Date', key: 'Ctrl+Shift+#', run: fmt({ nf: 'd-mmm-yy' }, L.N('Format')) });
+  cmd('fmtTime', { label: 'Time', key: 'Ctrl+Shift+@', run: fmt({ nf: 'h:mm AM/PM' }, L.N('Format')) });
+  cmd('fmtNumber', { label: 'Number', key: 'Ctrl+Shift+!', run: fmt({ nf: '#,##0.00' }, L.N('Format')) });
   cmd('borderOutline', { label: 'Outline Border', key: 'Ctrl+Shift+&', run: run(() => A().applyBorderPreset('outside')) });
   cmd('borderNone', { label: 'Remove Borders', key: 'Ctrl+Shift+_', run: run(() => A().applyBorderPreset('none')) });
 
@@ -212,7 +213,7 @@
   cmd('dataForm', { label: 'F&orm...', icon: 'dataForm', run: run(() => D().dataForm()) });
   cmd('subtotals', { label: 'Su&btotals...', icon: 'subtotal', run: run(() => { if (guard()) return; D().subtotals(); }) });
   cmd('validation', { label: 'Va&lidation...', icon: 'validation', run: run(() => { if (guard()) return; D().validation(); }) });
-  cmd('dataTable', { label: '&Table...', run: run(() => D().dataTable()) });
+  cmd('dataTable', { label: '&Table...|what-if', run: run(() => D().dataTable()) });
   cmd('textToColumns', { label: 'T&ext to Columns...', icon: 'textToCols', run: run(() => { if (guard()) return; D().textToColumns(); }) });
   cmd('consolidate', { label: 'Co&nsolidate...', run: run(() => D().consolidate()) });
   cmd('groupRows', { label: '&Group...', icon: 'group', key: 'Alt+Shift+ArrowRight', run: run(() => A().group(1)) });
@@ -245,8 +246,8 @@
   cmd('nextSheet', { label: 'Next Sheet', key: 'Ctrl+PageDown', run: () => A().nextSheet(1) });
   cmd('prevSheet', { label: 'Previous Sheet', key: 'Ctrl+PageUp', run: () => A().nextSheet(-1) });
   cmd('autoSum', { label: 'AutoSum', tip: 'AutoSum', icon: 'autoSum', key: 'Alt+=', run: run(() => { if (guard()) return; A().autoSum('SUM'); }) });
-  cmd('insertDate', { label: 'Insert Date', key: 'Ctrl+;', run: run(() => { if (guard()) return; const s = sel(); O.tx(wb(), 'Typing', () => O.enter(sh(), s.r, s.c, NF.text('m/d/yyyy', Math.floor(NF.jsDateToSerial(new Date(), wb().date1904))))); }) });
-  cmd('insertTime', { label: 'Insert Time', key: 'Ctrl+Shift+:', run: run(() => { if (guard()) return; const s = sel(); O.tx(wb(), 'Typing', () => O.enter(sh(), s.r, s.c, NF.text('h:mm AM/PM', NF.jsDateToSerial(new Date(), wb().date1904) % 1))); }) });
+  cmd('insertDate', { label: 'Insert Date', key: 'Ctrl+;', run: run(() => { if (guard()) return; const s = sel(); O.tx(wb(), L.N('Typing'), () => O.enter(sh(), s.r, s.c, NF.text('m/d/yyyy', Math.floor(NF.jsDateToSerial(new Date(), wb().date1904))))); }) });
+  cmd('insertTime', { label: 'Insert Time', key: 'Ctrl+Shift+:', run: run(() => { if (guard()) return; const s = sel(); O.tx(wb(), L.N('Typing'), () => O.enter(sh(), s.r, s.c, NF.text('h:mm AM/PM', NF.jsDateToSerial(new Date(), wb().date1904) % 1))); }) });
   cmd('copyAbove', { label: 'Copy Formula from Above', key: "Ctrl+'", run: run(() => A().copyFromAbove(false)) });
   cmd('copyValueAbove', { label: 'Copy Value from Above', key: 'Ctrl+Shift+"', run: run(() => A().copyFromAbove(true)) });
   cmd('selectRegion', { label: 'Select Current Region', key: 'Ctrl+Shift+*', run: () => { const s = sel(); G().selectRange(O.currentRegion(sh(), s.r, s.c), { r: s.r, c: s.c }); } });

@@ -20,11 +20,11 @@
     const k = UNIT_PT[unit];
     const step = o.step != null ? o.step : unit === 'in' ? 0.1 : unit === 'cm' ? 0.1 : unit === 'mm' ? 1 : unit === 'pt' ? 1 : 0.5;
     const dec = unit === 'in' || unit === 'cm' ? 2 : unit === 'pt' ? 1 : 1;
-    const fmt = (v) => (v == null || v === '' ? (o.autoLabel || '') : L.round(v / k, dec) + UNIT_LABEL[unit]);
+    const fmt = (v) => (v == null || v === '' ? L.t(o.autoLabel || '') : L.round(v / k, dec) + UNIT_LABEL[unit]);
     const id = o.id || nid('len');
     const inp = h('input', { type: 'text', id, class: 'spin-in', value: fmt(pt), autocomplete: 'off', inputmode: 'decimal' });
     let val = pt;
-    const parse = () => { const s = inp.value.trim(); if (!s && o.autoLabel) return null; if (o.autoLabel && s.toLowerCase() === o.autoLabel.toLowerCase()) return null; const v = D.parseLen(s, unit); return v == null || isNaN(v) ? val : v; };
+    const parse = () => { const s = inp.value.trim(); if (!s && o.autoLabel) return null; if (o.autoLabel && s.toLowerCase() === L.t(o.autoLabel).toLowerCase()) return null; const v = D.parseLen(s, unit); return v == null || isNaN(v) ? val : v; };
     const set = (v, quiet) => { if (v != null) v = L.clamp(v, o.min == null ? -1e6 : o.min, o.max == null ? 1e6 : o.max); val = v; inp.value = fmt(v); if (!quiet && o.onChange) o.onChange(v); };
     const up = h('button', { type: 'button', class: 'spin-b up', tabindex: '-1', 'aria-label': 'Increase', html: '<span></span>' });
     const dn = h('button', { type: 'button', class: 'spin-b dn', tabindex: '-1', 'aria-label': 'Decrease', html: '<span></span>' });
@@ -43,7 +43,7 @@
   G.num = function (v, o) {
     o = o || {};
     const s = ui.spin(Object.assign({ value: v == null ? 0 : v, step: 1, dec: 0, min: 0 }, o, { id: o.id || nid('num') }));
-    if (v == null && o.autoLabel) s.input.value = o.autoLabel;
+    if (v == null && o.autoLabel) s.input.value = L.t(o.autoLabel);
     return s;
   };
   /** colour picker button. value: 'auto' | 'RRGGBB' | null(no colour) */
@@ -53,7 +53,7 @@
     const sw = h('span', { class: 'cpk-sw' });
     const lbl = h('span', { class: 'cpk-l' });
     const btn = h('button', { type: 'button', class: 'cpk', id: o.id || nid('col') }, sw, lbl, h('span', { class: 'dd-arrow' }));
-    const show = () => { sw.style.background = val && val !== 'auto' ? '#' + val : o.autoColor || (val === 'auto' ? '#000' : 'transparent'); lbl.textContent = val === 'auto' ? (o.autoText || 'Automatic') : !val ? (o.noneText || 'No Color') : ui.colorName('#' + val); };
+    const show = () => { sw.style.background = val && val !== 'auto' ? '#' + val : o.autoColor || (val === 'auto' ? '#000' : 'transparent'); lbl.textContent = val === 'auto' ? L.t(o.autoText || 'Automatic') : !val ? L.t(o.noneText || 'No Color') : L.t(ui.colorName('#' + val)); };
     show();
     btn.addEventListener('click', () => ui.colorMenu(btn, { mode: o.mode || 'font', automatic: o.automatic !== false }, (v) => {
       if (v && v.auto) val = 'auto';
@@ -66,18 +66,25 @@
     btn.set = (v) => { val = v; show(); };
     return btn;
   };
-  /** list box with optional text input on top (Word's font/size/style pickers) */
+  /** list box with optional text input on top (Word's font/size/style pickers); items: values or { value, label }.
+   *  Labels are shown in the UI's language; o.translate === 'no': the items are data (fonts, sizes, names), shown as
+   *  they are. Items are matched by value, never by the text shown. */
   G.listBox = function (items, value, o) {
     o = o || {};
-    const box = h('div', { class: 'listbox', style: o.height ? `height:${o.height}px` : '' });
-    const inp = o.input ? h('input', { type: 'text', class: 'listbox-in', id: o.id || nid('lb'), value: value == null ? '' : String(value), autocomplete: 'off' }) : null;
+    const box = h('div', { class: 'listbox', style: o.height ? `height:${o.height}px` : '', translate: o.translate || null });
+    const val = (it) => (typeof it === 'object' ? it.value : it);
+    const shown = (it) => { const s = typeof it === 'object' ? it.label : String(it); return o.translate === 'no' ? s : L.t(s); };
     let list = items.slice();
+    const label = (v) => { const it = list.find((x) => String(val(x)) === String(v)); return it ? shown(it) : v == null ? '' : String(v); };
+    const inp = o.input ? h('input', { type: 'text', class: 'listbox-in', id: o.id || nid('lb'), value: label(value), autocomplete: 'off', translate: o.translate || null }) : null;
     let cur = value;
     const render = () => {
       L.clear(box);
       for (const it of list) {
-        const v = typeof it === 'object' ? it.value : it;
-        const el = h('div', { class: 'li' + (String(v) === String(cur) ? ' on' : ''), text: typeof it === 'object' ? it.label : String(it) });
+        const v = val(it);
+        const el = h('div', { class: 'li' + (String(v) === String(cur) ? ' on' : '') });
+        el.textContent = shown(it);
+        el._v = v;
         if (typeof it === 'object' && it.style) el.style.cssText += it.style;
         if (typeof it === 'object' && it.group) { el.className = 'li-group'; box.appendChild(el); continue; }
         el.addEventListener('click', () => { pick(v); });
@@ -87,24 +94,30 @@
       const on = box.querySelector('.li.on');
       if (on) setTimeout(() => on.scrollIntoView({ block: 'nearest' }), 0);
     };
-    const pick = (v, fromInput) => { cur = v; if (inp && !fromInput) inp.value = String(v); for (const el of box.querySelectorAll('.li')) el.classList.toggle('on', el.textContent === (list.find((x) => String(typeof x === 'object' ? x.value : x) === String(v)) || {}).label || el.textContent === String(v)); if (o.onChange) o.onChange(v); };
+    const mark = (v) => { for (const el of box.querySelectorAll('.li')) el.classList.toggle('on', v !== undefined && String(el._v) === String(v)); };
+    const pick = (v, fromInput) => { cur = v; if (inp && !fromInput) inp.value = label(v); mark(v); if (o.onChange) o.onChange(v); };
     if (inp) inp.addEventListener('input', () => {
-      const v = inp.value;
-      const hit = list.find((x) => String(typeof x === 'object' ? x.label : x).toLowerCase().startsWith(v.toLowerCase()));
-      cur = v;
-      for (const el of box.querySelectorAll('.li')) el.classList.toggle('on', !!hit && el.textContent === String(typeof hit === 'object' ? hit.label : hit));
+      const v = inp.value, lc = v.toLowerCase();
+      const hit = list.find((x) => shown(x).toLowerCase().startsWith(lc));
+      /* a label typed in the UI's language stands for its value */
+      const exact = list.find((x) => shown(x).toLowerCase() === lc);
+      cur = exact && shown(exact) !== String(val(exact)) ? val(exact) : v;
+      mark(hit ? val(hit) : undefined);
       const on = box.querySelector('.li.on');
       if (on) on.scrollIntoView({ block: 'nearest' });
-      if (o.onChange) o.onChange(v);
+      if (o.onChange) o.onChange(cur);
     });
     render();
     const wrap = h('div', { class: 'col', style: 'gap:2px' }, inp, box);
-    wrap.get = () => (inp ? inp.value : cur);
-    wrap.set = (v) => { cur = v; if (inp) inp.value = v == null ? '' : String(v); render(); };
+    wrap.get = () => (inp ? (cur != null && label(cur) === inp.value ? String(cur) : inp.value) : cur);
+    wrap.set = (v) => { cur = v; if (inp) inp.value = label(v); render(); };
     wrap.setItems = (it) => { list = it; render(); };
     wrap.input = inp;
     return wrap;
   };
+  /** text that is data (a sample, a name, the document's own text): shown as it is, never translated */
+  const raw = (tag, attrs, text) => { const el = h(tag, Object.assign({ translate: 'no' }, attrs)); el.textContent = text; return el; };
+  G.raw = raw;
   /** labelled field */
   G.f = (label, ctl, cls) => ui.field(label, ctl, cls ? { cls } : null);
   G.row = (...kids) => h('div', { class: 'row' }, ...kids);
@@ -127,7 +140,7 @@
   }
 
   /* ================= Font ================= */
-  const UNDERLINES = [['none', '(none)'], ['single', 'Single'], ['words', 'Words only'], ['double', 'Double'], ['thick', 'Thick'], ['dotted', 'Dotted'], ['dottedHeavy', 'Thick dotted'], ['dash', 'Dash'], ['dashedHeavy', 'Thick dash'], ['dashLong', 'Long dash'], ['dotDash', 'Dot dash'], ['dotDotDash', 'Dot dot dash'], ['wave', 'Wave'], ['wavyDouble', 'Double wave'], ['wavyHeavy', 'Heavy wave']];
+  const UNDERLINES = [['none', L.N('(none)')], ['single', L.N('Single')], ['words', L.N('Words only')], ['double', L.N('Double')], ['thick', L.N('Thick')], ['dotted', L.N('Dotted')], ['dottedHeavy', L.N('Thick dotted')], ['dash', L.N('Dash')], ['dashedHeavy', L.N('Thick dash')], ['dashLong', L.N('Long dash')], ['dotDash', L.N('Dot dash')], ['dotDotDash', L.N('Dot dot dash')], ['wave', L.N('Wave')], ['wavyDouble', L.N('Double wave')], ['wavyHeavy', L.N('Heavy wave')]];
   G.UNDERLINES = UNDERLINES;
   /**
    * opts: {target: rPr object to edit (style dialogs) — returns via onOK(newRPr)}
@@ -139,14 +152,14 @@
     const st = { font: val('font'), sz: val('sz'), b: val('b'), i: val('i'), u: val('u'), uColor: val('uColor'), color: val('color'), strike: val('strike'), dstrike: val('dstrike'), vert: val('vert'), shadow: val('shadow'), outline: val('outline'), emboss: val('emboss'), imprint: val('imprint'), smallCaps: val('smallCaps'), caps: val('caps'), hidden: val('hidden'), w: val('w'), spacing: val('spacing'), position: val('position'), kern: val('kern'), effect: val('effect') };
     const changed = new Set();
     const set = (k, v) => { st[k] = v; changed.add(k); upd(); };
-    const fontLB = G.listBox(FONTS(), st.font || '', { input: true, height: 110, id: 'fd-font', onChange: (v) => set('font', v) });
+    const fontLB = G.listBox(FONTS(), st.font || '', { input: true, height: 110, id: 'fd-font', translate: 'no', onChange: (v) => set('font', v) });
     const styleName = () => (st.b && st.i ? 'Bold Italic' : st.b ? 'Bold' : st.i ? 'Italic' : st.b === undefined || st.i === undefined ? '' : 'Regular');
-    const styleLB = G.listBox(['Regular', 'Italic', 'Bold', 'Bold Italic'], styleName(), { input: true, height: 110, id: 'fd-style', onChange: (v) => { const s = String(v).toLowerCase(); st.b = /bold/.test(s); st.i = /italic/.test(s); changed.add('b'); changed.add('i'); upd(); } });
-    const sizeLB = G.listBox(L.SIZE_LIST.map(String), st.sz != null ? String(L.round(st.sz, 1)) : '', { input: true, height: 110, id: 'fd-size', onChange: (v) => { const n = parseFloat(v); if (n > 0) set('sz', L.clamp(Math.round(n * 2) / 2, 1, 1638)); } });
+    const styleLB = G.listBox([L.N('Regular'), L.N('Italic'), L.N('Bold'), L.N('Bold Italic')], styleName(), { input: true, height: 110, id: 'fd-style', onChange: (v) => { const s = String(v).toLowerCase(); st.b = /bold/.test(s); st.i = /italic/.test(s); changed.add('b'); changed.add('i'); upd(); } });
+    const sizeLB = G.listBox(L.SIZE_LIST.map(String), st.sz != null ? String(L.round(st.sz, 1)) : '', { input: true, height: 110, id: 'fd-size', translate: 'no', onChange: (v) => { const n = parseFloat(v); if (n > 0) set('sz', L.clamp(Math.round(n * 2) / 2, 1, 1638)); } });
     const color = G.color(st.color == null ? 'auto' : st.color, { id: 'fd-color', onChange: (v) => set('color', v === 'auto' ? undefined : v) });
     const ul = ui.select(UNDERLINES, st.u || 'none', (v) => set('u', v === 'none' ? (opts.target ? undefined : 'none') : v), { id: 'fd-ul' });
     const ulColor = G.color(st.uColor || 'auto', { id: 'fd-ulc', onChange: (v) => set('uColor', v === 'auto' ? undefined : v) });
-    const fx = [['strike', 'Stri&kethrough'], ['dstrike', 'Double strikethrou&gh'], ['sup', 'Su&perscript'], ['sub', 'Su&bscript'], ['shadow', 'S&hadow'], ['outline', '&Outline'], ['emboss', '&Emboss'], ['imprint', 'En&grave'], ['smallCaps', 'S&mall caps'], ['caps', '&All caps'], ['hidden', '&Hidden']];
+    const fx = [['strike', 'Stri&kethrough'], ['dstrike', 'Double strikethrou&gh'], ['sup', 'Su&perscript'], ['sub', 'Su&bscript'], ['shadow', 'S&hadow'], ['outline', '&Outline|font effect'], ['emboss', '&Emboss'], ['imprint', 'En&grave'], ['smallCaps', 'S&mall caps'], ['caps', '&All caps'], ['hidden', '&Hidden']];
     const fxEls = {};
     const fxBox = h('div', { class: 'grid3' });
     for (const [k, l] of fx) {
@@ -160,9 +173,9 @@
       fxEls[k] = c;
       fxBox.appendChild(c);
     }
-    const pv = h('div', { class: 'preview-box font-preview' }, h('span', { text: '' }));
+    const pv = h('div', { class: 'preview-box font-preview', translate: 'no' }, h('span', { text: '' }));
     const pvCap = h('div', { class: 'prev-cap', text: '' });
-    const sample = () => { if (opts.target) return opts.sample || 'Sample Text'; const t = E.collapsed() ? '' : O.textRange(...E.range(), ' ').trim().slice(0, 40); return t || (st.font || 'Times New Roman'); };
+    const sample = () => { if (opts.target) return opts.sample || L.t('Sample Text'); const t = E.collapsed() ? '' : O.textRange(...E.range(), ' ').trim().slice(0, 40); return t || (st.font || 'Times New Roman'); };
     function upd() {
       const r = {};
       for (const k in st) if (st[k] !== undefined && st[k] !== false) r[k] = st[k];
@@ -171,7 +184,7 @@
       preview(pv.firstChild, r);
       pv.firstChild.textContent = sample();
       const note = st.font ? L.fontNote(st.font) : '';
-      pvCap.textContent = note ? `${st.font} is not installed on this computer; ${note} is used on screen and in print.` : 'This is a TrueType font. This font will be used on both printer and screen.';
+      pvCap.textContent = note ? L.t('{0} is not installed on this computer; {1} is used on screen and in print.', st.font, note) : L.t('This is a TrueType font. This font will be used on both printer and screen.');
     }
     upd();
     /* character spacing */
@@ -184,7 +197,7 @@
     const kernAt = ui.spin({ value: st.kern || 14, step: 1, dec: 1, unit: ' pt', min: 1, id: 'fd-kern', onChange: (v) => { if (kern.input.checked) set('kern', v); } });
     const anim = ui.select([['', '(none)'], ['blinkBackground', 'Blinking Background'], ['lights', 'Las Vegas Lights'], ['antsBlack', 'Marching Black Ants'], ['antsRed', 'Marching Red Ants'], ['shimmer', 'Shimmer'], ['sparkle', 'Sparkle Text']], st.effect || '', (v) => set('effect', v || undefined), { id: 'fd-anim', size: 7, style: 'width:100%' });
     const tabs = ui.tabs([
-      { label: 'Fo&nt', body: h('div', null, G.row(h('div', { class: 'col', style: 'flex:2;min-width:150px' }, h('label', { for: 'fd-font', html: '<u>F</u>ont:' }), fontLB), h('div', { class: 'col', style: 'flex:1.2;min-width:100px' }, h('label', { for: 'fd-style', html: 'Font st<u>y</u>le:' }), styleLB), h('div', { class: 'col', style: 'flex:0.7;min-width:60px' }, h('label', { for: 'fd-size', html: '<u>S</u>ize:' }), sizeLB)),
+      { label: 'Fo&nt', body: h('div', null, G.row(h('div', { class: 'col', style: 'flex:2;min-width:150px' }, h('label', { for: 'fd-font', html: ui.ampHTML('&Font:') }), fontLB), h('div', { class: 'col', style: 'flex:1.2;min-width:100px' }, h('label', { for: 'fd-style', html: ui.ampHTML('Font st&yle:') }), styleLB), h('div', { class: 'col', style: 'flex:0.7;min-width:60px' }, h('label', { for: 'fd-size', html: ui.ampHTML('&Size:') }), sizeLB)),
         G.row(G.f('Font &color:', color), G.f('&Underline style:', ul), G.f('Underline color:', ulColor)), ui.group('Effects', fxBox)) },
       { label: 'Cha&racter Spacing', body: h('div', { class: 'col' }, G.f('S&cale:', scale, 'wide'), G.row(G.f('&Spacing:', spKind, 'wide'), G.f('&By:', spBy, 'narrow')), G.row(G.f('&Position:', posKind, 'wide'), G.f('B&y:', posBy, 'narrow')), G.row(kern, G.f('Poi&nts and above', kernAt))) },
       { label: 'Te&xt Effects', body: h('div', { class: 'col' }, h('label', { for: 'fd-anim', text: 'Animations:' }), anim, h('div', { class: 'tp-note', text: 'Animated text effects are kept in the file; they display as plain text, as in later versions of Word.' })) },
@@ -204,10 +217,10 @@
       const r = result();
       if (opts.onOK) { opts.onOK(r); return; }
       if (!changed.size) return;
-      E.formatRun(r, 'Font');
+      E.formatRun(r, L.N('Font'));
     }
     async function setDefault() {
-      const ok = await ui.msg(`Do you want to change the default font to ${st.font || 'Times New Roman'}, ${st.sz || 12} pt?\nThis change will affect all new documents based on the NORMAL template.`, { icon: 'question', buttons: ['&Yes', '&No'] });
+      const ok = await ui.msg(L.t('Do you want to change the default font to {0}, {1} pt?\nThis change will affect all new documents based on the NORMAL template.', st.font || 'Times New Roman', st.sz || 12), { icon: 'question', buttons: ['&Yes', '&No'] });
       if (ok !== 0) return;
       const d = doc();
       E.edit('Default Font', () => { D.touchKey(d, 'defaults'); d.defaults.rPr = Object.assign({}, d.defaults.rPr, st.font ? { font: st.font } : {}, st.sz ? { sz: st.sz } : {}); D.touchKey(d, 'styles'); if (d.styles.Normal) { d.styles.Normal.rPr = Object.assign({}, d.styles.Normal.rPr); delete d.styles.Normal.rPr.font; delete d.styles.Normal.rPr.sz; } D.stylesChanged(); return E.sel; });
@@ -225,7 +238,7 @@
     const changed = new Set();
     const set = (k, v) => { st[k] = v; changed.add(k); drawPv(); };
     const align = ui.select([['left', 'Left'], ['center', 'Centered'], ['right', 'Right'], ['both', 'Justified'], ['distribute', 'Distributed']], st.jc, (v) => set('jc', v), { id: 'pd-al' });
-    const lvl = ui.select([['', 'Body text']].concat([1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => [String(n - 1), 'Level ' + n])), st.outline == null || st.outline >= 9 ? '' : String(st.outline), (v) => set('outline', v === '' ? 9 : +v), { id: 'pd-lvl' });
+    const lvl = ui.select([['', 'Body text']].concat([1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => [String(n - 1), L.t('Level {0}', n)])), st.outline == null || st.outline >= 9 ? '' : String(st.outline), (v) => set('outline', v === '' ? 9 : +v), { id: 'pd-lvl' });
     const left = G.len(st.l, { id: 'pd-l', min: -1584, onChange: (v) => set('l', v) });
     const right = G.len(st.r, { id: 'pd-r', min: -1584, onChange: (v) => set('r', v) });
     const special = ui.select([['none', '(none)'], ['first', 'First line'], ['hang', 'Hanging']], st.fl > 0 ? 'first' : st.fl < 0 ? 'hang' : 'none', (v) => { if (v === 'none') { by.set(0); set('fl', 0); } else { const n = Math.abs(by.get() || 36); by.set(n); set('fl', v === 'first' ? n : -n); } }, { id: 'pd-sp' });
@@ -233,10 +246,10 @@
     if (!same((p) => p.ind)) { left.input.value = ''; right.input.value = ''; }
     const before = ui.spin({ value: st.b, step: 6, dec: 1, unit: ' pt', min: 0, max: 1584, id: 'pd-b', onChange: (v) => { set('b', v); st.bAuto = false; changed.add('bAuto'); } });
     const after = ui.spin({ value: st.a, step: 6, dec: 1, unit: ' pt', min: 0, max: 1584, id: 'pd-a', onChange: (v) => { set('a', v); st.aAuto = false; changed.add('aAuto'); } });
-    if (st.bAuto) before.input.value = 'Auto';
-    if (st.aAuto) after.input.value = 'Auto';
+    if (st.bAuto) before.input.value = L.t('Auto');
+    if (st.aAuto) after.input.value = L.t('Auto');
     const lsKind = st.rule === 'exact' ? 'exact' : st.rule === 'atLeast' ? 'atLeast' : st.line === 1 ? 'single' : st.line === 1.5 ? '1.5' : st.line === 2 ? 'double' : 'multiple';
-    const ls = ui.select([['single', 'Single'], ['1.5', '1.5 lines'], ['double', 'Double'], ['atLeast', 'At least'], ['exact', 'Exactly'], ['multiple', 'Multiple']], lsKind, (v) => {
+    const ls = ui.select([['single', 'Single|line spacing'], ['1.5', '1.5 lines'], ['double', 'Double|line spacing'], ['atLeast', 'At least'], ['exact', 'Exactly'], ['multiple', 'Multiple']], lsKind, (v) => {
       if (v === 'single') { st.line = 1; st.rule = 'auto'; at.set(''); }
       else if (v === '1.5') { st.line = 1.5; st.rule = 'auto'; }
       else if (v === 'double') { st.line = 2; st.rule = 'auto'; }
@@ -285,7 +298,7 @@
         if (changed.has('widow')) pPr.widow = st.widow;
       };
       if (opts.onOK) { const t = {}; fn(t); opts.onOK(t); return; }
-      E.formatPara(fn, 'Paragraph');
+      E.formatPara(fn, L.N('Paragraph'));
     }
   };
 
@@ -297,14 +310,14 @@
     let tabs = (pp.tabs || []).filter((t) => t.al !== 'clear' && t.al !== 'num').map((t) => Object.assign({}, t));
     const cleared = [];
     const pos = h('input', { type: 'text', id: 'td-pos', style: 'width:100%' });
-    const list = G.listBox(tabs.map((t) => D.fmtLen(t.pos)), null, { height: 90, onChange: (v) => { const t = tabs.find((x) => D.fmtLen(x.pos) === v); if (t) { pos.value = v; al.set(t.al === 'start' ? 'left' : t.al === 'end' ? 'right' : t.al); lead.set(t.leader || 'none'); } } });
+    const list = G.listBox(tabs.map((t) => D.fmtLen(t.pos)), null, { height: 90, translate: 'no', onChange: (v) => { const t = tabs.find((x) => D.fmtLen(x.pos) === v); if (t) { pos.value = v; al.set(t.al === 'start' ? 'left' : t.al === 'end' ? 'right' : t.al); lead.set(t.leader || 'none'); } } });
     const def = G.len(d.settings.defTab || 36, { id: 'td-def', min: 1 });
     const al = G.radios('td-al', [['left', '&Left'], ['center', '&Center'], ['right', '&Right'], ['decimal', '&Decimal'], ['bar', '&Bar']], 'left');
-    const lead = G.radios('td-lead', [['none', '&1 None'], ['dot', '&2 .......'], ['hyphen', '&3 -------'], ['underscore', '&4 ______']], 'none');
+    const lead = G.radios('td-lead', [['none', L.N('&1 None')], ['dot', '&2 .......'], ['hyphen', '&3 -------'], ['underscore', '&4 ______']], 'none');
     const clearInfo = h('div', { class: 'tp-note' });
-    const refresh = () => { tabs.sort((a, b) => a.pos - b.pos); list.setItems(tabs.map((t) => D.fmtLen(t.pos))); clearInfo.textContent = cleared.length ? 'Tab stops to be cleared: ' + cleared.map((p) => D.fmtLen(p)).join(', ') : ''; };
+    const refresh = () => { tabs.sort((a, b) => a.pos - b.pos); list.setItems(tabs.map((t) => D.fmtLen(t.pos))); clearInfo.textContent = cleared.length ? L.t('Tab stops to be cleared: {0}', cleared.map((p) => D.fmtLen(p)).join(', ')) : ''; };
     const setTab = () => { const p = D.parseLen(pos.value); if (p == null || isNaN(p)) return false; const i = tabs.findIndex((t) => Math.abs(t.pos - p) < 0.5); const t = { pos: L.round(p, 2), al: al.get(), leader: lead.get() === 'none' ? undefined : lead.get() }; if (i >= 0) tabs[i] = t; else tabs.push(t); refresh(); return true; };
-    const body = h('div', null, G.row(h('div', { class: 'col', style: 'flex:1' }, h('label', { for: 'td-pos', html: '<u>T</u>ab stop position:' }), pos, list), h('div', { class: 'col', style: 'flex:1' }, G.f('De&fault tab stops:', def), clearInfo)),
+    const body = h('div', null, G.row(h('div', { class: 'col', style: 'flex:1' }, h('label', { for: 'td-pos', html: ui.ampHTML('&Tab stop position:') }), pos, list), h('div', { class: 'col', style: 'flex:1' }, G.f('De&fault tab stops:', def), clearInfo)),
       G.row(ui.group('Alignment', al), ui.group('Leader', lead)),
       h('div', { class: 'tp-btns' }, ui.button('&Set', () => setTab()), ui.button('Cl&ear', () => { const p = D.parseLen(pos.value); if (p == null) return; tabs = tabs.filter((t) => Math.abs(t.pos - p) > 0.5); cleared.push(p); refresh(); }), ui.button('Clear &All', () => { for (const t of tabs) cleared.push(t.pos); tabs = []; for (const t of D.pProps(d, E.sel ? E.sel.f.p : D.firstPara(d.main.blocks)).tabs || []) cleared.push(t.pos); refresh(); })));
     ui.dialog({
@@ -320,15 +333,15 @@
           pPr.tabs = out.length ? out.sort((a, b) => a.pos - b.pos) : undefined;
         };
         if (opts.onOK) { const t = {}; fn(t, null); opts.onOK(t); return; }
-        E.formatPara(fn, 'Tabs');
+        E.formatPara(fn, L.N('Tabs'));
       } }, { label: 'Cancel' }],
     });
   };
 
   /* ================= Borders and Shading ================= */
-  const BORDER_STYLES = [['single', 'Single'], ['dotted', 'Dotted'], ['dashSmallGap', 'Small dash'], ['dashed', 'Dashed'], ['dotDash', 'Dot dash'], ['dotDotDash', 'Dot dot dash'], ['double', 'Double'], ['triple', 'Triple'], ['thinThickSmallGap', 'Thin-thick'], ['thickThinSmallGap', 'Thick-thin'], ['thinThickThinSmallGap', 'Thin-thick-thin'], ['wave', 'Wave'], ['doubleWave', 'Double wave'], ['dashDotStroked', 'Dash dot stroked'], ['threeDEmboss', '3-D emboss'], ['threeDEngrave', '3-D engrave'], ['outset', 'Outset'], ['inset', 'Inset']];
+  const BORDER_STYLES = [['single', L.N('Single')], ['dotted', L.N('Dotted')], ['dashSmallGap', L.N('Small dash')], ['dashed', L.N('Dashed')], ['dotDash', L.N('Dot dash')], ['dotDotDash', L.N('Dot dot dash')], ['double', L.N('Double')], ['triple', L.N('Triple')], ['thinThickSmallGap', L.N('Thin-thick')], ['thickThinSmallGap', L.N('Thick-thin')], ['thinThickThinSmallGap', L.N('Thin-thick-thin')], ['wave', L.N('Wave')], ['doubleWave', L.N('Double wave')], ['dashDotStroked', L.N('Dash dot stroked')], ['threeDEmboss', L.N('3-D emboss')], ['threeDEngrave', L.N('3-D engrave')], ['outset', L.N('Outset')], ['inset', L.N('Inset')]];
   const WIDTHS = [0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6];
-  const SHD_PATTERNS = [['clear', 'Clear'], ['solid', 'Solid (100%)'], ['pct5', '5%'], ['pct10', '10%'], ['pct12', '12.5%'], ['pct15', '15%'], ['pct20', '20%'], ['pct25', '25%'], ['pct30', '30%'], ['pct35', '35%'], ['pct37', '37.5%'], ['pct40', '40%'], ['pct45', '45%'], ['pct50', '50%'], ['pct55', '55%'], ['pct60', '60%'], ['pct62', '62.5%'], ['pct65', '65%'], ['pct70', '70%'], ['pct75', '75%'], ['pct80', '80%'], ['pct85', '85%'], ['pct87', '87.5%'], ['pct90', '90%'], ['pct95', '95%'], ['horzStripe', 'Dk Horizontal'], ['vertStripe', 'Dk Vertical'], ['reverseDiagStripe', 'Dk Dwn Diagonal'], ['diagStripe', 'Dk Up Diagonal'], ['horzCross', 'Dk Grid'], ['diagCross', 'Dk Trellis'], ['thinHorzStripe', 'Lt Horizontal'], ['thinVertStripe', 'Lt Vertical'], ['thinReverseDiagStripe', 'Lt Dwn Diagonal'], ['thinDiagStripe', 'Lt Up Diagonal'], ['thinHorzCross', 'Lt Grid'], ['thinDiagCross', 'Lt Trellis']];
+  const SHD_PATTERNS = [['clear', L.N('Clear')], ['solid', L.N('Solid (100%)')], ['pct5', '5%'], ['pct10', '10%'], ['pct12', '12.5%'], ['pct15', '15%'], ['pct20', '20%'], ['pct25', '25%'], ['pct30', '30%'], ['pct35', '35%'], ['pct37', '37.5%'], ['pct40', '40%'], ['pct45', '45%'], ['pct50', '50%'], ['pct55', '55%'], ['pct60', '60%'], ['pct62', '62.5%'], ['pct65', '65%'], ['pct70', '70%'], ['pct75', '75%'], ['pct80', '80%'], ['pct85', '85%'], ['pct87', '87.5%'], ['pct90', '90%'], ['pct95', '95%'], ['horzStripe', L.N('Dk Horizontal')], ['vertStripe', L.N('Dk Vertical')], ['reverseDiagStripe', L.N('Dk Dwn Diagonal')], ['diagStripe', L.N('Dk Up Diagonal')], ['horzCross', L.N('Dk Grid')], ['diagCross', L.N('Dk Trellis')], ['thinHorzStripe', L.N('Lt Horizontal')], ['thinVertStripe', L.N('Lt Vertical')], ['thinReverseDiagStripe', L.N('Lt Dwn Diagonal')], ['thinDiagStripe', L.N('Lt Up Diagonal')], ['thinHorzCross', L.N('Lt Grid')], ['thinDiagCross', L.N('Lt Trellis')]];
   G.BORDER_STYLES = BORDER_STYLES;
   function borderPanel(kind, init, o) {
     /* kind: 'para' | 'cell' | 'table' | 'page' */
@@ -339,7 +352,7 @@
     let pen = { val: first.val, sz: first.sz || 0.5, color: first.color || 'auto' };
     const styleBox = G.listBox(BORDER_STYLES.map(([v, l]) => ({ value: v, label: l })), pen.val, { height: 120, onChange: (v) => { pen.val = v; } });
     const color = G.color(pen.color, { id: nid('bdc'), onChange: (v) => { pen.color = v || 'auto'; } });
-    const width = ui.select(WIDTHS.map((w) => [w, w + ' pt']), pen.sz, (v) => { pen.sz = +v; }, { id: nid('bdw') });
+    const width = ui.select(WIDTHS.map((w) => [w, w + ' pt']), pen.sz, (v) => { pen.sz = +v; }, { id: nid('bdw'), translate: 'no' });
     const pvBox = h('div', { class: 'bd-preview' });
     const inner = h('div', { class: 'bd-box' });
     const text = h('div', { class: 'bd-text' }, h('i'), h('i'), h('i'), h('i'), h('i'));
@@ -347,8 +360,9 @@
     const sideBtn = {};
     const pos = { top: 'left:2px;top:30px', bottom: 'left:2px;bottom:30px', left: 'left:30px;bottom:2px', right: 'right:30px;bottom:2px', between: 'left:2px;top:64px', insideH: 'left:2px;top:64px', insideV: 'left:64px;bottom:2px' };
     const ico = { top: 'bordersTop', bottom: 'bordersBottom', left: 'bordersLeft', right: 'bordersRight', between: 'bordersInH', insideH: 'bordersInH', insideV: 'bordersInV' };
+    const tip = { top: L.N('Top Border'), bottom: L.N('Bottom Border'), left: L.N('Left Border'), right: L.N('Right Border'), between: L.N('Inside Horizontal Border'), insideH: L.N('Inside Horizontal Border'), insideV: L.N('Inside Vertical Border') };
     for (const s of sides) {
-      const b = h('button', { type: 'button', class: 'bd-btn', style: pos[s], 'aria-label': s, 'data-tip': s, html: L.icons.get(ico[s]) });
+      const b = h('button', { type: 'button', class: 'bd-btn', style: pos[s], 'aria-label': tip[s], 'data-tip': tip[s], html: L.icons.get(ico[s]) });
       b.addEventListener('click', () => { if (bd[s]) delete bd[s]; else bd[s] = Object.assign({}, pen, { space: s === 'left' || s === 'right' ? 4 : 1 }); setting.set('custom'); draw(); });
       sideBtn[s] = b;
       pvBox.appendChild(b);
@@ -376,7 +390,7 @@
       draw();
     });
     draw();
-    const el = G.row(ui.group('Setting:', setting), h('div', { class: 'col', style: 'flex:1;min-width:140px' }, h('label', { text: 'St&yle:' }), styleBox, G.f('&Color:', color), G.f('&Width:', width)), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), h('div', { class: 'tp-note', text: 'Click on diagram or use buttons to apply borders' }), pvBox));
+    const el = G.row(ui.group('Setting:', setting), h('div', { class: 'col', style: 'flex:1;min-width:140px' }, h('label', { html: ui.ampHTML('St&yle:') }), styleBox, G.f('&Color:', color), G.f('&Width:', width)), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), h('div', { class: 'tp-note', text: 'Click on diagram or use buttons to apply borders' }), pvBox));
     el.get = () => { const out = {}; for (const s of sides) out[s] = bd[s] ? Object.assign({}, bd[s], o.shadow ? { shadow: true } : {}) : null; return out; };
     return el;
   }
@@ -399,7 +413,7 @@
     let fill = shdCur.fill && shdCur.fill !== 'auto' ? shdCur.fill.toUpperCase() : null;
     const fillGrid = h('div', { class: 'cp-grid', style: 'grid-template-columns:repeat(8,18px)' });
     const fillName = h('div', { class: 'tp-note' });
-    const showFill = () => { fillName.textContent = fill ? ui.colorName('#' + fill) : 'No Fill'; L.$$('.cp-sw', fillGrid).forEach((b) => b.classList.toggle('on', b.dataset.c === fill)); pvShd.style.background = fill ? '#' + fill : '#fff'; };
+    const showFill = () => { fillName.textContent = L.t(fill ? ui.colorName('#' + fill) : 'No Fill'); L.$$('.cp-sw', fillGrid).forEach((b) => b.classList.toggle('on', b.dataset.c === fill)); pvShd.style.background = fill ? '#' + fill : '#fff'; };
     for (const c of L.color.STANDARD) { const b = h('button', { class: 'cp-sw', type: 'button', style: `background:${c}`, 'data-c': c.replace('#', '').toUpperCase(), 'data-tip': ui.colorName(c), 'aria-label': ui.colorName(c) }); b.addEventListener('click', () => { fill = b.dataset.c; showFill(); }); fillGrid.appendChild(b); }
     const pvShd = h('div', { class: 'preview-box', style: 'width:150px;height:90px' });
     const patt = ui.select(SHD_PATTERNS, shdCur.val && shdCur.val !== 'nil' ? shdCur.val : 'clear', null, { id: 'bd-patt' });
@@ -472,10 +486,10 @@
       g.appendChild(none);
       const items = kind === 'bullet' ? BULLET_GALLERY : kind === 'number' ? NUM_GALLERY : D.OUTLINE_PRESETS.slice(0, 7);
       items.forEach((it) => {
-        const b = h('button', { type: 'button' });
-        if (kind === 'bullet') for (let i = 0; i < 3; i++) b.appendChild(h('div', null, h('span', { text: it[0], style: 'font-size:16px;width:12px' }), h('i')));
-        else if (kind === 'number') for (let i = 1; i <= 3; i++) b.appendChild(h('div', null, h('span', { text: it[1].replace('%1', D.fmtNum(i, it[0])) }), h('i')));
-        else { const lv = (k) => { const [fmt, t] = it.lv(k); return t.replace(/%(\d)/g, (m, x) => D.fmtNum(1, +x - 1 === k ? fmt : it.lv(+x - 1)[0])); }; for (let k = 0; k < 3; k++) b.appendChild(h('div', { class: 'l' + k }, h('span', { text: lv(k) }), h('i'))); }
+        const b = h('button', { type: 'button', translate: 'no' });
+        if (kind === 'bullet') for (let i = 0; i < 3; i++) b.appendChild(h('div', null, raw('span', { style: 'font-size:16px;width:12px' }, it[0]), h('i')));
+        else if (kind === 'number') for (let i = 1; i <= 3; i++) b.appendChild(h('div', null, raw('span', null, it[1].replace('%1', D.fmtNum(i, it[0]))), h('i')));
+        else { const lv = (k) => { const [fmt, t] = it.lv(k); return t.replace(/%(\d)/g, (m, x) => D.fmtNum(1, +x - 1 === k ? fmt : it.lv(+x - 1)[0])); }; for (let k = 0; k < 3; k++) b.appendChild(h('div', { class: 'l' + k }, raw('span', null, lv(k)), h('i'))); }
         b.addEventListener('click', () => pick(g, b, { kind, it }));
         b.addEventListener('dblclick', () => okBtn.click());
         g.appendChild(b);
@@ -532,9 +546,11 @@
     const tabAfter = G.len(36, { id: 'cl-tab', min: 0 });
     const indentAt = G.len(36, { id: 'cl-ind', min: 0, onChange: () => drawPv() });
     const follow = ui.select([['tab', 'Tab character'], ['space', 'Space'], ['nothing', 'Nothing']], abs.levels[cur].suff || 'tab', null, { id: 'cl-follow' });
-    const linkStyle = ui.select([['', '(no style)']].concat([1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => ['Heading' + i, 'Heading ' + i])), abs.levels[cur].pStyle || '', null, { id: 'cl-link' });
+    const linkStyle = ui.select([['', '(no style)']], '', null, { id: 'cl-link' });
+    for (let i = 1; i <= 9; i++) linkStyle.appendChild(raw('option', { value: 'Heading' + i }, 'Heading ' + i));   // style names, as the document has them
+    linkStyle.value = abs.levels[cur].pStyle || '';
     const legal = ui.check('&Legal style numbering', !!abs.levels[cur].isLgl, null);
-    const pv = h('div', { class: 'para-preview', style: 'height:150px;width:180px;font:9px Arial,Arimo,sans-serif;gap:5px' });
+    const pv = h('div', { class: 'para-preview', style: 'height:150px;width:180px;font:9px Arial,Arimo,sans-serif;gap:5px', translate: 'no' });
     let bullet = { ch: abs.levels[cur].glyph || '•', font: (abs.levels[cur].rPr && abs.levels[cur].rPr.font) || 'Symbol', raw: abs.levels[cur].text };
     let fontR = Object.assign({}, abs.levels[cur].rPr || {});
     bulletCh.addEventListener('click', () => G.symbol({ pick: (ch, font) => { bullet = { ch, font: font || 'Symbol', raw: ch }; bulletCh.textContent = ch; drawPv(); } }));
@@ -586,15 +602,15 @@
         const lv = abs.levels[k];
         const lbl = lv.fmt === 'bullet' ? lv.glyph || '•' : (lv.text || '').replace(/%(\d)/g, (m, x) => { const j = +x - 1; return D.fmtNum((counters[j] || 1) + (abs.levels[j].start || 1) - 1, lv.isLgl && j < k ? 'decimal' : abs.levels[j].fmt); });
         const ind = lv.ind || {};
-        pv.appendChild(h('div', { style: `display:flex;gap:4px;align-items:center;margin-left:${((ind.l || 0) + (ind.fl || 0)) * 0.3}px` }, h('span', { text: lbl, style: 'flex:none;min-width:10px' }), h('i', { style: 'flex:1;height:3px;background:#999' })));
+        pv.appendChild(h('div', { style: `display:flex;gap:4px;align-items:center;margin-left:${((ind.l || 0) + (ind.fl || 0)) * 0.3}px` }, raw('span', { style: 'flex:none;min-width:10px' }, lbl), h('i', { style: 'flex:1;height:3px;background:#999' })));
       }
     }
     const bulletRow = G.row(G.f('Bullet character:', bulletCh), ui.button('&Font...', () => G.font({ target: fontR, sample: bullet.ch, onOK: (r) => { Object.assign(fontR, r); drawPv(); } }), { class: 'btn small' }));
     const numRow = h('div', { class: 'col' }, G.row(G.f('Number f&ormat:', numText), ui.button('&Font...', () => G.font({ target: fontR, sample: '1.', onOK: (r) => { Object.assign(fontR, r); drawPv(); } }), { class: 'btn small' })), G.row(G.f('&Number style:', numStyle), G.f('&Start at:', start)), multi ? G.row(G.f('Lin&k level to style:', linkStyle), legal) : null);
     load();
     ui.dialog({
-      title: isBullet ? 'Customize Bulleted List' : multi ? 'Customize Outline Numbered List' : 'Customize Numbered List', width: 520,
-      body: G.row(multi ? h('div', { class: 'col', style: 'width:60px' }, h('label', { text: 'Le&vel' }), lvList) : null, h('div', { class: 'col', style: 'flex:1;min-width:250px' }, bulletRow, numRow, ui.group('Number position', G.row(G.f('Alignment:', align), G.f('&Aligned at:', alignedAt))), ui.group('Text position', G.row(G.f('Ta&b space after:', tabAfter), G.f('&Indent at:', indentAt)), G.f('Follow number with:', follow))), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv)),
+      title: L.t(isBullet ? 'Customize Bulleted List' : multi ? 'Customize Outline Numbered List' : 'Customize Numbered List'), width: 520,
+      body: G.row(multi ? h('div', { class: 'col', style: 'width:60px' }, h('label', { html: ui.ampHTML('Le&vel') }), lvList) : null, h('div', { class: 'col', style: 'flex:1;min-width:250px' }, bulletRow, numRow, ui.group('Number position', G.row(G.f('Alignment:', align), G.f('&Aligned at:', alignedAt))), ui.group('Text position', G.row(G.f('Ta&b space after:', tabAfter), G.f('&Indent at:', indentAt)), G.f('Follow number with:', follow))), h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: 'Preview' }), pv)),
       buttons: [{ label: 'OK', primary: true, onClick: () => { save(); L.lists.apply(abs, {}); } }, { label: 'Cancel' }],
     });
   };
@@ -614,7 +630,7 @@
     const presetBox = h('div', { class: 'preset-grid' });
     const presets = [['one', 'O&ne', 1, true], ['two', 'T&wo', 2, true], ['three', '&Three', 3, true], ['left', '&Left', 2, false, [0.35, 0.65]], ['right', '&Right', 2, false, [0.65, 0.35]]];
     for (const [k, l, cn, e, fr] of presets) {
-      const b = h('button', { type: 'button' }, h('div', { class: 'colsample', style: 'width:50px;height:40px;padding:3px;gap:3px' }), h('span', { html: l.replace(/&(.)/, '<u>$1</u>') }));
+      const b = h('button', { type: 'button' }, h('div', { class: 'colsample', style: 'width:50px;height:40px;padding:3px;gap:3px' }), h('span', { html: ui.ampHTML(l) }));
       const smp = b.firstChild;
       const fracs = fr || Array.from({ length: cn }, () => 1 / cn);
       for (const f of fracs) { const c = h('div', { style: `flex:${f}` }); for (let i = 0; i < 4; i++) c.appendChild(h('i')); smp.appendChild(c); }
@@ -655,7 +671,7 @@
         const out = { n: nn, space: widths[0] ? widths[0].spc.get() || 36 : 36, eq: eq.input.checked, sep: sep.input.checked, w: [] };
         if (!out.eq) out.w = widths.map((x, i) => ({ w: L.round(x.w.get(), 2), space: i < nn - 1 ? L.round(x.spc.get() || 0, 2) : 0 }));
         if (nn === 1) { out.w = []; out.eq = true; }
-        E.edit('Columns', () => {
+        E.edit(L.N('Columns'), () => {
           if (applyTo.value === 'all') { for (const sc of D.sections(d)) { const hd = sc.endPara || d; D.touchKey(hd, 'sect'); (hd === d ? d.sect : hd.sect).cols = L.clone(out); } }
           else if (applyTo.value === 'forward') {
             /* continuous section break at the caret's paragraph start */
@@ -680,6 +696,8 @@
   };
 
   /* ================= Page Setup ================= */
+  /* the names of the paper sizes (D.PAPER) as the Paper size box shows them */
+  const PAPER_NAMES = { Letter: L.N('Letter'), Legal: L.N('Legal'), Executive: L.N('Executive'), 'B5 (JIS)': L.N('B5 (JIS)'), Tabloid: L.N('Tabloid'), Statement: L.N('Statement'), 'Envelope #10': L.N('Envelope #10'), 'Envelope DL': L.N('Envelope DL'), 'Envelope C5': L.N('Envelope C5'), 'Envelope Monarch': L.N('Envelope Monarch') };
   G.pageSetup = function (tab) {
     const d = doc();
     const s = A().curSect();
@@ -690,10 +708,10 @@
     let orient = sect.orient || (sect.pgW > sect.pgH ? 'landscape' : 'portrait');
     const orBtns = h('div', { class: 'preset-grid' });
     const orB = (k, l) => { const b = h('button', { type: 'button', class: orient === k ? 'on' : '' }, h('div', { class: 'ps-page', style: k === 'landscape' ? 'width:60px;height:46px' : 'width:46px;height:60px' }), h('span', { html: l })); b.addEventListener('click', () => { if (orient !== k) { orient = k; const w = pw.get(), hh = ph.get(); pw.set(Math.min(w, hh) === w && k === 'landscape' ? hh : w); ph.set(Math.min(w, hh) === w && k === 'landscape' ? w : hh); if (k === 'portrait' && w > hh) { pw.set(hh); ph.set(w); } } L.$$('button', orBtns).forEach((x) => x.classList.toggle('on', x === b)); drawPv(); }); return b; };
-    orBtns.append(orB('portrait', 'P<u>o</u>rtrait'), orB('landscape', 'Land<u>s</u>cape'));
-    const multi = ui.select([['normal', 'Normal'], ['mirror', 'Mirror margins'], ['twoOnOne', '2 pages per sheet'], ['bookFold', 'Book fold']], d.settings.mirror ? 'mirror' : d.settings.bookFold ? 'bookFold' : 'normal', () => { const m = multi.value === 'mirror' || multi.value === 'bookFold'; L.$('label[for="ps-l"]').textContent = m ? 'Inside:' : 'Left:'; L.$('label[for="ps-r"]').textContent = m ? 'Outside:' : 'Right:'; drawPv(); }, { id: 'ps-multi' });
+    orBtns.append(orB('portrait', ui.ampHTML('P&ortrait')), orB('landscape', ui.ampHTML('Land&scape')));
+    const multi = ui.select([['normal', 'Normal'], ['mirror', 'Mirror margins'], ['twoOnOne', '2 pages per sheet'], ['bookFold', 'Book fold']], d.settings.mirror ? 'mirror' : d.settings.bookFold ? 'bookFold' : 'normal', () => { const m = multi.value === 'mirror' || multi.value === 'bookFold'; L.$('label[for="ps-l"]').innerHTML = ui.ampHTML(m ? 'Inside:' : '&Left:'); L.$('label[for="ps-r"]').innerHTML = ui.ampHTML(m ? 'Outside:' : '&Right:'); drawPv(); }, { id: 'ps-multi' });
     const paperName = D.paperName(sect);
-    const paper = ui.select(D.PAPER.map((p) => [p[0], p[0]]).concat([['Custom size', 'Custom size']]), paperName, (v) => { const p = D.PAPER.find((x) => x[0] === v); if (!p) return; const land = orient === 'landscape'; pw.set(land ? p[2] : p[1]); ph.set(land ? p[1] : p[2]); drawPv(); }, { id: 'ps-paper' });
+    const paper = ui.select(D.PAPER.map((p) => [p[0], PAPER_NAMES[p[0]] || p[0]]).concat([['Custom size', 'Custom size']]), paperName, (v) => { const p = D.PAPER.find((x) => x[0] === v); if (!p) return; const land = orient === 'landscape'; pw.set(land ? p[2] : p[1]); ph.set(land ? p[1] : p[2]); drawPv(); }, { id: 'ps-paper' });
     const pw = G.len(sect.pgW, { id: 'ps-w', min: 72, max: 1584, onChange: () => { paper.value = D.paperName({ pgW: pw.get(), pgH: ph.get() }); drawPv(); } });
     const ph = G.len(sect.pgH, { id: 'ps-h', min: 72, max: 1584, onChange: () => { paper.value = D.paperName({ pgW: pw.get(), pgH: ph.get() }); drawPv(); } });
     const start = ui.select([['continuous', 'Continuous'], ['nextColumn', 'New column'], ['nextPage', 'New page'], ['evenPage', 'Even page'], ['oddPage', 'Odd page']], sect.type || 'nextPage', null, { id: 'ps-start' });
@@ -724,7 +742,7 @@
     function lineNumbers() {
       const on = ui.check('Add &line numbering', !!lnNum, null);
       const startAt = G.num(lnNum ? lnNum.start || 1 : 1, { min: 1, id: 'ln-start' });
-      const from = G.len(lnNum && lnNum.distance != null ? lnNum.distance : null, { id: 'ln-from', autoLabel: 'Auto', min: 0 });
+      const from = G.len(lnNum && lnNum.distance != null ? lnNum.distance : null, { id: 'ln-from', autoLabel: L.N('Auto'), min: 0 });
       const countBy = G.num(lnNum ? lnNum.countBy || 1 : 1, { min: 1, max: 100, id: 'ln-by' });
       const restart = G.radios('ln-r', [['newPage', 'Restart each &page'], ['newSection', 'Restart each &section'], ['continuous', '&Continuous']], lnNum ? lnNum.restart || 'newPage' : 'newPage');
       ui.dialog({ title: 'Line Numbers', width: 300, body: h('div', { class: 'col' }, on, G.f('Start &at:', startAt), G.f('From &text:', from), G.f('Count &by:', countBy), ui.group('Numbering:', restart)), buttons: [{ label: 'OK', primary: true, onClick: () => { lnNum = on.input.checked ? { start: startAt.get(), distance: from.get(), countBy: countBy.get(), restart: restart.get() } : null; } }, { label: 'Cancel' }] });
@@ -782,8 +800,8 @@
     const box = h('div', { class: 'preset-grid' });
     const mk = (k, l, svg) => { const b = h('button', { type: 'button', class: pos === k ? 'on' : '' }, h('span', { html: svg }), h('span', { html: l })); b.addEventListener('click', () => { pos = k; L.$$('button', box).forEach((x) => x.classList.toggle('on', x === b)); }); return b; };
     const lines = '<path d="M6 8h40M6 14h40M6 20h40M6 26h40M6 32h40" stroke="#999"/>';
-    box.append(mk('none', '<u>N</u>one', `<svg width="52" height="40">${lines}<text x="6" y="12" font-size="10" font-family="Times">W</text></svg>`), mk('drop', '<u>D</u>ropped', `<svg width="52" height="40"><path d="M22 8h24M22 14h24M22 20h24M6 26h40M6 32h40" stroke="#999"/><text x="4" y="22" font-size="22" font-family="Times" font-weight="bold">W</text></svg>`), mk('margin', 'In <u>m</u>argin', `<svg width="52" height="40"><path d="M14 8h34M14 14h34M14 20h34M14 26h34M14 32h34" stroke="#999"/><text x="0" y="22" font-size="20" font-family="Times" font-weight="bold">W</text></svg>`));
-    const font = ui.select(FONTS(), (D.rProps(doc(), p, p.runs.find((x) => x.t === 'text')) || {}).font || 'Times New Roman', null, { id: 'dc-font' });
+    box.append(mk('none', ui.ampHTML('&None'), `<svg width="52" height="40">${lines}<text x="6" y="12" font-size="10" font-family="Times">W</text></svg>`), mk('drop', ui.ampHTML('&Dropped'), `<svg width="52" height="40"><path d="M22 8h24M22 14h24M22 20h24M6 26h40M6 32h40" stroke="#999"/><text x="4" y="22" font-size="22" font-family="Times" font-weight="bold">W</text></svg>`), mk('margin', ui.ampHTML('In &margin'), `<svg width="52" height="40"><path d="M14 8h34M14 14h34M14 20h34M14 26h34M14 32h34" stroke="#999"/><text x="0" y="22" font-size="20" font-family="Times" font-weight="bold">W</text></svg>`));
+    const font = ui.select(FONTS(), (D.rProps(doc(), p, p.runs.find((x) => x.t === 'text')) || {}).font || 'Times New Roman', null, { id: 'dc-font', translate: 'no' });
     const nl = G.num(dc.lines || 3, { min: 1, max: 10, id: 'dc-lines' });
     const dist = G.len(dc.dist || 0, { min: 0, id: 'dc-dist' });
     ui.dialog({
@@ -821,7 +839,7 @@
 
   /* ================= Change Case ================= */
   G.changeCase = function () {
-    const r = G.radios('cc', [['sentence', '&Sentence case.'], ['lower', '&lowercase'], ['upper', '&UPPERCASE'], ['title', '&Title Case'], ['toggle', 't&OGGLE cASE']], 'sentence');
+    const r = G.radios('cc', [['sentence', '&Sentence case.'], ['lower', L.N('&lowercase')], ['upper', L.N('&UPPERCASE')], ['title', '&Title Case'], ['toggle', L.N('t&OGGLE cASE')]], 'sentence');
     ui.dialog({ title: 'Change Case', width: 230, body: r, buttons: [{ label: 'OK', primary: true, onClick: () => {
       if (!E.sel) return;
       let [a, b] = E.range();
@@ -837,12 +855,12 @@
     let media = wm.type === 'picture' ? wm.media : null;
     const kind = G.radios('wm-k', [['none', 'N&o watermark'], ['picture', 'P&icture watermark'], ['text', 'Te&xt watermark']], wm.type || 'none');
     const pic = ui.button('Select &Picture...', async () => { const f = (await L.pickFiles('image/*'))[0]; if (!f) return; media = L.media.add(new Blob([await L.readAsArrayBuffer(f)], { type: f.type }), f.name); picName.textContent = f.name; kind.set('picture'); });
-    const picName = h('span', { class: 'tp-note', text: media ? 'Picture selected' : '' });
+    const picName = h('span', { class: 'tp-note', text: media ? L.t('Picture selected') : '' });
     const scale = ui.select([['auto', 'Auto'], [5, '500%'], [2, '200%'], [1.5, '150%'], [1, '100%'], [0.5, '50%']], wm.scale || 'auto', null, { id: 'wm-scale' });
     const washout = ui.check('&Washout', wm.washout !== false, null);
     const text = h('input', { type: 'text', id: 'wm-text', list: 'wm-list', value: wm.text || 'ASAP', style: 'width:200px' });
     const dl = h('datalist', { id: 'wm-list' }, ...['ASAP', 'ATTORNEY-CLIENT PRIVILEGE', 'CONFIDENTIAL', 'COPY', 'DO NOT COPY', 'DRAFT', 'ORIGINAL', 'PERSONAL', 'SAMPLE', 'TOP SECRET', 'URGENT'].map((x) => h('option', { value: x })));
-    const font = ui.select(FONTS(), wm.font || 'Times New Roman', null, { id: 'wm-font' });
+    const font = ui.select(FONTS(), wm.font || 'Times New Roman', null, { id: 'wm-font', translate: 'no' });
     const size = ui.select([['auto', 'Auto'], 36, 40, 44, 48, 54, 60, 66, 72, 80, 90, 96, 105, 120, 144].map((x) => (Array.isArray(x) ? x : [x, String(x)])), wm.size || 'auto', null, { id: 'wm-size' });
     const color = G.color(wm.color || 'C0C0C0', { id: 'wm-col', automatic: false });
     const semi = ui.check('&Semitransparent', wm.semi !== false, null);
@@ -866,23 +884,23 @@
 
   /* ================= Theme ================= */
   const THEMES = [
-    ['(No Theme)', null],
-    ['Blends', { body: 'Trebuchet MS', head: 'Trebuchet MS', hc: '003366', bg: 'EAF1DD' }], ['Blueprint', { body: 'Verdana', head: 'Verdana', hc: '1F497D', bg: 'DBE5F1' }], ['Capsules', { body: 'Arial', head: 'Arial Black', hc: '993300', bg: 'FFF8E1' }],
-    ['Compass', { body: 'Book Antiqua', head: 'Book Antiqua', hc: '663300', bg: 'F5F0E1' }], ['Edge', { body: 'Tahoma', head: 'Tahoma', hc: '333399', bg: null }], ['Expedition', { body: 'Book Antiqua', head: 'Book Antiqua', hc: '4F6228', bg: 'F2F2E6' }],
-    ['Industrial', { body: 'Verdana', head: 'Arial Black', hc: '595959', bg: 'F2F2F2' }], ['Journal', { body: 'Georgia', head: 'Georgia', hc: '7F0000', bg: 'FDFAF2' }], ['Network', { body: 'Verdana', head: 'Verdana', hc: '00557F', bg: null }],
-    ['Rice Paper', { body: 'Garamond', head: 'Garamond', hc: '5C4033', bg: 'FBF6E9' }], ['Sumi Painting', { body: 'Palatino Linotype', head: 'Palatino Linotype', hc: '262626', bg: 'FAFAF5' }], ['Willow', { body: 'Georgia', head: 'Trebuchet MS', hc: '336600', bg: 'F3F8EC' }],
+    [L.N('(No Theme)'), null],
+    [L.N('Blends'), { body: 'Trebuchet MS', head: 'Trebuchet MS', hc: '003366', bg: 'EAF1DD' }], [L.N('Blueprint'), { body: 'Verdana', head: 'Verdana', hc: '1F497D', bg: 'DBE5F1' }], [L.N('Capsules'), { body: 'Arial', head: 'Arial Black', hc: '993300', bg: 'FFF8E1' }],
+    [L.N('Compass'), { body: 'Book Antiqua', head: 'Book Antiqua', hc: '663300', bg: 'F5F0E1' }], [L.N('Edge'), { body: 'Tahoma', head: 'Tahoma', hc: '333399', bg: null }], [L.N('Expedition'), { body: 'Book Antiqua', head: 'Book Antiqua', hc: '4F6228', bg: 'F2F2E6' }],
+    [L.N('Industrial'), { body: 'Verdana', head: 'Arial Black', hc: '595959', bg: 'F2F2F2' }], [L.N('Journal'), { body: 'Georgia', head: 'Georgia', hc: '7F0000', bg: 'FDFAF2' }], [L.N('Network'), { body: 'Verdana', head: 'Verdana', hc: '00557F', bg: null }],
+    [L.N('Rice Paper'), { body: 'Garamond', head: 'Garamond', hc: '5C4033', bg: 'FBF6E9' }], [L.N('Sumi Painting'), { body: 'Palatino Linotype', head: 'Palatino Linotype', hc: '262626', bg: 'FAFAF5' }], [L.N('Willow'), { body: 'Georgia', head: 'Trebuchet MS', hc: '336600', bg: 'F3F8EC' }],
   ];
   G.theme = function () {
     let pick = null;
     const pv = h('div', { class: 'preview-box', style: 'width:260px;height:180px;flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:12px;gap:6px' });
-    const draw = (t) => { L.clear(pv); pv.style.background = t && t.bg ? '#' + t.bg : '#fff'; pv.append(h('div', { text: 'Heading 1 style', style: `font:bold 18px ${L.fontStack(t ? t.head : 'Arial')};color:#${t ? t.hc : '000'}` }), h('div', { text: 'Heading 2 style', style: `font:bold 14px ${L.fontStack(t ? t.head : 'Arial')};color:#${t ? t.hc : '000'}` }), h('div', { text: 'Regular Text Sample — the quick brown fox jumps over the lazy dog.', style: `font:12px ${L.fontStack(t ? t.body : 'Times New Roman')}` }), h('div', { html: '<u style="color:#00f">Hyperlink</u>', style: 'font-size:12px' })); };
+    const draw = (t) => { L.clear(pv); pv.style.background = t && t.bg ? '#' + t.bg : '#fff'; pv.append(h('div', { text: 'Heading 1 style', style: `font:bold 18px ${L.fontStack(t ? t.head : 'Arial')};color:#${t ? t.hc : '000'}` }), h('div', { text: 'Heading 2 style', style: `font:bold 14px ${L.fontStack(t ? t.head : 'Arial')};color:#${t ? t.hc : '000'}` }), h('div', { text: 'Regular Text Sample — the quick brown fox jumps over the lazy dog.', style: `font:12px ${L.fontStack(t ? t.body : 'Times New Roman')}` }), h('div', { style: 'font-size:12px' }, h('u', { style: 'color:#00f', text: 'Hyperlink' }))); };
     const lb = G.listBox(THEMES.map((x) => x[0]), '(No Theme)', { height: 200, onChange: (v) => { pick = THEMES.find((x) => x[0] === v); draw(pick && pick[1]); } });
     draw(null);
     ui.dialog({ title: 'Theme', width: 470, body: G.row(h('div', { class: 'col', style: 'width:150px' }, h('label', { text: 'Choose a Theme:' }), lb), pv), buttons: [{ label: 'OK', primary: true, onClick: () => {
       if (!pick) return;
       const t = pick[1];
       const d = doc();
-      E.edit('Theme', () => {
+      E.edit(L.N('Theme'), () => {
         D.touchKey(d, 'styles'); D.touchKey(d, 'bg');
         const base = D.builtinStyles();
         for (let i = 1; i <= 3; i++) { const id = 'Heading' + i; d.styles[id] = d.styles[id] || base[id]; d.styles[id].rPr = Object.assign({}, d.styles[id].rPr, { font: t ? t.head : base[id].rPr.font, color: t ? t.hc : undefined }); }
@@ -914,20 +932,20 @@
     if (!isNew && st.builtin) name.disabled = true;
     const type = ui.select([['paragraph', 'Paragraph'], ['character', 'Character'], ['table', 'Table'], ['numbering', 'List']], st.type, (v) => { st.type = v; refreshLists(); drawPv(); }, { id: 'sd-type', disabled: !isNew });
     const paraStyles = () => Object.keys(d.styles).filter((k) => d.styles[k].type === (st.type === 'character' ? 'character' : st.type) && k !== id).map((k) => [k, D.styleDisplayName(d.styles[k])]).sort((a, b) => a[1].localeCompare(b[1]));
-    const based = ui.select([['', '(no style)']].concat(paraStyles()), st.basedOn || '', (v) => { st.basedOn = v || null; drawPv(); }, { id: 'sd-based' });
-    const next = ui.select(paraStyles().concat(isNew ? [['__self', '(this style)']] : []), st.next || (isNew ? '__self' : id), (v) => { st.next = v; }, { id: 'sd-next' });
-    function refreshLists() { L.clear(based); for (const [v, l] of [['', '(no style)']].concat(paraStyles())) based.appendChild(h('option', { value: v, text: l, selected: v === (st.basedOn || '') })); nextRow.hidden = st.type !== 'paragraph'; }
+    const based = ui.select([['', L.t('(no style)')]].concat(paraStyles()), st.basedOn || '', (v) => { st.basedOn = v || null; drawPv(); }, { id: 'sd-based', translate: 'no' });
+    const next = ui.select(paraStyles().concat(isNew ? [['__self', L.t('(this style)')]] : []), st.next || (isNew ? '__self' : id), (v) => { st.next = v; }, { id: 'sd-next', translate: 'no' });
+    function refreshLists() { L.clear(based); for (const [v, l] of [['', L.t('(no style)')]].concat(paraStyles())) based.appendChild(raw('option', { value: v, selected: v === (st.basedOn || '') }, l)); nextRow.hidden = st.type !== 'paragraph'; }
     const nextRow = G.f('&Style for following paragraph:', next, 'wide');
     /* quick formatting row */
     const eff = () => { const b = st.basedOn ? (st.type === 'character' ? D.charStyleProps(d, st.basedOn) : D.styleProps(d, st.basedOn).rPr) : d.defaults.rPr; return Object.assign({}, b, st.rPr); };
-    const font = ui.select(FONTS(), eff().font || 'Times New Roman', (v) => { st.rPr.font = v; drawPv(); }, { id: 'sd-font' });
-    const size = ui.select(L.SIZE_LIST.map((x) => [x, String(x)]), eff().sz || 12, (v) => { st.rPr.sz = +v; drawPv(); }, { id: 'sd-size' });
+    const font = ui.select(FONTS(), eff().font || 'Times New Roman', (v) => { st.rPr.font = v; drawPv(); }, { id: 'sd-font', translate: 'no' });
+    const size = ui.select(L.SIZE_LIST.map((x) => [x, String(x)]), eff().sz || 12, (v) => { st.rPr.sz = +v; drawPv(); }, { id: 'sd-size', translate: 'no' });
     const tog = (k, icon, tip) => { const b = h('button', { type: 'button', class: 'tb-btn' + (eff()[k] ? ' on' : ''), 'data-tip': tip, 'aria-label': tip, html: L.icons.get(icon) }); b.addEventListener('click', () => { st.rPr[k] = eff()[k] ? (k === 'u' ? 'none' : false) : k === 'u' ? 'single' : true; b.classList.toggle('on'); drawPv(); }); return b; };
     const col = G.color(eff().color || 'auto', { id: 'sd-col', onChange: (v) => { st.rPr.color = v === 'auto' ? undefined : v; drawPv(); } });
     const jc = (v, icon, tip) => { const b = h('button', { type: 'button', class: 'tb-btn', 'data-tip': tip, 'aria-label': tip, html: L.icons.get(icon) }); b.addEventListener('click', () => { st.pPr.jc = v; drawPv(); }); return b; };
-    const fmtRow = h('div', { class: 'row', style: 'align-items:center;gap:3px' }, font, size, tog('b', 'bold', 'Bold'), tog('i', 'italic', 'Italic'), tog('u', 'underline', 'Underline'), col, jc('left', 'alignLeft', 'Align Left'), jc('center', 'alignCenter', 'Center'), jc('right', 'alignRight', 'Align Right'), jc('both', 'justify', 'Justify'));
+    const fmtRow = h('div', { class: 'row', style: 'align-items:center;gap:3px' }, font, size, tog('b', 'bold', L.N('Bold')), tog('i', 'italic', L.N('Italic')), tog('u', 'underline', L.N('Underline')), col, jc('left', 'alignLeft', 'Align Left'), jc('center', 'alignCenter', L.N('Center')), jc('right', 'alignRight', 'Align Right'), jc('both', 'justify', L.N('Justify')));
     const pv = h('div', { class: 'preview-box', style: 'height:100px;flex-direction:column;align-items:stretch;justify-content:center;padding:6px 10px;gap:4px' });
-    const desc = h('div', { class: 'tp-note', style: 'min-height:32px' });
+    const desc = h('div', { class: 'tp-note', style: 'min-height:32px', translate: 'no' });   // translated parts and style names
     function drawPv() {
       L.clear(pv);
       const r = eff();
@@ -935,8 +953,8 @@
       pv.append(h('div', { style: 'height:3px;background:#ccc' }), h('div', { text: 'Sample Text Sample Text Sample Text Sample Text', style: R.runCSS(Object.assign({}, r, { sz: Math.min(r.sz || 12, 24) }), 1) + `;text-align:${{ center: 'center', right: 'right', both: 'justify' }[pp.jc] || 'left'};white-space:nowrap;overflow:hidden` }), h('div', { style: 'height:3px;background:#ccc' }));
       const parts = [];
       if (st.basedOn) parts.push((d.styles[st.basedOn] ? D.styleDisplayName(d.styles[st.basedOn]) : st.basedOn) + ' +');
-      for (const [k, v] of Object.entries(st.rPr)) if (v !== undefined) parts.push(k === 'font' ? 'Font: ' + v : k === 'sz' ? v + ' pt' : k === 'color' ? 'Font color: #' + v : k === 'b' ? (v ? 'Bold' : 'Not Bold') : k === 'i' ? (v ? 'Italic' : 'Not Italic') : k === 'u' ? 'Underline: ' + v : k);
-      if (pp.jc) parts.push({ left: 'Left', center: 'Centered', right: 'Right', both: 'Justified' }[pp.jc]);
+      for (const [k, v] of Object.entries(st.rPr)) if (v !== undefined) parts.push(k === 'font' ? L.t('Font: {0}', v) : k === 'sz' ? v + ' pt' : k === 'color' ? L.t('Font color: #{0}', v) : k === 'b' ? L.t(v ? 'Bold' : 'Not Bold') : k === 'i' ? L.t(v ? 'Italic' : 'Not Italic') : k === 'u' ? L.t('Underline: {0}', L.t((UNDERLINES.find((x) => x[0] === v) || [v, v])[1])) : k);
+      if (pp.jc) parts.push(L.t({ left: 'Left', center: 'Centered', right: 'Right', both: 'Justified' }[pp.jc]));
       desc.textContent = parts.join(', ');
     }
     drawPv();
@@ -958,7 +976,7 @@
         const nm = name.value.trim();
         if (!nm) { ui.msg('Please enter a name for the style.', { icon: 'warn' }); return false; }
         const exists = D.findStyleByName(d, nm);
-        if (isNew && exists) { ui.msg(`A style named ${nm} already exists.`, { icon: 'warn' }); return false; }
+        if (isNew && exists) { ui.msg(L.t('A style named {0} already exists.', nm), { icon: 'warn' }); return false; }
         const sid = isNew ? D.uniqueStyleId(d, nm) : id;
         E.edit(isNew ? 'New Style' : 'Modify Style', () => {
           D.touchKey(d, 'styles');
@@ -979,12 +997,12 @@
   G.language = function (opts) {
     opts = opts || {};
     const cur = E.curRun().lang || 'en-US';
-    const lb = G.listBox(A().LANGS.map(([v, l]) => ({ value: v, label: l })), cur, { height: 180 });
+    const lb = G.listBox(A().LANGS.map(([v, l]) => ({ value: v, label: l })), cur, { height: 180 });   // the names are L.N-marked in app.js
     const noProof = ui.check("&Do not check spelling or grammar", !!E.curRun().noProof, null);
     const detect = ui.check('Detect &language automatically', true, null);
     ui.dialog({
       title: 'Language', width: 320, body: h('div', { class: 'col' }, h('div', { text: 'Mark selected text as:' }), lb, h('div', { class: 'tp-note', text: 'The speller and other proofing tools use the dictionaries of the selected language.' }), noProof, detect),
-      buttons: [{ label: '&Default...', onClick: async () => { const r = await ui.msg('Do you want to change the default language to ' + A().langName(lb.get()) + '?', { icon: 'question', buttons: ['&Yes', '&No'] }); if (r === 0) { const d = doc(); E.edit('Default Language', () => { D.touchKey(d, 'defaults'); d.defaults.rPr = Object.assign({}, d.defaults.rPr, { lang: lb.get() }); D.stylesChanged(); return E.sel; }); } return false; } }, { label: 'OK', primary: true, onClick: () => { if (opts.onOK) { opts.onOK(lb.get()); return; } E.formatRun({ lang: lb.get(), noProof: noProof.input.checked || undefined }, 'Language'); A().updateStatus(); } }, { label: 'Cancel' }],
+      buttons: [{ label: '&Default...', onClick: async () => { const r = await ui.msg(L.t('Do you want to change the default language to {0}?', A().langName(lb.get())), { icon: 'question', buttons: ['&Yes', '&No'] }); if (r === 0) { const d = doc(); E.edit('Default Language', () => { D.touchKey(d, 'defaults'); d.defaults.rPr = Object.assign({}, d.defaults.rPr, { lang: lb.get() }); D.stylesChanged(); return E.sel; }); } return false; } }, { label: 'OK', primary: true, onClick: () => { if (opts.onOK) { opts.onOK(lb.get()); return; } E.formatRun({ lang: lb.get(), noProof: noProof.input.checked || undefined }, L.N('Language')); A().updateStatus(); } }, { label: 'Cancel' }],
       onOpen: (el) => el.querySelector('.dlg-foot .btn').classList.add('left'),
     });
   };

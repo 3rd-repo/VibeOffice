@@ -40,7 +40,7 @@
     /* continue the list right above when it has the same kind */
     const prev = D.prevPara(d, first);
     const pinf = prev && O.containerOf(prev) === O.containerOf(first) ? LS.info(prev) : null;
-    E.edit(kind === 'bullet' ? 'Bullets' : 'Numbering', () => {
+    E.edit(kind === 'bullet' ? L.N('Bullets') : L.N('Numbering'), () => {
       let numId;
       if (isKind(pinf)) numId = pinf.numId;
       else {
@@ -102,7 +102,7 @@
     const d = doc();
     const paras = E.selectedParas().filter((p) => LS.info(p));
     if (!paras.length) return false;
-    E.edit('Numbering', () => {
+    E.edit(L.N('Numbering'), () => {
       for (const p of paras) { const inf = LS.info(p); D.touch(p); p.pPr.num = { id: inf.numId, lvl: L.clamp(inf.lvl + delta, 0, 8) }; delete p.pPr.ind; }
       return E.sel;
     });
@@ -151,7 +151,7 @@
     A.setFontSize(v);
   }
   function setAlign(jc) {
-    E.formatPara((pPr) => { const cur = pPr.jc; pPr.jc = cur === jc && jc !== 'left' ? 'left' : jc; }, 'Align');
+    E.formatPara((pPr) => { const cur = pPr.jc; pPr.jc = cur === jc && jc !== 'left' ? 'left' : jc; }, L.N('Align'));
   }
   const alignIs = (jc) => { const v = para().jc || 'left'; return jc === 'left' ? v === 'left' || v === 'start' : jc === 'both' ? v === 'both' || v === 'distribute' : v === jc; };
   function indent(delta) {
@@ -179,10 +179,10 @@
     if (!d.styles[id]) {
       const b = D.builtinStyles()[id];
       if (!b) return;
-      E.edit('Style', () => { D.touchKey(d, 'styles'); d.styles[id] = b; D.stylesChanged(); return E.sel; });
+      E.edit(L.N('Style'), () => { D.touchKey(d, 'styles'); d.styles[id] = b; D.stylesChanged(); return E.sel; });
     }
     const [a, b] = E.range();
-    E.edit('Style', () => { O.applyStyle(a, b, id); return E.sel; });
+    E.edit(L.N('Style'), () => { O.applyStyle(a, b, id); return E.sel; });
   }
   A.applyStyle = applyStyle;
   function insertFieldNow(instr, label) {
@@ -238,16 +238,16 @@
   C('exitApp', { label: 'E&xit', run: async () => { for (;;) { const last = A.docs.length <= 1; if (!(await A.closeDocument())) return; if (last) break; } if (window.VO) VO.exit(); } });
 
   /* ================= Edit ================= */
-  C('undo', { get label() { return D.canUndo() ? '&Undo ' + D.undoLabel() : "&Can't Undo"; }, tip: 'Undo', icon: 'undo', key: 'Ctrl+Z', enabled: () => D.canUndo() && !viewing(), run: () => { D.undo(); } });
-  C('redo', { get label() { return D.canRedo() ? '&Redo ' + D.redoLabel() : "&Repeat"; }, tip: 'Redo', icon: 'redo', key: 'Ctrl+Y', enabled: () => D.canRedo() && !viewing(), run: () => { D.redo(); } });
-  C('cut', { label: 'Cu&t', icon: 'cut', key: 'Ctrl+X', enabled: () => canEdit() && (hasSel() || objSel()), run: () => { E.focus(); if (!clip()) { const d = E.copyData(); if (d) { E.clip = d; L.bus.emit('clip', d); } } E.edit('Cut', () => E.deleteSelection()); } });
+  C('undo', { get label() { return D.canUndo() ? L.t('&Undo {0}', L.t(D.undoLabel())) : "&Can't Undo"; }, tip: 'Undo', icon: 'undo', key: 'Ctrl+Z', enabled: () => D.canUndo() && !viewing(), run: () => { D.undo(); } });
+  C('redo', { get label() { return D.canRedo() ? L.t('&Redo {0}', L.t(D.redoLabel())) : "&Repeat"; }, tip: 'Redo', icon: 'redo', key: 'Ctrl+Y', enabled: () => D.canRedo() && !viewing(), run: () => { D.redo(); } });
+  C('cut', { label: 'Cu&t', icon: 'cut', key: 'Ctrl+X', enabled: () => canEdit() && (hasSel() || objSel()), run: () => { E.focus(); if (!clip()) { const d = E.copyData(); if (d) { E.clip = d; L.bus.emit('clip', d); } } E.edit(L.N('Cut'), () => E.deleteSelection()); } });
   C('copy', { label: '&Copy', icon: 'copy', key: 'Ctrl+C', enabled: () => hasSel() || objSel(), run: () => { E.focus(); const d = E.copyData(); if (d) { E.clip = d; L.bus.emit('clip', d); } clip(); } });
   C('officeClipboard', { label: 'Office Clip&board...', icon: 'clipboard', run: pane('clipboard') });
   C('paste', { label: '&Paste', icon: 'paste', key: 'Ctrl+V', enabled: () => canEdit(), run: () => pasteCmd() });
   C('pasteSpecial', { label: 'Paste &Special...', enabled: () => canEdit(), run: dlg('pasteSpecial') });
   C('pasteHyperlink', { label: 'Paste as &Hyperlink', enabled: () => canEdit() && !!E.clip, run: () => { const t = E.clip.text.trim(); if (!t) return; const url = /^(https?:|mailto:|www\.)/i.test(t) ? (/^www\./i.test(t) ? 'http://' + t : t) : null; E.edit('Paste as Hyperlink', () => { const pos = E.deleteSelection(); return O.insertText(pos, t, Object.assign(O.inheritRPr(pos), { style: 'Hyperlink', link: url ? { url } : { anchor: '' } })); }); } });
   C('clearFormats', { label: '&Formats', enabled: canEdit, run: () => { const [a, b] = E.range(); E.edit('Clear Formats', () => { if (!D.eqPos(a, b)) O.formatRange(a, b, (r) => { const k = {}; if (r.link) k.link = r.link; if (r.ins) k.ins = r.ins; if (r.del) k.del = r.del; return k; }); O.setParaProps(E.selectedParas(), (pPr) => { const k = {}; if (pPr.num) k.num = pPr.num; if (pPr.sect) k.sect = pPr.sect; return k; }); return E.sel; }); } });
-  C('clearContents', { label: '&Contents', key: 'Del', enabled: () => canEdit() && hasSel(), run: () => E.edit('Clear', () => E.deleteSelection()) });
+  C('clearContents', { label: '&Contents', key: 'Del', enabled: () => canEdit() && hasSel(), run: () => E.edit(L.N('Clear'), () => E.deleteSelection()) });
   C('selectAll', { label: 'Select A&ll', key: 'Ctrl+A', icon: 'selectAll', run: () => { E.focus(); E.selectAll(); } });
   C('find', { label: '&Find...', icon: 'find', key: 'Ctrl+F', run: dlg('find', 'find') });
   C('replace', { label: 'R&eplace...', icon: 'replace', key: 'Ctrl+H', enabled: () => !viewing(), run: dlg('find', 'replace') });
@@ -262,7 +262,7 @@
   C('viewReading', { label: 'R&eading Layout', icon: 'read', tip: 'Read', radio: true, checked: () => A.view === 'reading', run: () => A.setView(A.view === 'reading' ? A.prevView || 'print' : 'reading') });
   C('viewOutline', { label: '&Outline', icon: 'outlineView', key: 'Ctrl+Alt+O', radio: true, checked: () => A.view === 'outline', run: () => A.setView('outline') });
   C('taskPane', { label: 'Tas&k Pane', icon: 'taskpane', key: 'Ctrl+F1', checked: () => A.taskOpen(), run: () => A.toggleTask() });
-  const TBNAMES = { standard: 'Standard', formatting: 'Formatting', drawing: 'Drawing', tables: 'Tables and Borders', reviewing: 'Reviewing', picture: 'Picture', outlining: 'Outlining', headerFooter: 'Header and Footer', mailMerge: 'Mail Merge', wordart: 'LettersArt' };
+  const TBNAMES = { standard: L.N('Standard'), formatting: L.N('Formatting'), drawing: L.N('Drawing'), tables: 'Tables and Borders', reviewing: L.N('Reviewing'), picture: L.N('Picture'), outlining: L.N('Outlining'), headerFooter: 'Header and Footer', mailMerge: 'Mail Merge', wordart: L.N('LettersArt') };
   for (const k in TBNAMES) C('tb_' + k, { label: TBNAMES[k], tip: TBNAMES[k], checked: () => A.tbShown(k), run: () => A.toggleToolbar(k) });
   C('ruler', { label: '&Ruler', icon: 'ruler', checked: () => !!A.opts.ruler, run: () => { A.opts.ruler = !A.opts.ruler; A.saveOpts(); A.updateRulers(); } });
   C('docMap', { label: '&Document Map', icon: 'docMap', checked: () => !!A.opts.docMap, run: () => A.toggleDocMap() });
@@ -320,17 +320,17 @@
   C('revealFormatting', { label: 'Re&veal Formatting...', icon: 'reveal', key: 'Shift+F1', run: pane('reveal') });
   C('formatObject', { get label() { const it = L.drawing && L.drawing.selectedItem(); return it ? (it.t === 'img' ? 'P&icture...' : it.tb ? 'Text B&ox...' : it.wordart ? 'Letters&Art...' : it.t === 'chart' ? 'Ch&art...' : 'AutoSha&pe...') : 'Obj&ect...'; }, icon: 'formatPicture', tip: 'Format Object', enabled: () => objSel(), run: () => A.formatObject() });
   /* character */
-  C('bold', { label: 'Bold', icon: 'bold', key: 'Ctrl+B', enabled: canEdit, checked: () => !!run().b, run: () => E.toggleRun('b', undefined, 'Bold') });
-  C('italic', { label: 'Italic', icon: 'italic', key: 'Ctrl+I', enabled: canEdit, checked: () => !!run().i, run: () => E.toggleRun('i', undefined, 'Italic') });
-  C('underline', { label: 'Underline', icon: 'underline', key: 'Ctrl+U', enabled: canEdit, checked: () => !!run().u && run().u !== 'none', run: () => { const u = run().u; E.formatRun({ u: u && u !== 'none' ? 'none' : 'single' }, 'Underline'); } });
-  C('dblUnderline', { label: 'Double Underline', enabled: canEdit, run: () => { const u = run().u; E.formatRun({ u: u === 'double' ? 'none' : 'double' }, 'Underline'); } });
-  C('wordUnderline', { label: 'Word Underline', enabled: canEdit, run: () => { const u = run().u; E.formatRun({ u: u === 'words' ? 'none' : 'words' }, 'Underline'); } });
-  C('strike', { label: 'Strikethrough', icon: 'strike', enabled: canEdit, checked: () => !!run().strike, run: () => E.toggleRun('strike', undefined, 'Strikethrough') });
-  C('subscript', { label: 'Subscript', icon: 'subscript', key: 'Ctrl+=', enabled: canEdit, checked: () => run().vert === 'subscript', run: () => E.formatRun({ vert: run().vert === 'subscript' ? undefined : 'subscript' }, 'Subscript') });
-  C('superscript', { label: 'Superscript', icon: 'superscript', key: 'Ctrl+Shift++', enabled: canEdit, checked: () => run().vert === 'superscript', run: () => E.formatRun({ vert: run().vert === 'superscript' ? undefined : 'superscript' }, 'Superscript') });
+  C('bold', { label: 'Bold', icon: 'bold', key: 'Ctrl+B', enabled: canEdit, checked: () => !!run().b, run: () => E.toggleRun('b', undefined, L.N('Bold')) });
+  C('italic', { label: 'Italic', icon: 'italic', key: 'Ctrl+I', enabled: canEdit, checked: () => !!run().i, run: () => E.toggleRun('i', undefined, L.N('Italic')) });
+  C('underline', { label: 'Underline', icon: 'underline', key: 'Ctrl+U', enabled: canEdit, checked: () => !!run().u && run().u !== 'none', run: () => { const u = run().u; E.formatRun({ u: u && u !== 'none' ? 'none' : 'single' }, L.N('Underline')); } });
+  C('dblUnderline', { label: 'Double Underline', enabled: canEdit, run: () => { const u = run().u; E.formatRun({ u: u === 'double' ? 'none' : 'double' }, L.N('Underline')); } });
+  C('wordUnderline', { label: 'Word Underline', enabled: canEdit, run: () => { const u = run().u; E.formatRun({ u: u === 'words' ? 'none' : 'words' }, L.N('Underline')); } });
+  C('strike', { label: 'Strikethrough', icon: 'strike', enabled: canEdit, checked: () => !!run().strike, run: () => E.toggleRun('strike', undefined, L.N('Strikethrough')) });
+  C('subscript', { label: 'Subscript', icon: 'subscript', key: 'Ctrl+=', enabled: canEdit, checked: () => run().vert === 'subscript', run: () => E.formatRun({ vert: run().vert === 'subscript' ? undefined : 'subscript' }, L.N('Subscript')) });
+  C('superscript', { label: 'Superscript', icon: 'superscript', key: 'Ctrl+Shift++', enabled: canEdit, checked: () => run().vert === 'superscript', run: () => E.formatRun({ vert: run().vert === 'superscript' ? undefined : 'superscript' }, L.N('Superscript')) });
   C('allCaps', { label: 'All Caps', enabled: canEdit, checked: () => !!run().caps, run: () => E.toggleRun('caps', undefined, 'All Caps') });
   C('smallCaps', { label: 'Small Caps', enabled: canEdit, checked: () => !!run().smallCaps, run: () => E.toggleRun('smallCaps', undefined, 'Small Caps') });
-  C('hiddenText', { label: 'Hidden', enabled: canEdit, checked: () => !!run().hidden, run: () => E.toggleRun('hidden', undefined, 'Hidden') });
+  C('hiddenText', { label: 'Hidden', enabled: canEdit, checked: () => !!run().hidden, run: () => E.toggleRun('hidden', undefined, L.N('Hidden')) });
   C('resetChar', { label: 'Reset Character Formatting', key: 'Ctrl+Space', enabled: canEdit, run: () => { if (E.collapsed()) { E.pending = { b: false, i: false, u: undefined, strike: undefined, vert: undefined, caps: undefined, smallCaps: undefined, color: undefined, hl: undefined, font: undefined, sz: undefined }; L.bus.emit('sel', E.sel); return; } const [a, b] = E.range(); E.edit('Reset Character', () => { O.formatRange(a, b, (r) => { const k = {}; for (const x of ['link', 'ins', 'del', 'style']) if (r[x]) k[x] = r[x]; if (k.style && !/^(Hyperlink|FootnoteReference|EndnoteReference|CommentReference)$/.test(k.style)) delete k.style; return k; }); return E.sel; }); } });
   C('resetPara', { label: 'Reset Paragraph Formatting', key: 'Ctrl+Q', enabled: canEdit, run: () => E.formatPara((pPr) => { const k = {}; for (const x of ['style', 'num', 'sect', 'frame']) if (pPr[x]) k[x] = pPr[x]; return k; }, 'Reset Paragraph') });
   C('growFont', { label: 'Grow Font', icon: 'growFont', key: 'Ctrl+Shift+>', enabled: canEdit, run: () => stepSize(1) });
@@ -461,7 +461,7 @@
   C('about', { label: '&About Quire', run: dlg('about') });
 
   /* ================= Reviewing ================= */
-  const MK = { markupFinalMarkup: ['Final Showing Markup', 'markup'], markupFinal: ['Final', 'final'], markupOriginalMarkup: ['Original Showing Markup', 'origMarkup'], markupOriginal: ['Original', 'original'] };
+  const MK = { markupFinalMarkup: ['Final Showing Markup', 'markup'], markupFinal: [L.N('Final'), 'final'], markupOriginalMarkup: ['Original Showing Markup', 'origMarkup'], markupOriginal: [L.N('Original'), 'original'] };
   for (const k in MK) C(k, { label: MK[k][0], radio: true, checked: () => LY.opts.markup === MK[k][1], run: () => { LY.opts.markup = MK[k][1]; LY.render(); E.restoreDom(true); } });
   C('showComments', { label: '&Comments', checked: () => LY.opts.showComments !== false, run: () => { LY.opts.showComments = !LY.opts.showComments; LY.render(); E.restoreDom(true); } });
   C('showInsDel', { label: '&Insertions and Deletions', checked: () => LY.opts.markup !== 'final', run: () => { LY.opts.markup = LY.opts.markup === 'final' ? 'markup' : 'final'; LY.render(); E.restoreDom(true); } });
@@ -486,7 +486,7 @@
   C('picMoreBright', { label: 'More Brightness', icon: 'moreBright', enabled: imgSel, run: () => A.picAdjust('bright', 0.1) });
   C('picLessBright', { label: 'Less Brightness', icon: 'lessBright', enabled: imgSel, run: () => A.picAdjust('bright', -0.1) });
   C('picCrop', { label: 'Crop', icon: 'crop', enabled: imgSel, run: () => L.dlg.formatObject('picture') });
-  C('picRotate', { label: 'Rotate Left 90°', icon: 'rotateL', enabled: () => canEdit() && objSel(), run: () => L.drawing.modifySelected('Rotate', (it) => { it.rot = (((it.rot || 0) - 90) % 360 + 360) % 360 || undefined; }) });
+  C('picRotate', { label: 'Rotate Left 90°', icon: 'rotateL', enabled: () => canEdit() && objSel(), run: () => L.drawing.modifySelected(L.N('Rotate'), (it) => { it.rot = (((it.rot || 0) - 90) % 360 + 360) % 360 || undefined; }) });
   C('picReset', { label: 'Reset Picture', icon: 'resetPicture', enabled: imgSel, run: () => L.drawing.modifySelected('Reset Picture', (it) => { delete it.bright; delete it.contrast; delete it.gray; delete it.bw; delete it.washout; delete it.crop; delete it.rot; if (it.natW) { it.w = it.natW; it.h = it.natH; } }) });
   C('selectObjects', { label: 'Select Objects', icon: 'select', checked: () => !!A.selectObjectsMode, run: () => { A.selectObjectsMode = !A.selectObjectsMode; L.$('#scroller').classList.toggle('selobj', A.selectObjectsMode); } });
   C('drawLine', { label: '&Line', icon: 'line', tip: 'Line', enabled: canEdit, run: () => L.drawtool && L.drawtool.start({ geom: 'line', line: true }) });
@@ -496,7 +496,7 @@
   C('drawOval', { label: '&Oval', icon: 'oval', tip: 'Oval', enabled: canEdit, run: () => L.drawtool && L.drawtool.start({ geom: 'ellipse' }) });
   C('fillColor', { label: 'Fill Color', icon: 'fillColor', tip: 'Fill Color', enabled: () => canEdit() && objSel(), run: () => L.drawing.modifySelected('Fill Color', (it) => { it.fill = { t: 'solid', c: A.lastFill || '#CCFFCC', a: 1 }; }) });
   C('lineColor', { label: 'Line Color', icon: 'lineColor', tip: 'Line Color', enabled: () => canEdit() && objSel(), run: () => L.drawing.modifySelected('Line Color', (it) => { it.line = Object.assign({ w: 0.75, dash: 'solid' }, it.line && it.line.t !== 'none' ? it.line : {}, { c: A.lastLine || '#000000' }); }) });
-  const order = (label, fn) => ({ label, enabled: () => canEdit() && floatSel(), run: () => L.drawing.modifySelected(ui.stripAmp(label), fn) });
+  const order = (label, fn) => ({ label, enabled: () => canEdit() && floatSel(), run: () => L.drawing.modifySelected(ui.plainAmp(label), fn) });
   C('bringFront', Object.assign(order('Bring to Fro&nt', (it) => { it.float.z = A.maxZ() + 1024; it.float.behind = false; if (it.float.wrap === 'behind') it.float.wrap = 'none'; }), { icon: 'bringFront' }));
   C('sendBack', Object.assign(order('Send to Bac&k', (it) => { it.float.z = Math.max(0, A.minZ() - 1024); }), { icon: 'sendBack' }));
   C('bringForward', Object.assign(order('Bring &Forward', (it) => { it.float.z = (it.float.z || 0) + 1024 * 1024; }), { icon: 'bringForward' }));
@@ -506,10 +506,10 @@
   C('groupObj', { label: '&Group', icon: 'group', enabled: () => false, run: () => {} });
   C('ungroupObj', { label: '&Ungroup', icon: 'ungroup', enabled: () => canEdit() && selectedObjIs((it) => it.t === 'group'), run: () => A.ungroup() });
   for (const [k, dir, lbl] of [['nudgeUp', 'ArrowUp', '&Up'], ['nudgeDown', 'ArrowDown', '&Down'], ['nudgeLeft', 'ArrowLeft', '&Left'], ['nudgeRight', 'ArrowRight', '&Right']]) C(k, { label: lbl, enabled: () => canEdit() && floatSel(), run: () => L.drawing.nudge(dir, 1) });
-  C('rotateLeft', { label: 'Rotate &Left 90°', icon: 'rotateL', enabled: () => canEdit() && objSel(), run: () => L.drawing.modifySelected('Rotate', (it) => { it.rot = (((it.rot || 0) - 90) % 360 + 360) % 360 || undefined; }) });
-  C('rotateRight', { label: 'Rotate &Right 90°', icon: 'rotateR', enabled: () => canEdit() && objSel(), run: () => L.drawing.modifySelected('Rotate', (it) => { it.rot = ((it.rot || 0) + 90) % 360 || undefined; }) });
-  C('flipH', { label: 'Flip &Horizontal', icon: 'flipH', enabled: () => canEdit() && selectedObjIs((it) => it.t === 'shape' || it.t === 'img'), run: () => L.drawing.modifySelected('Flip', (it) => { it.flipH = !it.flipH || undefined; }) });
-  C('flipV', { label: 'Flip &Vertical', icon: 'flipV', enabled: () => canEdit() && selectedObjIs((it) => it.t === 'shape' || it.t === 'img'), run: () => L.drawing.modifySelected('Flip', (it) => { it.flipV = !it.flipV || undefined; }) });
+  C('rotateLeft', { label: 'Rotate &Left 90°', icon: 'rotateL', enabled: () => canEdit() && objSel(), run: () => L.drawing.modifySelected(L.N('Rotate'), (it) => { it.rot = (((it.rot || 0) - 90) % 360 + 360) % 360 || undefined; }) });
+  C('rotateRight', { label: 'Rotate &Right 90°', icon: 'rotateR', enabled: () => canEdit() && objSel(), run: () => L.drawing.modifySelected(L.N('Rotate'), (it) => { it.rot = ((it.rot || 0) + 90) % 360 || undefined; }) });
+  C('flipH', { label: 'Flip &Horizontal', icon: 'flipH', enabled: () => canEdit() && selectedObjIs((it) => it.t === 'shape' || it.t === 'img'), run: () => L.drawing.modifySelected(L.N('Flip'), (it) => { it.flipH = !it.flipH || undefined; }) });
+  C('flipV', { label: 'Flip &Vertical', icon: 'flipV', enabled: () => canEdit() && selectedObjIs((it) => it.t === 'shape' || it.t === 'img'), run: () => L.drawing.modifySelected(L.N('Flip'), (it) => { it.flipV = !it.flipV || undefined; }) });
   C('setDefaults', { label: 'Set AutoShape &Defaults', enabled: () => selectedObjIs((it) => it.t === 'shape'), run: () => { const it = L.drawing.selectedItem(); A.shapeDefaults = { fill: L.clone(it.fill), line: L.clone(it.line), shadow: it.shadow ? L.clone(it.shadow) : undefined }; A.status('New AutoShapes will use these settings.'); } });
   C('wordartEdit', { label: 'Edit Te&xt...', enabled: () => canEdit() && selectedObjIs((it) => !!it.wordart), run: () => L.dlg.wordart(true) });
   C('wordartGallery', { label: 'LettersArt Gallery', icon: 'waGallery', enabled: () => canEdit() && selectedObjIs((it) => !!it.wordart), run: () => L.dlg.wordart('gallery') });
@@ -625,13 +625,13 @@
     const it = L.drawing.selectedItem();
     if (!os || !it || it.t !== 'chart') return;
     const shape = { chart: L.clone(it.chart), w: it.w, h: it.h };
-    L.chart.edit(shape, (res) => { if (!res) return; L.drawing.modifySelected('Chart', (x) => { x.chart = res.chart || shape.chart; }); });
+    L.chart.edit(shape, (res) => { if (!res) return; L.drawing.modifySelected(L.N('Chart'), (x) => { x.chart = res.chart || shape.chart; }); });
   };
   A.ungroup = function () {
     const os = E.objSel;
     const it = L.drawing.selectedItem();
     if (!os || !it || it.t !== 'group') return;
-    E.edit('Ungroup', () => {
+    E.edit(L.N('Ungroup'), () => {
       D.touch(os.p);
       const i = os.p.runs.indexOf(it);
       const baseH = it.float ? it.float.posH : null, baseV = it.float ? it.float.posV : null;
@@ -673,7 +673,7 @@
         });
       }
       E.pasteBlocks(blocks);
-    } catch (e) { ui.msg('The file could not be inserted. ' + (e.message || ''), { icon: 'error' }); }
+    } catch (e) { ui.msg(L.t('The file could not be inserted. {0}', e.message || ''), { icon: 'error' }); }
   };
   /** copy styles missing from the current document */
   A.mergeStylesFrom = function (src, overwrite) {

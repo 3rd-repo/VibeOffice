@@ -61,7 +61,9 @@ export async function openPage(app, options = {}) {
         }});
       }});` });
     // no app: the Start Center, ready once it has loaded (it attaches no document)
-    await send('Page.navigate', { url: app ? base + '/' + app + '/?new' : base + '/' });
+    // the UI in English unless asked otherwise (options.lang: 'ja', 'qps'…; common/i18n.js), whatever the browser's language
+    const lang = 'lang=' + (options.lang || 'en');
+    await send('Page.navigate', { url: app ? base + '/' + app + '/?new&' + lang : base + '/?' + lang });
     const ready = app ? '!!window.__corpusHooks' : "document.readyState === 'complete' && !!window.VO";
     for (let i = 0; i < 200; i++) {
       if (await evaluate(ready).catch(() => false)) return { evaluate, close, errors, requests, send };

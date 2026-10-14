@@ -568,7 +568,7 @@ test('A drop-down inside a dialog opens above it: Format Cells ▸ Patterns ▸ 
     await u.click(await pt(u, 'B2'));
     await u.evaluate(`L.dlg.formatCells(4)`); await pause(300);
     await u.click(await u.evaluate(`(() => { const b = [...document.querySelectorAll('.dlg button')].find((x) => x.textContent.trim() === 'Pattern'); const r = b.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`));
-    const swatch = await centre('.menu .pat-grid button[aria-label="darkGrid"]');
+    const swatch = await centre('.menu .pat-grid button[data-pattern="darkGrid"]');
     assert.ok(swatch, 'the pattern menu is open');
     assert.ok(swatch.top, 'its swatches are on top, not under the dialog');
     await u.click(swatch);

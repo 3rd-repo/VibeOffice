@@ -29,7 +29,7 @@ const until = async (f, ms) => { const t0 = Date.now(); while (!f() && Date.now(
 try {
   for (const k of KEYS) localStorage.removeItem(k);
   out.auto = L.assistant.shown();
-  const help = L.app.menuBar.menus.find((m) => m.label === '&Help');
+  const help = L.app.menuBar.menus.find((m) => L.ui.plainAmp(m.label) === 'Help');
   out.inHelp = !!help && help.items.includes('showAssistant');
   out.labelOff = ui.cmds.showAssistant.label;
   ui.exec('showAssistant');

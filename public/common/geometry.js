@@ -647,6 +647,18 @@
     wave: [0, 0x18, 0x25, 0xC0, 0, 0x18, 0x25, 0xC0], trellis: [0xFF, 0x66, 0xFF, 0x99, 0xFF, 0x66, 0xFF, 0x99],
     zigZag: [0x81, 0x42, 0x24, 0x18, 0x81, 0x42, 0x24, 0x18],
   };
+  /* each pattern's name, as Office's pattern pickers show it (UI text, translated where it is shown) */
+  const N = (x) => x;
+  const PATTERN_NAMES = { pct5: '5%', pct10: '10%', pct20: '20%', pct25: '25%', pct30: '30%', pct40: '40%', pct50: '50%', pct60: '60%', pct70: '70%', pct75: '75%', pct80: '80%', pct90: '90%',
+    horz: N('Horizontal'), vert: N('Vertical'), ltHorz: N('Light horizontal'), ltVert: N('Light vertical'), dkHorz: N('Dark horizontal'), dkVert: N('Dark vertical'),
+    narHorz: N('Narrow horizontal'), narVert: N('Narrow vertical'), dashHorz: N('Dashed horizontal'), dashVert: N('Dashed vertical'), cross: N('Cross'),
+    dnDiag: N('Downward diagonal'), upDiag: N('Upward diagonal'), ltDnDiag: N('Light downward diagonal'), ltUpDiag: N('Light upward diagonal'),
+    dkDnDiag: N('Dark downward diagonal'), dkUpDiag: N('Dark upward diagonal'), wdDnDiag: N('Wide downward diagonal'), wdUpDiag: N('Wide upward diagonal'),
+    dashDnDiag: N('Dashed downward diagonal'), dashUpDiag: N('Dashed upward diagonal'), diagCross: N('Diagonal cross'), smCheck: N('Small checker board'),
+    lgCheck: N('Large checker board'), smGrid: N('Small grid'), lgGrid: N('Large grid'), dotGrid: N('Dotted grid'), smConfetti: N('Small confetti'),
+    lgConfetti: N('Large confetti'), horzBrick: N('Horizontal brick'), diagBrick: N('Diagonal brick'), solidDmnd: N('Solid diamond'), openDmnd: N('Outlined diamond'),
+    dotDmnd: N('Dotted diamond'), plaid: N('Plaid'), sphere: N('Sphere'), weave: N('Weave'), divot: N('Divot'), shingle: N('Shingle'), wave: N('Wave'),
+    trellis: N('Trellis'), zigZag: N('Zig zag') };
   /** SVG path of a pattern's set bits, one 1×1 square each, in an 8×8 box */
   const patternPath = (bits) => {
     let d = '';
@@ -656,6 +668,7 @@
 
   L.geom = {
     PATTERNS,
+    PATTERN_NAMES,
     patternPath,
     presets: G,
     get: (name) => G[name] || G.rect,
@@ -692,14 +705,14 @@
       sh.w = Math.abs(p2[0] - p1[0]); sh.h = Math.abs(p2[1] - p1[1]);
       sh.flipH = p1[0] > p2[0]; sh.flipV = p1[1] > p2[1];
     },
-    /* AutoShapes menu groups (2003 order) */
+    /* AutoShapes menu groups (2003 order), by their English names (UI text, translated where shown) */
     MENU: {
-      'Basic Shapes': ['rect', 'parallelogram', 'trapezoid', 'diamond', 'roundRect', 'octagon', 'triangle', 'rtTriangle', 'ellipse', 'hexagon', 'plus', 'pentagon', 'can', 'cube', 'bevel', 'foldedCorner', 'smileyFace', 'donut', 'noSmoking', 'heart', 'lightningBolt', 'sun', 'moon', 'arc', 'bracketPair', 'bracePair', 'leftBracket', 'rightBracket', 'leftBrace', 'rightBrace', 'frame', 'cloud'],
-      'Block Arrows': ['rightArrow', 'leftArrow', 'upArrow', 'downArrow', 'leftRightArrow', 'upDownArrow', 'quadArrow', 'bentArrow', 'uturnArrow', 'circularArrow', 'stripedRightArrow', 'notchedRightArrow', 'homePlate', 'chevron'],
-      'Flowchart': ['flowChartProcess', 'flowChartAlternateProcess', 'flowChartDecision', 'flowChartInputOutput', 'flowChartPredefinedProcess', 'flowChartInternalStorage', 'flowChartDocument', 'flowChartMultidocument', 'flowChartTerminator', 'flowChartPreparation', 'flowChartManualInput', 'flowChartManualOperation', 'flowChartConnector', 'flowChartOffpageConnector', 'flowChartPunchedCard', 'flowChartPunchedTape', 'flowChartSummingJunction', 'flowChartOr', 'flowChartCollate', 'flowChartSort', 'flowChartExtract', 'flowChartMerge', 'flowChartDelay', 'flowChartMagneticDisk', 'flowChartDisplay'],
-      'Stars and Banners': ['irregularSeal1', 'irregularSeal2', 'star4', 'star5', 'star6', 'star8', 'star16', 'star24', 'star32', 'ribbon2', 'verticalScroll', 'horizontalScroll', 'wave'],
-      'Callouts': ['wedgeRectCallout', 'wedgeRoundRectCallout', 'wedgeEllipseCallout', 'cloudCallout'],
-      'Action Buttons': ['actionButtonBlank', 'actionButtonHome', 'actionButtonHelp', 'actionButtonInformation', 'actionButtonBackPrevious', 'actionButtonForwardNext', 'actionButtonBeginning', 'actionButtonEnd', 'actionButtonReturn', 'actionButtonDocument', 'actionButtonSound', 'actionButtonMovie'],
+      [N('Basic Shapes')]: ['rect', 'parallelogram', 'trapezoid', 'diamond', 'roundRect', 'octagon', 'triangle', 'rtTriangle', 'ellipse', 'hexagon', 'plus', 'pentagon', 'can', 'cube', 'bevel', 'foldedCorner', 'smileyFace', 'donut', 'noSmoking', 'heart', 'lightningBolt', 'sun', 'moon', 'arc', 'bracketPair', 'bracePair', 'leftBracket', 'rightBracket', 'leftBrace', 'rightBrace', 'frame', 'cloud'],
+      [N('Block Arrows')]: ['rightArrow', 'leftArrow', 'upArrow', 'downArrow', 'leftRightArrow', 'upDownArrow', 'quadArrow', 'bentArrow', 'uturnArrow', 'circularArrow', 'stripedRightArrow', 'notchedRightArrow', 'homePlate', 'chevron'],
+      [N('Flowchart')]: ['flowChartProcess', 'flowChartAlternateProcess', 'flowChartDecision', 'flowChartInputOutput', 'flowChartPredefinedProcess', 'flowChartInternalStorage', 'flowChartDocument', 'flowChartMultidocument', 'flowChartTerminator', 'flowChartPreparation', 'flowChartManualInput', 'flowChartManualOperation', 'flowChartConnector', 'flowChartOffpageConnector', 'flowChartPunchedCard', 'flowChartPunchedTape', 'flowChartSummingJunction', 'flowChartOr', 'flowChartCollate', 'flowChartSort', 'flowChartExtract', 'flowChartMerge', 'flowChartDelay', 'flowChartMagneticDisk', 'flowChartDisplay'],
+      [N('Stars and Banners')]: ['irregularSeal1', 'irregularSeal2', 'star4', 'star5', 'star6', 'star8', 'star16', 'star24', 'star32', 'ribbon2', 'verticalScroll', 'horizontalScroll', 'wave'],
+      [N('Callouts')]: ['wedgeRectCallout', 'wedgeRoundRectCallout', 'wedgeEllipseCallout', 'cloudCallout'],
+      [N('Action Buttons')]: ['actionButtonBlank', 'actionButtonHome', 'actionButtonHelp', 'actionButtonInformation', 'actionButtonBackPrevious', 'actionButtonForwardNext', 'actionButtonBeginning', 'actionButtonEnd', 'actionButtonReturn', 'actionButtonDocument', 'actionButtonSound', 'actionButtonMovie'],
     },
     /* small SVG preview of a preset (for menus) */
     preview(name, size) {

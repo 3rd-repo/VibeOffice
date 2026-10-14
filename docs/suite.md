@@ -167,6 +167,10 @@ Every app, in every look, has a Search commands box at the top right (the end of
 
 Script order: `suite.js`, the app config, `core.js`, then the libraries and the app's own scripts as listed in each `index.html` (Ledger's from `tools/ledger/build/make.py`, where `'common/x'` means `public/common/x.js`).
 
+## Language
+
+The UI's language is one choice for the whole suite, like the look: Auto (the default: the first of the browser's languages that VibeOffice has, else English), English, 日本語, 한국어, Français or Deutsch, in the Start Center's Settings or Tools ▸ Options ▸ General ▸ Language of any app. It is `localStorage['vibeoffice.lang']`; each page's head script resolves it into `<html lang>` before the first paint (`?lang=` overrides it for one page, as the tests do with `lang=en`), and a change applies to the windows opened after it (the Start Center reloads). `common/i18n.js` reads it, loads the dictionary and gives `VO.t` / `L.t`; the apps start once it is loaded. See docs/i18n.md.
+
 ## The assistant: Scout
 
 Scout, a beagle on his mat, is the suite's assistant, and the place where an AI assistant will live later; for now he offers a few things to do. He is in every app, in every look, and comes in when an app starts, except on iOS and Android (`L.isMobile` in `core.js`) and in an automated browser (`navigator.webdriver`: Playwright, and `tools/shot.mjs`, which says so), where he comes in only once the user has shown him. Hiding him lasts the day: he doesn't come in by himself again until the next day.

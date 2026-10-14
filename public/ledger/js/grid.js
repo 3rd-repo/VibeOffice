@@ -637,7 +637,7 @@
       const w = Math.max(0, drag.w0 + p.x - drag.x0);
       drag.w = w;
       const mdw = M.mdw(sh.wb);
-      setStatusTip('Width: ' + M.pxToChars(w / G.zoomOf(sh), mdw).toFixed(2) + ' (' + Math.round(w / G.zoomOf(sh)) + ' pixels)', p);
+      setStatusTip(L.t('Width: {0} ({1} pixels)', M.pxToChars(w / G.zoomOf(sh), mdw).toFixed(2), Math.round(w / G.zoomOf(sh))), p);
       showGuide('v', p.x);
       return;
     }
@@ -645,14 +645,14 @@
       /* snap to the nearest row / column boundary */
       const hit = RD.hit(fr, Math.max(fr.hdrW + 1, p.x), Math.max(fr.hdrH + 1, p.y));
       if (hit.area !== 'cell') return;
-      if (drag.axis === 'r') { const y1 = RD.rowY(fr, hit.pane, hit.r), y2 = RD.rowY(fr, hit.pane, hit.r + 1); drag.to = p.y - y1 < y2 - p.y ? hit.r : hit.r + 1; showGuide('h', RD.rowY(fr, hit.pane, drag.to)); setStatusTip('Page break before row ' + (drag.to + 1), p); }
-      else { const x1 = RD.colX(fr, hit.pane, hit.c), x2 = RD.colX(fr, hit.pane, hit.c + 1); drag.to = p.x - x1 < x2 - p.x ? hit.c : hit.c + 1; showGuide('v', RD.colX(fr, hit.pane, drag.to)); setStatusTip('Page break before column ' + F.colName(drag.to), p); }
+      if (drag.axis === 'r') { const y1 = RD.rowY(fr, hit.pane, hit.r), y2 = RD.rowY(fr, hit.pane, hit.r + 1); drag.to = p.y - y1 < y2 - p.y ? hit.r : hit.r + 1; showGuide('h', RD.rowY(fr, hit.pane, drag.to)); setStatusTip(L.t('Page break before row {0}', drag.to + 1), p); }
+      else { const x1 = RD.colX(fr, hit.pane, hit.c), x2 = RD.colX(fr, hit.pane, hit.c + 1); drag.to = p.x - x1 < x2 - p.x ? hit.c : hit.c + 1; showGuide('v', RD.colX(fr, hit.pane, drag.to)); setStatusTip(L.t('Page break before column {0}', F.colName(drag.to)), p); }
       return;
     }
     if (drag.kind === 'rowres') {
       const hpx = Math.max(0, drag.h0 + p.y - drag.y0);
       drag.h = hpx;
-      setStatusTip('Height: ' + (Math.round((hpx / G.zoomOf(sh)) * 0.75 * 4) / 4).toFixed(2) + ' (' + Math.round(hpx / G.zoomOf(sh)) + ' pixels)', p);
+      setStatusTip(L.t('Height: {0} ({1} pixels)', (Math.round((hpx / G.zoomOf(sh)) * 0.75 * 4) / 4).toFixed(2), Math.round(hpx / G.zoomOf(sh))), p);
       showGuide('h', p.y);
       return;
     }
@@ -1060,12 +1060,12 @@
       if (!(cm.visible || showAll || (hoverCm && hoverCm === cm))) continue;
       const q = G.cellRect(cm.r, cm.c);
       if (q.x + q.w < fr.hdrW - 200 || q.y < fr.hdrH - 200) continue;
-      const box = add(h('div', { class: 'cmt-box' }));
+      const box = add(h('div', { class: 'cmt-box', translate: 'no' }));
       const w = (cm.w || 108) * 96 / 72 * fr.z, hh = (cm.h || 59) * 96 / 72 * fr.z;
       const bx = q.x + q.w + 15, by = Math.max(fr.hdrH + 2, q.y - 8);
       Object.assign(box.style, { left: bx + 'px', top: by + 'px', width: w + 'px', height: hh + 'px', fontSize: (8 * fr.z) + 'pt', background: cm.fill && /^#[0-9a-f]{6}$/i.test(cm.fill) ? cm.fill : '' });
-      if (cm.author && !/^\s*$/.test(cm.author) && !(cm.text || '').startsWith(cm.author)) box.appendChild(h('b', { text: cm.author + ':' })), box.appendChild(document.createTextNode('\n'));
-      if (cm.runs) for (const run of cm.runs) { const sp = h('span', { text: run.t }); if (run.font && run.font.b) sp.style.fontWeight = 'bold'; if (run.font && run.font.i) sp.style.fontStyle = 'italic'; box.appendChild(sp); }
+      if (cm.author && !/^\s*$/.test(cm.author) && !(cm.text || '').startsWith(cm.author)) box.appendChild(h('b', { translate: 'no', text: cm.author + ':' })), box.appendChild(document.createTextNode('\n'));
+      if (cm.runs) for (const run of cm.runs) { const sp = h('span', { translate: 'no', text: run.t }); if (run.font && run.font.b) sp.style.fontWeight = 'bold'; if (run.font && run.font.i) sp.style.fontStyle = 'italic'; box.appendChild(sp); }
       else box.appendChild(document.createTextNode(cm.text || ''));
       const line = add(h('div', { class: 'cmt-line' }));
       const x1 = q.x + q.w - 1, y1 = q.y + 2, x2 = bx, y2 = by + 6;
@@ -1089,8 +1089,8 @@
     }
     if (dv && dv.showInput && (dv.prompt || dv.promptTitle) && !(L.editor && L.editor.active)) {
       const q = G.cellRect(s.r, s.c);
-      const tip = add(h('div', { class: 'dv-tip' }));
-      if (dv.promptTitle) tip.appendChild(h('b', { text: dv.promptTitle }));
+      const tip = add(h('div', { class: 'dv-tip', translate: 'no' }));
+      if (dv.promptTitle) tip.appendChild(h('b', { translate: 'no', text: dv.promptTitle }));
       tip.appendChild(document.createTextNode(dv.prompt || ''));
       Object.assign(tip.style, { left: (q.x + Math.min(q.w, 40)) + 'px', top: (q.y + q.h + 4) + 'px' });
     }

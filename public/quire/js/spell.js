@@ -14,6 +14,8 @@
   const opt = (k, def) => { const o = A() && A().opts; return o && o[k] !== undefined ? o[k] !== false : def !== false; };
 
   const LEX = L.lex;
+  /* text kept in tables, shown through L.t where it is shown (common/i18n.js; the Node tests load this file without it) */
+  const N = L.N || ((s) => s);
 
   /* ================= tokenising ================= */
   /** words of a text: [{w, a, b}] (letters with inner apostrophes and hyphens) */
@@ -46,12 +48,12 @@
   }
   const PLURAL_SUBJ = /^(we|they|you)$/i, SING_SUBJ = /^(he|she|it)$/i;
   const CONFUSED = [
-    [/\b(could|should|would|must|might)\s+of\b/gi, (m) => m[1] + ' have', 'Commonly Confused Words', 'Use "have" after could, should, would, might and must.'],
-    [/\b(more|less|better|worse|rather|other|greater|larger|smaller|higher|lower|faster|slower|older|younger|bigger)\s+then\b/gi, (m) => m[1] + ' than', 'Commonly Confused Words', 'Use "than" in comparisons.'],
-    [/\byour\s+(welcome|right|wrong|not|going|being)\b/gi, (m) => "you're " + m[1], 'Possessives and Plurals', '"Your" is possessive; "you\'re" means "you are".'],
-    [/\b(its)\s+(a|an|the|been|not|going|very|so|too|time)\b/gi, (m) => "it's " + m[2], 'Possessives and Plurals', '"Its" is possessive; "it\'s" means "it is" or "it has".'],
-    [/\btheir\s+(is|are|was|were)\b/gi, (m) => 'there ' + m[1], 'Commonly Confused Words', '"Their" is possessive; use "there" with is, are, was and were.'],
-    [/\b(irregardless)\b/gi, () => 'regardless', 'Commonly Confused Words', '"Irregardless" is nonstandard.'],
+    [/\b(could|should|would|must|might)\s+of\b/gi, (m) => m[1] + ' have', N('Commonly Confused Words'), N('Use "have" after could, should, would, might and must.')],
+    [/\b(more|less|better|worse|rather|other|greater|larger|smaller|higher|lower|faster|slower|older|younger|bigger)\s+then\b/gi, (m) => m[1] + ' than', N('Commonly Confused Words'), N('Use "than" in comparisons.')],
+    [/\byour\s+(welcome|right|wrong|not|going|being)\b/gi, (m) => "you're " + m[1], N('Possessives and Plurals'), N('"Your" is possessive; "you\'re" means "you are".')],
+    [/\b(its)\s+(a|an|the|been|not|going|very|so|too|time)\b/gi, (m) => "it's " + m[2], N('Possessives and Plurals'), N('"Its" is possessive; "it\'s" means "it is" or "it has".')],
+    [/\btheir\s+(is|are|was|were)\b/gi, (m) => 'there ' + m[1], N('Commonly Confused Words'), N('"Their" is possessive; use "there" with is, are, was and were.')],
+    [/\b(irregardless)\b/gi, () => 'regardless', N('Commonly Confused Words'), N('"Irregardless" is nonstandard.')],
   ];
   /** grammar issues within one paragraph text: [{a, b, rule, suggestions, explain}] */
   function grammarIssues(t, o) {
@@ -64,7 +66,7 @@
     /* repeated words */
     for (let i = 1; i < ws.length; i++) {
       const p = ws[i - 1], c = ws[i];
-      if (p.w.toLowerCase() === c.w.toLowerCase() && /^[ \t]+$/.test(t.slice(p.b, c.a)) && /\p{L}/u.test(c.w) && !/^(that|had|is|bye|so|no|ha|very|bora|can|in|walla|chop|pom|tut|aye|do|knock|well|now)$/i.test(c.w)) out.push({ a: c.a, b: c.b, delA: p.b, rule: 'Repeated Word', kind: 'repeat', suggestions: ['Delete Repeated Word'], explain: 'The word appears twice in a row.' });
+      if (p.w.toLowerCase() === c.w.toLowerCase() && /^[ \t]+$/.test(t.slice(p.b, c.a)) && /\p{L}/u.test(c.w) && !/^(that|had|is|bye|so|no|ha|very|bora|can|in|walla|chop|pom|tut|aye|do|knock|well|now)$/i.test(c.w)) out.push({ a: c.a, b: c.b, delA: p.b, rule: N('Repeated Word'), kind: 'repeat', suggestions: [N('Delete Repeated Word')], explain: 'The word appears twice in a row.' });
     }
     /* a / an */
     for (let i = 0; i + 1 < ws.length; i++) {
@@ -72,8 +74,8 @@
       if (!/^(a|an)$/i.test(art) || !/^\s+$/.test(t.slice(ws[i].b, nx.a))) continue;
       if (/^[A-Z]$/.test(art) && i > 0 && !/[.!?]\s*$/.test(t.slice(0, ws[i].a))) continue; /* "Exhibit A" */
       const an = needsAn(nx.w);
-      if (art.toLowerCase() === 'a' && an) out.push({ a: ws[i].a, b: ws[i].b, rule: 'Use of "a" or "an"', suggestions: [art === 'A' ? 'An' : 'an'], explain: 'Use "an" before a word that starts with a vowel sound.' });
-      else if (art.toLowerCase() === 'an' && !an && /^[a-z]/i.test(nx.w)) out.push({ a: ws[i].a, b: ws[i].b, rule: 'Use of "a" or "an"', suggestions: [art === 'An' ? 'A' : 'a'], explain: 'Use "a" before a word that starts with a consonant sound.' });
+      if (art.toLowerCase() === 'a' && an) out.push({ a: ws[i].a, b: ws[i].b, rule: N('Use of "a" or "an"'), suggestions: [art === 'A' ? 'An' : 'an'], explain: 'Use "an" before a word that starts with a vowel sound.' });
+      else if (art.toLowerCase() === 'an' && !an && /^[a-z]/i.test(nx.w)) out.push({ a: ws[i].a, b: ws[i].b, rule: N('Use of "a" or "an"'), suggestions: [art === 'An' ? 'A' : 'a'], explain: 'Use "a" before a word that starts with a consonant sound.' });
     }
     /* subject–verb agreement for pronouns */
     for (let i = 0; i + 1 < ws.length; i++) {
@@ -88,11 +90,11 @@
         /* questions ("Do they", "Have we") and "it do" in odd constructions are left alone */
         const before = t.slice(Math.max(0, ws[i].a - 30), ws[i].a);
         if (/\b(do|does|did|will|would|can|could|should|let|make|made|help|see|saw|watch|hear|heard|have|had)\s+$/i.test(before)) continue;
-        out.push({ a: v.a, b: v.b, rule: 'Subject-Verb Agreement', suggestions: [fix], explain: 'The verb does not agree with its subject.' });
+        out.push({ a: v.a, b: v.b, rule: N('Subject-Verb Agreement'), suggestions: [fix], explain: 'The verb does not agree with its subject.' });
       }
     }
     /* lower-case pronoun i */
-    for (const w of ws) if (w.w === 'i' && !/[.\\/]$/.test(t.slice(0, w.a)) && !/^[.\\/]/.test(t.slice(w.b))) out.push({ a: w.a, b: w.b, rule: 'Capitalization', suggestions: ['I'], explain: 'The pronoun "I" is always capitalized.' });
+    for (const w of ws) if (w.w === 'i' && !/[.\\/]$/.test(t.slice(0, w.a)) && !/^[.\\/]/.test(t.slice(w.b))) out.push({ a: w.a, b: w.b, rule: N('Capitalization'), suggestions: ['I'], explain: 'The pronoun "I" is always capitalized.' });
     /* first letter of a sentence */
     if (prose) {
       const re = /(^|[.!?]["'”’)\]]*\s+)(\p{Ll}[\p{L}'’]*)/gu;
@@ -103,23 +105,23 @@
         if (m[1] && (/^(e\.g|i\.e|etc|vs|cf|al|approx|no|fig|p|pp|vol|ch|sec)\.$/i.test(prevWord) || /^\S\.$/.test(prevWord) || /\.\S+\.$/.test(prevWord))) continue;
         if (!m[1] && /^[\s(“"'‘]*$/.test(t.slice(0, at)) === false) continue;
         if (/^(e\.g|i\.e|www|http|iphone|ipad|ipod|ebay)/i.test(m[2])) continue;
-        out.push({ a: at, b: at + m[2].length, rule: 'Capitalization', suggestions: [m[2][0].toUpperCase() + m[2].slice(1)], explain: 'Start a sentence with a capital letter.' });
+        out.push({ a: at, b: at + m[2].length, rule: N('Capitalization'), suggestions: [m[2][0].toUpperCase() + m[2].slice(1)], explain: 'Start a sentence with a capital letter.' });
       }
     }
     /* spacing and punctuation */
     let m;
     const sp = /([\p{L}\p{N},;:.!?)]) {2,}(?=[\p{L}\p{N}(])/gu;
-    while ((m = sp.exec(t))) { if (/[.!?]/.test(m[1])) continue; out.push({ a: m.index + 1, b: m.index + m[0].length, rule: 'Spacing', suggestions: [' '], explain: 'There is more than one space between these words.' }); }
+    while ((m = sp.exec(t))) { if (/[.!?]/.test(m[1])) continue; out.push({ a: m.index + 1, b: m.index + m[0].length, rule: N('Spacing'), suggestions: [' '], explain: 'There is more than one space between these words.' }); }
     const before = /([\p{L}\p{N}]) +([,;:.!?])(?=\s|$)/gu;
-    while ((m = before.exec(t))) { if (m[2] === '.' && /\.\.$/.test(t.slice(0, m.index + m[0].length + 2))) continue; out.push({ a: m.index + 1, b: m.index + m[0].length, rule: 'Punctuation', suggestions: [m[2]], explain: 'Punctuation follows the word directly.' }); }
+    while ((m = before.exec(t))) { if (m[2] === '.' && /\.\.$/.test(t.slice(0, m.index + m[0].length + 2))) continue; out.push({ a: m.index + 1, b: m.index + m[0].length, rule: N('Punctuation'), suggestions: [m[2]], explain: 'Punctuation follows the word directly.' }); }
     const after = /([\p{Ll}]{2,})([,;])(?=\p{L})/gu;
-    while ((m = after.exec(t))) out.push({ a: m.index + m[1].length, b: m.index + m[0].length, rule: 'Punctuation', suggestions: [m[2] + ' '], explain: 'Put a space after a comma or semicolon.' });
+    while ((m = after.exec(t))) out.push({ a: m.index + m[1].length, b: m.index + m[0].length, rule: N('Punctuation'), suggestions: [m[2] + ' '], explain: 'Put a space after a comma or semicolon.' });
     const dbl = /([,;:])\1+|(?<!\.)\.\.(?!\.)/g;
-    while ((m = dbl.exec(t))) out.push({ a: m.index, b: m.index + m[0].length, rule: 'Punctuation', suggestions: [m[0][0]], explain: 'This punctuation mark is repeated.' });
+    while ((m = dbl.exec(t))) out.push({ a: m.index, b: m.index + m[0].length, rule: N('Punctuation'), suggestions: [m[0][0]], explain: 'This punctuation mark is repeated.' });
     for (const [re, fix, rule, explain] of CONFUSED) {
       if (!fix) continue;
       re.lastIndex = 0;
-      while ((m = re.exec(t))) out.push({ a: m.index, b: m.index + m[0].length, rule, suggestions: [restoreCase(fix(m), m[0])], explain });
+      while ((m = re.exec(t))) out.push({ a: m.index, b: m.index + m[0].length, rule, suggestions: [SP.restoreCase(fix(m), m[0])], explain });
     }
     /* overlapping findings: keep the first */
     out.sort((x, y) => x.a - y.a || y.b - x.b);
@@ -136,6 +138,7 @@
     const rp = it ? D.rProps(d, p, it) : D.rProps(d, p, { t: 'text', text: '', rPr: p.rPr || {} });
     return rp.lang || (d.defaults && d.defaults.rPr && d.defaults.rPr.lang) || 'en-US';
   }
+  SP.paraLang = paraLang;
   SP.paraList = (p) => LEX.listFor(paraLang(p));
 
   /** all issues in a paragraph (model text) */
@@ -150,7 +153,7 @@
     for (const w of words(t)) {
       if (zones.some(([a, b]) => w.a < b && a < w.b)) continue;
       if (noproof.has(w.a)) continue;
-      if (!SP.okWord(w.w, list)) out.push({ p, a: w.a, b: w.b, kind: 'spelling', word: w.w, rule: 'Not in Dictionary' });
+      if (!SP.okWord(w.w, list)) out.push({ p, a: w.a, b: w.b, kind: 'spelling', word: w.w, rule: N('Not in Dictionary') });
     }
     if (withGrammar) for (const g of grammarIssues(t, { inCell: !!D.cellOf(doc(), p) })) if (!noproof.has(g.a) && !out.some((s) => s.a < g.b && g.a < s.b)) out.push(Object.assign({ p, kind: g.kind || 'grammar', word: t.slice(g.a, g.b) }, g));
     return out.sort((x, y) => x.a - y.a);
@@ -287,11 +290,14 @@
       return items;
     }
     const items = (hit.suggestions || []).map((s) => ({ label: (s === ' ' ? '(single space)' : s).replace(/&/g, '&&'), bold: true, run: () => replace(s === 'Delete Repeated Word' ? '' : s) }));
-    items.push('-', { label: '&Ignore Once', run: () => { SP.ignoredOnce.add(p.id + ':g:' + hit.word); SP.refreshSoon(0); } }, { label: '&Grammar...', run: () => { E.setSel(D.pos(p, hit.a)); SP.check(); } }, { label: '&About This Sentence', run: () => ui.msg(hit.rule + '\n\n' + (hit.explain || ''), { icon: 'info', title: 'Grammar' }) });
+    items.push('-', { label: '&Ignore Once', run: () => { SP.ignoredOnce.add(p.id + ':g:' + hit.word); SP.refreshSoon(0); } }, { label: '&Grammar...', run: () => { E.setSel(D.pos(p, hit.a)); SP.check(); } }, { label: '&About This Sentence', run: () => ui.msg(L.t(hit.rule) + '\n\n' + L.t(hit.explain || ''), { icon: 'info', title: 'Grammar' }) });
     return items;
   };
 
   /* ================= the Spelling and Grammar dialog ================= */
+  /* the grammar rules (grammarIssues) as the dialog names them above the sentence */
+  const RULE_CAP = { 'Commonly Confused Words': N('Commonly Confused Words:'), 'Possessives and Plurals': N('Possessives and Plurals:'), 'Use of "a" or "an"': N('Use of "a" or "an":'),
+    'Subject-Verb Agreement': N('Subject-Verb Agreement:'), Capitalization: N('Capitalization:'), Spacing: N('Spacing:'), Punctuation: N('Punctuation:') };
   SP.check = async function () {
     const d = doc();
     if (!E.sel) return;
@@ -305,7 +311,7 @@
     if (!lists.size) { ui.msg('The text is not marked as English, so it was not checked. Use Tools ▸ Language ▸ Set Language to mark it.', { icon: 'info', title: 'Spelling and Grammar' }); return; }
     L.ui.busy(true, 'Loading the dictionary...');
     try { for (const l of lists) await LEX.load(l); }
-    catch (e) { L.ui.busy(false); ui.msg('The dictionary could not be loaded (' + (e.message || e) + '). Quire needs to be served from a web server, not opened as a local file, for spelling to work.', { icon: 'warn', title: 'Spelling and Grammar' }); return; }
+    catch (e) { L.ui.busy(false); ui.msg(L.t('The dictionary could not be loaded ({0}). Quire needs to be served from a web server, not opened as a local file, for spelling to work.', e.message || e), { icon: 'warn', title: 'Spelling and Grammar' }); return; }
     L.ui.busy(false);
     const withGrammar = opt('grammar', true);
     const issues = [];
@@ -325,7 +331,7 @@
   function run(issues, withGrammar) {
     let idx = -1;
     let cur = null;
-    const ctxBox = h('div', { class: 'sg-context', contenteditable: 'false' });
+    const ctxBox = h('div', { class: 'sg-context', contenteditable: 'false', translate: 'no' });
     const label = h('div', { class: 'cd-cap' });
     const sugg = h('select', { size: 6, id: 'sg-sugg', style: 'width:100%' });
     const changes = new Map();
@@ -353,14 +359,14 @@
     };
     const show = () => {
       const t = D.ptext(cur.p);
-      label.textContent = cur.kind === 'spelling' ? 'Not in Dictionary:' : cur.kind === 'repeat' ? 'Repeated Word:' : cur.rule + ':';
+      label.textContent = L.t(cur.kind === 'spelling' ? 'Not in Dictionary:' : cur.kind === 'repeat' ? 'Repeated Word:' : RULE_CAP[cur.rule] || cur.rule + ':');
       L.clear(ctxBox);
       const s0 = Math.max(0, t.lastIndexOf('.', cur.a - 2) + 1), e0 = Math.min(t.length, (t.indexOf('.', cur.b) + 1) || t.length);
-      ctxBox.append(document.createTextNode(t.slice(s0, cur.a).replace(/^\s+/, '')), h('span', { class: cur.kind === 'spelling' ? 'sg-bad' : 'sg-gram', text: t.slice(cur.a, cur.b) }), document.createTextNode(t.slice(cur.b, e0)));
+      ctxBox.append(document.createTextNode(t.slice(s0, cur.a).replace(/^\s+/, '')), Object.assign(h('span', { class: cur.kind === 'spelling' ? 'sg-bad' : 'sg-gram' }), { textContent: t.slice(cur.a, cur.b) }), document.createTextNode(t.slice(cur.b, e0)));
       L.clear(sugg);
       const list = cur.suggestions || [];
-      if (!list.length) sugg.appendChild(h('option', { text: cur.kind === 'spelling' ? '(No Spelling Suggestions)' : '(No Suggestions)', disabled: true }));
-      for (const s of list) sugg.appendChild(h('option', { value: s, text: s === ' ' ? '(single space)' : s }));
+      if (!list.length) sugg.appendChild(h('option', { text: cur.kind === 'spelling' ? L.N('(No Spelling Suggestions)') : '(No Suggestions)', disabled: true }));
+      for (const s of list) sugg.appendChild(Object.assign(h('option', { value: s, translate: s === ' ' || s === 'Delete Repeated Word' ? null : 'no' }), { textContent: s === ' ' ? L.t('(single space)') : s === 'Delete Repeated Word' ? L.t(s) : s }));
       sugg.selectedIndex = list.length ? 0 : -1;
       L.app.gotoPos(D.pos(cur.p, cur.a), D.pos(cur.p, cur.b));
       const isSp = cur.kind === 'spelling';
@@ -370,17 +376,17 @@
       btnAuto.disabled = !isSp || !list.length;
       btnExplain.hidden = isSp;
     };
-    const setLabel = (b, s) => { b.innerHTML = ''; b.appendChild(h('span', { html: s.replace(/&(.)/, '<u>$1</u>') })); b._label = s; };
+    const setLabel = (b, s) => { b.innerHTML = ''; b.appendChild(h('span', { html: ui.ampHTML(s) })); b._label = s; };
     const apply = (rep) => {
       const p = cur.p, a = cur.a, b = cur.b;
       if (cur.kind === 'repeat') {
         /* the finding covers the space and the second word */
         const s0 = cur.delA != null ? cur.delA : a;
-        E.edit('Grammar', () => { O.deleteRange(D.pos(p, s0), D.pos(p, b)); return D.pos(p, s0); });
+        E.edit(N('Grammar'), () => { O.deleteRange(D.pos(p, s0), D.pos(p, b)); return D.pos(p, s0); });
         for (const x of issues.slice(idx + 1)) if (x.p === p && x.a >= b) { x.a -= b - s0; x.b -= b - s0; }
         return;
       }
-      E.edit(cur.kind === 'spelling' ? 'Spelling' : 'Grammar', () => { const it = D.itemAfter(p, a); O.deleteRange(D.pos(p, a), D.pos(p, b)); return O.insertText(D.pos(p, a), rep, it && it.rPr ? L.clone(it.rPr) : {}); });
+      E.edit(cur.kind === 'spelling' ? N('Spelling') : N('Grammar'), () => { const it = D.itemAfter(p, a); O.deleteRange(D.pos(p, a), D.pos(p, b)); return O.insertText(D.pos(p, a), rep, it && it.rPr ? L.clone(it.rPr) : {}); });
       for (const x of issues.slice(idx + 1)) if (x.p === p && x.a >= b) { x.a += rep.length - (b - a); x.b += rep.length - (b - a); }
     };
     const pick = () => (sugg.selectedIndex >= 0 && sugg.value ? sugg.value : null);
@@ -390,7 +396,7 @@
     const btnChange = ui.button('&Change', () => { const v = pick(); if (v == null && cur.kind !== 'repeat') return; apply(v === 'Delete Repeated Word' ? '' : v); next(); });
     const btnChangeAll = ui.button('Change A&ll', () => { const v = pick(); if (v == null) return; changes.set(cur.word, v); apply(v); next(); });
     const btnAuto = ui.button('AutoCo&rrect', () => { const v = pick(); if (v == null) return; if (L.autocorrect) L.autocorrect.setEntry(cur.word, v); apply(v); next(); });
-    const btnExplain = ui.button('E&xplain...', () => ui.msg(cur.rule + '\n\n' + (cur.explain || ''), { icon: 'info', title: 'Grammar' }));
+    const btnExplain = ui.button('E&xplain...', () => ui.msg(L.t(cur.rule) + '\n\n' + L.t(cur.explain || ''), { icon: 'info', title: 'Grammar' }));
     sugg.addEventListener('dblclick', () => btnChange.click());
     const side = h('div', { class: 'col', style: 'width:140px' }, btnIgnore, btnIgnoreAll, btnAdd, h('div', { style: 'height:16px' }), btnChange, btnChangeAll, btnAuto, btnExplain);
     for (const b of side.querySelectorAll('.btn')) b.style.width = '100%';
@@ -398,7 +404,7 @@
     const langLbl = h('span', { text: langName(SP.paraList(issues[0].p)) });
     const chkG = ui.check('Check &grammar', gram, (v) => { gram = v; });
     const left = h('div', { class: 'col', style: 'flex:1;min-width:0' }, label, ctxBox, h('label', { for: 'sg-sugg', text: 'Suggestions:' }), sugg, h('div', { class: 'field' }, h('label', { text: 'Dictionary language:' }), langLbl), chkG);
-    const dlg = ui.dialog({ title: 'Spelling and Grammar: ' + langName(SP.paraList(issues[0].p)), width: 540, body: h('div', { class: 'row', style: 'flex-wrap:nowrap' }, left, side), buttons: [{ label: '&Options...', onClick: () => { L.dlg.options('spelling'); return false; } }, { label: '&Undo', onClick: () => { if (D.canUndo()) { D.undo(); idx = Math.max(-1, idx - 2); next(); } return false; } }, { label: 'Cancel', cancel: true }], onClose: () => SP.refreshSoon(0) });
+    const dlg = ui.dialog({ title: L.t('Spelling and Grammar: {0}', L.t(langName(SP.paraList(issues[0].p)))), width: 540, body: h('div', { class: 'row', style: 'flex-wrap:nowrap' }, left, side), buttons: [{ label: '&Options...', onClick: () => { L.dlg.options('spelling'); return false; } }, { label: '&Undo', onClick: () => { if (D.canUndo()) { D.undo(); idx = Math.max(-1, idx - 2); next(); } return false; } }, { label: 'Cancel', cancel: true }], onClose: () => SP.refreshSoon(0) });
     dlg.buttons[0].classList.add('left');
     next();
   }

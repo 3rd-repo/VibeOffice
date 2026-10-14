@@ -814,7 +814,7 @@
       ctx.font = `bold ${Math.round(size)}px Arial, Arimo, sans-serif`;
       ctx.fillStyle = 'rgba(150,150,150,0.55)';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('Page ' + n, (x1 + x2) / 2, (y1 + y2) / 2);
+      ctx.fillText(L.t('Page {0}', n), (x1 + x2) / 2, (y1 + y2) / 2);
     };
     if (across) { for (let i = 0; i < rs.length - 1; i++) for (let j = 0; j < cs.length - 1; j++) label(i, j); }
     else { for (let j = 0; j < cs.length - 1; j++) for (let i = 0; i < rs.length - 1; i++) label(i, j); }

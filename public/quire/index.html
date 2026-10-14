@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<script>try{var d=document.documentElement,l=localStorage.getItem('vibeoffice.look')||'classic';d.dataset.look=l;d.dataset.layout=l==='paper2016'?'ribbon':'bars'}catch(e){}</script>
+<script>try{var d=document.documentElement,l=localStorage.getItem('vibeoffice.look')||'classic';d.dataset.look=l;d.dataset.layout=l==='paper2016'?'ribbon':'bars';var u=['en','ja','ko','fr','de','qps'],g=(location.search.match(/[?&]lang=([a-z]+)/)||[])[1]||localStorage.getItem('vibeoffice.lang');if(u.indexOf(g)<0)g=(navigator.languages||[navigator.language]).map(function(x){return String(x).toLowerCase().split('-')[0]}).filter(function(x){return x!=='qps'&&u.indexOf(x)>=0})[0]||'en';d.lang=g==='qps'?'qps-ploc':g}catch(e){}</script>
 <link rel="stylesheet" href="../common/looks.css">
 <link rel="stylesheet" href="../common/ui.css">
 <link rel="stylesheet" href="../common/scout/scout.css">
@@ -52,7 +52,7 @@
 .pg { position: relative; margin: 0 auto 14px; background: #fff; box-shadow: 0 0 0 1px #4a4a4a, 3px 3px 0 1px #3c3c3c; contain: layout paint; overflow: hidden; }
 .pages.multi { display: flex; flex-wrap: wrap; gap: 14px 16px; align-items: flex-start; }
 .pages.multi .pg { margin: 0; }
-.pg.blank::after { content: "(This page intentionally left blank by a section break)"; position: absolute; left: 0; right: 0; top: 45%; text-align: center; color: #999; font: 12px Arial, Arimo, sans-serif; }
+.pg.blank::after { content: var(--t-blank, "(This page intentionally left blank by a section break)"); position: absolute; left: 0; right: 0; top: 45%; text-align: center; color: #999; font: 12px Arial, Arimo, sans-serif; }
 .pg-body { position: absolute; }
 .pg-reg { position: absolute; left: 0; }
 .pg-col { position: absolute; top: 0; }
@@ -82,7 +82,7 @@
 .pages.hfmode .pg-hdr::before, .pages.hfmode .pg-ftr::before { content: attr(data-label); position: absolute; left: -2px; font: 10px Tahoma, var(--ui-font); color: #333; background: #e8e8e8; border: 1px dashed #7a7a7a; padding: 0 4px; white-space: nowrap; pointer-events: none; }
 .pages.hfmode .pg-hdr::before { top: -18px; }
 .pages.hfmode .pg-ftr::before { bottom: auto; top: -18px; }
-.pages.hfmode .pg-hdr[data-same]::after, .pages.hfmode .pg-ftr[data-same]::after { content: "Same as Previous"; position: absolute; right: -2px; top: -18px; font: 10px Tahoma, var(--ui-font); color: #333; background: #e8e8e8; border: 1px dashed #7a7a7a; padding: 0 4px; pointer-events: none; }
+.pages.hfmode .pg-hdr[data-same]::after, .pages.hfmode .pg-ftr[data-same]::after { content: var(--t-same, "Same as Previous"); position: absolute; right: -2px; top: -18px; font: 10px Tahoma, var(--ui-font); color: #333; background: #e8e8e8; border: 1px dashed #7a7a7a; padding: 0 4px; pointer-events: none; }
 /* flow views */
 .flow { position: relative; margin: 0 0 30px 0; padding: 4px 0 40vh 28px; background: #fff; min-height: 100%; }
 .flow.web { padding: 10px 20px 40vh; }
@@ -113,7 +113,7 @@
 .raw.mml.mpara { display: block; margin: 2px 0; }
 .raw.mml math { font-family: "Cambria Math", "STIX Two Math", "Latin Modern Math", "Noto Sans Math", math; font-style: normal; }
 .raw.mml mtable mtd { padding: 1px 4px; }
-.raw.empty::before { content: "[object]"; color: #888; font: 10px Arial, Arimo, sans-serif; }
+.raw.empty::before { content: var(--t-object, "[object]"); color: #888; font: 10px Arial, Arimo, sans-serif; }
 .anc { display: inline-block; width: 0; height: 0; overflow: hidden; vertical-align: baseline; }
 .flt .shp, .flt .img { display: block; }
 .obj-missing { display: inline-block; width: 40px; height: 20px; border: 1px dashed #999; }
@@ -145,7 +145,7 @@
 .pages.marks .pg .hbrk { position: absolute; }
 .sectmark { position: absolute; width: 100%; text-align: center; font: 10px/14px Arial, Arimo, sans-serif; color: #3a3a3a; border-top: 3px double #555; margin-top: 8px; height: 0; text-indent: 0; }
 .sectmark::after { content: attr(data-label); background: #fff; position: relative; top: -9px; padding: 0 4px; }
-.flow .p.has-sect::after { content: "Section Break (Next Page)"; display: block; text-align: center; font: 10px/14px Arial, Arimo, sans-serif; color: #3a3a3a; border-top: 3px double #555; margin: 6px 0 4px; height: 0; }
+.flow .p.has-sect::after { content: var(--t-sect, "Section Break (Next Page)"); display: block; text-align: center; font: 10px/14px Arial, Arimo, sans-serif; color: #3a3a3a; border-top: 3px double #555; margin: 6px 0 4px; height: 0; }
 .flow .p.has-sect .sectmark { display: none; }
 .flow .pg-fn, .flow .fnote { display: none; }
 /* tables */
@@ -355,6 +355,8 @@ body.bluebg .pages .pc, body.bluebg .pages .pc span { color: #fff !important; }
 <script src="../common/suite.js"></script>
 <script>window.L = { APP_ID: 'quire', APP_NAME: 'Quire', APP: 'Quire 2003' };</script>
 <script src="../common/core.js"></script>
+<script src="../common/i18n.js"></script>
+<script src="../common/locales.js"></script>
 <script src="../common/xml.js"></script>
 <script src="../common/opc.js"></script>
 <script src="../common/opc-order.js"></script>

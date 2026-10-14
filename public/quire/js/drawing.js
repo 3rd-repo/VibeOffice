@@ -139,7 +139,7 @@
   }
 
   /* ---------- WordArt ---------- */
-  DR.WARPS = [['textPlain', 'Plain Text'], ['textArchUp', 'Arch Up'], ['textArchDown', 'Arch Down'], ['textCircle', 'Circle'], ['textWave1', 'Wave'], ['textSlantUp', 'Slant Up'], ['textSlantDown', 'Slant Down'], ['textTriangle', 'Triangle Up'], ['textChevron', 'Chevron Up'], ['textCanUp', 'Can Up']];
+  DR.WARPS = [['textPlain', L.N('Plain Text')], ['textArchUp', L.N('Arch Up')], ['textArchDown', L.N('Arch Down')], ['textCircle', L.N('Circle')], ['textWave1', L.N('Wave')], ['textSlantUp', L.N('Slant Up')], ['textSlantDown', L.N('Slant Down')], ['textTriangle', L.N('Triangle Up')], ['textChevron', L.N('Chevron Up')], ['textCanUp', L.N('Can Up')]];
   function warpPoints(warp, w, hh, fs) {
     const pts = [], N = 64, m = fs * 0.15;
     for (let i = 0; i <= N; i++) {
@@ -466,7 +466,7 @@
       const W = page.W, H = page.H;
       const len = diag ? Math.hypot(W, H) * 0.75 : W * 0.8;
       const fs = wm.size && wm.size > 1 ? px(wm.size) : Math.min(len / Math.max(4, wm.text.length) * 1.6, 220);
-      const t = el('div', null, `font-family:${L.fontStack(wm.font || 'Times New Roman').replace(/"/g, "'")};font-size:${fs}px;color:#${wm.color || 'C0C0C0'};white-space:nowrap;transform:rotate(${diag ? -45 : 0}deg);opacity:${wm.semi === false ? 1 : 0.5};line-height:1`);
+      const t = el('div', null, `font-family:${L.fontStack(wm.font || 'Times New Roman').replace(/\x22/g, "'")};font-size:${fs}px;color:#${wm.color || 'C0C0C0'};white-space:nowrap;transform:rotate(${diag ? -45 : 0}deg);opacity:${wm.semi === false ? 1 : 0.5};line-height:1`);
       t.textContent = wm.text;
       box.appendChild(t);
     } else if (wm.type === 'picture' && wm.media) {
@@ -588,7 +588,7 @@
     const os = L.ed.objSel;
     if (!os || !os.float) return;
     const dx = key === 'ArrowLeft' ? -pt : key === 'ArrowRight' ? pt : 0, dy = key === 'ArrowUp' ? -pt : key === 'ArrowDown' ? pt : 0;
-    L.ed.edit('Nudge', () => { D.touch(os.p); const it = D.itemAfter(os.p, os.o); if (it && it.float) moveFloat(it, dx, dy, os.el); return { a: D.pos(os.p, os.o), f: D.pos(os.p, os.o + 1) }; }, { merge: 'nudge' });
+    L.ed.edit(L.N('Nudge'), () => { D.touch(os.p); const it = D.itemAfter(os.p, os.o); if (it && it.float) moveFloat(it, dx, dy, os.el); return { a: D.pos(os.p, os.o), f: D.pos(os.p, os.o + 1) }; }, { merge: 'nudge' });
   };
   function startResize(ev, hn, target) {
     ev.preventDefault(); ev.stopPropagation();
@@ -645,7 +645,7 @@
       /* a click on the handle that never moved changes nothing */
       up(e2, d) {
         if (!d.moved) return;
-        L.ed.edit('Rotate', () => { D.touch(os.p); const it = D.itemAfter(os.p, os.o); if (it) it.rot = L.round(((ang % 360) + 360) % 360, 1) || undefined; return { a: D.pos(os.p, os.o), f: D.pos(os.p, os.o + 1) }; });
+        L.ed.edit(L.N('Rotate'), () => { D.touch(os.p); const it = D.itemAfter(os.p, os.o); if (it) it.rot = L.round(((ang % 360) + 360) % 360, 1) || undefined; return { a: D.pos(os.p, os.o), f: D.pos(os.p, os.o + 1) }; });
       },
       cancel: () => { shape.style.transform = transform0; },
       capture: L.layout.scroller,
@@ -666,7 +666,7 @@
   DR.selectedItem = () => (L.ed.objSel ? D.itemAfter(L.ed.objSel.p, L.ed.objSel.o) : null);
 
   /* ---------- wrapping styles (Format ▸ Picture ▸ Layout, Draw ▸ Text Wrapping) ---------- */
-  DR.WRAPS = [['inline', 'In Line with Text'], ['square', 'Square'], ['tight', 'Tight'], ['behind', 'Behind Text'], ['none', 'In Front of Text'], ['topBottom', 'Top and Bottom'], ['through', 'Through']];
+  DR.WRAPS = [['inline', L.N('In Line with Text')], ['square', L.N('Square')], ['tight', L.N('Tight')], ['behind', L.N('Behind Text')], ['none', L.N('In Front of Text')], ['topBottom', L.N('Top and Bottom')], ['through', L.N('Through')]];
   DR.setWrap = function (it, wrap, anchorInfo) {
     if (wrap === 'inline') { delete it.float; return; }
     if (!it.float) {

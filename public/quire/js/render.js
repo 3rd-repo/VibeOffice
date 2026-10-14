@@ -14,10 +14,16 @@
     'calibri': 1.2207, 'calibri light': 1.2207, 'cambria': 1.1724, 'times new roman': 1.149, 'arial': 1.149, 'courier new': 1.1328, 'verdana': 1.2153, 'georgia': 1.1362,
     'tahoma': 1.2069, 'trebuchet ms': 1.1611, 'segoe ui': 1.3301, 'garamond': 1.1235, 'comic sans ms': 1.3936, 'book antiqua': 1.1704, 'bookman old style': 1.1636, 'century gothic': 1.2251,
     'palatino linotype': 1.1353, 'lucida console': 1.0, 'impact': 1.2197, 'arial black': 1.41, 'arial narrow': 1.149, 'franklin gothic medium': 1.1338, 'symbol': 1.2275, 'wingdings': 1.1, 'aptos': 1.2, 'helvetica': 1.149,
+    /* East Asian fonts, by their English names (L.fontKey: ＭＳ 明朝 is ms mincho), from the fonts' Windows metrics;
+       unverified against Word (python3 tools/linegrid.py fonts measures them from its PDF) */
+    'ms mincho': 1.0, 'ms pmincho': 1.0, 'ms gothic': 1.0, 'ms pgothic': 1.0, 'ms ui gothic': 1.0, 'yu mincho': 1.73, 'yu gothic': 1.73, 'yu gothic light': 1.73,
+    'meiryo': 1.5, 'malgun gothic': 1.33,
   };
-  R.lineFactor = (font) => LH[String(font || '').toLowerCase()] || 1.17;
+  R.lineFactor = (font) => LH[L.fontKey(font)] || 1.17;
+  /* a run's line factor: its East Asian font's where its text has East Asian characters and that font is taller */
+  const runFactorFont = (r) => (r.eaText && r.fontEA && LH[L.fontKey(r.fontEA)] > R.lineFactor(r.font) ? r.fontEA : r.font);
   const SPACE_EM = { 'times new roman': 0.25, arial: 0.2778, calibri: 0.2261, 'calibri light': 0.2261, cambria: 0.2197, georgia: 0.2412, verdana: 0.3516, tahoma: 0.3125, 'courier new': 0.6, garamond: 0.25, 'book antiqua': 0.25, 'palatino linotype': 0.25, 'segoe ui': 0.2744, 'trebuchet ms': 0.3013, 'century gothic': 0.2773, helvetica: 0.2778, aptos: 0.2, 'arial narrow': 0.2278 };
-  R.spaceEm = (font) => SPACE_EM[String(font || '').toLowerCase()] || 0.25;
+  R.spaceEm = (font) => SPACE_EM[L.fontKey(font)] || 0.25;
   R.mathSolo = (p) => {
     let maths = 0, other = '';
     for (const it of p.runs) {
@@ -127,13 +133,14 @@
     const sz = r.sz || 12;
     const vert = r.vert;
     const fsz = vert === 'superscript' || vert === 'subscript' ? sz * 0.65 : sz;
-    s.push(`font-family:${L.fontStack(r.font || 'Times New Roman').replace(/"/g, "'")}`);
+    s.push(`font-family:${L.fontStack(r.font || 'Times New Roman', r.fontEA).replace(/\x22/g, "'")}`);
+    const lf = runFactorFont(r);
     s.push(`font-size:${R.px(fsz)}px`);
     /* superscript/subscript text is raised or lowered inside the line Word has already sized: it must not
        stretch the line (a footnote reference would otherwise push its line down a few pixels) */
     if (vert === 'superscript' || vert === 'subscript') s.push('line-height:0');
-    else if (lineMult && lineMult.grid) { const g = R.gridLine(lineMult.grid, lineMult.mult, sz, r.font); s.push(g > lineMult.line ? `line-height:${g}px` : `line-height:${R.lineFactor(r.font)}`); }
-    else if (lineMult != null) s.push(`line-height:${L.round(R.lineFactor(r.font) * lineMult * (fsz < sz ? sz / fsz : 1), 4)}`);
+    else if (lineMult && lineMult.grid) { const g = R.gridLine(lineMult.grid, lineMult.mult, sz, lf); s.push(g > lineMult.line ? `line-height:${g}px` : `line-height:${R.lineFactor(lf)}`); }
+    else if (lineMult != null) s.push(`line-height:${L.round(R.lineFactor(lf) * lineMult * (fsz < sz ? sz / fsz : 1), 4)}`);
     if (r.b) s.push('font-weight:bold');
     if (r.i) s.push('font-style:italic');
     const deco = [];
@@ -251,7 +258,7 @@
     /* line height strut from the first text run (Word sizes lines by their content, not the mark) */
     const firstText = p.runs.find((it) => it.t === 'text' && it.text && !(it.rPr && it.rPr.hidden && !ctx.showHidden) && !(it.rPr && it.rPr.del && ctx.markup === 'final'));
     const strutR = firstText ? D.rProps(d, p, firstText, tctx) : markR;
-    st.push(`font-family:${L.fontStack(strutR.font).replace(/"/g, "'")}`, `font-size:${R.px(strutR.sz || 12)}px`);
+    st.push(`font-family:${L.fontStack(strutR.font).replace(/\x22/g, "'")}`, `font-size:${R.px(strutR.sz || 12)}px`);
     /* Word 2013+ (compatibility mode 15) fits justified lines by shrinking spaces up to 20% */
     if (pPr.jc === 'both' && d.settings && d.settings.compat >= 15) st.push(`word-spacing:${L.round(-0.2 * R.spaceEm(strutR.font) * R.px(strutR.sz || 12), 3)}px`);
     /* the paragraph's own line (CSS's strut): what each line is at least, where the line rule gives one (exact, at
@@ -360,12 +367,15 @@
       const sb = document.createElement('span');
       sb.className = 'sectmark';
       sb.contentEditable = 'false';
-      sb.dataset.label = 'Section Break (' + ({ nextPage: 'Next Page', continuous: 'Continuous', evenPage: 'Even Page', oddPage: 'Odd Page', nextColumn: 'Next Column' }[p.sect.type || 'nextPage'] || 'Next Page') + ')';
+      sb.dataset.label = L.t({ nextPage: 'Section Break (Next Page)', continuous: 'Section Break (Continuous)', evenPage: 'Section Break (Even Page)', oddPage: 'Section Break (Odd Page)', nextColumn: 'Section Break (Next Column)' }[p.sect.type || 'nextPage'] || 'Section Break (Next Page)');
       pc.appendChild(sb);
     }
     return outer;
   };
 
+  /* the names docx-read gives the objects it keeps without showing them (preserve.js keepObject); alt text is the document's */
+  /* a kept object's label (preserve.js keepObject); a SmartArt diagram is shown by its feature's name in the UI */
+  const rawLabel = (s) => (s === 'SmartArt' ? L.t('IntelliArt') : [L.N('Embedded object'), L.N('Drawing'), L.N('Form control'), L.N('Embedded content')].includes(s) ? L.t(s) : s);
   /** fill a paragraph content element with spans for items in [from,to) */
   R.fillRuns = function (pc, p, from, to, ctx, pPr, ls, tctx, runLine) {
     const d = ctx.doc;
@@ -502,8 +512,12 @@
             r = Object.assign({}, r, { sz: maxTextSz });
           }
         }
+        /* East Asian characters: drawn with the run's East Asian font, in its East Asian language */
+        const ea = L.hasEAText(text);
+        if (ea && r.fontEA) r = Object.assign({}, r, { eaText: true });
+        const lang = ea && r.langEA ? r.langEA : r.lang && !/^en/i.test(r.lang) ? r.lang : '';
         const css = R.runCSS(r, mult, ctx.dkPara ? { autoWhite: true, key: 'w' } : null) + extra;
-        const clsS = cls.join(' ');
+        const clsS = cls.join(' ') + (lang ? '|' + lang : '');
         /* merge with the previous span when formatting is identical */
         if (lastSpan && lastCss === css + '|' + clsS && +lastSpan.dataset.o + +lastSpan.dataset.n === a) {
           lastSpan.firstChild.appendData(text);
@@ -513,12 +527,12 @@
         el = document.createElement('span');
         el.appendChild(document.createTextNode(text));
         el.style.cssText = css;
-        if (clsS) el.className = clsS;
+        if (cls.length) el.className = cls.join(' ');
         el.dataset.o = a;
         el.dataset.n = b - a;
         if (r.link || rp.link) el.dataset.link = linkStr(r.link || rp.link);
         if (r.noProof) el.spellcheck = false;
-        if (r.lang && !/^en/i.test(r.lang)) el.lang = r.lang;
+        if (lang) el.lang = lang;
         controlSpan(el);
         pc.appendChild(el);
         lastSpan = el; lastCss = css + '|' + clsS;
@@ -536,7 +550,7 @@
           el = document.createElement('span');
           el.className = 'hbrk ' + (it.type === 'page' ? 'pbrk' : 'cbrk');
           el.contentEditable = 'false';
-          el.dataset.label = it.type === 'page' ? 'Page Break' : 'Column Break';
+          el.dataset.label = it.type === 'page' ? L.t('Page Break') : L.t('Column Break');
         } else {
           el = document.createElement('br');
           /* Chromium sizes a line by its block, not by a <br>: R.lineBoxes gives this style to the line it ends */
@@ -599,7 +613,7 @@
           el.appendChild(mm);
         } else {
           el.style.cssText = R.runCSS(r, mult) + (it.math ? ';font-family:"Cambria Math",Caladea,serif;font-style:italic' : '');
-          el.textContent = it.text || it.label || '';
+          el.textContent = it.text || rawLabel(it.label) || '';
           if (it.opaquePlaceholder) { el.style.opacity = '0.65'; el.style.border = '1px dotted currentColor'; el.style.padding = '2px 5px'; }
           if (!it.text && !it.label) el.classList.add('empty');
         }
@@ -731,7 +745,7 @@
       wrap.appendChild(im);
     } else {
       wrap.classList.add('missing');
-      wrap.textContent = it.alt || 'Picture';
+      wrap.textContent = it.alt || L.t('Picture');
     }
     if (it.rot) wrap.style.transform = `rotate(${it.rot}deg)`;
     if (it.flipH || it.flipV) wrap.style.transform = (wrap.style.transform || '') + ` scale(${it.flipH ? -1 : 1},${it.flipV ? -1 : 1})`;

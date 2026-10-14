@@ -73,7 +73,7 @@
     const sh = G.sheet(), wb = G.wb;
     let list = (A.opts && A.opts.dictLang) === 'en_GB' ? 'en_GB' : 'en_US';
     ui.busy(true, 'Loading the dictionary...');
-    try { await LEX.load(list); } catch (e) { ui.busy(false); ui.msg('The spelling dictionary could not be loaded (' + (e.message || e) + ').', { icon: 'warn' }); return; }
+    try { await LEX.load(list); } catch (e) { ui.busy(false); ui.msg(L.t('The spelling dictionary could not be loaded ({0}).', e.message || e), { icon: 'warn' }); return; }
     ui.busy(false);
     /* cells to check: the selection when it is more than one cell, otherwise the sheet from the active cell, wrapping */
     const rg0 = G.range();
@@ -102,11 +102,11 @@
       if (typeof v !== 'string') return;
       const re = new RegExp('(^|[^\\p{L}])' + x.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=$|[^\\p{L}])', 'u');
       const nv = v.replace(re, (m, pre) => pre + to);
-      if (nv !== v) { O.tx(wb, 'Spelling', () => O.setValue(sh, x.r, x.c, nv)); changes++; }
+      if (nv !== v) { O.tx(wb, L.N('Spelling'), () => O.setValue(sh, x.r, x.c, nv)); changes++; }
     };
     if (!next()) { ui.msg(changes ? 'The spelling check is complete for the entire sheet.' : 'The spelling check is complete for the entire sheet.', { icon: 'info' }); return; }
     const word = h('input', { type: 'text', style: 'width:100%' });
-    const ctx = h('div', { class: 'sp-ctx' });
+    const ctx = h('div', { class: 'sp-ctx', translate: 'no' });
     const sugg = h('select', { size: '6', style: 'width:100%' });
     const btn = (label, fn) => ui.button(label, fn, { style: 'width:100%' });
     let cur = null;
@@ -116,10 +116,10 @@
       word.value = cur.word;
       const v = sh.val(cur.r, cur.c);
       ctx.textContent = '';
-      ctx.append(document.createTextNode(v.slice(Math.max(0, cur.index - 40), cur.index)), h('b', { style: 'color:#c00', text: cur.word }), document.createTextNode(v.slice(cur.index + cur.word.length, cur.index + cur.word.length + 40)));
+      ctx.append(document.createTextNode(v.slice(Math.max(0, cur.index - 40), cur.index)), h('b', { style: 'color:#c00', translate: 'no', text: cur.word }), document.createTextNode(v.slice(cur.index + cur.word.length, cur.index + cur.word.length + 40)));
       sugg.textContent = '';
       const s = SP.suggest(cur.word, list, 8);
-      for (const x of s.length ? s : ['(No Suggestions)']) sugg.appendChild(h('option', { value: x, text: x }));
+      for (const x of s.length ? s : [L.t('(No Suggestions)')]) sugg.appendChild(h('option', { value: x, translate: 'no', text: x }));
       sugg.selectedIndex = 0;
       sugg.disabled = !s.length;
     };
@@ -130,17 +130,17 @@
     const langSel = ui.select(LANGS, list, async (v) => {
       /* switch dictionaries: load the list, remember the choice, re-check the current cell */
       ui.busy(true, 'Loading the dictionary...');
-      try { await LEX.load(v); } catch (e) { ui.busy(false); ui.msg('The spelling dictionary could not be loaded (' + (e.message || e) + ').', { icon: 'warn' }); langSel.value = list; return; }
+      try { await LEX.load(v); } catch (e) { ui.busy(false); ui.msg(L.t('The spelling dictionary could not be loaded ({0}).', e.message || e), { icon: 'warn' }); langSel.value = list; return; }
       ui.busy(false);
       list = v;
       if (A.opts) { A.opts.dictLang = v; if (A.saveOpts) A.saveOpts(); }
-      d.el.querySelector('.dlg-ttl').textContent = 'Spelling: ' + langName(v);
+      d.el.querySelector('.dlg-ttl').textContent = L.t('Spelling: {0}', L.t(langName(v)));
       hits = findErrors(sh.val(cur.r, cur.c), list).map((x) => Object.assign(x, { r: cur.r, c: cur.c }));
       hi = 0;
       if (!hits.length) { hi = 1; advance(); } else show();
     });
     const d = ui.dialog({
-      title: 'Spelling: ' + langName(list), width: 520,
+      title: L.t('Spelling: {0}', L.t(langName(list))), width: 520,
       body: h('div', { class: 'sp-grid' },
         h('div', { class: 'col' }, h('label', { text: 'Not in Dictionary:' }), ctx, word, h('label', { text: 'Suggestions:' }), sugg, ui.field('Dictionary &language:', langSel)),
         h('div', { class: 'col sp-btns' },

@@ -46,7 +46,7 @@
     const single = G().ranges().length === 1 && rg.r1 === rg.r2 && rg.c1 === rg.c2;
     return single ? O.currentRegion(s, sel.r, sel.c) : O.clip(s, rg);
   };
-  const colLabel = (s, rg, header, c) => { if (header) { const v = s.val(rg.r1, c); if (v != null && v !== '') return String(v); } return 'Column ' + F.colName(c); };
+  const colLabel = (s, rg, header, c) => { if (header) { const v = s.val(rg.r1, c); if (v != null && v !== '') return String(v); } return L.t('Column {0}', F.colName(c)); };
 
   /* ================================================================ Sort */
   D.sort = function () {
@@ -59,17 +59,17 @@
     const body = h('div', { class: 'col' });
     const draw = () => {
       body.textContent = '';
-      const opts = st.byCols ? Array.from({ length: rg.r2 - rg.r1 + 1 }, (_, i) => [rg.r1 + i, 'Row ' + (rg.r1 + i + 1)]) : Array.from({ length: rg.c2 - rg.c1 + 1 }, (_, i) => [rg.c1 + i, colLabel(s, rg, header, rg.c1 + i)]);
+      const opts = st.byCols ? Array.from({ length: rg.r2 - rg.r1 + 1 }, (_, i) => [rg.r1 + i, L.t('Row {0}', rg.r1 + i + 1)]) : Array.from({ length: rg.c2 - rg.c1 + 1 }, (_, i) => [rg.c1 + i, colLabel(s, rg, header, rg.c1 + i)]);
       st.keys.forEach((k, i) => {
-        const selEl = ui.select((i ? [['', '(none)']] : []).concat(opts), k.c == null ? '' : k.c, (v) => { k.c = v === '' ? null : +v; });
+        const selEl = ui.select((i ? [['', L.t('(none)')]] : []).concat(opts), k.c == null ? '' : k.c, (v) => { k.c = v === '' ? null : +v; }, { translate: 'no' });
         body.appendChild(ui.group(i === 0 ? 'Sort by' : 'Then by', h('div', { class: 'row', style: 'gap:12px;align-items:center' }, selEl, h('div', { class: 'col' }, ui.radio('sk' + i, '&Ascending', !k.desc, () => { k.desc = false; }), ui.radio('sk' + i, '&Descending', k.desc, () => { k.desc = true; })))));
       });
       body.appendChild(ui.group('My data range has', h('div', { class: 'row', style: 'gap:16px' }, ui.radio('sk-h', 'Header &row', header, () => { header = true; draw(); }), ui.radio('sk-h', 'No header ro&w', !header, () => { header = false; draw(); }))));
     };
     draw();
     const options = () => {
-      const lists = [['', 'Normal']].concat(O.customLists.map((l, i) => [i, l.slice(0, 4).join(', ')]));
-      ui.dialog({ title: 'Sort Options', width: 320, body: h('div', { class: 'col' }, ui.field('&First key sort order', ui.select(lists, st.list == null ? '' : st.list, (v) => { st.list = v === '' ? null : +v; })), ui.check('&Case sensitive', st.caseSensitive, (v) => { st.caseSensitive = v; }),
+      const lists = [['', L.t('Normal')]].concat(O.customLists.map((l, i) => [i, l.slice(0, 4).join(', ')]));
+      ui.dialog({ title: 'Sort Options', width: 320, body: h('div', { class: 'col' }, ui.field('&First key sort order', ui.select(lists, st.list == null ? '' : st.list, (v) => { st.list = v === '' ? null : +v; }, { translate: 'no' })), ui.check('&Case sensitive', st.caseSensitive, (v) => { st.caseSensitive = v; }),
         ui.group('Orientation', ui.radio('so-o', 'Sort &top to bottom', !st.byCols, () => { st.byCols = false; st.keys.forEach((k) => { k.c = null; }); st.keys[0].c = sel.c; }), ui.radio('so-o', 'Sort &left to right', st.byCols, () => { st.byCols = true; st.keys.forEach((k) => { k.c = null; }); st.keys[0].c = sel.r; }))),
       buttons: [{ label: 'OK', primary: true, onClick: () => draw() }, { label: 'Cancel' }] });
     };
@@ -133,18 +133,18 @@
       throw new Error('The value you entered is not a valid number, date or time.');
     };
     ui.dialog({ title: 'Data Validation', width: 440, body: ui.tabs([{ label: 'Settings', body: settings }, { label: 'Input Message', body: input }, { label: 'Error Alert', body: error }, { label: 'IME Mode', body: ime }]),
-      buttons: [{ label: '&Clear All', onClick: () => { tryRun(() => O.tx(w, 'Validation', () => { for (const rg of ranges) O.removeRangeRules(s, rg, 'dv'); })); } },
+      buttons: [{ label: '&Clear All', onClick: () => { tryRun(() => O.tx(w, L.N('Validation'), () => { for (const rg of ranges) O.removeRangeRules(s, rg, 'dv'); })); } },
         { label: 'OK', primary: true, onClick: () => {
           let f1, f2;
           try {
             f1 = st.type === 'none' ? undefined : toFormula(v1.value);
             f2 = ['whole', 'decimal', 'date', 'time', 'textLength'].includes(st.type) && (st.op === 'between' || st.op === 'notBetween') ? toFormula(v2.value) : undefined;
-            if (st.type !== 'none' && f1 == null) throw new Error('You must enter a value in the ' + (st.type === 'list' ? 'Source' : 'Minimum') + ' box.');
+            if (st.type !== 'none' && f1 == null) throw new Error(st.type === 'list' ? L.t('You must enter a value in the Source box.') : L.t('You must enter a value in the Minimum box.'));
             if (f2 === null) throw new Error('You must enter a value in the Maximum box.');
           } catch (e) { ui.msg(e.message, { icon: 'warn' }); return false; }
           const rule = { type: st.type, op: ['whole', 'decimal', 'date', 'time', 'textLength'].includes(st.type) ? st.op : undefined, allowBlank: st.allowBlank, showDrop: st.showDrop !== false, showInput: st.showInput !== false, showError: st.showError !== false, errorStyle: st.errorStyle, f1: f1 == null ? undefined : f1, f2: f2 == null ? undefined : f2, promptTitle: pt.value || undefined, prompt: pm.value || undefined, errorTitle: et.value || undefined, error: em.value || undefined, ime: st.ime };
           if (st.x14) { rule.x14 = true; rule.extKeep = st.extKeep; }
-          tryRun(() => O.tx(w, 'Validation', () => {
+          tryRun(() => O.tx(w, L.N('Validation'), () => {
             let target = ranges;
             if (st.applyAll && cur) target = target.concat(cur.ranges);
             for (const rg of target) O.removeRangeRules(s, rg, 'dv');
@@ -154,14 +154,15 @@
   };
 
   /* ================================================================ Subtotals */
-  const SUBFN = [[9, 'Sum'], [3, 'Count'], [1, 'Average'], [4, 'Max'], [5, 'Min'], [6, 'Product'], [2, 'Count Nums'], [7, 'StdDev'], [8, 'StdDevp'], [10, 'Var'], [11, 'Varp']];
+  /* the functions' names, shown translated; the English goes into the subtotal rows */
+  const SUBFN = [[9, L.N('Sum')], [3, L.N('Count')], [1, L.N('Average')], [4, L.N('Max')], [5, L.N('Min')], [6, L.N('Product')], [2, 'Count Nums'], [7, L.N('StdDev')], [8, L.N('StdDevp')], [10, L.N('Var')], [11, L.N('Varp')]];
   D.subtotals = function () {
     const s = sh(), w = wb();
     const rg = listRange();
     if (rg.r2 <= rg.r1) { ui.msg('Ledger cannot determine which row in your list or selection contains column labels, which are required for this command.', { icon: 'warn' }); return; }
     const cols = Array.from({ length: rg.c2 - rg.c1 + 1 }, (_, i) => rg.c1 + i);
     const st = { at: rg.c1, fn: 9, add: new Set([rg.c2]), replace: true, pageBreak: false, below: true };
-    const addBox = h('div', { class: 'lbox checks' }, ...cols.map((c) => ui.check(colLabel(s, rg, true, c), st.add.has(c), (v) => { if (v) st.add.add(c); else st.add.delete(c); })));
+    const addBox = h('div', { class: 'lbox checks', translate: 'no' }, ...cols.map((c) => ui.check(colLabel(s, rg, true, c), st.add.has(c), (v) => { if (v) st.add.add(c); else st.add.delete(c); })));
     const removeAll = () => tryRun(() => O.structural(s, 'Remove Subtotals', () => {
       for (let r = rg.r2; r > rg.r1; r--) { const row = s.rows[r]; if (row && row.cells.some((cl) => cl && cl.f != null && /^SUBTOTAL\(/i.test(cl.f))) O.insertLines(s, 'r', r, -1); }
       s.rows.forEach((row) => { if (row) { delete row.level; delete row.hidden; } });
@@ -169,14 +170,14 @@
       LY.invalidate(s);
     }));
     ui.dialog({ title: 'Subtotal', width: 340, body: h('div', { class: 'col' },
-      ui.field('&At each change in:', ui.select(cols.map((c) => [c, colLabel(s, rg, true, c)]), st.at, (v) => { st.at = +v; })),
+      ui.field('&At each change in:', ui.select(cols.map((c) => [c, colLabel(s, rg, true, c)]), st.at, (v) => { st.at = +v; }, { translate: 'no' })),
       ui.field('&Use function:', ui.select(SUBFN, st.fn, (v) => { st.fn = +v; })),
       h('label', { text: 'Add subtotal to:' }), addBox,
       ui.check('Replace &current subtotals', true, (v) => { st.replace = v; }), ui.check('&Page break between groups', false, (v) => { st.pageBreak = v; }), ui.check('&Summary below data', true, (v) => { st.below = v; })),
     buttons: [{ label: '&Remove All', onClick: removeAll }, { label: 'OK', primary: true, onClick: () => tryRun(() => {
       if (!st.add.size) return;
       const fnName = SUBFN.find((x) => x[0] === st.fn)[1];
-      O.structural(s, 'Subtotals', () => {
+      O.structural(s, L.N('Subtotals'), () => {
         let r2 = rg.r2;
         if (st.replace) { for (let r = r2; r > rg.r1; r--) { const row = s.rows[r]; if (row && row.cells.some((cl) => cl && cl.f != null && /^SUBTOTAL\(/i.test(cl.f))) { O.insertLines(s, 'r', r, -1); r2--; } } }
         /* groups: runs of equal values in the "at each change" column */
@@ -236,9 +237,9 @@
       const n = Math.max(1, ...data.map((r) => r.length));
       const tbl = h('table', { class: 'tiw-table' });
       const hr = h('tr');
-      for (let c = 0; c < n; c++) { const th = h('th', { class: c === selCol ? 'on' : '', text: { general: 'General', text: 'Text', skip: 'Skip' }[st.formats[c] || 'general'] || st.formats[c] }); th.addEventListener('click', () => { selCol = c; drawPrev(); fmtSync(); }); hr.appendChild(th); }
+      for (let c = 0; c < n; c++) { const th = h('th', { class: c === selCol ? 'on' : '', text: { general: L.N('General'), text: 'Text', skip: L.N('Skip') }[st.formats[c] || 'general'] || st.formats[c] }); th.addEventListener('click', () => { selCol = c; drawPrev(); fmtSync(); }); hr.appendChild(th); }
       tbl.appendChild(hr);
-      for (const r of data) { const tr = h('tr'); for (let c = 0; c < n; c++) tr.appendChild(h('td', { class: c === selCol ? 'on' : '', text: r[c] == null ? '' : r[c] })); tbl.appendChild(tr); }
+      for (const r of data) { const tr = h('tr'); for (let c = 0; c < n; c++) tr.appendChild(h('td', { class: c === selCol ? 'on' : '', translate: 'no', text: r[c] == null ? '' : r[c] })); tbl.appendChild(tr); }
       preview.appendChild(tbl);
     };
     const d = st.delims;
@@ -293,7 +294,7 @@
     const list = refBox(F.quoteSheet(s.name) + '!' + F.absRangeName(rg), 220);
     const crit = refBox('', 220), to = refBox('', 220);
     to.hidden = true;
-    ui.dialog({ title: 'Advanced Filter', width: 360, body: h('div', { class: 'col' }, ui.group('Action', ui.radio('af-a', '&Filter the list, in-place', true, () => { copy = false; to.input.disabled = true; }), ui.radio('af-a', 'C&opy to another location', false, () => { copy = true; to.input.disabled = false; })),
+    ui.dialog({ title: 'Advanced Filter', width: 360, body: h('div', { class: 'col' }, ui.group('Action|filter', ui.radio('af-a', '&Filter the list, in-place', true, () => { copy = false; to.input.disabled = true; }), ui.radio('af-a', 'C&opy to another location', false, () => { copy = true; to.input.disabled = false; })),
       ui.field('&List range:', list), ui.field('&Criteria range:', crit), ui.field('Copy &to:', (() => { to.hidden = false; to.input.disabled = true; return to; })()), ui.check('Unique &records only', false, (v) => { unique = v; })),
     buttons: [{ label: 'OK', primary: true, onClick: () => {
       const lr = parseRef(list.input.value), cr = crit.input.value.trim() ? parseRef(crit.input.value) : null;
@@ -303,7 +304,7 @@
       if (copy && !dest) { ui.msg('The extract range is not valid.', { icon: 'warn' }); return false; }
       tryRun(() => {
         const n = L.filter.advanced(lr.sheet, { r1: lr.r1, c1: lr.c1, r2: Math.min(lr.r2, lr.sheet.maxR), c2: lr.c2 }, cr ? cr.sheet : null, cr ? { r1: cr.r1, c1: cr.c1, r2: cr.r2, c2: cr.c2 } : null, { unique, copyTo: dest ? { sheet: dest.sheet, r: dest.r1, c: dest.c1 } : null });
-        A().status(`${n} of ${lr.r2 - lr.r1} records found`);
+        A().status(L.t('{0} of {1} records found', n, lr.r2 - lr.r1));
       });
     } }, { label: 'Cancel' }] });
   };
@@ -317,13 +318,13 @@
     let rec = 1, criteria = null;
     const inputs = cols.map((c) => { const i = h('input', { type: 'text', style: 'width:100%' }); i.dataset.c = c; return i; });
     const count = h('div', { class: 'df-count' });
-    const fieldsBox = h('div', { class: 'df-fields' }, ...cols.map((c, k) => ui.field(colLabel(s, rg, true, c) + ':', inputs[k])));
+    const fieldsBox = h('div', { class: 'df-fields', translate: 'no' }, ...cols.map((c, k) => ui.field(L.t('{0}:', colLabel(s, rg, true, c)), inputs[k])));
     const total = () => rg.r2 - rg.r1;
     const load = () => {
       if (criteria) return;
       const r = rg.r1 + rec;
       cols.forEach((c, k) => { const cl = s.get(r, c); inputs[k].value = rec > total() ? '' : cl && cl.f != null ? textOf(s, r, c) : cl && cl.v != null ? L.editor.cellText(s, r, c) : ''; inputs[k].readOnly = !!(cl && cl.f != null) && rec <= total(); });
-      count.textContent = rec > total() ? 'New Record' : `${rec} of ${total()}`;
+      count.textContent = rec > total() ? L.t('New Record') : L.t('{0} of {1}', rec, total());
     };
     const save = () => {
       if (criteria || rec > total() + 1) return;
@@ -346,8 +347,8 @@
       btn('Find &Prev', () => { save(); const k = find(-1); if (k) { rec = k; load(); } }),
       btn('Find &Next', () => { save(); const k = find(1); if (k) { rec = k; load(); } }),
       critMode = btn('&Criteria', () => {
-        if (!criteria) { save(); criteria = inputs.map(() => ''); inputs.forEach((i) => { i.value = ''; i.readOnly = false; }); count.textContent = 'Criteria'; critMode.textContent = 'Form'; }
-        else { criteria = inputs.map((i) => i.value.trim()); const k = find(1) || find(-1) || rec; const crit = criteria; criteria = null; rec = k; load(); criteria = crit; criteria = crit.some(Boolean) ? crit : null; critMode.textContent = 'Criteria'; }
+        if (!criteria) { save(); criteria = inputs.map(() => ''); inputs.forEach((i) => { i.value = ''; i.readOnly = false; }); count.textContent = L.t('Criteria'); critMode.textContent = L.t('Form'); }
+        else { criteria = inputs.map((i) => i.value.trim()); const k = find(1) || find(-1) || rec; const crit = criteria; criteria = null; rec = k; load(); criteria = crit; criteria = crit.some(Boolean) ? crit : null; critMode.textContent = L.t('Criteria'); }
       }));
     inputs.forEach((i) => i.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); save(); if (rec <= total()) rec++; load(); } }));
     ui.dialog({ title: s.name, width: 460, body: h('div', { class: 'row df', style: 'gap:12px;align-items:flex-start' }, fieldsBox, side), buttons: [{ label: 'Cl&ose', primary: true, onClick: () => save() }] });
@@ -398,7 +399,7 @@
   };
 
   /* ================================================================ Conditional Formatting (Excel 2003) */
-  const CF_OPS = [['between', 'between'], ['notBetween', 'not between'], ['equal', 'equal to'], ['notEqual', 'not equal to'], ['greaterThan', 'greater than'], ['lessThan', 'less than'], ['greaterThanOrEqual', 'greater than or equal to'], ['lessThanOrEqual', 'less than or equal to']];
+  const CF_OPS = [['between', L.N('between')], ['notBetween', L.N('not between')], ['equal', L.N('equal to')], ['notEqual', L.N('not equal to')], ['greaterThan', L.N('greater than')], ['lessThan', L.N('less than')], ['greaterThanOrEqual', L.N('greater than or equal to')], ['lessThanOrEqual', L.N('less than or equal to')]];
   D.conditionalFormat = function () {
     const s = sh(), w = wb(), sel = G().sel();
     const ranges = G().ranges().map((r) => O.clip(s, r));
@@ -425,7 +426,7 @@
         const two = cd.kind === 'value' && (cd.op === 'between' || cd.op === 'notBetween');
         const prev = h('div', { class: 'cf-prev', style: prevCss(cd.dxf), text: Object.keys(cd.dxf).length ? 'AaBbCcYyZz' : 'No Format Set' });
         const fmtBtn = ui.button('&Format...', () => D.cfFormat(cd.dxf, (d2) => { cd.dxf = d2; draw(); }));
-        body.appendChild(ui.group('Condition ' + (i + 1), h('div', { class: 'row', style: 'gap:6px;align-items:center;flex-wrap:wrap' }, kindSel, cd.kind === 'value' ? opSel : null, a, two ? h('span', { text: 'and' }) : null, two ? b : null),
+        body.appendChild(ui.group(L.t('Condition {0}', i + 1), h('div', { class: 'row', style: 'gap:6px;align-items:center;flex-wrap:wrap' }, kindSel, cd.kind === 'value' ? opSel : null, a, two ? h('span', { text: 'and' }) : null, two ? b : null),
           h('div', { class: 'row', style: 'gap:8px;align-items:center;margin-top:4px' }, h('span', { class: 'hint', text: 'Preview of format to use when condition is true:' }), prev, fmtBtn)));
       });
     }
@@ -441,7 +442,7 @@
     };
     ui.dialog({ title: 'Conditional Formatting', width: 560, body,
       buttons: [{ label: '&Add >>', onClick: () => { if (conds.length < 3) { conds.push({ kind: 'value', op: 'between', v1: '', v2: '', dxf: {} }); draw(); } return false; } },
-        { label: '&Delete...', onClick: () => { const checks = conds.map((c, i) => ui.check('Condition ' + (i + 1), false, null)); ui.dialog({ title: 'Delete Conditional Format', width: 260, body: ui.group('Select condition(s) to delete:', ...checks), buttons: [{ label: 'OK', primary: true, onClick: () => { for (let i = checks.length - 1; i >= 0; i--) if (checks[i].input.checked) conds.splice(i, 1); if (!conds.length) conds.push({ kind: 'value', op: 'between', v1: '', v2: '', dxf: {} }); draw(); } }, { label: 'Cancel' }] }); return false; } },
+        { label: '&Delete...', onClick: () => { const checks = conds.map((c, i) => ui.check(L.t('Condition {0}', i + 1), false, null)); ui.dialog({ title: 'Delete Conditional Format', width: 260, body: ui.group('Select condition(s) to delete:', ...checks), buttons: [{ label: 'OK', primary: true, onClick: () => { for (let i = checks.length - 1; i >= 0; i--) if (checks[i].input.checked) conds.splice(i, 1); if (!conds.length) conds.push({ kind: 'value', op: 'between', v1: '', v2: '', dxf: {} }); draw(); } }, { label: 'Cancel' }] }); return false; } },
         { label: 'OK', primary: true, onClick: () => {
           const rules = [];
           try {
@@ -470,12 +471,12 @@
     const f = d.font || {};
     const styleSel = ui.select([['', '(unchanged)'], ['r', 'Regular'], ['i', 'Italic'], ['b', 'Bold'], ['bi', 'Bold Italic']], f.b == null && f.i == null ? '' : (f.b ? 'b' : '') + (f.i ? 'i' : '') || 'r', (v) => { if (!v) { delete f.b; delete f.i; } else { f.b = /b/.test(v); f.i = /i/.test(v); } });
     const uSel = ui.select([['', '(unchanged)'], ['none', 'None'], ['single', 'Single'], ['double', 'Double']], f.u || '', (v) => { if (!v) delete f.u; else f.u = v === 'none' ? undefined : v; });
-    const col = (get, set, mode) => { const b = h('button', { type: 'button', class: 'swatch-btn wide', style: `background:${get() || 'transparent'}` }, h('span', { text: get() ? '' : 'Automatic' }), h('span', { class: 'dd-arrow' })); b.addEventListener('click', () => ui.colorMenu(b, { mode, grid: true }, (c) => { if (c.auto || c.none) { set(null); b.style.background = 'transparent'; b.firstChild.textContent = c.none ? 'No Color' : 'Automatic'; } else if (typeof c === 'string') { set(c); b.style.background = c; b.firstChild.textContent = ''; } })); return b; };
+    const col = (get, set, mode) => { const b = h('button', { type: 'button', class: 'swatch-btn wide', style: `background:${get() || 'transparent'}` }, h('span', { text: get() ? '' : 'Automatic' }), h('span', { class: 'dd-arrow' })); b.addEventListener('click', () => ui.colorMenu(b, { mode, grid: true }, (c) => { if (c.auto || c.none) { set(null); b.style.background = 'transparent'; b.firstChild.textContent = c.none ? L.t('No Color') : L.t('Automatic'); } else if (typeof c === 'string') { set(c); b.style.background = c; b.firstChild.textContent = ''; } })); return b; };
     const fontTab = h('div', { class: 'col' }, ui.field('Font st&yle:', styleSel), ui.field('&Underline:', uSel), ui.field('&Color:', col(() => (f.color ? M.colorHex(w, f.color) : null), (c) => { if (c) f.color = M.rgb(c); else delete f.color; }, 'font')), ui.check('Stri&kethrough', !!f.strike, (v) => { f.strike = v || undefined; }));
     const fill = d.fill || {};
     const patTab = h('div', { class: 'col' }, ui.field('Cell shading color:', col(() => (fill.fg || fill.bg ? M.colorHex(w, fill.fg || fill.bg) : null), (c) => { if (c) { fill.pattern = 'solid'; fill.fg = M.rgb(c); fill.bg = M.rgb(c); } else { delete fill.pattern; delete fill.fg; delete fill.bg; } }, 'fill')));
     const bd = d.border || {};
-    const bTab = h('div', { class: 'col' }, ui.check('&Outline', !!(bd.t && bd.b && bd.l && bd.r), (v) => { for (const k of ['t', 'b', 'l', 'r']) if (v) bd[k] = { style: 'thin' }; else delete bd[k]; }), ...[['t', 'Top'], ['b', 'Bottom'], ['l', 'Left'], ['r', 'Right']].map(([k, l]) => ui.check(l, !!bd[k], (v) => { if (v) bd[k] = { style: 'thin' }; else delete bd[k]; })));
+    const bTab = h('div', { class: 'col' }, ui.check('&Outline|border', !!(bd.t && bd.b && bd.l && bd.r), (v) => { for (const k of ['t', 'b', 'l', 'r']) if (v) bd[k] = { style: 'thin' }; else delete bd[k]; }), ...[['t', L.N('Top')], ['b', L.N('Bottom')], ['l', L.N('Left')], ['r', L.N('Right')]].map(([k, l]) => ui.check(l, !!bd[k], (v) => { if (v) bd[k] = { style: 'thin' }; else delete bd[k]; })));
     ui.dialog({ title: 'Format Cells', width: 340, body: ui.tabs([{ label: 'Font', body: fontTab }, { label: 'Border', body: bTab }, { label: 'Patterns', body: patTab }]),
       buttons: [{ label: '&Clear', onClick: () => { done({}); } }, { label: 'OK', primary: true, onClick: () => { const out = {}; const fo = {}; for (const k in f) if (f[k] !== undefined) fo[k] = f[k]; if (Object.keys(fo).length) out.font = fo; if (fill.pattern) out.fill = fill; if (Object.keys(bd).length) out.border = bd; done(out); } }, { label: 'Cancel' }] });
   };
@@ -483,23 +484,23 @@
   /* ================================================================ AutoFormat */
   const DARK = M.rgb('#000080'), MID = M.rgb('#C0C0C0'), PALE = M.rgb('#FFFFCC');
   const AUTOFMT = {
-    'Simple': { head: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'thin' } } }, total: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'thin' } } }, body: {} },
-    'Classic 1': { head: { font: { i: true }, border: { b: { style: 'thin' } } }, total: { border: { t: { style: 'thin' }, b: { style: 'double' } } }, first: { font: { b: true } }, body: {} },
-    'Classic 2': { head: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#800080') } }, first: { fill: { pattern: 'solid', fg: MID }, font: { b: true } }, total: { font: { b: true }, border: { t: { style: 'thin' } } }, body: {} },
-    'Classic 3': { head: { font: { b: true, i: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: DARK } }, body: { fill: { pattern: 'solid', fg: MID } }, total: { font: { b: true }, fill: { pattern: 'solid', fg: MID }, border: { t: { style: 'thin' } } } },
-    'Accounting 1': { head: { font: { b: true, i: true }, border: { b: { style: 'thin' } } }, body: { nf: '_(* #,##0.00_);_(* \\(#,##0.00\\);_(* "-"??_);_(@_)' }, total: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'double' } }, nf: '_("$"* #,##0.00_);_("$"* \\(#,##0.00\\);_("$"* "-"??_);_(@_)' } },
-    'Accounting 2': { head: { font: { b: true }, border: { t: { style: 'medium' }, b: { style: 'thin' } } }, body: { nf: '#,##0.00_);(#,##0.00)' }, total: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'medium' } }, nf: '"$"#,##0.00_);\\("$"#,##0.00\\)' } },
-    'Accounting 3': { head: { font: { b: true, i: true }, border: { b: { style: 'double' } } }, first: { font: { b: true } }, body: { nf: '_(* #,##0.00_);_(* \\(#,##0.00\\);_(* "-"??_);_(@_)' }, total: { font: { b: true }, border: { t: { style: 'thin' } }, nf: '_("$"* #,##0.00_);_("$"* \\(#,##0.00\\);_("$"* "-"??_);_(@_)' } },
-    'Accounting 4': { head: { font: { b: true }, border: { b: { style: 'thin' } } }, body: { nf: '#,##0.00_);(#,##0.00)' }, total: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'double' } }, nf: '"$"#,##0.00_);\\("$"#,##0.00\\)' } },
-    'Colorful 1': { head: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#008080') } }, first: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#008080') } }, body: { fill: { pattern: 'solid', fg: M.rgb('#CCFFFF') } }, total: { font: { b: true }, fill: { pattern: 'solid', fg: M.rgb('#99CCFF') } } },
-    'Colorful 2': { head: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#993366') } }, body: { fill: { pattern: 'solid', fg: PALE } }, total: { font: { b: true }, fill: { pattern: 'solid', fg: M.rgb('#FFCC99') } } },
-    'Colorful 3': { head: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#000000') } }, first: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#000000') } }, body: { fill: { pattern: 'solid', fg: M.rgb('#FFCC00') } }, total: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#000000') } } },
-    'List 1': { head: { font: { b: true }, border: { b: { style: 'medium' } } }, band: { fill: { pattern: 'solid', fg: M.rgb('#E3E3E3') } }, body: {}, total: { font: { b: true }, border: { t: { style: 'thin' } } } },
-    'List 2': { head: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#333399') } }, band: { fill: { pattern: 'solid', fg: M.rgb('#CCCCFF') } }, body: {}, total: { font: { b: true }, border: { t: { style: 'double' } } } },
-    'List 3': { head: { font: { b: true, i: true }, border: { t: { style: 'thin' }, b: { style: 'thin' } } }, band: { fill: { pattern: 'solid', fg: M.rgb('#CCFFCC') } }, body: {}, total: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'thin' } } } },
-    '3D Effects 1': { head: { font: { b: true }, fill: { pattern: 'solid', fg: MID }, border: { t: { style: 'thin', color: M.rgb('#FFFFFF') }, l: { style: 'thin', color: M.rgb('#FFFFFF') }, b: { style: 'thin', color: M.rgb('#808080') }, r: { style: 'thin', color: M.rgb('#808080') } } }, body: { fill: { pattern: 'solid', fg: MID }, border: { t: { style: 'thin', color: M.rgb('#FFFFFF') }, l: { style: 'thin', color: M.rgb('#FFFFFF') }, b: { style: 'thin', color: M.rgb('#808080') }, r: { style: 'thin', color: M.rgb('#808080') } } }, total: { font: { b: true }, fill: { pattern: 'solid', fg: MID } } },
-    '3D Effects 2': { head: { font: { b: true }, fill: { pattern: 'solid', fg: MID }, border: { t: { style: 'thin', color: M.rgb('#808080') }, l: { style: 'thin', color: M.rgb('#808080') }, b: { style: 'thin', color: M.rgb('#FFFFFF') }, r: { style: 'thin', color: M.rgb('#FFFFFF') } } }, body: { fill: { pattern: 'solid', fg: MID }, border: { t: { style: 'thin', color: M.rgb('#808080') }, l: { style: 'thin', color: M.rgb('#808080') }, b: { style: 'thin', color: M.rgb('#FFFFFF') }, r: { style: 'thin', color: M.rgb('#FFFFFF') } } }, total: { font: { b: true }, fill: { pattern: 'solid', fg: MID } } },
-    'None': null,
+    [L.N('Simple')]: { head: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'thin' } } }, total: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'thin' } } }, body: {} },
+    [L.N('Classic 1')]: { head: { font: { i: true }, border: { b: { style: 'thin' } } }, total: { border: { t: { style: 'thin' }, b: { style: 'double' } } }, first: { font: { b: true } }, body: {} },
+    [L.N('Classic 2')]: { head: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#800080') } }, first: { fill: { pattern: 'solid', fg: MID }, font: { b: true } }, total: { font: { b: true }, border: { t: { style: 'thin' } } }, body: {} },
+    [L.N('Classic 3')]: { head: { font: { b: true, i: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: DARK } }, body: { fill: { pattern: 'solid', fg: MID } }, total: { font: { b: true }, fill: { pattern: 'solid', fg: MID }, border: { t: { style: 'thin' } } } },
+    [L.N('Accounting 1')]: { head: { font: { b: true, i: true }, border: { b: { style: 'thin' } } }, body: { nf: '_(* #,##0.00_);_(* \\(#,##0.00\\);_(* "-"??_);_(@_)' }, total: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'double' } }, nf: '_("$"* #,##0.00_);_("$"* \\(#,##0.00\\);_("$"* "-"??_);_(@_)' } },
+    [L.N('Accounting 2')]: { head: { font: { b: true }, border: { t: { style: 'medium' }, b: { style: 'thin' } } }, body: { nf: '#,##0.00_);(#,##0.00)' }, total: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'medium' } }, nf: '"$"#,##0.00_);\\("$"#,##0.00\\)' } },
+    [L.N('Accounting 3')]: { head: { font: { b: true, i: true }, border: { b: { style: 'double' } } }, first: { font: { b: true } }, body: { nf: '_(* #,##0.00_);_(* \\(#,##0.00\\);_(* "-"??_);_(@_)' }, total: { font: { b: true }, border: { t: { style: 'thin' } }, nf: '_("$"* #,##0.00_);_("$"* \\(#,##0.00\\);_("$"* "-"??_);_(@_)' } },
+    [L.N('Accounting 4')]: { head: { font: { b: true }, border: { b: { style: 'thin' } } }, body: { nf: '#,##0.00_);(#,##0.00)' }, total: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'double' } }, nf: '"$"#,##0.00_);\\("$"#,##0.00\\)' } },
+    [L.N('Colorful 1')]: { head: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#008080') } }, first: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#008080') } }, body: { fill: { pattern: 'solid', fg: M.rgb('#CCFFFF') } }, total: { font: { b: true }, fill: { pattern: 'solid', fg: M.rgb('#99CCFF') } } },
+    [L.N('Colorful 2')]: { head: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#993366') } }, body: { fill: { pattern: 'solid', fg: PALE } }, total: { font: { b: true }, fill: { pattern: 'solid', fg: M.rgb('#FFCC99') } } },
+    [L.N('Colorful 3')]: { head: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#000000') } }, first: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#000000') } }, body: { fill: { pattern: 'solid', fg: M.rgb('#FFCC00') } }, total: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#000000') } } },
+    [L.N('List 1')]: { head: { font: { b: true }, border: { b: { style: 'medium' } } }, band: { fill: { pattern: 'solid', fg: M.rgb('#E3E3E3') } }, body: {}, total: { font: { b: true }, border: { t: { style: 'thin' } } } },
+    [L.N('List 2')]: { head: { font: { b: true, color: M.rgb('#FFFFFF') }, fill: { pattern: 'solid', fg: M.rgb('#333399') } }, band: { fill: { pattern: 'solid', fg: M.rgb('#CCCCFF') } }, body: {}, total: { font: { b: true }, border: { t: { style: 'double' } } } },
+    [L.N('List 3')]: { head: { font: { b: true, i: true }, border: { t: { style: 'thin' }, b: { style: 'thin' } } }, band: { fill: { pattern: 'solid', fg: M.rgb('#CCFFCC') } }, body: {}, total: { font: { b: true }, border: { t: { style: 'thin' }, b: { style: 'thin' } } } },
+    [L.N('3D Effects 1')]: { head: { font: { b: true }, fill: { pattern: 'solid', fg: MID }, border: { t: { style: 'thin', color: M.rgb('#FFFFFF') }, l: { style: 'thin', color: M.rgb('#FFFFFF') }, b: { style: 'thin', color: M.rgb('#808080') }, r: { style: 'thin', color: M.rgb('#808080') } } }, body: { fill: { pattern: 'solid', fg: MID }, border: { t: { style: 'thin', color: M.rgb('#FFFFFF') }, l: { style: 'thin', color: M.rgb('#FFFFFF') }, b: { style: 'thin', color: M.rgb('#808080') }, r: { style: 'thin', color: M.rgb('#808080') } } }, total: { font: { b: true }, fill: { pattern: 'solid', fg: MID } } },
+    [L.N('3D Effects 2')]: { head: { font: { b: true }, fill: { pattern: 'solid', fg: MID }, border: { t: { style: 'thin', color: M.rgb('#808080') }, l: { style: 'thin', color: M.rgb('#808080') }, b: { style: 'thin', color: M.rgb('#FFFFFF') }, r: { style: 'thin', color: M.rgb('#FFFFFF') } } }, body: { fill: { pattern: 'solid', fg: MID }, border: { t: { style: 'thin', color: M.rgb('#808080') }, l: { style: 'thin', color: M.rgb('#808080') }, b: { style: 'thin', color: M.rgb('#FFFFFF') }, r: { style: 'thin', color: M.rgb('#FFFFFF') } } }, total: { font: { b: true }, fill: { pattern: 'solid', fg: MID } } },
+    [L.N('None')]: null,
   };
   D.autoFormat = function () {
     const s = sh(), w = wb();
@@ -510,9 +511,9 @@
     const grid = h('div', { class: 'afmt-grid' });
     const sample = (name) => {
       const spec = AUTOFMT[name];
-      const tbl = h('table', { class: 'afmt-sample' });
+      const tbl = h('table', { class: 'afmt-sample', translate: 'no' });
       const data = [['', 'Jan', 'Feb', 'Mar', 'Total'], ['East', 7, 7, 5, 19], ['West', 6, 4, 7, 17], ['South', 8, 7, 9, 24], ['Total', 21, 18, 21, 60]];
-      data.forEach((row, r) => { const tr = h('tr'); row.forEach((x, c) => { const role = !spec ? {} : r === 0 ? spec.head : r === data.length - 1 ? spec.total : c === 0 && spec.first ? spec.first : spec.band && r % 2 === 0 ? Object.assign({}, spec.body, spec.band) : spec.body; const td = h('td', { text: String(x) }); const css = []; const f = role.font || {}; if (f.b) css.push('font-weight:bold'); if (f.i) css.push('font-style:italic'); if (f.color) css.push('color:' + M.colorHex(w, f.color)); if (role.fill) css.push('background:' + M.colorHex(w, role.fill.fg)); const b = role.border || {}; for (const [k, side] of [['t', 'top'], ['b', 'bottom'], ['l', 'left'], ['r', 'right']]) if (b[k]) css.push(`border-${side}:${b[k].style === 'medium' ? 2 : b[k].style === 'double' ? 3 : 1}px ${b[k].style === 'double' ? 'double' : 'solid'} ${M.colorHex(w, b[k].color, '#000')}`); td.style.cssText = css.join(';'); if (typeof x === 'number') td.style.textAlign = 'right'; tr.appendChild(td); }); tbl.appendChild(tr); });
+      data.forEach((row, r) => { const tr = h('tr'); row.forEach((x, c) => { const role = !spec ? {} : r === 0 ? spec.head : r === data.length - 1 ? spec.total : c === 0 && spec.first ? spec.first : spec.band && r % 2 === 0 ? Object.assign({}, spec.body, spec.band) : spec.body; const td = h('td', { translate: 'no', text: String(x) }); const css = []; const f = role.font || {}; if (f.b) css.push('font-weight:bold'); if (f.i) css.push('font-style:italic'); if (f.color) css.push('color:' + M.colorHex(w, f.color)); if (role.fill) css.push('background:' + M.colorHex(w, role.fill.fg)); const b = role.border || {}; for (const [k, side] of [['t', 'top'], ['b', 'bottom'], ['l', 'left'], ['r', 'right']]) if (b[k]) css.push(`border-${side}:${b[k].style === 'medium' ? 2 : b[k].style === 'double' ? 3 : 1}px ${b[k].style === 'double' ? 'double' : 'solid'} ${M.colorHex(w, b[k].color, '#000')}`); td.style.cssText = css.join(';'); if (typeof x === 'number') td.style.textAlign = 'right'; tr.appendChild(td); }); tbl.appendChild(tr); });
       return tbl;
     };
     for (const name of Object.keys(AUTOFMT)) { const b = h('button', { type: 'button', class: 'afmt-item' + (name === pick ? ' on' : '') }, sample(name), h('div', { text: name })); b.addEventListener('click', () => { pick = name; L.$$('.afmt-item', grid).forEach((x) => x.classList.toggle('on', x === b)); }); grid.appendChild(b); }
@@ -520,7 +521,7 @@
     optBox.hidden = true;
     ui.dialog({ title: 'AutoFormat', width: 560, body: h('div', { class: 'col' }, grid, optBox), buttons: [{ label: '&Options...', onClick: () => { optBox.hidden = !optBox.hidden; return false; } }, { label: 'OK', primary: true, onClick: () => tryRun(() => {
       const spec = AUTOFMT[pick];
-      O.tx(w, 'AutoFormat', () => {
+      O.tx(w, L.N('AutoFormat'), () => {
         for (let r = rg.r1; r <= rg.r2; r++) for (let c = rg.c1; c <= rg.c2; c++) {
           const cl = s.get(r, c) || { v: null };
           const isTotal = r === rg.r2 && rg.r2 > rg.r1 + 1 && /total/i.test(String(s.val(r, rg.c1) || ''));
@@ -542,6 +543,8 @@
   };
 
   /* ================================================================ Style */
+  /* the horizontal alignments, as Format Cells names them */
+  const ALIGN_NAMES = { general: L.N('General'), left: 'Left (Indent)', center: L.N('Center'), right: 'Right (Indent)', fill: L.N('Fill'), justify: L.N('Justify'), centerContinuous: 'Center Across Selection', distributed: 'Distributed (Indent)' };
   const BUILTIN_STYLES = { Normal: 0, Comma: 3, 'Comma [0]': 6, Currency: 4, 'Currency [0]': 7, Percent: 5, Hyperlink: 8, 'Followed Hyperlink': 9 };
   D.builtinStyle = function (w, name) {
     const base = w.styles.get(0);
@@ -569,8 +572,9 @@
     const describe = () => {
       const st = styleOf(nameIn.value) || cur;
       descBox.textContent = '';
-      const lines = [['nf', 'Number', st.nf || 'General'], ['align', 'Alignment', (st.align && st.align.h) || 'General, Bottom Aligned'], ['font', 'Font', `${LY.fontName(w, st.font || {})} ${(st.font && st.font.sz) || 10}${st.font && st.font.b ? ' Bold' : ''}${st.font && st.font.i ? ' Italic' : ''}`], ['border', 'Border', st.border ? 'Borders' : 'No Borders'], ['fill', 'Patterns', st.fill ? 'Shaded' : 'No Shading'], ['prot', 'Protection', st.prot && st.prot.locked === false ? 'Unlocked' : 'Locked']];
-      for (const [k, l, v] of lines) descBox.appendChild(h('div', { class: 'row', style: 'gap:6px' }, ui.check(l, inc[k], (x) => { inc[k] = x; }), h('span', { class: 'hint', text: v })));
+      const fo = st.font || {}, bi = fo.b && fo.i ? L.t('Bold Italic') : fo.b ? L.t('Bold') : fo.i ? L.t('Italic') : '';
+      const lines = [['nf', L.N('Number'), st.nf || 'General', 1], ['align', L.N('Alignment'), st.align && st.align.h ? L.t(ALIGN_NAMES[st.align.h] || st.align.h) : L.t('General, Bottom Aligned')], ['font', L.N('Font'), `${LY.fontName(w, fo)} ${fo.sz || 10}${bi ? ' ' + bi : ''}`, 1], ['border', L.N('Border'), st.border ? L.t('Borders') : L.t('No Borders')], ['fill', L.N('Patterns'), st.fill ? L.t('Shaded') : L.t('No Shading')], ['prot', L.N('Protection'), st.prot && st.prot.locked === false ? L.t('Unlocked') : L.t('Locked')]];
+      for (const [k, l, v, data] of lines) descBox.appendChild(h('div', { class: 'row', style: 'gap:6px' }, ui.check(l, inc[k], (x) => { inc[k] = x; }), h('span', { class: 'hint', translate: data ? 'no' : null, text: v })));
     };
     nameIn.addEventListener('input', describe);
     describe();
@@ -581,16 +585,16 @@
       const bi = BUILTIN_STYLES[n];
       list.push({ name: n, style: idx, builtinId: bi, customBuiltin: bi != null ? true : undefined });
       const old = w.cellStyles;
-      O.tx(w, 'Style', () => { w.cellStyles = list; w.undo.op(() => { w.cellStyles = old; }, () => { w.cellStyles = list; }); });
+      O.tx(w, L.N('Style'), () => { w.cellStyles = list; w.undo.op(() => { w.cellStyles = old; }, () => { w.cellStyles = list; }); });
     };
     ui.dialog({ title: 'Style', width: 420, body: h('div', { class: 'col' }, ui.field('&Style name:', nameIn), dl, ui.group('Style includes', descBox)),
       buttons: [
         { label: '&Add', onClick: () => { const n = nameIn.value.trim(); if (!n) return false; save(n, fromCell()); describe(); return false; } },
-        { label: '&Delete', onClick: () => { const n = nameIn.value.trim(); if (n === 'Normal') { ui.msg('The Normal style cannot be deleted.', { icon: 'warn' }); return false; } const old = w.cellStyles; const list = old.filter((c) => c.name !== n); O.tx(w, 'Style', () => { w.cellStyles = list; w.undo.op(() => { w.cellStyles = old; }, () => { w.cellStyles = list; }); }); nameIn.value = 'Normal'; describe(); return false; } },
+        { label: '&Delete', onClick: () => { const n = nameIn.value.trim(); if (n === 'Normal') { ui.msg('The Normal style cannot be deleted.', { icon: 'warn' }); return false; } const old = w.cellStyles; const list = old.filter((c) => c.name !== n); O.tx(w, L.N('Style'), () => { w.cellStyles = list; w.undo.op(() => { w.cellStyles = old; }, () => { w.cellStyles = list; }); }); nameIn.value = 'Normal'; describe(); return false; } },
         { label: '&Modify...', onClick: () => {
           const n = nameIn.value.trim() || 'Normal';
           const base = styleOf(n) || cur;
-          D.formatCells(0, { style: base, title: 'Format Cells - ' + n, apply: (newSt) => {
+          D.formatCells(0, { style: base, title: L.t('Format Cells - {0}', n), apply: (newSt) => {
             if (n === 'Normal') {
               /* the default style: every cell without a style of its own follows it */
               const old = w.styles.list[0];
@@ -616,7 +620,7 @@
             d.xs = n === 'Normal' ? undefined : n;
             void cs;
             return d;
-          }, 'Style');
+          }, L.N('Style'));
         }) }, { label: 'Cancel' }] });
   };
 
@@ -633,7 +637,7 @@
         const res = D.solveGoal(w, t, ch, goal);
         const before = res.start;
         tryRun(() => { const cell = ch.sheet.get(ch.r1, ch.c1); if (cell) cell.v = before; C.changed(w, [{ sh: ch.sheet, r: ch.r1, c: ch.c1 }]); O.tx(w, 'Goal Seek', () => O.setValue(ch.sheet, ch.r1, ch.c1, res.x, true)); });
-        ui.dialog({ title: 'Goal Seek Status', width: 300, body: h('div', { class: 'col' }, h('div', { text: `Goal Seeking with Cell ${F.cellName(t.r1, t.c1)} ${res.ok ? 'found a solution.' : 'may not have found a solution.'}` }), h('table', { class: 'kv' }, h('tr', null, h('td', { text: 'Target value:' }), h('td', { text: String(goal) })), h('tr', null, h('td', { text: 'Current value:' }), h('td', { text: L.csv.cellText(t.sheet, t.r1, t.c1) })))),
+        ui.dialog({ title: 'Goal Seek Status', width: 300, body: h('div', { class: 'col' }, h('div', { text: res.ok ? L.t('Goal Seeking with Cell {0} found a solution.', F.cellName(t.r1, t.c1)) : L.t('Goal Seeking with Cell {0} may not have found a solution.', F.cellName(t.r1, t.c1)) }), h('table', { class: 'kv' }, h('tr', null, h('td', { text: 'Target value:' }), h('td', { translate: 'no', text: String(goal) })), h('tr', null, h('td', { text: 'Current value:' }), h('td', { translate: 'no', text: L.csv.cellText(t.sheet, t.r1, t.c1) })))),
           buttons: [{ label: 'OK', primary: true }, { label: 'Cancel', onClick: () => A().undo() }] });
       } }, { label: 'Cancel' }] });
   };
@@ -664,14 +668,14 @@
     if (!s.scenarios) s.scenarios = [];
     const box = h('div');
     let cur = 0;
-    const draw = () => { box.textContent = ''; const lb = D.list(s.scenarios.map((x, i) => [i, x.name]), s.scenarios.length ? cur : null, (i) => { cur = i; info.textContent = s.scenarios[i] ? `Changing cells: ${s.scenarios[i].cells.map((c) => F.cellName(c.r, c.c, true, true)).join(',')}\nComment: ${s.scenarios[i].comment || ''}` : ''; }); lb.ondbl = () => show(); box.appendChild(s.scenarios.length ? lb : h('div', { class: 'tp-note', text: 'No Scenarios defined. Choose Add to add scenarios.' })); };
+    const draw = () => { box.textContent = ''; const lb = D.list(s.scenarios.map((x, i) => [i, x.name]), s.scenarios.length ? cur : null, (i) => { cur = i; info.textContent = s.scenarios[i] ? L.t('Changing cells: {0}\nComment: {1}', s.scenarios[i].cells.map((c) => F.cellName(c.r, c.c, true, true)).join(','), s.scenarios[i].comment || '') : ''; }, { translate: 'no' }); lb.ondbl = () => show(); box.appendChild(s.scenarios.length ? lb : h('div', { class: 'tp-note', text: 'No Scenarios defined. Choose Add to add scenarios.' })); };
     const info = h('div', { class: 'hint', style: 'white-space:pre-line' });
     const show = () => { const sc = s.scenarios[cur]; if (!sc) return; tryRun(() => O.tx(w, 'Show Scenario', () => { for (const c of sc.cells) O.enter(s, c.r, c.c, String(c.v)); })); };
     const edit = (sc) => {
       const nm = h('input', { type: 'text', value: sc ? sc.name : '', style: 'width:100%' });
       const cells = refBox(sc ? sc.cells.map((c) => F.cellName(c.r, c.c, true, true)).join(',') : F.absRangeName(G().range()), 220);
       const cm = h('textarea', { rows: '3', style: 'width:100%' });
-      cm.value = sc ? sc.comment || '' : 'Created by ' + (A().opts.userName || '') + ' on ' + new Date().toLocaleDateString();
+      cm.value = sc ? sc.comment || '' : L.t('Created by {0} on {1}', A().opts.userName || '', new Date().toLocaleDateString());
       ui.dialog({ title: sc ? 'Edit Scenario' : 'Add Scenario', width: 360, body: h('div', { class: 'col' }, ui.field('Scenario &name:', nm), ui.field('Changing &cells:', cells), ui.field('Co&mment:', cm)),
         buttons: [{ label: 'OK', primary: true, onClick: () => {
           const refs = [];
@@ -684,7 +688,7 @@
               const item = { name: nm.value.trim(), comment: cm.value, cells: refs.map((x, i) => { const p = NF.parseInput(ins[i].value, {}); return { r: x.r, c: x.c, v: p && typeof p.v === 'number' ? p.v : ins[i].value }; }) };
               const old = s.scenarios.slice();
               const list = sc ? s.scenarios.map((q) => (q === sc ? item : q)) : s.scenarios.concat([item]);
-              O.tx(w, 'Scenario', () => { s.scenarios = list; w.undo.op(() => { s.scenarios = old; }, () => { s.scenarios = list; }); });
+              O.tx(w, L.N('Scenario'), () => { s.scenarios = list; w.undo.op(() => { s.scenarios = old; }, () => { s.scenarios = list; }); });
               cur = list.indexOf(item); draw();
             } }, { label: 'Cancel' }] });
         } }, { label: 'Cancel' }] });
@@ -729,7 +733,7 @@
     };
     draw();
     ui.dialog({ title: 'Scenario Manager', width: 420, body: h('div', { class: 'col' }, h('label', { text: 'Sc&enarios:' }), box, info),
-      buttons: [{ label: '&Show', onClick: () => { show(); return false; } }, { label: '&Add...', onClick: () => { edit(null); return false; } }, { label: '&Delete', onClick: () => { const old = s.scenarios.slice(); const list = old.filter((_, i) => i !== cur); O.tx(w, 'Scenario', () => { s.scenarios = list; w.undo.op(() => { s.scenarios = old; }, () => { s.scenarios = list; }); }); cur = 0; draw(); return false; } }, { label: '&Edit...', onClick: () => { edit(s.scenarios[cur]); return false; } }, { label: 'S&ummary...', onClick: () => { summary(); } }, { label: 'Close', primary: true }] });
+      buttons: [{ label: '&Show', onClick: () => { show(); return false; } }, { label: '&Add...', onClick: () => { edit(null); return false; } }, { label: '&Delete', onClick: () => { const old = s.scenarios.slice(); const list = old.filter((_, i) => i !== cur); O.tx(w, L.N('Scenario'), () => { s.scenarios = list; w.undo.op(() => { s.scenarios = old; }, () => { s.scenarios = list; }); }); cur = 0; draw(); return false; } }, { label: '&Edit...', onClick: () => { edit(s.scenarios[cur]); return false; } }, { label: 'S&ummary...', onClick: () => { summary(); } }, { label: 'Close', primary: true }] });
   };
 
   /* ================================================================ Data Table (what-if) */
@@ -762,7 +766,7 @@
         out.push({ r, c, v: val(s, fr, fc) });
       }
     } finally { for (const x of inputs) { x.cl.v = x.v; C.changed(w, [{ sh: x.p.sheet, r: x.p.r1, c: x.p.c1 }]); } }
-    O.tx(w, 'Table', () => {
+    O.tx(w, L.N('Table'), () => {
       for (const x of out) { const old = s.get(x.r, x.c); const n = Object.assign({}, old || {}); delete n.f; n.v = M.isErr(x.v) ? x.v : x.v; O.put(s, x.r, x.c, n); }
       const master = Object.assign({}, s.get(res.r1, res.c1) || {});
       master.dt = { ref: F.rangeName(res), dt2D: !!two, dtr: !!(ri && !ci), r1: ri ? F.cellName(ri.r1, ri.c1) : F.cellName(ci.r1, ci.c1), r2: two ? F.cellName(ci.r1, ci.c1) : undefined };
@@ -771,7 +775,7 @@
   };
 
   /* ================================================================ Consolidate */
-  const CONS_FN = [['SUM', 'Sum'], ['COUNT', 'Count'], ['AVERAGE', 'Average'], ['MAX', 'Max'], ['MIN', 'Min'], ['PRODUCT', 'Product'], ['COUNTNUMS', 'Count Nums'], ['STDEV', 'StdDev'], ['STDEVP', 'StdDevp'], ['VAR', 'Var'], ['VARP', 'Varp']];
+  const CONS_FN = [['SUM', L.N('Sum')], ['COUNT', L.N('Count')], ['AVERAGE', L.N('Average')], ['MAX', L.N('Max')], ['MIN', L.N('Min')], ['PRODUCT', L.N('Product')], ['COUNTNUMS', 'Count Nums'], ['STDEV', L.N('StdDev')], ['STDEVP', L.N('StdDevp')], ['VAR', L.N('Var')], ['VARP', L.N('Varp')]];
   D.consolidate = function () {
     const s = sh(), w = wb(), sel = G().sel();
     let fn = 'SUM', top = false, left = false;
@@ -779,7 +783,7 @@
     const refIn = refBox('', 220);
     const box = h('div');
     let cur = -1;
-    const draw = () => { box.textContent = ''; box.appendChild(D.list(refs.map((x, i) => [i, x]), cur >= 0 ? cur : null, (i) => { cur = i; refIn.input.value = refs[i]; }, { class: 'lbox short' })); };
+    const draw = () => { box.textContent = ''; box.appendChild(D.list(refs.map((x, i) => [i, x]), cur >= 0 ? cur : null, (i) => { cur = i; refIn.input.value = refs[i]; }, { class: 'lbox short', translate: 'no' })); };
     draw();
     ui.dialog({ title: 'Consolidate', width: 380, body: h('div', { class: 'col' }, ui.field('&Function:', ui.select(CONS_FN, fn, (v) => { fn = v; })), ui.field('&Reference:', refIn), h('div', { class: 'row', style: 'gap:6px' }, ui.button('&Add', () => { const t = refIn.input.value.trim(); if (!parseRef(t)) { ui.msg('Reference is not valid.', { icon: 'warn' }); return; } if (!refs.includes(t)) refs.push(t); draw(); }), ui.button('&Delete', () => { if (cur >= 0) { refs.splice(cur, 1); cur = -1; draw(); } })), h('label', { text: 'All r&eferences:' }), box, ui.group('Use labels in', ui.check('&Top row', false, (v) => { top = v; }), ui.check('&Left column', false, (v) => { left = v; }))),
       buttons: [{ label: 'OK', primary: true, onClick: () => tryRun(() => {
@@ -802,7 +806,7 @@
           }
         }
         const agg = (vals) => { const n = vals.filter((x) => typeof x === 'number'); switch (fn) { case 'COUNT': return vals.filter((x) => x != null && x !== '').length; case 'COUNTNUMS': return n.length; case 'AVERAGE': return n.length ? n.reduce((a, b) => a + b, 0) / n.length : 0; case 'MAX': return n.length ? Math.max(...n) : 0; case 'MIN': return n.length ? Math.min(...n) : 0; case 'PRODUCT': return n.reduce((a, b) => a * b, 1); case 'STDEV': case 'STDEVP': case 'VAR': case 'VARP': { const m = n.reduce((a, b) => a + b, 0) / (n.length || 1); const ss = n.reduce((a, b) => a + (b - m) * (b - m), 0); const vv = ss / Math.max(1, fn.endsWith('P') ? n.length : n.length - 1); return /STDEV/.test(fn) ? Math.sqrt(vv) : vv; } default: return n.reduce((a, b) => a + b, 0); } };
-        O.tx(w, 'Consolidate', () => {
+        O.tx(w, L.N('Consolidate'), () => {
           const r0 = sel.r + (top ? 1 : 0), c0 = sel.c + (left ? 1 : 0);
           if (top) colKeys.forEach((k, j) => O.put(s, sel.r, c0 + j, { v: k }));
           if (left) rowKeys.forEach((k, i) => O.put(s, r0 + i, sel.c, { v: k }));
@@ -812,7 +816,7 @@
   };
 
   /* ================================================================ PivotTable report (static summary) */
-  const PIV_FN = [['sum', 'Sum'], ['count', 'Count'], ['average', 'Average'], ['max', 'Max'], ['min', 'Min'], ['countNums', 'Count Nums']];
+  const PIV_FN = [['sum', L.N('Sum')], ['count', L.N('Count')], ['average', L.N('Average')], ['max', L.N('Max')], ['min', L.N('Min')], ['countNums', 'Count Nums']];
   D.pivotTable = function () {
     const s = sh(), w = wb();
     const rg = listRange();
@@ -821,7 +825,7 @@
     const numericCol = cols.find(([c]) => typeof val(s, rg.r1 + 1, c) === 'number');
     const st = { row: cols[0][0], col: '', data: numericCol ? numericCol[0] : cols[cols.length - 1][0], fn: numericCol ? 'sum' : 'count', page: '', pageVal: '', where: 'new' };
     const src = refBox(F.quoteSheet(s.name) + '!' + F.absRangeName(rg), 220);
-    const opt = (k, none) => ui.select((none ? [['', '(none)']] : []).concat(cols), st[k], (v) => { st[k] = v === '' ? '' : +v; });
+    const opt = (k, none) => ui.select((none ? [['', L.t('(none)')]] : []).concat(cols), st[k], (v) => { st[k] = v === '' ? '' : +v; }, { translate: 'no' });
     ui.dialog({ title: 'PivotTable and PivotChart Wizard', width: 420, body: h('div', { class: 'col' },
       ui.field('&Range:', src),
       ui.group('Layout', ui.field('&Row field:', opt('row')), ui.field('&Column field:', opt('col', true)), h('div', { class: 'row', style: 'gap:8px' }, ui.field('&Data field:', opt('data')), ui.field('Summarize by:', ui.select(PIV_FN, st.fn, (v) => { st.fn = v; }))), ui.field('&Page field:', opt('page', true))),
@@ -857,7 +861,7 @@
     const fnLabel = PIV_FN.find((x) => x[0] === st.fn)[1];
     const head = (c) => String(s.val(p.r1, c) == null ? F.colName(c) : s.val(p.r1, c));
     let dst, r0, c0;
-    O.tx(w, 'PivotTable', () => {
+    O.tx(w, L.N('PivotTable'), () => {
       if (st.where === 'new') { dst = O.addSheet(w, w.nextSheetName('Sheet'), w.sheets.indexOf(s)); r0 = 2; c0 = 0; }
       else { dst = sh(); r0 = G().sel().r; c0 = G().sel().c; }
       const BOLD = w.styles.derive(0, { font: { b: true } });

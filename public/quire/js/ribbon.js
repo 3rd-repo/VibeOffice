@@ -118,7 +118,7 @@
           { label: 'Close', items: [{ cmd: 'hfClose', size: 'large', label: 'Close Header and Footer' }] },
         ] },
       ] },
-      { id: 'outlining', set: 'Outline', open: true, when: ctx('outlining'), tabs: [
+      { id: 'outlining', set: L.N('Outline'), open: true, when: ctx('outlining'), tabs: [
         { id: 'outlining', label: 'Outlining', groups: [
           { label: 'Outline Tools', items: [{ row: ['promoteH1', 'promote', 'demote', 'demoteBody'] }, { row: ['moveUp', 'moveDown', 'expand', 'collapse'] }, 'olFirstLine', 'olFormatting'] },
           { label: 'Table of Contents', items: ['updateTOC', 'gotoTOC'] },

@@ -3,6 +3,10 @@
   python3 tools/linegrid.py make [tmp/linegrid/linegrid.docx]   a document with one paragraph per case: English text in
       Times New Roman at sizes either side of the grid pitch, each at several line spacings, on a 15.6pt grid and an
       18pt grid, and Chinese text (SimSun, with a few English words, as in issue 11's file) on the 15.6pt grid
+  python3 tools/linegrid.py fonts [tmp/linegrid/fonts.docx]      single spaced paragraphs in each East Asian font (and
+      three Latin ones to compare), at 10.5 and 21pt, no grid: after Word has saved it as PDF,
+  python3 tools/linegrid.py read-fonts fonts.pdf [OUT.json]       gives each font's line height as a multiple of its size
+      (Quire's R.lineFactor; check with pdffonts which fonts Word had)
   python3 tools/linegrid.py read linegrid.pdf [OUT.json]          after Word has saved it as PDF: the distance between
       the lines of each case, in points, and the line each page starts with (tests/from-issues/11/word.json, from
       Word for Mac; the document is tests/from-issues/11/linegrid.docx; checked by the tests there)
@@ -47,6 +51,11 @@ def make(out):
             paras.append(f'<w:p><w:pPr><w:sectPr><w:type w:val="nextPage"/>{grid}</w:sectPr></w:pPr></w:p>')
         else:
             last = f'<w:sectPr>{grid}</w:sectPr>'
+    write_docx(out, paras, last)
+    print(f'saved {out}: {sum(1 for _ in cases())} cases. Open it in Word, save it as PDF, then: python3 tools/linegrid.py read <the PDF>')
+
+
+def write_docx(out, paras, last):
     document = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="{W}" xmlns:r="{REL}"><w:body>{"".join(paras)}{last}</w:body></w:document>'
     # the compatibility settings of a Word document written in China (issue 11's file), where line grids are usual
     settings = (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:settings xmlns:w="{W}"><w:defaultTabStop w:val="420"/>'
@@ -73,10 +82,32 @@ def make(out):
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
         for name, data in parts.items():
             z.writestr(name, data)
-    print(f'saved {out}: {sum(1 for _ in cases())} cases. Open it in Word, save it as PDF, then: python3 tools/linegrid.py read <the PDF>')
 
 
-def read(pdf, out=None):
+FONTS = [('Times New Roman', 'en'), ('Calibri', 'en'), ('Century', 'en'), ('MS Mincho', 'ja'), ('MS PMincho', 'ja'), ('MS Gothic', 'ja'),
+         ('MS PGothic', 'ja'), ('Yu Mincho', 'ja'), ('Yu Gothic', 'ja'), ('Meiryo', 'ja'), ('Malgun Gothic', 'ko'), ('Batang', 'ko'),
+         ('Gulim', 'ko'), ('Dotum', 'ko'), ('SimSun', 'zh'), ('SimHei', 'zh'), ('DengXian', 'zh'), ('Microsoft YaHei', 'zh'), ('PMingLiU', 'zh')]
+FONT_TEXT = {'en': TEXT['en'], 'zh': TEXT['zh'], 'ja': 'この段落の行と行の間を測ります。漢字とかなと Latin letters を使います。',
+             'ko': '이 문단의 줄 사이를 잽니다. 한글과 Latin letters 를 씁니다.'}
+
+
+def make_fonts(out):
+    """single spacing, no grid: each font's own line height (Quire's R.lineFactor, common/core.js), at two sizes"""
+    paras = []
+    for font, script in FONTS:
+        for sz in (10.5, 21):
+            text = FONT_TEXT[script]
+            words = text * max(2, round(2400 / sz / len(text)))
+            paras.append(f'<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>'
+                         f'<w:r><w:rPr><w:rFonts w:ascii="{font}" w:eastAsia="{font}" w:hAnsi="{font}" w:cs="{font}"/><w:sz w:val="{round(sz * 2)}"/>'
+                         f'<w:szCs w:val="{round(sz * 2)}"/></w:rPr><w:t xml:space="preserve">{escape("[" + font + "/" + format(sz, "g") + "]")} {escape(words)}</w:t></w:r></w:p>')
+    last = ('<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1800" w:bottom="1440" w:left="1800" w:header="851" '
+            'w:footer="992" w:gutter="0"/><w:cols w:space="425"/></w:sectPr>')
+    write_docx(out, paras, last)
+    print(f'saved {out}: {len(paras)} paragraphs. Open it in Word, save it as PDF, then: python3 tools/linegrid.py read-fonts <the PDF>')
+
+
+def read(pdf, out=None, fonts=False):
     """the lines of each case (the text lines after its label, up to the next label), on the same page: their spacing;
     and the line each page starts with"""
     html = subprocess.run(['pdftotext', '-bbox-layout', pdf, '-'], capture_output=True, text=True, check=True).stdout
@@ -85,12 +116,12 @@ def read(pdf, out=None):
         for line in re.findall(r'<line xMin="[\d.]+" yMin="([\d.]+)" xMax="[\d.]+" yMax="([\d.]+)">(.*?)</line>', body, re.S):
             boxes = re.findall(r'yMin="([\d.]+)" xMax="[\d.]+" yMax="[\d.]+">([^<]*)</word>', line[2])
             words = [w for _, w in boxes]
-            m = re.match(r'\[[\d.]+/[\d.]+/[\d.]+(/zh)?\]', words[0]) if words else None
+            m = re.match(r'\[[^/\]]+/[\d.]+\]' if fonts else r'\[[\d.]+/[\d.]+/[\d.]+(/zh)?\]', ' '.join(words)) if words else None   # a font's name has spaces
             if m:
                 current = m.group(0)
                 found[current] = []
             # the top of the Chinese words where the line has any: English words beside them reach higher
-            top = next((float(y) for y, w in boxes if re.search('[\u3000-\u9fff]', w)), float(line[0]))
+            top = next((float(y) for y, w in boxes if re.search('[\u3000-\u9fff\uac00-\ud7af]', w)), float(line[0]))
             if current and not (found[current] and found[current][-1][0] == page and abs(found[current][-1][1] - top) < 1):   # a line split in two
                 found[current].append((page, top))
     result = {}
@@ -100,7 +131,9 @@ def read(pdf, out=None):
             result[key] = round(sum(gaps) / len(gaps), 2)
             if max(gaps) - min(gaps) > 0.3:
                 print(f'{key}: uneven gaps {[round(g, 2) for g in gaps]}', file=sys.stderr)
-    missing = [label(*c) for c in cases() if label(*c) not in result]
+    if fonts:   # each font's single line as a multiple of its size: the line factor
+        result = {k: round(v / float(k[1:-1].split('/')[1]), 4) for k, v in result.items()}
+    missing = [] if fonts else [label(*c) for c in cases() if label(*c) not in result]
     if missing:
         print(f'not measured: {missing}', file=sys.stderr)
     starts = {}
@@ -120,5 +153,9 @@ if __name__ == '__main__':
         make(sys.argv[2] if len(sys.argv) > 2 else 'tmp/linegrid/linegrid.docx')
     elif len(sys.argv) > 2 and sys.argv[1] == 'read':
         read(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
+    elif len(sys.argv) > 1 and sys.argv[1] == 'fonts':
+        make_fonts(sys.argv[2] if len(sys.argv) > 2 else 'tmp/linegrid/fonts.docx')
+    elif len(sys.argv) > 2 and sys.argv[1] == 'read-fonts':
+        read(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None, fonts=True)
     else:
         sys.exit(__doc__)

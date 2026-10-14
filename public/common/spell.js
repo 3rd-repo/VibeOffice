@@ -129,7 +129,8 @@
     }
     return d[n][m];
   }
-  const restoreCase = (sugg, orig) => (isUpper(orig) && orig.length > 1 ? sugg.toUpperCase() : /^\p{Lu}/u.test(orig) && !/^\p{Lu}/u.test(sugg) ? sugg[0].toUpperCase() + sugg.slice(1) : sugg);
+  /** sugg in orig's case: all capitals, or a capital first letter */
+  const restoreCase = (SP.restoreCase = (sugg, orig) => (isUpper(orig) && orig.length > 1 ? sugg.toUpperCase() : /^\p{Lu}/u.test(orig) && !/^\p{Lu}/u.test(sugg) ? sugg[0].toUpperCase() + sugg.slice(1) : sugg));
   SP.suggest = function (word, list, max) {
     max = max || 8;
     const lex = LEX.lists[list];

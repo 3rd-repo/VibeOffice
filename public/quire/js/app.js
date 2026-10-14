@@ -23,7 +23,7 @@
     toolbars: { standard: true, formatting: true, drawing: true, tables: false, reviewing: 'auto', picture: 'auto', outlining: 'auto', headerFooter: 'auto', mailMerge: false, wordart: 'auto' },
     showMarks: false, marks: { tabs: false, spaces: false, para: false, hidden: false, all: false }, textBoundaries: true, fieldShading: 'selected', bookmarks: false,
     smartQuotes: true, autocorrect: true, autoFormat: true, capSentence: true, autoBullets: true, autoNumbers: true, autoBorders: true, autoHeadings: false, autoUrl: true, ordinals: true, fractions: true, dashes: true,
-    spell: true, unit: 'in', recent: [], zoom: 1, view: 'print', balloons: true, pasteOptions: true, dragDrop: true, smartCut: true, typingReplaces: true,
+    spell: true, unit: (L.locale && L.locale.get().unit) || 'in', recent: [], zoom: 1, view: 'print', balloons: true, pasteOptions: true, dragDrop: true, smartCut: true, typingReplaces: true,
     userName: 'Quire User', userInitials: 'QU', markupMode: 'markup',
   };
   const A = (L.app = Object.assign(L.app || {}, {
@@ -33,8 +33,10 @@
   const doc = () => D.doc;
 
   /* ================= options ================= */
-  A.loadOpts = () => { A.opts = L.deepMerge(L.clone(DEFAULT_OPTS), L.store.get('opts', {}) || {}); D.unit = A.opts.unit || 'in'; };
-  A.saveOpts = () => { L.store.set('opts', A.opts); };
+  /* the options that follow the UI's language, with their English values (common/locales.js) */
+  const EN_OPTS = { unit: 'in' };
+  A.loadOpts = () => { A.opts = L.deepMerge(L.clone(DEFAULT_OPTS), L.locale.savedOpts(L.store.get('opts', {}), EN_OPTS)); D.unit = A.opts.unit || 'in'; };
+  A.saveOpts = () => { L.store.set('opts', L.locale.optsToSave(A.opts, DEFAULT_OPTS, EN_OPTS)); };
   A.applyOpts = () => {
     document.body.classList.toggle('bluebg', !!A.opts.blueBg);
     D.unit = A.opts.unit || 'in';
@@ -86,7 +88,7 @@
           'headingRows', { label: 'Con&vert', sub: ['textToTable', 'tableToText'] }, 'sortDlg', 'formulaDlg', 'gridlines', '-', 'tableProps'],
       },
       { label: '&Window', items: () => ['newWindow', 'arrangeAll', 'splitWindow', '-', ...A.windowItems()] },
-      { label: '&Help', items: ['help', 'showAssistant', '-', 'gettingStarted', 'keyboardHelp', '-', 'about'] },
+      { label: '&Help|menu bar', items: ['help', 'showAssistant', '-', 'gettingStarted', 'keyboardHelp', '-', 'about'] },
     ];
     const row = L.$('#menurow');
     A.menuBar = ui.menuBar(row, menus);
@@ -100,7 +102,7 @@
       'printedWatermark',
     ];
   }
-  A.setBackground = (c) => E.edit('Background', () => { D.touchKey(doc(), 'bg'); doc().bg = c; return E.sel; });
+  A.setBackground = (c) => E.edit(L.N('Background'), () => { D.touchKey(doc(), 'bg'); doc().bg = c; return E.sel; });
 
   /* ================= toolbars ================= */
   const listPanel = (items, close) => {
@@ -139,7 +141,7 @@
           if (!s) return;
           const [i, j] = s.dataset.ij.split(',').map(Number);
           cur = [i + 1, j + 1]; if (i + 2 > R && R < 12) R++; if (j + 2 > C && C < 10) C++;
-          draw(); lbl.textContent = `${cur[0]} x ${cur[1]} Table`;
+          draw(); lbl.textContent = L.t('{0} x {1} Table', cur[0], cur[1]);
         });
         cells.addEventListener('click', () => { if (cur[0]) { close(); L.tables.insert(cur[0], cur[1]); } });
         draw();
@@ -156,7 +158,7 @@
         const lbl = h('div', { class: 'tgp-label', text: 'Cancel' });
         for (let j = 0; j < 4; j++) {
           const s = h('span', { style: 'height:30px' });
-          s.addEventListener('pointerenter', () => { L.$$('span', cells).forEach((x, k) => x.classList.toggle('on', k <= j)); lbl.textContent = `${j + 1} Column${j ? 's' : ''}`; });
+          s.addEventListener('pointerenter', () => { L.$$('span', cells).forEach((x, k) => x.classList.toggle('on', k <= j)); lbl.textContent = j ? L.t('{0} Columns', j + 1) : L.t('{0} Column', j + 1); });
           s.addEventListener('click', () => { close(); A.setColumns(j + 1); });
           cells.appendChild(s);
         }
@@ -165,7 +167,7 @@
       },
     }, ...(more || [])], r, { cls: 'grid-menu' });
   }
-  A.setColumns = (n) => E.edit('Columns', () => { const s = A.curSect(); D.touchKey(s.holder, s.key); s.sect.cols = Object.assign({}, s.sect.cols, { n, eq: true, w: [] }); return E.sel; });
+  A.setColumns = (n) => E.edit(L.N('Columns'), () => { const s = A.curSect(); D.touchKey(s.holder, s.key); s.sect.cols = Object.assign({}, s.sect.cols, { n, eq: true, w: [] }); return E.sel; });
   /** the section object governing the caret (holder/key let undo snapshot it) */
   A.curSect = function () {
     const d = doc();
@@ -181,13 +183,15 @@
     ui.openMenu([1, 1.5, 2, 2.5, 3].map((x) => ({ label: String(x.toFixed(1)), checked: () => v === x, run: () => E.formatPara((pPr) => { pPr.sp = Object.assign({}, pPr.sp, { line: x, rule: 'auto' }); }, 'Line Spacing') }))
       .concat(['-', { label: '&More...', run: () => L.dlg.paragraph() }]), r);
   }
+  const HL_NAMES = [['yellow', L.N('Yellow')], ['green', L.N('Bright Green')], ['cyan', L.N('Turquoise')], ['magenta', L.N('Pink')], ['blue', L.N('Blue')], ['red', L.N('Red')], ['darkBlue', L.N('Dark Blue')], ['darkCyan', L.N('Teal')],
+    ['darkGreen', L.N('Green')], ['darkMagenta', L.N('Violet')], ['darkRed', L.N('Dark Red')], ['darkYellow', L.N('Dark Yellow')], ['darkGray', L.N('Gray-50%')], ['lightGray', L.N('Gray-25%')], ['black', L.N('Black')]];
   function highlightDD(r, anchor) {
     ui.openMenu([{
       custom: (close) => {
         const el = h('div', { class: 'color-panel' });
         const g = h('div', { class: 'cp-grid hl' });
-        for (const n of ['yellow', 'green', 'cyan', 'magenta', 'blue', 'red', 'darkBlue', 'darkCyan', 'darkGreen', 'darkMagenta', 'darkRed', 'darkYellow', 'darkGray', 'lightGray', 'black']) {
-          g.appendChild(h('button', { class: 'cp-sw', type: 'button', style: `background:${L.R.HIGHLIGHT[n]}`, 'data-tip': n.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()), 'aria-label': n, onclick: () => { close(); A.lastHighlight = n; A.applyHighlight(n); } }));
+        for (const [n, name] of HL_NAMES) {
+          g.appendChild(h('button', { class: 'cp-sw', type: 'button', style: `background:${L.R.HIGHLIGHT[n]}`, 'data-tip': name, 'aria-label': name, onclick: () => { close(); A.lastHighlight = n; A.applyHighlight(n); } }));
         }
         el.appendChild(g);
         el.appendChild(h('button', { class: 'cp-wide', type: 'button', text: 'None', onclick: () => { close(); A.applyHighlight('none'); } }));
@@ -195,7 +199,7 @@
       },
     }], anchor ? anchor.getBoundingClientRect() : r, { cls: 'color-menu' });
   }
-  A.applyHighlight = (n) => { if (E.collapsed()) { A.highlighter.start(true, n); return; } E.formatRun({ hl: n === 'none' ? undefined : n }, 'Highlight'); };
+  A.applyHighlight = (n) => { if (E.collapsed()) { A.highlighter.start(true, n); return; } E.formatRun({ hl: n === 'none' ? undefined : n }, L.N('Highlight')); };
   function fontColorDD(r, anchor) {
     ui.colorMenu(anchor || r, { mode: 'font' }, (v) => {
       if (v && v.auto) A.applyFontColor('auto');
@@ -241,7 +245,7 @@
         default: if (['top', 'bottom', 'left', 'right'].includes(k)) set(k, !has(k));
       }
       pPr.borders = Object.keys(cur).length ? cur : undefined;
-    }, 'Borders');
+    }, L.N('Borders'));
   };
   A.insertHorizontalLine = () => E.edit('Horizontal Line', () => {
     let pos = E.deleteSelection();
@@ -256,7 +260,7 @@
     const grid = (list) => ({ custom: (close) => { const g = h('div', { class: 'shape-grid' }); for (const k of list) { const p = L.geom.get(k); const b = h('button', { type: 'button', 'data-tip': p.label || k, 'aria-label': p.label || k, html: L.geom.preview(k, 20) }); b.addEventListener('click', () => { close(); L.drawtool && L.drawtool.start({ geom: k, line: !!p.isLine }); }); g.appendChild(b); } return g; } });
     ui.openMenu([
       { label: '&Lines', icon: 'line', sub: ['drawLine', 'drawArrow', 'drawDblArrow'] },
-      ...['Basic Shapes', 'Block Arrows', 'Flowchart', 'Stars and Banners', 'Callouts'].map((g) => ({ label: g.replace(/^(\w)/, '&$1'), icon: { 'Basic Shapes': 'autoshapes', 'Block Arrows': 'arrowStyle', Flowchart: 'diagram', 'Stars and Banners': 'animation', Callouts: 'comment' }[g], sub: [grid(L.geom.MENU[g])] })),
+      ...[['Basic Shapes', '&Basic Shapes', 'autoshapes'], ['Block Arrows', '&Block Arrows', 'arrowStyle'], ['Flowchart', '&Flowchart', 'diagram'], ['Stars and Banners', '&Stars and Banners', 'animation'], ['Callouts', '&Callouts', 'comment']].map(([g, label, icon]) => ({ label, icon, sub: [grid(L.geom.MENU[g])] })),
       '-', { label: '&More AutoShapes...', icon: 'clipart', run: () => L.panes && L.panes.task.show('clipart') },
     ], { left: r.left, bottom: r.bottom }, { selectFirst: !at });
   };
@@ -271,7 +275,7 @@
     }, o)),
     font: (o) => ui.combo(Object.assign({ id: 'tb-font', width: 136, tip: 'Font', options: () => A.fontOptions(), preview: (v) => `font-family:${L.fontStack(v)};font-size:13px`, note: L.fontNote, listCls: 'fonts', value: () => { const v = E.uniformRun('font'); return v || ''; }, onChange: (v) => A.setFont(v) }, o)),
     size: (o) => ui.combo(Object.assign({ id: 'tb-size', width: 40, tip: 'Font Size', options: () => L.SIZE_LIST, value: () => { const v = E.uniformRun('sz'); return v ? String(L.round(v, 1)) : ''; }, onChange: (v) => A.setFontSize(parseFloat(v)) }, o)),
-    zoom: (o) => ui.combo(Object.assign({ id: 'tb-zoom', width: 74, tip: 'Zoom', options: () => ['500%', '200%', '150%', '100%', '75%', '50%', '25%', '10%', 'Page Width', 'Text Width', 'Whole Page', 'Two Pages'], value: () => Math.round(LY.zoom * 100) + '%', onChange: (v) => A.zoomTo(v) }, o)),
+    zoom: (o) => ui.combo(Object.assign({ id: 'tb-zoom', width: 74, tip: 'Zoom', options: () => ['500%', '200%', '150%', '100%', '75%', '50%', '25%', '10%'].concat([L.N('Page Width'), L.N('Text Width'), L.N('Whole Page'), L.N('Two Pages')].map((v) => ({ value: v, label: L.t(v) }))), value: () => Math.round(LY.zoom * 100) + '%', onChange: (v) => A.zoomTo(v) }, o)),
   };
   function buildToolbars() {
     const host = L.$('#toolbars');
@@ -292,8 +296,8 @@
         'insertComment', 'trackChanges', 'reviewingPane']),
       picture: ui.toolbar('picture', 'Picture', ['insertPicture', ui.tbDrop('', 'colorPic', (r) => ui.openMenu([{ label: '&Automatic', run: () => A.picMode('') }, { label: '&Grayscale', run: () => A.picMode('gray') }, { label: '&Black & White', run: () => A.picMode('bw') }, { label: '&Washout', run: () => A.picMode('washout') }], r), 'Color'),
         'picMoreContrast', 'picLessContrast', 'picMoreBright', 'picLessBright', '|', 'picCrop', 'picRotate', ui.tbDrop('', 'lineStyle', (r) => A.objLineWeightMenu(r), 'Line Style'), '|', ui.tbDrop('', 'textWrap', (r) => A.wrapMenu(r), 'Text Wrapping'), 'formatObject', 'picReset']),
-      outlining: ui.toolbar('outlining', 'Outlining', ['promoteH1', 'promote', ui.combo({ id: 'tb-olvl', width: 74, tip: 'Outline Level', options: () => ['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5', 'Level 6', 'Level 7', 'Level 8', 'Level 9', 'Body text'], value: () => { const l = E.sel ? D.headingLevel(doc(), E.sel.f.p) : 0; return l ? 'Level ' + l : 'Body text'; }, onChange: (v) => L.outline && L.outline.setLevel(/body/i.test(v) ? 0 : parseInt(v.replace(/\D/g, ''), 10) || 0) }), 'demote', 'demoteBody', '|', 'moveUp', 'moveDown', 'expand', 'collapse',
-        ui.combo({ id: 'tb-olshow', width: 96, tip: 'Show Level', options: () => ['Show All Levels', 'Show Level 1', 'Show Level 2', 'Show Level 3', 'Show Level 4', 'Show Level 5', 'Show Level 6', 'Show Level 7', 'Show Level 8', 'Show Level 9'], value: () => (L.outline && L.outline.showLevel ? 'Show Level ' + L.outline.showLevel : 'Show All Levels'), onChange: (v) => L.outline && L.outline.show(/all/i.test(v) ? 0 : parseInt(v.replace(/\D/g, ''), 10)) }),
+      outlining: ui.toolbar('outlining', 'Outlining', ['promoteH1', 'promote', ui.combo({ id: 'tb-olvl', width: 74, tip: 'Outline Level', options: () => [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => L.t('Level {0}', n)).concat(L.t('Body text')), value: () => { const l = E.sel ? D.headingLevel(doc(), E.sel.f.p) : 0; return l ? L.t('Level {0}', l) : L.t('Body text'); }, onChange: (v) => L.outline && L.outline.setLevel(parseInt(v.replace(/\D/g, ''), 10) || 0) }), 'demote', 'demoteBody', '|', 'moveUp', 'moveDown', 'expand', 'collapse',
+        ui.combo({ id: 'tb-olshow', width: 96, tip: 'Show Level', options: () => [L.t('Show All Levels')].concat([1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => L.t('Show Level {0}', n))), value: () => (L.outline && L.outline.showLevel ? L.t('Show Level {0}', L.outline.showLevel) : L.t('Show All Levels')), onChange: (v) => L.outline && L.outline.show(parseInt(v.replace(/\D/g, ''), 10) || 0) }),
         'olFirstLine', 'olFormatting', '|', 'updateTOC', 'gotoTOC']),
       headerFooter: ui.toolbar('headerFooter', 'Header and Footer', [ui.tbDrop('Insert AutoText', null, (r) => ui.openMenu(L.autocorrect ? L.autocorrect.hfAutoText() : [], r), 'Insert AutoText'), '|', 'hfPageNum', 'hfNumPages', 'hfFormatPageNum', 'hfDate', 'hfTime', '|', 'pageSetup', 'hfShowText', 'hfLinkPrev', '|', 'hfSwitch', 'hfPrev', 'hfNext', '|', ui.tbButton('hfClose', { label: 'Close' })]),
       mailMerge: ui.toolbar('mailMerge', 'Mail Merge', ['mmMainDoc', 'mmOpenSource', 'mmRecipients', '|', 'mmAddress', 'mmGreeting', 'mmInsertField', '|', 'mmViewData', 'mmFirst', 'mmPrev', ui.combo({ id: 'tb-mmrec', width: 34, tip: 'Go to Record', options: () => [], value: () => String(L.mailmerge ? L.mailmerge.rec + 1 : 1), onChange: (v) => L.mailmerge && L.mailmerge.go(parseInt(v, 10) - 1) }), 'mmNext', 'mmLast', '|', 'mmMergeNew', 'mmMergePrint']),
@@ -321,7 +325,7 @@
     for (const k in doc().styles) { const r = doc().styles[k].rPr; if (r && r.font) docFonts.push(r.font); }
     return L.fontSections({ major: doc().theme?.major, minor: doc().theme?.minor, extra: docFonts });
   };
-  A.setFont = (v) => { if (!v) return; L.addRecentFont(v); E.formatRun({ font: v }, 'Font'); E.refocus(); };
+  A.setFont = (v) => { if (!v) return; L.addRecentFont(v); E.formatRun({ font: v }, L.N('Font')); E.refocus(); };
   A.setFontSize = (v) => { if (!(v > 0)) return; v = L.clamp(Math.round(v * 2) / 2, 1, 1638); E.formatRun({ sz: v }, 'Font Size'); E.refocus(); };
   function styleState() {
     const d = doc();
@@ -369,7 +373,7 @@
       return;
     }
     const [a, b] = E.range();
-    E.edit('Style', () => { O.applyStyle(a, b, s.id); return E.sel; });
+    E.edit(L.N('Style'), () => { O.applyStyle(a, b, s.id); return E.sel; });
     E.refocus();
   };
   A.historyMenu = function (r, kind) {
@@ -377,10 +381,11 @@
     if (!list.length) return;
     ui.openMenu([{ custom: (close) => {
       const el = h('div', { class: 'style-list', style: 'max-height:260px;overflow:auto;min-width:180px' });
-      const lbl = h('div', { class: 'tgp-label', text: `${kind === 'undo' ? 'Undo' : 'Redo'} 1 Action` });
+      const actions = (n) => (kind === 'undo' ? (n === 1 ? L.t('Undo {0} Action', n) : L.t('Undo {0} Actions', n)) : n === 1 ? L.t('Redo {0} Action', n) : L.t('Redo {0} Actions', n));
+      const lbl = h('div', { class: 'tgp-label', text: actions(1) });
       const btns = list.slice(0, 40).map((label, i) => {
         const b = h('button', { type: 'button', text: label });
-        b.addEventListener('pointerenter', () => { btns.forEach((x, k) => { x.style.background = k <= i ? '#316ac5' : ''; x.style.color = k <= i ? '#fff' : ''; }); lbl.textContent = `${kind === 'undo' ? 'Undo' : 'Redo'} ${i + 1} Action${i ? 's' : ''}`; });
+        b.addEventListener('pointerenter', () => { btns.forEach((x, k) => { x.style.background = k <= i ? '#316ac5' : ''; x.style.color = k <= i ? '#fff' : ''; }); lbl.textContent = actions(i + 1); });
         b.addEventListener('click', () => { close(); for (let k = 0; k <= i; k++) ui.exec(kind); });
         el.appendChild(b);
         return b;
@@ -410,7 +415,7 @@
   };
   const lineSVG = (w, dash, extra) => `<svg width="90" height="14" viewBox="0 0 90 14"><path d="M2 7h86" stroke="#000" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} fill="none"/>${extra || ''}</svg>`;
   A.WEIGHTS = [0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6];
-  A.objLineWeightMenu = (r) => ui.openMenu([{ custom: (close) => listPanel(A.WEIGHTS.map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: w + ' pt', run: () => L.drawing.modifySelected('Line Style', (it) => { if (it.t === 'img') it.border = Object.assign({ val: 'single', color: '000000' }, it.border || {}, { sz: w }); else it.line = Object.assign({ c: '#000000', dash: 'solid' }, it.line && it.line.t !== 'none' ? it.line : {}, { w }); }) })).concat([{ label: 'More Lines...', run: () => ui.exec('formatObject') }]), close) }], r);
+  A.objLineWeightMenu = (r) => ui.openMenu([{ custom: (close) => listPanel(A.WEIGHTS.map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: L.t('{0} pt', w), run: () => L.drawing.modifySelected('Line Style', (it) => { if (it.t === 'img') it.border = Object.assign({ val: 'single', color: '000000' }, it.border || {}, { sz: w }); else it.line = Object.assign({ c: '#000000', dash: 'solid' }, it.line && it.line.t !== 'none' ? it.line : {}, { w }); }) })).concat([{ label: 'More Lines...', run: () => ui.exec('formatObject') }]), close) }], r);
   A.objDashMenu = (r) => ui.openMenu([{ custom: (close) => listPanel([['solid', null], ['sysDot', '1 1'], ['sysDash', '3 1'], ['dash', '4 3'], ['dashDot', '4 3 1 3'], ['lgDash', '8 3'], ['lgDashDot', '8 3 1 3'], ['lgDashDotDot', '8 3 1 3 1 3']].map(([k, da]) => ({ html: lineSVG(2, da), run: () => L.drawing.modifySelected('Dash Style', (it) => { if (it.line && it.line.t !== 'none') it.line = Object.assign({}, it.line, { dash: k }); }) })), close) }], r);
   A.objArrowMenu = (r) => {
     const P = [[null, null], [null, 'triangle'], ['triangle', null], ['triangle', 'triangle'], [null, 'arrow'], [null, 'stealth'], [null, 'oval'], [null, 'diamond'], ['oval', 'oval']];
@@ -419,12 +424,12 @@
   };
   A.objShadowMenu = (r) => {
     const S = [null, [3, 3], [-3, 3], [3, -3], [-3, -3], [0, 4], [4, 0], [6, 6]];
-    ui.openMenu([{ custom: (close) => { const g = h('div', { class: 'shape-grid', style: 'grid-template-columns:repeat(4,30px)' }); S.forEach((s) => { const b = h('button', { type: 'button', style: 'width:30px;height:30px', 'aria-label': s ? 'Shadow Style' : 'No Shadow', html: s ? `<svg width="24" height="24"><rect x="${6 + s[0] / 1.5}" y="${6 + s[1] / 1.5}" width="12" height="12" fill="#888"/><rect x="6" y="6" width="12" height="12" fill="#fff" stroke="#000"/></svg>` : '<svg width="24" height="24"><rect x="6" y="6" width="12" height="12" fill="#fff" stroke="#000"/><path d="M3 21L21 3" stroke="#d33"/></svg>' }); b.addEventListener('click', () => { close(); L.drawing.modifySelected('Shadow', (it) => { it.shadow = s ? { c: '#000000', a: 0.5, dx: s[0], dy: s[1], blur: 0 } : undefined; }); }); g.appendChild(b); }); return g; } }], r);
+    ui.openMenu([{ custom: (close) => { const g = h('div', { class: 'shape-grid', style: 'grid-template-columns:repeat(4,30px)' }); S.forEach((s) => { const b = h('button', { type: 'button', style: 'width:30px;height:30px', 'aria-label': s ? 'Shadow Style' : 'No Shadow', html: s ? `<svg width="24" height="24"><rect x="${6 + s[0] / 1.5}" y="${6 + s[1] / 1.5}" width="12" height="12" fill="#888"/><rect x="6" y="6" width="12" height="12" fill="#fff" stroke="#000"/></svg>` : '<svg width="24" height="24"><rect x="6" y="6" width="12" height="12" fill="#fff" stroke="#000"/><path d="M3 21L21 3" stroke="#d33"/></svg>' }); b.addEventListener('click', () => { close(); L.drawing.modifySelected(L.N('Shadow'), (it) => { it.shadow = s ? { c: '#000000', a: 0.5, dx: s[0], dy: s[1], blur: 0 } : undefined; }); }); g.appendChild(b); }); return g; } }], r);
   };
   A.borderStyleMenu = (r) => ui.openMenu([{ custom: (close) => listPanel([['single', null], ['dotted', '1 2'], ['dashed', '4 3'], ['dotDash', '4 3 1 3'], ['double', null], ['thick', null], ['triple', null], ['wave', null], ['threeDEmboss', null]].map(([k, da]) => ({ html: k === 'double' ? '<svg width="90" height="14"><path d="M2 5h86M2 9h86" stroke="#000"/></svg>' : k === 'triple' ? '<svg width="90" height="14"><path d="M2 3h86M2 7h86M2 11h86" stroke="#000"/></svg>' : k === 'wave' ? '<svg width="90" height="14"><path d="M2 7q5-5 10 0t10 0t10 0t10 0t10 0t10 0t10 0t10 0t6 0" fill="none" stroke="#000"/></svg>' : lineSVG(k === 'thick' ? 3 : 1, da), run: () => { A.borderPen.val = k; } })).concat([{ label: 'No Border', run: () => { A.borderPen.val = 'nil'; } }]), close) }], r);
-  A.borderWeightMenu = (r) => ui.openMenu([{ custom: (close) => listPanel([0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6].map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: w + ' pt', run: () => { A.borderPen.sz = w; } })), close) }], r);
+  A.borderWeightMenu = (r) => ui.openMenu([{ custom: (close) => listPanel([0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6].map((w) => ({ html: lineSVG(Math.max(0.5, w * 1.33)), label: L.t('{0} pt', w), run: () => { A.borderPen.sz = w; } })), close) }], r);
   A.picMode = (m) => L.drawing.modifySelected('Picture Color', (it) => { it.gray = m === 'gray' || undefined; it.bw = m === 'bw' || undefined; it.washout = m === 'washout' || undefined; });
-  A.picAdjust = (k, d) => L.drawing.modifySelected(k === 'bright' ? 'Brightness' : 'Contrast', (it) => { it[k] = L.clamp(L.round((it[k] || 0) + d, 2), -1, 1) || undefined; });
+  A.picAdjust = (k, d) => L.drawing.modifySelected(k === 'bright' ? L.N('Brightness') : L.N('Contrast'), (it) => { it[k] = L.clamp(L.round((it[k] || 0) + d, 2), -1, 1) || undefined; });
 
   /* ================= status bar ================= */
   let statusTimer = 0;
@@ -432,12 +437,12 @@
     const sb = L.$('#statusbar');
     const cell = (cls, tip) => h('div', { class: 'sb-cell ' + (cls || ''), 'data-tip': tip || null });
     A.sb = {
-      page: cell('', 'Page'), sec: cell('', 'Section'), pages: cell('', 'Page / pages'), at: cell('', 'Vertical position'), ln: cell('', 'Line'), col: cell('', 'Column'),
+      page: cell('', L.N('Page')), sec: cell('', L.N('Section')), pages: cell('', 'Page / pages'), at: cell('', 'Vertical position'), ln: cell('', L.N('Line|position')), col: cell('', L.N('Column|position')),
       rec: cell('flag', 'Record macro'), trk: cell('flag act', 'Track Changes (double-click to toggle)'), ext: cell('flag act', 'Extend selection'), ovr: cell('flag act', 'Overtype (double-click to toggle)'),
-      lang: cell('act', 'Language'), spell: cell('act sb-spell', 'Spelling and grammar status'), msg: cell('grow'),
+      lang: cell('act', L.N('Language')), spell: cell('act sb-spell', 'Spelling and grammar status'), msg: cell('grow'),
     };
-    A.sb.rec.textContent = 'REC'; A.sb.trk.textContent = 'TRK'; A.sb.ext.textContent = 'EXT'; A.sb.ovr.textContent = 'OVR';
-    A.sb.lang.textContent = 'English (U.S.)';
+    A.sb.rec.textContent = L.t('REC'); A.sb.trk.textContent = L.t('TRK'); A.sb.ext.textContent = L.t('EXT'); A.sb.ovr.textContent = L.t('OVR');
+    A.sb.lang.textContent = A.langName('en-US');
     A.sb.spell.innerHTML = '<svg width="18" height="14" viewBox="0 0 18 14"><rect x="1.5" y="1.5" width="11" height="11" fill="#fff" stroke="#556"/><path d="M3 4h7M3 6.5h7M3 9h5" stroke="#889"/><path d="M10 9l2.5 3 4.5-7" fill="none" stroke="#2f9a3a" stroke-width="1.6"/></svg>';
     A.sb.trk.addEventListener('dblclick', () => ui.exec('trackChanges'));
     A.sb.ovr.addEventListener('dblclick', () => { E.overtype = !E.overtype; A.updateStatus(); });
@@ -453,7 +458,7 @@
     const spellIcon = () => {
       const on = L.spell && !L.spell.hidden && A.opts.spell !== false;
       A.sb.spell.classList.toggle('off', !on);
-      A.sb.spell.dataset.tip = on ? 'Spelling and grammar are checked as you type. Click to stop.' : 'Spelling and grammar are not checked as you type. Click to check this document.';
+      A.sb.spell.dataset.tip = on ? L.t('Spelling and grammar are checked as you type. Click to stop.') : L.t('Spelling and grammar are not checked as you type. Click to check this document.');
     };
     L.bus.on('proof-state', spellIcon);
     L.bus.on('doc-loaded', spellIcon);
@@ -461,7 +466,7 @@
     A.sb.page.addEventListener('dblclick', () => ui.exec('goTo'));
     sb.append(A.sb.page, A.sb.sec, A.sb.pages, A.sb.at, A.sb.ln, A.sb.col, A.sb.rec, A.sb.trk, A.sb.ext, A.sb.ovr, A.sb.lang, A.sb.spell, A.sb.msg);
   }
-  A.status = (msg, ms) => { if (!A.sb) return; A.sb.msg.textContent = msg; clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sb.msg.textContent = ''; }, ms || 4000); };
+  A.status = (msg, ms) => { if (!A.sb) return; A.sb.msg.textContent = L.t(msg); clearTimeout(statusTimer); statusTimer = setTimeout(() => { A.sb.msg.textContent = ''; }, ms || 4000); };
   A.updateStatus = L.debounce(function () {
     if (!A.sb) return;
     const d = doc();
@@ -474,31 +479,32 @@
     const pi = LY.pageOf(sel.f);
     const pg = pi >= 0 ? LY.pages[pi] : null;
     if (pg) {
-      A.sb.page.textContent = 'Page ' + D.fmtNum(pg.numVal, pg.numFmt);
-      A.sb.sec.textContent = 'Sec ' + (pg.si + 1);
+      A.sb.page.textContent = L.t('Page {0}', D.fmtNum(pg.numVal, pg.numFmt));
+      A.sb.sec.textContent = L.t('Sec {0}', pg.si + 1);
       A.sb.pages.textContent = `${pi + 1}/${n}`;
       const r = E.caretRect();
       if (r) {
         const pr = pg.el.getBoundingClientRect();
         const atPt = (r.top - pr.top) / LY.zoom / D.PX;
-        A.sb.at.textContent = 'At ' + D.fmtLen(atPt);
+        A.sb.at.textContent = L.t('At {0}', D.fmtLen(atPt));
         /* line number on the page and column within the line */
         const lc = A.lineCol(sel.f, pg);
-        A.sb.ln.textContent = 'Ln ' + lc.ln;
-        A.sb.col.textContent = 'Col ' + lc.col;
+        A.sb.ln.textContent = L.t('Ln {0}', lc.ln);
+        A.sb.col.textContent = L.t('Col {0}', lc.col);
       }
     } else {
-      A.sb.page.textContent = LY.view === 'print' ? '' : 'Page 1';
-      A.sb.sec.textContent = 'Sec 1';
+      A.sb.page.textContent = LY.view === 'print' ? '' : L.t('Page {0}', 1);
+      A.sb.sec.textContent = L.t('Sec {0}', 1);
       A.sb.pages.textContent = LY.view === 'print' ? '' : '';
-      A.sb.at.textContent = ''; A.sb.ln.textContent = ''; A.sb.col.textContent = 'Col ' + (sel.f.o + 1);
+      A.sb.at.textContent = ''; A.sb.ln.textContent = ''; A.sb.col.textContent = L.t('Col {0}', sel.f.o + 1);
     }
     const r = E.curRun();
     const lang = r.lang || (d.defaults.rPr && d.defaults.rPr.lang) || 'en-US';
     A.sb.lang.textContent = A.langName(lang);
   }, 60);
-  A.LANGS = [['en-US', 'English (U.S.)'], ['en-GB', 'English (U.K.)'], ['en-AU', 'English (Australia)'], ['en-CA', 'English (Canada)'], ['fr-FR', 'French (France)'], ['fr-CA', 'French (Canada)'], ['de-DE', 'German (Germany)'], ['es-ES', 'Spanish (Spain)'], ['es-MX', 'Spanish (Mexico)'], ['it-IT', 'Italian (Italy)'], ['pt-BR', 'Portuguese (Brazil)'], ['pt-PT', 'Portuguese (Portugal)'], ['nl-NL', 'Dutch (Netherlands)'], ['sv-SE', 'Swedish'], ['da-DK', 'Danish'], ['nb-NO', 'Norwegian (Bokmål)'], ['fi-FI', 'Finnish'], ['pl-PL', 'Polish'], ['ru-RU', 'Russian'], ['ja-JP', 'Japanese'], ['zh-CN', 'Chinese (PRC)'], ['ko-KR', 'Korean']];
-  A.langName = (code) => { const hit = A.LANGS.find((x) => x[0].toLowerCase() === String(code).toLowerCase()); return hit ? hit[1] : code; };
+  /* [code, name]: the names are UI text, shown through L.t; A.langName gives the name as shown */
+  A.LANGS = [['en-US', L.N('English (U.S.)')], ['en-GB', L.N('English (U.K.)')], ['en-AU', L.N('English (Australia)')], ['en-CA', L.N('English (Canada)')], ['fr-FR', L.N('French (France)')], ['fr-CA', L.N('French (Canada)')], ['de-DE', L.N('German (Germany)')], ['es-ES', L.N('Spanish (Spain)')], ['es-MX', L.N('Spanish (Mexico)')], ['it-IT', L.N('Italian (Italy)')], ['pt-BR', L.N('Portuguese (Brazil)')], ['pt-PT', L.N('Portuguese (Portugal)')], ['nl-NL', L.N('Dutch (Netherlands)')], ['sv-SE', L.N('Swedish')], ['da-DK', L.N('Danish')], ['nb-NO', L.N('Norwegian (Bokmål)')], ['fi-FI', L.N('Finnish')], ['pl-PL', L.N('Polish')], ['ru-RU', L.N('Russian')], ['ja-JP', L.N('Japanese')], ['zh-CN', L.N('Chinese (PRC)')], ['ko-KR', L.N('Korean')]];
+  A.langName = (code) => { const hit = A.LANGS.find((x) => x[0].toLowerCase() === String(code).toLowerCase()); return hit ? L.t(hit[1]) : code; };
   A.lineCol = function (pos, pg) {
     const frag = LY.fragFor(pos.p, pos.o);
     if (!frag) return { ln: 1, col: pos.o + 1 };
@@ -662,7 +668,7 @@
     ui.refresh();
     E.refocus();
   };
-  A.windowItems = () => A.docs.map((w, i) => ({ label: `&${i + 1} ${(i === A.cur ? A.fileName : w.fileName).replace(/&/g, '&&')}`, checked: () => i === A.cur, run: () => A.switchTo(i) }));
+  A.windowItems = () => A.docs.map((w, i) => ({ label: `&${i + 1} ${(i === A.cur ? A.fileName : w.fileName).replace(/&/g, '&&')}`, raw: true, checked: () => i === A.cur, run: () => A.switchTo(i) }));
   A.loadDoc = function (d, name, opts) {
     opts = opts || {};
     ui.dragCancel();
@@ -692,15 +698,17 @@
   };
   async function confirmDiscard() {
     if (!doc() || !doc().dirty) return true;
-    const r = await ui.msg(`Do you want to save the changes to ${A.fileName}?`, { icon: 'warn', buttons: ['&Yes', '&No', 'Cancel'] });
+    const r = await ui.msg(L.t('Do you want to save the changes to {0}?', A.fileName), { icon: 'warn', buttons: ['&Yes', '&No', 'Cancel'] });
     if (r === 0) return await A.save() === 'saved';
     if (r === 1 && window.VO) VO.discard(doc());   // its unsaved version goes too
     return r === 1;
   }
   A.confirmDiscard = confirmDiscard;
+  /** a blank document as the Office of the UI's language makes it (common/locales.js) */
+  const blank = () => D.applyLocale(D.newDoc(), L.locale && L.locale.get());
   A.newDocument = async function (opts) {
     A.untitled++;
-    const d = D.newDoc(opts && opts.modern ? { modern: true } : {});
+    const d = opts && opts.modern ? D.newDoc({ modern: true }) : blank();
     if (opts && opts.build) opts.build(d);
     /* a new document opens in its own window, as in Word; an untouched blank one is simply replaced */
     A.loadDoc(d, 'Document' + A.untitled, { newWindow: !pristine() });
@@ -708,7 +716,7 @@
   /** close the current document (asking to save); false when the user cancels */
   A.closeDocument = async function () {
     if (!(await confirmDiscard())) return false;
-    if (A.docs.length <= 1) { A.docs = []; A.cur = -1; A.untitled++; A.loadDoc(D.newDoc(), 'Document' + A.untitled); return true; }
+    if (A.docs.length <= 1) { A.docs = []; A.cur = -1; A.untitled++; A.loadDoc(blank(), 'Document' + A.untitled); return true; }
     const i = A.cur;
     A.docs.splice(i, 1);
     A.cur = -1; /* nothing to stash: the closed window is gone */
@@ -723,7 +731,7 @@
   A.openFile = async function (file) {
     const reuse = pristine();
     const name = file.name.replace(/\.(docx|docm|dotx|dotm|doc|txt|html?|rtf|xml|md|markdown|mdown|mkd|zip)$/i, '');
-    ui.busy(true, `Opening ${file.name}...`);
+    ui.busy(true, L.t('Opening {0}...', file.name));
     try {
       let d, warnings = [], type = 'docx';
       if (/\.txt$/i.test(file.name)) d = A.docFromText(await L.readAsText(file));
@@ -742,14 +750,14 @@
       if (d.isTemplate) A.status('Opened a template. Save keeps its template format.');
       if (d.wasEncrypted) A.status('This document is protected with a password to open; saving keeps the protection (Tools ▸ Options ▸ Security).');
       if (warnings.length) ui.msg(warnings.join('\n'), { icon: 'warn' });
-      if (type === 'md') { const n = L.mdio.missingPictures(d); if (n) A.status(`${n === 1 ? 'A picture is' : n + ' pictures are'} not in the .md file and show${n === 1 ? 's' : ''} as a box. Open a .zip holding the file and its pictures to see them.`); }
-      if (d.settings.protect && d.settings.protect.on) A.status('This document is protected: ' + ({ readOnly: 'no changes (read only)', comments: 'comments only', tracked: 'tracked changes', forms: 'filling in forms' }[d.settings.protect.kind] || 'restricted'));
+      if (type === 'md') { const n = L.mdio.missingPictures(d); if (n) A.status(n === 1 ? L.t('A picture is not in the .md file and shows as a box. Open a .zip holding the file and its pictures to see them.') : L.t('{0} pictures are not in the .md file and show as a box. Open a .zip holding the file and its pictures to see them.', n)); }
+      if (d.settings.protect && d.settings.protect.on) A.status({ readOnly: L.N('This document is protected: no changes (read only)'), comments: L.N('This document is protected: comments only'), tracked: L.N('This document is protected: tracked changes'), forms: L.N('This document is protected: filling in forms') }[d.settings.protect.kind] || L.N('This document is protected: restricted'));
     } catch (e) {
       ui.busy(false);
       console.error(e);
       if (e && e.code === 'cancel') return;
       if (e && e.code === 'ole') ui.msg(e.message, { icon: 'warn' });
-      else ui.msg(`${L.APP} can't open ${file.name}. ${e && e.message ? e.message : ''}`, { icon: 'error' });
+      else ui.msg(L.t("{0} can't open {1}. {2}", L.APP, file.name, e && e.message ? e.message : ''), { icon: 'error' });
     }
   };
   /** read .docx bytes; a password-protected file asks for its password (or takes opts.password) */
@@ -764,7 +772,7 @@
       let plain;
       try { plain = await L.officeCrypto.decrypt(e.bytes, pass); }
       catch (err) {
-        const b = new Error(err && err.code === 'badpass' ? `The password is incorrect. ${L.APP} cannot open the document.` : err && err.message === 'unsupported' ? `This document is encrypted in a way ${L.APP} cannot read.` : String(err && err.message || err));
+        const b = new Error(err && err.code === 'badpass' ? L.t('The password is incorrect. {0} cannot open the document.', L.APP) : err && err.message === 'unsupported' ? L.t('This document is encrypted in a way {0} cannot read.', L.APP) : String(err && err.message || err));
         b.code = 'ole';
         b.badPassword = !!(err && err.code === 'badpass');
         throw b;
@@ -851,12 +859,12 @@
       if (losses === null) return 'declined';
       const r = await L.saveFile(`${name}.${ext}`, blob);
       if (r === 'saved') L.opc.acknowledge(d, losses);
-      if (r === 'saved' && ['docx', 'docm', 'dotx', 'dotm', 'md', 'mdzip'].includes(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); d.dirty = false; A.status(`Saved ${name}.${ext}`); ui.refresh(); if (window.VO) VO.saved(`${name}.${ext}`, blob, d); }
+      if (r === 'saved' && ['docx', 'docm', 'dotx', 'dotm', 'md', 'mdzip'].includes(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); d.dirty = false; A.status(L.t('Saved {0}', `${name}.${ext}`)); ui.refresh(); if (window.VO) VO.saved(`${name}.${ext}`, blob, d); }
       return r;
     } catch (e) {
       ui.busy(false);
       console.error(e);
-      ui.msg(`The file could not be saved: ${e.message || e}`, { icon: 'error' });
+      ui.msg(L.t('The file could not be saved: {0}', e.message || e), { icon: 'error' });
     }
   };
 
@@ -905,9 +913,9 @@
     const sel = window.getSelection(); sel.removeAllRanges();
     let n = 0;
     for (const p of list) {
-      ui.busy(true, `Creating PDF... (page ${++n} of ${list.length})`);
+      ui.busy(true, L.t('Creating PDF... (page {0} of {1})', ++n, list.length));
       const c = await A.rasterizePage(p.el, 2.2, css, map);
-      const jpeg = new Uint8Array(await (await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('This browser blocked the page image.'))), 'image/jpeg', 0.92))).arrayBuffer());
+      const jpeg = new Uint8Array(await (await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error(L.t('This browser blocked the page image.')))), 'image/jpeg', 0.92))).arrayBuffer());
       pages.push({ jpeg, iw: c.width, ih: c.height, pw: p.sect.pgW, ph: p.sect.pgH });
     }
     if (prevView !== A.view || LY.view !== (prevView === 'reading' || prevView === 'preview' ? 'print' : prevView)) { LY.view = prevView === 'reading' || prevView === 'preview' ? 'print' : prevView; LY.render(); }
@@ -916,7 +924,7 @@
   };
   A.printPDF = async function () {
     try { const blob = await A.buildPDF(); ui.busy(false); await L.saveFile(`${A.fileName}.pdf`, blob); }
-    catch (e) { ui.busy(false); ui.msg('The PDF could not be created: ' + (e.message || e), { icon: 'error' }); }
+    catch (e) { ui.busy(false); ui.msg(L.t('The PDF could not be created: {0}', e.message || e), { icon: 'error' }); }
   };
 
   /* ================= headers & footers ================= */
@@ -939,7 +947,7 @@
     /* create the story when the section has none */
     let story = LY.hfFor(secs, pg.si, kind, ty);
     if (!story) {
-      E.edit(kind === 'hdr' ? 'Header' : 'Footer', () => {
+      E.edit(kind === 'hdr' ? L.N('Header') : L.N('Footer'), () => {
         const id = (kind === 'hdr' ? 'h' : 'f') + D.nid();
         D.touchKey(d, 'hf');
         d.hf[id] = { kind, id, blocks: [D.para([], { style: kind === 'hdr' ? 'Header' : 'Footer' })] };
@@ -966,14 +974,16 @@
     A.updateToolbars();
     ui.refresh();
   };
+  const HF_NAMES = { first: [L.N('First Page Header'), L.N('First Page Footer')], even: [L.N('Even Page Header'), L.N('Even Page Footer')], odd: [L.N('Odd Page Header'), L.N('Odd Page Footer')], default: [L.N('Header'), L.N('Footer')] };
   function labelHF() {
     const d = doc();
     const secs = D.sections(d);
     for (const pg of LY.pages) {
       const multi = secs.length > 1;
-      const tyName = { first: 'First Page ', even: 'Even Page ', default: doc().settings.evenOdd ? 'Odd Page ' : '' }[pg.type] || '';
-      pg.hdr.dataset.label = `${tyName}Header${multi ? ' -Section ' + (pg.si + 1) + '-' : ''}`;
-      pg.ftr.dataset.label = `${tyName}Footer${multi ? ' -Section ' + (pg.si + 1) + '-' : ''}`;
+      const ty = pg.type === 'first' || pg.type === 'even' ? pg.type : doc().settings.evenOdd ? 'odd' : 'default';
+      const label = (name) => (multi ? L.t('{0} -Section {1}-', L.t(name), pg.si + 1) : L.t(name));
+      pg.hdr.dataset.label = label(HF_NAMES[ty][0]);
+      pg.ftr.dataset.label = label(HF_NAMES[ty][1]);
       const refH = LY.hfRefFor(secs, pg.si, 'hdr', pg.type), refF = LY.hfRefFor(secs, pg.si, 'ftr', pg.type);
       if (refH && refH.si < pg.si) pg.hdr.dataset.same = '1'; else delete pg.hdr.dataset.same;
       if (refF && refF.si < pg.si) pg.ftr.dataset.same = '1'; else delete pg.ftr.dataset.same;
@@ -1029,7 +1039,7 @@
       const used = new Set();
       for (const p of D.allParas(d)) if (D.headingLevel(d, p) && L.md.slug(D.plainText(p), used) === name.toLowerCase()) { A.gotoPos(D.pos(p, 0)); return true; }
     }
-    A.status(`Bookmark "${name}" not found.`);
+    A.status(L.t('Bookmark "{0}" not found.', name));
     return false;
   };
   A.gotoNote = function (key) {
@@ -1248,7 +1258,7 @@
   A.highlighter = ui.brush({
     el: () => L.$('#scroller'),
     pick: () => A.lastHighlight,
-    apply: (n) => { if (E.collapsed()) return false; E.formatRun({ hl: n === 'none' ? undefined : n }, 'Highlight'); return true; },
+    apply: (n) => { if (E.collapsed()) return false; E.formatRun({ hl: n === 'none' ? undefined : n }, L.N('Highlight')); return true; },
     hint: 'Select text to highlight. Press Esc to stop.',
     status: (t) => A.status(t),
   });
@@ -1296,6 +1306,9 @@
   A.init = async function () {
     A.loadOpts();
     if (window.VO && L.icons.app) VO.setIcon(L.icons.app(32));
+    /* the labels the page's CSS draws on pages and marks, in the UI's language */
+    for (const [v, text] of [['--t-blank', L.t('(This page intentionally left blank by a section break)')], ['--t-same', L.t('Same as Previous')],
+      ['--t-object', L.t('[object]')], ['--t-sect', L.t('Section Break (Next Page)')]]) document.documentElement.style.setProperty(v, JSON.stringify(text));
     buildMenus();
     buildToolbars();
     L.ribbonUI.init();
@@ -1316,7 +1329,7 @@
     LY.zoom = narrow ? Math.max(0.4, (window.innerWidth - 40) / 816) : A.opts.zoom || 1;
     /* opened from the Start Center: a template, or blank (a new document, or to open a file into); else the sample */
     const launch = window.VO && VO.launch;
-    A.loadDoc(launch && launch.template && L.templates ? L.templates.build(launch.template) : launch ? D.newDoc() : A.buildSample(), 'Document1');
+    A.loadDoc(launch && launch.template && L.templates ? L.templates.build(launch.template) : launch ? blank() : A.buildSample(), 'Document1');
     A.view = 'x';
     A.setView(A.opts.view && ['print', 'normal', 'web', 'outline'].includes(A.opts.view) ? A.opts.view : 'print');
     if (L.panes && A.opts.taskOpen) L.panes.task.show('getting-started');
@@ -1355,6 +1368,8 @@
     const p = LY.view === 'print' && LY.pages && LY.pages[0];
     return p ? A.rasterizePage(p.el, 400 / p.el.offsetWidth, docCSS(), await mediaDataMap()) : null;
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => A.init());
-  else A.init();
+  /* once the page and the UI's dictionary are here (common/i18n.js) */
+  const boot = () => (window.VO && VO.i18n ? VO.i18n.whenReady(() => A.init()) : A.init());
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();

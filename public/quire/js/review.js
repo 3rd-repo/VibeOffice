@@ -35,11 +35,11 @@
         const n = D.ilen(it);
         const rv = n ? revOf(it) : null;
         if (rv && cur && cur.type === rv[0] && cur.stamp.author === rv[1].author && cur.b === o) { cur.b = o + n; cur.text += it.t === 'text' ? it.text : ' '; }
-        else if (rv) { cur = { type: rv[0], stamp: rv[1], p, a: o, b: o + n, text: it.t === 'text' ? it.text : it.t === 'tab' ? '\t' : '[object]' }; out.push(cur); }
+        else if (rv) { cur = { type: rv[0], stamp: rv[1], p, a: o, b: o + n, text: it.t === 'text' ? it.text : it.t === 'tab' ? '\t' : L.t('[object]') }; out.push(cur); }
         else if (n) cur = null;
         o += n;
       }
-      if (p.pPr.chg) out.push({ type: 'pchg', stamp: p.pPr.chg, p, a: 0, b: D.plen(p), text: 'Paragraph formatting' });
+      if (p.pPr.chg) out.push({ type: 'pchg', stamp: p.pPr.chg, p, a: 0, b: D.plen(p), text: L.t('Paragraph formatting') });
       if (p.mark && (p.mark.ins || p.mark.del)) out.push({ type: p.mark.ins ? 'mins' : 'mdel', stamp: p.mark.ins || p.mark.del, p, a: D.plen(p), b: D.plen(p), text: '¶' });
     }
     return out;
@@ -131,7 +131,7 @@
     const cur = E.sel.f;
     const at = (x) => D.cmp(d, D.pos(x.p, x.a), cur);
     const hit = dir > 0 ? items.find((x) => at(x) > 0 || (E.collapsed() && at(x) === 0 && false)) : items.slice().reverse().find((x) => D.cmp(d, D.pos(x.p, x.b), E.range()[0]) < 0);
-    if (!hit) { if (!quiet) app().status(dir > 0 ? 'Word reached the end of the document.' : 'Word reached the beginning of the document.'); return; }
+    if (!hit) { if (!quiet) app().status(dir > 0 ? 'Quire reached the end of the document.' : 'Quire reached the beginning of the document.'); return; }
     E.setSel(D.pos(hit.p, hit.a), D.pos(hit.p, hit.b));
     if (hit.cmt) highlightBalloon(hit.cmt);
   };
@@ -221,7 +221,7 @@
     const ta = h('textarea', { rows: 6, style: 'width:100%' });
     ta.value = c.blocks.filter((b) => b.t === 'p').map((p) => D.plainText(p)).join('\n');
     L.ui.dialog({
-      title: `Comment [${c.initials || ''}${+id + 1}] — ${c.author}`, width: 380, body: h('div', { class: 'col' }, ta), focus: ta,
+      title: L.t('Comment [{0}{1}] — {2}', c.initials || '', +id + 1, c.author), width: 380, body: h('div', { class: 'col' }, ta), focus: ta,
       buttons: [{ label: 'OK', primary: true, onClick: () => {
         E.edit('Edit Comment', () => {
           D.touchKey(d, 'comments');
@@ -308,7 +308,7 @@
         const bl = h('div', { class: 'balloon' + (o.reply ? ' reply' : ''), 'data-cid': o.id });
         bl.style.borderColor = color;
         bl.style.background = L.color.mix ? L.color.mix(color, '#ffffff', 0.85) : '#fff8dc';
-        const head = h('div', { class: 'bh', text: `Comment [${c.initials || ''}${RV.commentNumber(o.id)}]${o.reply ? ' (reply)' : ''}: ` });
+        const head = h('div', { class: 'bh', text: L.t(o.reply ? 'Comment [{0}{1}] (reply):' : 'Comment [{0}{1}]:', c.initials || '', RV.commentNumber(o.id)) + ' ' });
         head.contentEditable = 'false';
         head.setAttribute('data-tip', `${c.author}, ${fmtDate(c.date)}`);
         const body = h('div', { class: 'bb' });
@@ -362,7 +362,9 @@
     LY.fitSizer();
     L.ui.refresh();
   };
-  const TYPE_LABEL = { ins: 'Inserted', del: 'Deleted', chg: 'Formatted', pchg: 'Formatted', mins: 'Inserted', mdel: 'Deleted' };
+  const TYPE_LABEL = { ins: L.N('Inserted'), del: L.N('Deleted'), chg: L.N('Formatted'), pchg: L.N('Formatted'), mins: L.N('Inserted'), mdel: L.N('Deleted') };
+  /* the document's own text (authors, dates, changed and comment text), shown as it is */
+  const data = (cls, s, style) => { const el = h('div', { class: cls, style, translate: 'no' }); el.textContent = s; return el; };
   RV.renderPane = function () {
     const pane = L.$('#revpane');
     if (pane.hidden) return;
@@ -381,15 +383,15 @@
       if (it.kind === 'rev') {
         const r = it.r;
         color = R.authorColor(r.stamp.author);
-        head = `${TYPE_LABEL[r.type]} ${r.stamp.author || ''} ${fmtDate(r.stamp.date)}`;
+        head = `${L.t(TYPE_LABEL[r.type])} ${r.stamp.author || ''} ${fmtDate(r.stamp.date)}`;
         body = r.type === 'chg' ? describeFmt(r) : r.text;
       } else {
         const c = d.comments[it.id];
         color = R.authorColor(c.author);
-        head = `Comment [${c.initials || ''}${RV.commentNumber(it.id)}] ${c.author} ${fmtDate(c.date)}`;
+        head = `${L.t('Comment [{0}{1}]', c.initials || '', RV.commentNumber(it.id))} ${c.author} ${fmtDate(c.date)}`;
         body = c.blocks.filter((b) => b.t === 'p').map((p) => D.plainText(p)).join('\n');
       }
-      const el = h('div', { class: 'rp-item' }, h('div', { class: 'rp-h', text: head, style: `color:${color}` }), h('div', { class: 'rp-b', text: body }));
+      const el = h('div', { class: 'rp-item' }, data('rp-h', head, `color:${color}`), data('rp-b', body));
       el.addEventListener('click', () => { const a = D.pos(it.p, it.kind === 'rev' ? it.r.a : it.o); const b = D.pos(it.p, it.kind === 'rev' ? it.r.b : it.o); app().gotoPos(a, b); if (it.kind === 'cmt') highlightBalloon(it.id); });
       if (it.kind === 'cmt') el.addEventListener('dblclick', () => RV.editComment(it.id));
       pane.appendChild(el);
@@ -400,15 +402,17 @@
     const now = (D.itemAfter(r.p, r.a) || {}).rPr || {};
     const out = [];
     const keys = ['b', 'i', 'u', 'strike', 'font', 'sz', 'color', 'hl', 'caps', 'smallCaps', 'vert'];
-    const name = { b: 'Bold', i: 'Italic', u: 'Underline', strike: 'Strikethrough', font: 'Font', sz: 'Font size', color: 'Font color', hl: 'Highlight', caps: 'All caps', smallCaps: 'Small caps', vert: 'Position' };
-    for (const k of keys) if (JSON.stringify(old[k]) !== JSON.stringify(now[k])) { const v = now[k]; out.push(v === true ? name[k] : v === false || v == null || v === 'none' ? 'Not ' + name[k] : `${name[k]}: ${k === 'sz' ? v + ' pt' : v}`); }
-    return 'Formatted: ' + (out.join(', ') || 'Font');
+    const name = { b: L.N('Bold'), i: L.N('Italic'), u: L.N('Underline'), strike: L.N('Strikethrough'), font: L.N('Font'), sz: L.N('Font size'), color: L.N('Font color'), hl: L.N('Highlight'), caps: L.N('All caps'), smallCaps: L.N('Small caps'), vert: L.N('Position') };
+    /* a property with a value: its name and the value as the document has it */
+    const value = { u: L.N('Underline: {0}'), font: L.N('Font: {0}'), sz: L.N('Font size: {0} pt'), color: L.N('Font color: {0}'), hl: L.N('Highlight: {0}'), vert: L.N('Position: {0}') };
+    for (const k of keys) if (JSON.stringify(old[k]) !== JSON.stringify(now[k])) { const v = now[k]; out.push(v === true ? L.t(name[k]) : v === false || v == null || v === 'none' ? L.t('Not {0}', L.t(name[k])) : value[k] ? L.t(value[k], v) : L.t(name[k])); }
+    return L.t('Formatted: {0}', out.join(', ') || L.t('Font'));
   }
   RV.reviewersDialog = function () {
     const list = RV.authors();
     const body = h('div', { class: 'col' }, h('div', { text: 'Reviewers in this document:' }));
     if (!list.length) body.appendChild(h('div', { class: 'tp-note', text: 'No one has tracked changes or comments yet.' }));
-    for (const a of list) body.appendChild(h('div', { style: 'display:flex;align-items:center;gap:6px' }, h('span', { style: `width:12px;height:12px;background:${R.authorColor(a)};border:1px solid #555;display:inline-block` }), h('span', { text: a })));
+    for (const a of list) body.appendChild(h('div', { style: 'display:flex;align-items:center;gap:6px' }, h('span', { style: `width:12px;height:12px;background:${R.authorColor(a)};border:1px solid #555;display:inline-block` }), data('', a)));
     L.ui.dialog({ title: 'Reviewers', body, width: 300, buttons: [{ label: 'Close', primary: true }] });
   };
 
@@ -423,9 +427,9 @@
       const other = res.doc;
       const n = RV.compareWith(other, other.props.lastModifiedBy || other.props.creator || f.name.replace(/\.\w+$/, ''));
       L.ui.busy(false);
-      app().status(n ? `Marked ${n} difference${n === 1 ? '' : 's'} as tracked changes.` : 'The documents are identical.');
+      app().status(n === 1 ? L.t('Marked {0} difference as tracked changes.', n) : n ? L.t('Marked {0} differences as tracked changes.', n) : 'The documents are identical.');
       if (n) { app().opts.toolbars.reviewing = true; app().updateToolbars(); }
-    } catch (e) { L.ui.busy(false); console.error(e); L.ui.msg('The documents could not be compared. ' + (e.message || ''), { icon: 'error' }); }
+    } catch (e) { L.ui.busy(false); console.error(e); L.ui.msg(L.t('The documents could not be compared. {0}', e.message || ''), { icon: 'error' }); }
   };
   const tokenize = (s) => s.match(/[\p{L}\p{N}_'’]+|\s+|[^\s\p{L}\p{N}_'’]/gu) || [];
   /** LCS diff of two arrays with an equality key; returns ops [{op:'eq'|'del'|'ins', a, b}] */

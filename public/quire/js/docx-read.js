@@ -163,13 +163,23 @@
           const mj = X.path(fs, 'majorFont', 'latin'), mn = X.path(fs, 'minorFont', 'latin');
           if (mj && at(mj, 'typeface')) doc.theme.major = at(mj, 'typeface');
           if (mn && at(mn, 'typeface')) doc.theme.minor = at(mn, 'typeface');
-          const mjEa = X.path(fs, 'majorFont', 'ea'), mnEa = X.path(fs, 'minorFont', 'ea');
-          doc.theme.majorEA = mjEa && at(mjEa, 'typeface'); doc.theme.minorEA = mnEa && at(mnEa, 'typeface');
+          /* the East Asian fonts: the theme's own (a:ea), else its font for the script of the document's East Asian
+             language (settings' themeFontLang: a Japanese Word's theme has <a:font script="Jpan" typeface="游明朝"/>) */
+          const setRel = relOfType('settings'), setX = setRel && (await xml(setRel.target));
+          const eaLang = String((setX && kid(setX, 'themeFontLang') && at(kid(setX, 'themeFontLang'), 'eastAsia')) || '').toLowerCase();
+          const script = /^ja/.test(eaLang) ? 'Jpan' : /^ko/.test(eaLang) ? 'Hang' : /^zh-(cn|sg)/.test(eaLang) ? 'Hans' : /^zh/.test(eaLang) ? 'Hant' : null;
+          const eaFont = (part) => {
+            const ea = X.path(fs, part, 'ea'), own = ea && at(ea, 'typeface');
+            const f = !own && script && kids(kid(fs, part) || fs).find((c) => c.localName === 'font' && at(c, 'script') === script);
+            return own || (f && at(f, 'typeface')) || '';
+          };
+          doc.theme.majorEA = eaFont('majorFont'); doc.theme.minorEA = eaFont('minorFont');
         }
       }
     }
     const dctx = { theme: doc.theme };
     const themeFont = (v) => (/^major/.test(v) ? doc.theme.major : doc.theme.minor);
+    const themeFontEA = (v) => (/^major/.test(v) ? doc.theme.majorEA : doc.theme.minorEA) || undefined;
 
     /* ---- colours ---- */
     function wColor(el, attr, themeAttr) {
@@ -237,7 +247,7 @@
             const f = at(c, 'ascii') || at(c, 'hAnsi');
             const ft = at(c, 'asciiTheme') || at(c, 'hAnsiTheme');
             if (ft) r.font = themeFont(ft); else if (f) r.font = f;
-            if (at(c, 'eastAsia')) r.fontEA = at(c, 'eastAsia'); else if (at(c, 'eastAsiaTheme')) r.fontEA = themeFont(at(c, 'eastAsiaTheme'));
+            if (at(c, 'eastAsia')) r.fontEA = at(c, 'eastAsia'); else if (at(c, 'eastAsiaTheme') && themeFontEA(at(c, 'eastAsiaTheme'))) r.fontEA = themeFontEA(at(c, 'eastAsiaTheme'));
             if (at(c, 'cs')) r.fontCS = at(c, 'cs');
             if (at(c, 'hint')) r.hint = at(c, 'hint');
             break;
@@ -631,6 +641,8 @@
       for (const c of setX.children) {
         switch (c.localName) {
           case 'defaultTabStop': s.defTab = tw(at(c, 'val')) || 36; break;
+          case 'characterSpacingControl': s.charSpacing = at(c, 'val'); break;
+          case 'themeFontLang': s.themeLang = { val: at(c, 'val') || undefined, eastAsia: at(c, 'eastAsia') || undefined, bidi: at(c, 'bidi') || undefined }; break;
           case 'evenAndOddHeaders': s.evenOdd = bool(c); break;
           case 'trackRevisions': s.track = bool(c); break;
           case 'mirrorMargins': s.mirror = bool(c); break;

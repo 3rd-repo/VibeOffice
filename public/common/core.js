@@ -13,32 +13,39 @@
   L.APP = L.APP || L.APP_NAME;
 
   /* ---------- DOM ---------- */
+  /* the text h() puts in the UI is shown in the UI's language (common/i18n.js): text, these attributes and string
+     children whose whole text has a translation */
+  const SHOWN = { title: 1, placeholder: 1, 'aria-label': 1, 'data-tip': 1 };
+  const tr = (v, ...args) => (typeof v !== 'string' ? v : L.t ? L.t(v, ...args) : v.replace(/\|[^|]*$/, '').replace(/\{(\d+)\}/g, (m, i) => (args[i] != null ? args[i] : m)));
   L.h = function h(tag, attrs, ...kids) {
     const el = document.createElement(tag);
+    /* translate: 'no' marks data (a font's name, a slide's title): shown as it is */
+    const data = attrs && attrs.translate === 'no';
     if (attrs) {
       for (const k in attrs) {
-        const v = attrs[k];
+        let v = attrs[k];
         if (v == null || v === false) continue;
+        if (SHOWN[k] && !data) v = tr(v);
         if (k === 'class') el.className = v;
         else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
         else if (k === 'style') el.style.cssText = v;
         else if (k === 'html') el.innerHTML = v;
-        else if (k === 'text') el.textContent = v;
+        else if (k === 'text') el.textContent = data ? v : tr(v);
         else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
         else if (k === 'dataset') Object.assign(el.dataset, v);
         else if (v === true) el.setAttribute(k, '');
         else el.setAttribute(k, v);
       }
     }
-    appendKids(el, kids);
+    appendKids(el, kids, data);
     return el;
   };
-  function appendKids(el, kids) {
+  function appendKids(el, kids, data) {
     for (const k of kids) {
       if (k == null || k === false) continue;
-      if (Array.isArray(k)) appendKids(el, k);
+      if (Array.isArray(k)) appendKids(el, k, data);
       else if (k instanceof Node) el.appendChild(k);
-      else el.appendChild(document.createTextNode(String(k)));
+      else el.appendChild(document.createTextNode(typeof k === 'string' && !data ? tr(k) : String(k)));
     }
   }
   L.$ = (s, r) => (r || document).querySelector(s);
@@ -432,11 +439,44 @@
     'wingdings': '"Segoe UI Symbol",sans-serif',
     'symbol': '"Segoe UI Symbol",serif',
   };
-  L.fontStack = function (name) {
-    if (!name) return 'Arial,"Arimo",sans-serif';
-    const n = String(name).replace(/"/g, '');
-    const fb = FONT_FALLBACK[n.toLowerCase()] || 'Arial,"Arimo",sans-serif';
-    return `"${n}",${fb}`;
+  /* East Asian fonts (docs/i18n.md, Fonts): Office's names in English and as Japanese, Korean and Chinese Office
+     write them, each with the fonts a Mac, Windows or Linux computer has in their place. None is vendored (several
+     megabytes each, in every offline install). [English name, stack, other names] */
+  const CJK_STACKS = {
+    jpSerif: '"Yu Mincho","YuMincho","Hiragino Mincho ProN","Hiragino Mincho Pro","Noto Serif CJK JP","Noto Serif JP","IPAexMincho","IPAMincho",serif',
+    jpSans: '"Yu Gothic","YuGothic","Hiragino Sans","Hiragino Kaku Gothic ProN","Meiryo","Noto Sans CJK JP","Noto Sans JP","IPAexGothic","IPAGothic",sans-serif',
+    krSerif: '"Batang","AppleMyungjo","Noto Serif CJK KR","Noto Serif KR","UnBatang",serif',
+    krSans: '"Malgun Gothic","Apple SD Gothic Neo","Noto Sans CJK KR","Noto Sans KR","UnDotum",sans-serif',
+    scSerif: '"SimSun","Songti SC","STSong","Noto Serif CJK SC","Noto Serif SC","AR PL UMing CN",serif',
+    scSans: '"Microsoft YaHei","DengXian","PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Noto Sans SC","WenQuanYi Micro Hei",sans-serif',
+    tcSerif: '"PMingLiU","Songti TC","LiSong Pro","Noto Serif CJK TC","Noto Serif TC","AR PL UMing TW",serif',
+    tcSans: '"Microsoft JhengHei","PingFang TC","Noto Sans CJK TC","Noto Sans TC",sans-serif',
+  };
+  const CJK = [['MS Mincho', 'jpSerif', 'ＭＳ 明朝'], ['MS PMincho', 'jpSerif', 'ＭＳ Ｐ明朝'], ['MS Gothic', 'jpSans', 'ＭＳ ゴシック'], ['MS PGothic', 'jpSans', 'ＭＳ Ｐゴシック'],
+    ['MS UI Gothic', 'jpSans'], ['Yu Mincho', 'jpSerif', '游明朝'], ['Yu Gothic', 'jpSans', '游ゴシック'], ['Yu Gothic UI', 'jpSans'], ['Yu Gothic Light', 'jpSans', '游ゴシック Light'],
+    ['Meiryo', 'jpSans', 'メイリオ'], ['Meiryo UI', 'jpSans'], ['HG Mincho E', 'jpSerif', 'HG明朝E'], ['HG Gothic E', 'jpSans', 'HGゴシックE'],
+    ['Malgun Gothic', 'krSans', '맑은 고딕'], ['Batang', 'krSerif', '바탕'], ['BatangChe', 'krSerif', '바탕체'], ['Gulim', 'krSans', '굴림'], ['GulimChe', 'krSans', '굴림체'],
+    ['Dotum', 'krSans', '돋움'], ['DotumChe', 'krSans', '돋움체'], ['Gungsuh', 'krSerif', '궁서'], ['GungsuhChe', 'krSerif', '궁서체'],
+    ['SimSun', 'scSerif', '宋体'], ['NSimSun', 'scSerif', '新宋体'], ['SimHei', 'scSans', '黑体'], ['DengXian', 'scSans', '等线'], ['DengXian Light', 'scSans', '等线 Light'],
+    ['Microsoft YaHei', 'scSans', '微软雅黑'], ['KaiTi', 'scSerif', '楷体'], ['FangSong', 'scSerif', '仿宋'],
+    ['PMingLiU', 'tcSerif', '新細明體'], ['MingLiU', 'tcSerif', '細明體'], ['Microsoft JhengHei', 'tcSans', '微軟正黑體'], ['DFKai-SB', 'tcSerif', '標楷體']];
+  const CJK_BY = new Map(), ALIAS = new Map();
+  for (const [en, stack, ...names] of CJK) { CJK_BY.set(en.toLowerCase(), { en, stack }); for (const n of names) ALIAS.set(n.toLowerCase(), en.toLowerCase()); }
+  /** the key every font table uses for a font: its English name, lower case (ＭＳ 明朝 → ms mincho) */
+  L.fontKey = (name) => { const n = String(name || '').replace(/"/g, '').trim().toLowerCase(); return ALIAS.get(n) || n; };
+  /** whether a font is one of the East Asian fonts above */
+  L.fontIsEA = (name) => CJK_BY.has(L.fontKey(name));
+  /** whether text has East Asian characters (Han, kana, Hangul, full-width forms), which Word draws with a run's
+      East Asian font */
+  L.hasEAText = (s) => /[\u1100-\u11ff\u2e80-\u9fff\uac00-\ud7af\uf900-\ufaff\ufe30-\ufe4f\uff00-\uffef]/.test(s || '');
+  /** a CSS font-family list for a font and what stands in for it; with ea, an East Asian font, its letters come
+      from the first and its East Asian characters from the second (as Word draws a run with both fonts) */
+  L.fontStack = function (name, ea) {
+    if (!name) return ea ? L.fontStack(ea) : 'Arial,"Arimo",sans-serif';
+    const n = String(name).replace(/"/g, ''), k = L.fontKey(n), cjk = CJK_BY.get(k);
+    const stack = cjk ? `"${n}",` + (cjk.en !== n ? `"${cjk.en}",` : '') + CJK_STACKS[cjk.stack] : `"${n}",${FONT_FALLBACK[k] || 'Arial,"Arimo",sans-serif'}`;
+    if (!ea || L.fontKey(ea) === k || !L.fontIsEA(ea)) return stack;
+    return stack.replace(/,(serif|sans-serif|monospace|cursive)$/, '') + ',' + L.fontStack(ea);
   };
   /* Which family in a stack the browser will draw with: an installed font (detected by measuring
      text against the generic fallbacks), or one of the suite's own stand-ins in public/fonts/. */
@@ -491,8 +531,11 @@
     return rules.join('\n');
   };
   /* the Font boxes: the fonts English Office users pick most, by Office's names (documents add their own) */
+  /* with a Japanese or Korean UI (common/i18n.js), that Office's own fonts too, under the names it shows them by */
+  const uiLang = typeof document !== 'undefined' ? (document.documentElement.getAttribute('lang') || 'en').split('-')[0] : 'en';
   L.FONT_LIST = ['Aptos', 'Aptos Display', 'Aptos Narrow', 'Arial', 'Arial Black', 'Calibri', 'Calibri Light', 'Cambria', 'Century Gothic', 'Comic Sans MS', 'Consolas',
-    'Courier New', 'Garamond', 'Georgia', 'Impact', 'Palatino Linotype', 'Segoe UI', 'Symbol', 'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana', 'Wingdings'];
+    'Courier New', 'Garamond', 'Georgia', 'Impact', 'Palatino Linotype', 'Segoe UI', 'Symbol', 'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana', 'Wingdings']
+    .concat({ ja: ['游明朝', '游ゴシック', 'ＭＳ 明朝', 'ＭＳ ゴシック', 'ＭＳ Ｐ明朝', 'ＭＳ Ｐゴシック', 'メイリオ'], ko: ['맑은 고딕', '바탕', '바탕체', '굴림', '굴림체', '돋움', '돋움체', '궁서'] }[uiLang] || []);
   /** the Font box list in Office's sections: Theme Fonts (the document's heading and body fonts),
    * Recently Used Fonts, All Fonts (L.FONT_LIST plus fonts the document uses), then the computer's
    * fonts once loaded (Chrome and Edge: the first item loads them). Items are strings,
@@ -503,8 +546,8 @@
     if (typeof root.queryLocalFonts === 'function') out.push({ label: local.length ? 'Reload fonts on your computer...' : 'Load all fonts on your computer...', run: L.loadLocalFonts }, { sep: true });
     if (major || minor) {
       out.push({ heading: 'Theme Fonts' });
-      if (major) out.push({ value: major, label: major + ' (Headings)' });
-      if (minor) out.push({ value: minor, label: minor + ' (Body)' });
+      if (major) out.push({ value: major, label: tr('{0} (Headings)', major) });
+      if (minor) out.push({ value: minor, label: tr('{0} (Body)', minor) });
     }
     if (recent.length) out.push({ heading: 'Recently Used Fonts' }, ...recent);
     const all = Array.from(new Set(L.FONT_LIST.concat(extra.filter(Boolean)))).sort((x, y) => x.localeCompare(y));
@@ -520,7 +563,7 @@
     try {
       return await root.VO.localFonts.load();
     } catch (e) {
-      L.ui?.msg('The fonts on this computer could not be listed' + (e.name === 'NotAllowedError' || e.name === 'SecurityError' ? ': permission was not given. You can allow it in the site settings of your browser.' : ': ' + (e.message || e)), { icon: 'warn' });
+      L.ui?.msg(e.name === 'NotAllowedError' || e.name === 'SecurityError' ? 'The fonts on this computer could not be listed: permission was not given. You can allow it in the site settings of your browser.' : L.t('The fonts on this computer could not be listed: {0}', e.message || e), { icon: 'warn' });
       return 0;
     }
   };

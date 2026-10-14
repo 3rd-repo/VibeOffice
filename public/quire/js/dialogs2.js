@@ -114,7 +114,7 @@
     const now = new Date();
     const pics = F().DATE_PICTURES;
     const def = L.store.get('defDatePic', pics[0]);
-    const lb = G.listBox(pics.map((p) => ({ value: p, label: F().formatDate(now, p) })), def, { height: 220, onDbl: () => ok.click() });
+    const lb = G.listBox(pics.map((p) => ({ value: p, label: F().formatDate(now, p) })), def, { height: 220, translate: 'no', onDbl: () => ok.click() });
     const lang = ui.select([['en-US', 'English (U.S.)'], ['en-GB', 'English (U.K.)']], 'en-US', null, { id: 'dt-lang' });
     const auto = ui.check('&Update automatically', !!L.store.get('defDateAuto', false), null);
     const dlg = ui.dialog({ title: 'Date and Time', width: 360, body: h('div', { class: 'col' }, h('label', { text: 'Available formats:' }), lb, G.f('&Language:', lang), auto), buttons: [
@@ -126,32 +126,32 @@
 
   /* ================= Field ================= */
   const FIELD_CATS = {
-    'Date and Time': ['CREATEDATE', 'DATE', 'EDITTIME', 'PRINTDATE', 'SAVEDATE', 'TIME'],
-    'Document Information': ['AUTHOR', 'COMMENTS', 'DOCPROPERTY', 'FILENAME', 'FILESIZE', 'INFO', 'KEYWORDS', 'LASTSAVEDBY', 'NUMCHARS', 'NUMPAGES', 'NUMWORDS', 'SUBJECT', 'TEMPLATE', 'TITLE'],
-    'Equations and Formulas': ['=', 'ADVANCE', 'EQ', 'SYMBOL'],
-    'Index and Tables': ['INDEX', 'RD', 'TA', 'TC', 'TOA', 'TOC', 'XE'],
-    'Links and References': ['AUTOTEXT', 'HYPERLINK', 'INCLUDEPICTURE', 'INCLUDETEXT', 'NOTEREF', 'PAGEREF', 'QUOTE', 'REF', 'STYLEREF'],
-    'Mail Merge': ['ASK', 'COMPARE', 'DATABASE', 'FILLIN', 'IF', 'MERGEFIELD', 'MERGEREC', 'MERGESEQ', 'NEXT', 'NEXTIF', 'SET', 'SKIPIF'],
-    Numbering: ['AUTONUM', 'AUTONUMLGL', 'AUTONUMOUT', 'BARCODE', 'LISTNUM', 'PAGE', 'REVNUM', 'SECTION', 'SECTIONPAGES', 'SEQ'],
-    'User Information': ['USERADDRESS', 'USERINITIALS', 'USERNAME'],
+    [L.N('Date and Time')]: ['CREATEDATE', 'DATE', 'EDITTIME', 'PRINTDATE', 'SAVEDATE', 'TIME'],
+    [L.N('Document Information')]: ['AUTHOR', 'COMMENTS', 'DOCPROPERTY', 'FILENAME', 'FILESIZE', 'INFO', 'KEYWORDS', 'LASTSAVEDBY', 'NUMCHARS', 'NUMPAGES', 'NUMWORDS', 'SUBJECT', 'TEMPLATE', 'TITLE'],
+    [L.N('Equations and Formulas')]: ['=', 'ADVANCE', 'EQ', 'SYMBOL'],
+    [L.N('Index and Tables')]: ['INDEX', 'RD', 'TA', 'TC', 'TOA', 'TOC', 'XE'],
+    [L.N('Links and References')]: ['AUTOTEXT', 'HYPERLINK', 'INCLUDEPICTURE', 'INCLUDETEXT', 'NOTEREF', 'PAGEREF', 'QUOTE', 'REF', 'STYLEREF'],
+    [L.N('Mail Merge')]: ['ASK', 'COMPARE', 'DATABASE', 'FILLIN', 'IF', 'MERGEFIELD', 'MERGEREC', 'MERGESEQ', 'NEXT', 'NEXTIF', 'SET', 'SKIPIF'],
+    [L.N('Numbering')]: ['AUTONUM', 'AUTONUMLGL', 'AUTONUMOUT', 'BARCODE', 'LISTNUM', 'PAGE', 'REVNUM', 'SECTION', 'SECTIONPAGES', 'SEQ'],
+    [L.N('User Information')]: ['USERADDRESS', 'USERINITIALS', 'USERNAME'],
   };
   const FIELD_DESC = { DATE: "Today's date", TIME: 'The current time', CREATEDATE: 'The date the document was created', SAVEDATE: 'The date the document was last saved', PRINTDATE: 'The date the document was last printed', EDITTIME: 'The total document editing time', AUTHOR: 'The name of the document author from Document Properties', TITLE: "The document's title from Document Properties", SUBJECT: "The document's subject", KEYWORDS: "The document's keywords", COMMENTS: 'The comments from Document Properties', FILENAME: "The document's name", NUMPAGES: 'The number of pages in the document', NUMWORDS: 'The number of words in the document', NUMCHARS: 'The number of characters in the document', PAGE: 'The number of the current page', SECTION: 'The number of the current section', SECTIONPAGES: 'The number of pages in the section', SEQ: 'Inserts an automatic sequence number', REF: 'Inserts the text marked by a bookmark', PAGEREF: 'Inserts the number of the page containing a bookmark', NOTEREF: 'Inserts the mark of a footnote or endnote', STYLEREF: 'Inserts the text from a like-style paragraph', TOC: 'Builds a table of contents', INDEX: 'Builds an index', XE: 'Marks an index entry', TC: 'Marks a table of contents entry', '=': 'Calculates the result of an expression', MERGEFIELD: 'Inserts a mail merge field', USERNAME: 'Your name from User Information', USERINITIALS: 'Your initials from User Information', USERADDRESS: 'Your postal address from User Information', LASTSAVEDBY: 'Name of the person who last saved the document', HYPERLINK: 'Opens and jumps to the specified file', QUOTE: 'Inserts literal text', SYMBOL: 'Inserts a symbol', IF: 'Evaluates arguments conditionally', REVNUM: "The document's revision number", TEMPLATE: "The document's template name", DOCPROPERTY: 'The value of a document property', MACROBUTTON: 'Runs a macro' };
   G.field = function (fieldRef, opts) {
     opts = opts || {};
     const editing = !!fieldRef;
     const cat = ui.select([['all', '(All)']].concat(Object.keys(FIELD_CATS).map((k) => [k, k])), 'all', () => fillNames(), { id: 'fl-cat' });
-    const names = G.listBox([], null, { height: 200, onChange: (v) => { desc.textContent = FIELD_DESC[v] || ''; code.value = v === '=' ? '= ' : v + ' '; preview(); } });
+    const names = G.listBox([], null, { height: 200, translate: 'no', onChange: (v) => { desc.textContent = L.t(FIELD_DESC[v] || ''); code.value = v === '=' ? '= ' : v + ' '; preview(); } });
     const fillNames = () => { const list = cat.value === 'all' ? Array.from(new Set(Object.values(FIELD_CATS).flat())).sort() : FIELD_CATS[cat.value]; names.setItems(list); };
     fillNames();
     const code = h('input', { type: 'text', id: 'fl-code', style: 'width:100%' });
     const desc = h('div', { class: 'tp-note', style: 'min-height:28px' });
-    const res = h('div', { class: 'tp-box', style: 'min-height:22px' });
+    const res = h('div', { class: 'tp-box', style: 'min-height:22px', translate: 'no' });   // the field's result: the document's text
     const fmtSel = ui.select([['', '(none)'], ['Upper', 'Uppercase'], ['Lower', 'Lowercase'], ['FirstCap', 'First capital'], ['Caps', 'Title case'], ['Arabic', '1, 2, 3, ...'], ['roman', 'i, ii, iii, ...'], ['ROMAN', 'I, II, III, ...'], ['alphabetic', 'a, b, c, ...'], ['ALPHABETIC', 'A, B, C, ...'], ['Ordinal', '1st, 2nd, 3rd ...'], ['CardText', 'One, Two, Three'], ['OrdText', 'First, Second, Third']], '', () => preview(), { id: 'fl-fmt' });
-    const datePic = ui.select([['', '(default)']].concat(F().DATE_PICTURES.map((p) => [p, p])), '', () => preview(), { id: 'fl-date' });
+    const datePic = ui.select([['', L.t('(default)')]].concat(F().DATE_PICTURES.map((p) => [p, p])), '', () => preview(), { id: 'fl-date', translate: 'no' });
     const keep = ui.check('Preserve formatting during updates', true, null);
     const fullCode = () => { let c = code.value.trim(); if (fmtSel.value) c += ' \\* ' + fmtSel.value; if (datePic.value && /^(DATE|TIME|CREATEDATE|SAVEDATE|PRINTDATE)\b/i.test(c) && !/\\@/.test(c)) c += ` \\@ "${datePic.value}"`; if (keep.input.checked && !/MERGEFORMAT/i.test(c) && !/^(TOC|INDEX|=)/i.test(c)) c += ' \\* MERGEFORMAT'; return c; };
-    const preview = () => { try { const r = F().evaluate(fullCode(), E.sel ? E.sel.f : null); res.textContent = r == null ? '(the result is produced when the field is inserted or updated)' : Array.isArray(r) ? '(generated paragraphs)' : String(r); } catch (e) { res.textContent = 'Error!'; } };
-    if (editing) { code.value = fieldRef.it.instr.trim().replace(/\s*\\\*\s*MERGEFORMAT/i, ''); const t = F().parse(fieldRef.it.instr).type; names.set(t); desc.textContent = FIELD_DESC[t] || ''; }
+    const preview = () => { try { const r = F().evaluate(fullCode(), E.sel ? E.sel.f : null); res.textContent = r == null ? L.t('(the result is produced when the field is inserted or updated)') : Array.isArray(r) ? L.t('(generated paragraphs)') : String(r); } catch (e) { res.textContent = L.t('Error!'); } };
+    if (editing) { code.value = fieldRef.it.instr.trim().replace(/\s*\\\*\s*MERGEFORMAT/i, ''); const t = F().parse(fieldRef.it.instr).type; names.set(t); desc.textContent = L.t(FIELD_DESC[t] || ''); }
     else if (opts.codes) code.value = '';
     code.addEventListener('input', preview);
     preview();
@@ -170,13 +170,13 @@
   };
 
   /* ================= Symbol ================= */
-  const SPECIALS = [['—', 'Em Dash', 'Alt+Ctrl+Num -'], ['–', 'En Dash', 'Ctrl+Num -'], ['‑', 'Nonbreaking Hyphen', 'Ctrl+_'], ['­', 'Optional Hyphen', 'Ctrl+-'], [' ', 'Em Space', ''], [' ', 'En Space', ''], [' ', '1/4 Em Space', ''], [' ', 'Nonbreaking Space', 'Ctrl+Shift+Space'], ['©', 'Copyright', 'Alt+Ctrl+C'], ['®', 'Registered', 'Alt+Ctrl+R'], ['™', 'Trademark', 'Alt+Ctrl+T'], ['§', 'Section', ''], ['¶', 'Paragraph', ''], ['…', 'Ellipsis', 'Alt+Ctrl+.'], ['‘', 'Single Opening Quote', "Ctrl+`,`"], ['’', 'Single Closing Quote', "Ctrl+','"], ['“', 'Double Opening Quote', 'Ctrl+`,"'], ['”', 'Double Closing Quote', "Ctrl+',\""], ['​', 'No-Width Optional Break', ''], ['⁠', 'No-Width Non Break', '']];
-  const SUBSETS = [['Basic Latin', 0x20, 0x7e], ['Latin-1 Supplement', 0xa0, 0xff], ['Latin Extended-A', 0x100, 0x17f], ['Greek and Coptic', 0x370, 0x3ff], ['Cyrillic', 0x400, 0x4ff], ['General Punctuation', 0x2010, 0x205e], ['Currency Symbols', 0x20a0, 0x20bf], ['Letterlike Symbols', 0x2100, 0x214f], ['Number Forms', 0x2150, 0x218b], ['Arrows', 0x2190, 0x21ff], ['Mathematical Operators', 0x2200, 0x22ff], ['Miscellaneous Technical', 0x2300, 0x23ff], ['Box Drawing', 0x2500, 0x257f], ['Block Elements', 0x2580, 0x259f], ['Geometric Shapes', 0x25a0, 0x25ff], ['Miscellaneous Symbols', 0x2600, 0x26ff], ['Dingbats', 0x2700, 0x27bf]];
+  const SPECIALS = [['—', L.N('Em Dash'), 'Alt+Ctrl+Num -'], ['–', L.N('En Dash'), 'Ctrl+Num -'], ['‑', L.N('Nonbreaking Hyphen'), 'Ctrl+_'], ['­', L.N('Optional Hyphen'), 'Ctrl+-'], [' ', L.N('Em Space'), ''], [' ', L.N('En Space'), ''], [' ', L.N('1/4 Em Space'), ''], [' ', L.N('Nonbreaking Space'), 'Ctrl+Shift+Space'], ['©', L.N('Copyright'), 'Alt+Ctrl+C'], ['®', L.N('Registered'), 'Alt+Ctrl+R'], ['™', L.N('Trademark'), 'Alt+Ctrl+T'], ['§', L.N('Section'), ''], ['¶', L.N('Paragraph'), ''], ['…', L.N('Ellipsis'), 'Alt+Ctrl+.'], ['‘', L.N('Single Opening Quote'), "Ctrl+`,`"], ['’', L.N('Single Closing Quote'), "Ctrl+','"], ['“', L.N('Double Opening Quote'), 'Ctrl+`,"'], ['”', L.N('Double Closing Quote'), "Ctrl+',\""], ['​', L.N('No-Width Optional Break'), ''], ['⁠', L.N('No-Width Non Break'), '']];
+  const SUBSETS = [[L.N('Basic Latin'), 0x20, 0x7e], [L.N('Latin-1 Supplement'), 0xa0, 0xff], [L.N('Latin Extended-A'), 0x100, 0x17f], [L.N('Greek and Coptic'), 0x370, 0x3ff], [L.N('Cyrillic'), 0x400, 0x4ff], [L.N('General Punctuation'), 0x2010, 0x205e], [L.N('Currency Symbols'), 0x20a0, 0x20bf], [L.N('Letterlike Symbols'), 0x2100, 0x214f], [L.N('Number Forms'), 0x2150, 0x218b], [L.N('Arrows'), 0x2190, 0x21ff], [L.N('Mathematical Operators'), 0x2200, 0x22ff], [L.N('Miscellaneous Technical'), 0x2300, 0x23ff], [L.N('Box Drawing'), 0x2500, 0x257f], [L.N('Block Elements'), 0x2580, 0x259f], [L.N('Geometric Shapes'), 0x25a0, 0x25ff], [L.N('Miscellaneous Symbols'), 0x2600, 0x26ff], [L.N('Dingbats'), 0x2700, 0x27bf]];
   G.symbol = function (opts) {
     opts = opts || {};
     let cur = null;
     const recent = L.store.get('recentSymbols', ['€', '£', '¥', '©', '®', '™', '±', '≠', '≤', '≥', '÷', '×', '∞', 'µ', 'α', 'β']);
-    const font = ui.select([['', '(normal text)'], ['Symbol', 'Symbol'], ['Wingdings', 'Wingdings'], ['Webdings', 'Webdings']].concat(G.FONTS().map((f) => [f, f])), '', () => fill(), { id: 'sy-font' });
+    const font = ui.select([['', L.t('(normal text)')], ['Symbol', 'Symbol'], ['Wingdings', 'Wingdings'], ['Webdings', 'Webdings']].concat(G.FONTS().map((f) => [f, f])), '', () => fill(), { id: 'sy-font', translate: 'no' });
     const subset = ui.select(SUBSETS.map((s, i) => [i, s[0]]), 1, () => fill(), { id: 'sy-sub' });
     const grid = h('div', { class: 'sym-grid' });
     const codeIn = h('input', { type: 'text', id: 'sy-code', style: 'width:70px' });
@@ -189,16 +189,16 @@
       else { const [, a, b] = SUBSETS[+subset.value]; for (let c = a; c <= b; c++) chars.push({ ch: String.fromCodePoint(c), font: f }); }
       for (const c of chars) {
         const b = h('button', { type: 'button', text: c.ch, style: c.font && !/Symbol|Wingdings|Webdings/.test(c.font) ? `font-family:${L.fontStack(c.font)}` : '' });
-        b.addEventListener('click', () => { L.$$('button.on', grid).forEach((x) => x.classList.remove('on')); b.classList.add('on'); cur = c; codeIn.value = c.ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0'); name.textContent = 'Unicode character ' + codeIn.value; });
+        b.addEventListener('click', () => { L.$$('button.on', grid).forEach((x) => x.classList.remove('on')); b.classList.add('on'); cur = c; codeIn.value = c.ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0'); name.textContent = L.t('Unicode character {0}', codeIn.value); });
         b.addEventListener('dblclick', () => { cur = c; insertBtn.click(); });
         grid.appendChild(b);
       }
     };
     fill();
-    codeIn.addEventListener('change', () => { const n = parseInt(codeIn.value, 16); if (!isNaN(n)) { cur = { ch: String.fromCodePoint(n), font: '' }; name.textContent = 'Unicode character ' + codeIn.value.toUpperCase(); } });
+    codeIn.addEventListener('change', () => { const n = parseInt(codeIn.value, 16); if (!isNaN(n)) { cur = { ch: String.fromCodePoint(n), font: '' }; name.textContent = L.t('Unicode character {0}', codeIn.value.toUpperCase()); } });
     const rec = h('div', { class: 'sym-recent' });
     for (const c of recent.slice(0, 16)) { const b = h('button', { type: 'button', text: c }); b.addEventListener('click', () => { cur = { ch: c, font: '' }; codeIn.value = c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0'); }); b.addEventListener('dblclick', () => { cur = { ch: c, font: '' }; insertBtn.click(); }); rec.appendChild(b); }
-    const spec = G.listBox(SPECIALS.map(([c, n, k]) => ({ value: c, label: `${n}${k ? '   ' + k : ''}` })), SPECIALS[0][0], { height: 220, onDbl: () => insertBtn.click() });
+    const spec = G.listBox(SPECIALS.map(([c, n, k]) => ({ value: c, label: L.t(n) + (k ? '   ' + ui.keyText(k) : '') })), SPECIALS[0][0], { height: 220, onDbl: () => insertBtn.click() });
     const tabs = ui.tabs([{ label: '&Symbols', body: h('div', { class: 'col' }, G.row(G.f('&Font:', font), G.f('Subset:', subset)), grid, h('div', { class: 'cd-cap', text: 'Recently used symbols:' }), rec, G.row(name, G.f('Character code:', codeIn))) }, { label: 'S&pecial Characters', body: spec }]);
     let tabIdx = 0;
     tabs.querySelectorAll('.tab').forEach((t, i) => t.addEventListener('click', () => { tabIdx = i; }));
@@ -244,7 +244,7 @@
   G.caption = function () {
     const labels = Array.from(new Set(F().CAPTION_LABELS.concat(L.store.get('captionLabels', []))));
     const ci = L.tables && L.tables.inTable();
-    const lab = ui.select(labels.map((x) => [x, x]), ci ? 'Table' : 'Figure', () => upd(), { id: 'cp-lab' });
+    const lab = ui.select(labels.map((x) => [x, x]), ci ? 'Table' : 'Figure', () => upd(), { id: 'cp-lab', translate: 'no' });   // labels go into the document as they are
     const txt = h('input', { type: 'text', id: 'cp-text', style: 'width:100%' });
     const pos = ui.select([['below', 'Below selected item'], ['above', 'Above selected item']], ci ? 'above' : 'below', null, { id: 'cp-pos' });
     const excl = ui.check('&Exclude label from caption', false, () => upd());
@@ -253,7 +253,7 @@
     upd();
     ui.dialog({
       title: 'Caption', width: 360, focus: txt,
-      body: h('div', { class: 'col' }, h('label', { for: 'cp-text', html: '<u>C</u>aption:' }), txt, ui.group('Options', G.f('&Label:', lab), G.f('&Position:', pos), excl), h('div', { class: 'tp-btns' }, ui.button('&New Label...', async () => { const n = await ui.prompt('Label:', '', 'New Label'); if (!n) return; const list = L.store.get('captionLabels', []); if (!list.includes(n)) { list.push(n); L.store.set('captionLabels', list); } lab.appendChild(h('option', { value: n, text: n })); lab.value = n; upd(); }, { class: 'btn small' }), ui.button('&Delete Label', () => { if (F().CAPTION_LABELS.includes(lab.value)) return; L.store.set('captionLabels', L.store.get('captionLabels', []).filter((x) => x !== lab.value)); lab.querySelector(`option[value="${lab.value}"]`).remove(); upd(); }, { class: 'btn small' }), ui.button('N&umbering...', () => numbering(), { class: 'btn small' }))),
+      body: h('div', { class: 'col' }, h('label', { for: 'cp-text', html: ui.ampHTML('&Caption:') }), txt, ui.group('Options', G.f('&Label:', lab), G.f('&Position:', pos), excl), h('div', { class: 'tp-btns' }, ui.button('&New Label...', async () => { const n = await ui.prompt('Label:', '', 'New Label'); if (!n) return; const list = L.store.get('captionLabels', []); if (!list.includes(n)) { list.push(n); L.store.set('captionLabels', list); } lab.appendChild(G.raw('option', { value: n }, n)); lab.value = n; upd(); }, { class: 'btn small' }), ui.button('&Delete Label', () => { if (F().CAPTION_LABELS.includes(lab.value)) return; L.store.set('captionLabels', L.store.get('captionLabels', []).filter((x) => x !== lab.value)); lab.querySelector(`option[value="${lab.value}"]`).remove(); upd(); }, { class: 'btn small' }), ui.button('N&umbering...', () => numbering(), { class: 'btn small' }))),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
         const prefix = (excl.input.checked ? '' : lab.value + ' ');
         let rest = txt.value;
@@ -265,7 +265,7 @@
     function numbering() {
       const fmt = ui.select([['ARABIC', '1, 2, 3, ...'], ['alphabetic', 'a, b, c, ...'], ['ALPHABETIC', 'A, B, C, ...'], ['roman', 'i, ii, iii, ...'], ['ROMAN', 'I, II, III, ...']], num.fmt, null, { id: 'cn-fmt' });
       const chap = ui.check('Include &chapter number', num.chapter, null);
-      const style = ui.select([1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => [i, 'Heading ' + i]), num.chapterStyle, null, { id: 'cn-st' });
+      const style = ui.select([1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => [i, 'Heading ' + i]), num.chapterStyle, null, { id: 'cn-st', translate: 'no' });   // style names
       const sep = ui.select([['-', '- (hyphen)'], ['.', '. (period)'], [':', ': (colon)'], ['—', '— (em dash)'], ['–', '– (en dash)']], num.sep, null, { id: 'cn-sep' });
       ui.dialog({ title: 'Caption Numbering', width: 320, body: h('div', { class: 'col' }, G.f('F&ormat:', fmt), chap, G.f('Chapter starts with style:', style, 'wide'), G.f('Use separator:', sep, 'wide')), buttons: [{ label: 'OK', primary: true, onClick: () => { num = { fmt: fmt.value, chapter: chap.input.checked, chapterStyle: +style.value, sep: sep.value }; upd(); } }, { label: 'Cancel' }] });
     }
@@ -273,20 +273,21 @@
 
   /* ================= Cross-reference ================= */
   G.crossRef = function () {
-    const types = ['Numbered item', 'Heading', 'Bookmark', 'Footnote', 'Endnote', 'Equation', 'Figure', 'Table'].concat(L.store.get('captionLabels', []));
-    const what = { 'Numbered item': [['number', 'Paragraph number'], ['numberFull', 'Paragraph number (full context)'], ['text', 'Paragraph text'], ['page', 'Page number'], ['abovebelow', 'Above/below']], Heading: [['text', 'Heading text'], ['page', 'Page number'], ['number', 'Heading number'], ['abovebelow', 'Above/below']], Bookmark: [['text', 'Bookmark text'], ['page', 'Page number'], ['number', 'Paragraph number'], ['abovebelow', 'Above/below']], Footnote: [['notenum', 'Footnote number'], ['page', 'Page number'], ['abovebelow', 'Above/below']], Endnote: [['notenum', 'Endnote number'], ['page', 'Page number'], ['abovebelow', 'Above/below']] };
-    const capWhat = [['text', 'Entire caption'], ['labelnum', 'Only label and number'], ['page', 'Page number'], ['abovebelow', 'Above/below']];
-    const type = ui.select(types.map((t) => [t, t]), 'Heading', () => refill(), { id: 'xr-type' });
+    const kinds = [L.N('Numbered item'), L.N('Heading'), L.N('Bookmark'), L.N('Footnote'), L.N('Endnote')];
+    const types = kinds.concat(['Equation', 'Figure', 'Table'], L.store.get('captionLabels', []));   // then the caption labels, as the document has them
+    const what = { 'Numbered item': [['number', 'Paragraph number'], ['numberFull', 'Paragraph number (full context)'], ['text', 'Paragraph text'], ['page', 'Page number'], ['abovebelow', L.N('Above/below')]], Heading: [['text', 'Heading text'], ['page', 'Page number'], ['number', 'Heading number'], ['abovebelow', L.N('Above/below')]], Bookmark: [['text', 'Bookmark text'], ['page', 'Page number'], ['number', 'Paragraph number'], ['abovebelow', L.N('Above/below')]], Footnote: [['notenum', 'Footnote number'], ['page', 'Page number'], ['abovebelow', L.N('Above/below')]], Endnote: [['notenum', 'Endnote number'], ['page', 'Page number'], ['abovebelow', L.N('Above/below')]] };
+    const capWhat = [['text', 'Entire caption'], ['labelnum', 'Only label and number'], ['page', 'Page number'], ['abovebelow', L.N('Above/below')]];
+    const type = ui.select(types.map((t) => [t, kinds.includes(t) ? L.t(t) : t]), 'Heading', () => refill(), { id: 'xr-type', translate: 'no' });
     const ref = ui.select([], '', null, { id: 'xr-ref' });
     const link = ui.check('Insert as &hyperlink', true, null);
     const ab = ui.check('Include above/&below', false, null);
-    const list = G.listBox([], null, { height: 200 });
+    const list = G.listBox([], null, { height: 200, translate: 'no' });
     let items = [];
     const refill = () => {
       L.clear(ref);
       for (const [v, l] of what[type.value] || capWhat) ref.appendChild(h('option', { value: v, text: l }));
       items = F().xrefItems(type.value);
-      list.setItems(items.map((x, i) => ({ value: String(i), label: x.text || '(empty)' })));
+      list.setItems(items.map((x, i) => ({ value: String(i), label: x.text || L.t('(empty)') })));
       if (items.length) list.set('0');
     };
     refill();
@@ -300,7 +301,7 @@
 
   /* ================= Index and Tables ================= */
   G.indexTables = function (tab) {
-    const leaders = [['dot', '.......'], ['hyphen', '-------'], ['underscore', '_______'], ['none', '(none)']];
+    const leaders = [['dot', '.......'], ['hyphen', '-------'], ['underscore', '_______'], ['none', L.N('(none)')]];
     /* TOC */
     const tShow = ui.check('&Show page numbers', true, () => pvToc());
     const tRight = ui.check('&Right align page numbers', true, () => pvToc());
@@ -310,20 +311,20 @@
     const tFormat = ui.select([['template', 'From template'], ['classic', 'Classic'], ['distinctive', 'Distinctive'], ['formal', 'Formal'], ['simple', 'Simple']], 'template', null, { id: 'it-tf' });
     let tStyles = null;
     const tPv = h('div', { class: 'preview-box', style: 'height:150px;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:6px;font:11px Times New Roman,Tinos,serif' });
-    const pvToc = () => { L.clear(tPv); for (let i = 1; i <= Math.min(3, tLevels.get()); i++) tPv.appendChild(h('div', { style: `display:flex;padding-left:${(i - 1) * 12}px;${i === 1 ? 'font-weight:bold' : ''}` }, h('span', { text: 'Heading ' + i }), h('span', { style: `flex:1;${tRight.input.checked && tLead.value !== 'none' ? 'border-bottom:1px dotted #000;margin:0 2px 3px' : ''}` }), h('span', { text: tShow.input.checked ? String(i * 2 - 1) : '' }))); };
+    const pvToc = () => { L.clear(tPv); for (let i = 1; i <= Math.min(3, tLevels.get()); i++) tPv.appendChild(h('div', { style: `display:flex;padding-left:${(i - 1) * 12}px;${i === 1 ? 'font-weight:bold' : ''}` }, h('span', { text: L.t('Heading {0}', i) }), h('span', { style: `flex:1;${tRight.input.checked && tLead.value !== 'none' ? 'border-bottom:1px dotted #000;margin:0 2px 3px' : ''}` }), h('span', { text: tShow.input.checked ? String(i * 2 - 1) : '' }))); };
     pvToc();
     const tocOptions = () => {
       const d = doc();
       const rows = h('div', { style: 'max-height:240px;overflow:auto;border:1px solid #919b9c;background:#fff' });
       const ids = Object.keys(d.styles).filter((k) => d.styles[k].type === 'paragraph').sort((a, b) => D.styleDisplayName(d.styles[a]).localeCompare(D.styleDisplayName(d.styles[b])));
       const inputs = {};
-      for (const k of ids) { const lv = D.styleProps(d, k).pPr.outline; const inp = h('input', { type: 'text', style: 'width:36px', value: tStyles ? tStyles[k] || '' : lv != null && lv < tLevels.get() && /^Heading\d$/.test(k) ? String(lv + 1) : '' }); inputs[k] = inp; rows.appendChild(h('div', { class: 'row', style: 'justify-content:space-between;padding:1px 4px' }, h('span', { text: D.styleDisplayName(d.styles[k]) }), inp)); }
+      for (const k of ids) { const lv = D.styleProps(d, k).pPr.outline; const inp = h('input', { type: 'text', style: 'width:36px', value: tStyles ? tStyles[k] || '' : lv != null && lv < tLevels.get() && /^Heading\d$/.test(k) ? String(lv + 1) : '' }); inputs[k] = inp; rows.appendChild(h('div', { class: 'row', style: 'justify-content:space-between;padding:1px 4px' }, G.raw('span', null, D.styleDisplayName(d.styles[k])), inp)); }
       const outl = ui.check('&Outline levels', true, null), fields = ui.check('Table &entry fields', false, null);
       ui.dialog({ title: 'Table of Contents Options', width: 340, body: h('div', { class: 'col' }, h('div', { text: 'Build table of contents from: Styles — TOC level:' }), rows, outl, fields), buttons: [{ label: 'OK', primary: true, onClick: () => { tStyles = {}; for (const k in inputs) if (inputs[k].value.trim()) tStyles[k] = +inputs[k].value; tStyles.__outline = outl.input.checked; tStyles.__fields = fields.input.checked; } }, { label: 'Cancel' }] });
     };
     const tocBody = h('div', { class: 'col' }, G.row(h('div', { class: 'col', style: 'flex:1' }, h('div', { class: 'cd-cap', text: 'Print Preview' }), tPv, tShow, tRight, G.f('Ta&b leader:', tLead)), h('div', { class: 'col', style: 'flex:1' }, h('div', { class: 'cd-cap', text: 'Web Preview' }), h('div', { class: 'preview-box', style: 'height:150px;flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:6px;gap:3px' }, h('u', { text: 'Heading 1', style: 'color:#00f' }), h('u', { text: 'Heading 2', style: 'color:#00f;margin-left:10px' }), h('u', { text: 'Heading 3', style: 'color:#00f;margin-left:20px' })), tLinks)), ui.group('General', G.row(G.f('Forma&ts:', tFormat), G.f('Show &levels:', tLevels))), h('div', { class: 'tp-btns' }, ui.button('&Options...', tocOptions, { class: 'btn small' }), ui.button('&Modify...', () => G.style('TOC1'), { class: 'btn small' })));
     /* Table of figures */
-    const fLabel = ui.select(['Figure', 'Table', 'Equation'].concat(L.store.get('captionLabels', [])).map((x) => [x, x]), 'Figure', null, { id: 'it-fl' });
+    const fLabel = ui.select(['Figure', 'Table', 'Equation'].concat(L.store.get('captionLabels', [])).map((x) => [x, x]), 'Figure', null, { id: 'it-fl', translate: 'no' });
     const fIncl = ui.check('Include label and &number', true, null);
     const fShow = ui.check('&Show page numbers', true, null);
     const fRight = ui.check('&Right align page numbers', true, null);
@@ -383,7 +384,7 @@
       if (!m) return;
       const entry = (m + (sub.value.trim() ? ':' + sub.value.trim() : '')).replace(/"/g, '\\"');
       let instr = `XE "${entry}"`;
-      if (opt.get() === 'xref') instr += ` \\t "${xref.value.replace(/"/g, '\\"')}"`;
+      if (opt.get() === 'xref') instr += ' \\t "' + xref.value.replace(/"/g, '\\"') + '"';
       if (bold.input.checked) instr += ' \\b';
       if (ital.input.checked) instr += ' \\i';
       if (!all) { E.edit('Mark Index Entry', () => { const [, b] = E.range(); return O.insertField(b, instr, '', {}); }); return; }
@@ -401,7 +402,7 @@
         }
         return E.sel;
       });
-      A().status(`${n} entr${n === 1 ? 'y' : 'ies'} marked.`);
+      A().status(n === 1 ? L.t('{0} entry marked.', n) : L.t('{0} entries marked.', n));
     };
     ui.dialog({ title: 'Mark Index Entry', width: 360, modeless: true, body: h('div', { class: 'col' }, G.f('Main &entry:', main, 'wide'), G.f('&Subentry:', sub, 'wide'), ui.group('Options', opt, xref), ui.group('Page number format', bold, ital)), buttons: [{ label: '&Mark', primary: true, onClick: () => { mark(false); return false; } }, { label: 'Mark &All', onClick: () => { mark(true); return false; } }, { label: 'Close' }] });
   };
@@ -411,7 +412,7 @@
     const sortBy = G.radios('bm-s', [['name', '&Name'], ['loc', '&Location']], 'name', () => fill());
     const hidden = ui.check('&Hidden bookmarks', false, () => fill());
     const name = h('input', { type: 'text', id: 'bm-name', style: 'width:100%' });
-    const list = G.listBox([], null, { height: 160, onChange: (v) => { name.value = v; }, onDbl: () => go() });
+    const list = G.listBox([], null, { height: 160, translate: 'no', onChange: (v) => { name.value = v; }, onDbl: () => go() });
     const fill = () => {
       const all = Array.from(F().bookmarks().values()).filter((b) => hidden.input.checked || !b.name.startsWith('_'));
       if (sortBy.get() === 'name') all.sort((a, b) => a.name.localeCompare(b.name)); else all.sort((a, b) => (a.p._o || 0) - (b.p._o || 0) || a.o - b.o);
@@ -423,8 +424,8 @@
     const go = () => { const n = name.value.trim(); if (n) A().gotoBookmark(n); };
     ui.dialog({
       title: 'Bookmark', width: 320, focus: name,
-      body: h('div', { class: 'col' }, h('label', { for: 'bm-name', html: '<u>B</u>ookmark name:' }), name, list, ui.group('Sort by:', sortBy), hidden),
-      buttons: [{ label: '&Add', primary: true, onClick: () => { const n = name.value.trim(); if (!valid(n)) { ui.msg('Bookmark names must begin with a letter and contain only letters, numbers and underscores.', { icon: 'warn' }); return false; } const [a, b] = E.range(); E.edit('Bookmark', () => { F().addBookmark(n, a, b); return E.sel; }); } }, { label: '&Delete', onClick: () => { const bm = F().bookmarks().get(name.value.trim()); if (bm) E.edit('Delete Bookmark', () => { F().removeBookmarkItems(bm); return E.sel; }); fill(); name.value = ''; return false; } }, { label: '&Go To', onClick: () => { go(); return false; } }, { label: 'Cancel' }],
+      body: h('div', { class: 'col' }, h('label', { for: 'bm-name', html: ui.ampHTML('&Bookmark name:') }), name, list, ui.group('Sort by:', sortBy), hidden),
+      buttons: [{ label: '&Add', primary: true, onClick: () => { const n = name.value.trim(); if (!valid(n)) { ui.msg('Bookmark names must begin with a letter and contain only letters, numbers and underscores.', { icon: 'warn' }); return false; } const [a, b] = E.range(); E.edit(L.N('Bookmark'), () => { F().addBookmark(n, a, b); return E.sel; }); } }, { label: '&Delete', onClick: () => { const bm = F().bookmarks().get(name.value.trim()); if (bm) E.edit('Delete Bookmark', () => { F().removeBookmarkItems(bm); return E.sel; }); fill(); name.value = ''; return false; } }, { label: '&Go To', onClick: () => { go(); return false; } }, { label: 'Cancel' }],
     });
   };
 
@@ -448,37 +449,37 @@
     if (!selText) disp.value = '';
     const addr = h('input', { type: 'text', id: 'hl-addr', value: cur && cur.url && !/^mailto:/.test(cur.url) ? cur.url : '', style: 'width:100%' });
     const tip = cur && cur.tip ? cur.tip : '';
-    const place = G.listBox([], cur && cur.anchor ? cur.anchor : null, { height: 170 });
-    const places = [{ value: '', label: 'Top of the Document' }];
+    const place = G.listBox([], cur && cur.anchor ? cur.anchor : null, { height: 170, translate: 'no' });   // headings and bookmarks: the document's own
+    const places = [{ value: '', label: L.t('Top of the Document') }];
     D.reindex(d);
-    places.push({ value: '', label: 'Headings', group: true });
+    places.push({ value: '', label: L.t('Headings'), group: true });
     for (const p of d.main.paras) { const lv = D.headingLevel(d, p); if (lv) places.push({ value: '§' + p.id, label: '    '.repeat(lv - 1) + D.plainText(p).trim().slice(0, 60) }); }
-    places.push({ value: '', label: 'Bookmarks', group: true });
+    places.push({ value: '', label: L.t('Bookmarks'), group: true });
     for (const [n] of F().bookmarks()) if (!n.startsWith('_')) places.push({ value: n, label: n });
     place.setItems(places);
     const mail = h('input', { type: 'text', id: 'hl-mail', value: cur && /^mailto:/.test(cur.url || '') ? cur.url.slice(7).split('?')[0] : '', style: 'width:100%' });
     const subj = h('input', { type: 'text', id: 'hl-subj', style: 'width:100%' });
     let kind = cur && cur.anchor && !cur.url ? 1 : cur && /^mailto:/.test(cur.url || '') ? 2 : 0;
     const tabs = ui.tabs([
-      { label: 'E&xisting File or Web Page', body: h('div', { class: 'col' }, h('label', { for: 'hl-addr', html: 'Addr<u>e</u>ss:' }), addr, h('div', { class: 'tp-note', text: 'Type a web address (https://…) or the name of a file.' })), onShow: () => { kind = 0; } },
+      { label: 'E&xisting File or Web Page', body: h('div', { class: 'col' }, h('label', { for: 'hl-addr', html: ui.ampHTML('Addr&ess:') }), addr, h('div', { class: 'tp-note', text: L.t('Type a web address (https://…) or the name of a file.') })), onShow: () => { kind = 0; } },
       { label: 'Place in This &Document', body: h('div', { class: 'col' }, h('div', { text: 'Select a place in this document:' }), place), onShow: () => { kind = 1; } },
       { label: 'E-&mail Address', body: h('div', { class: 'col' }, h('label', { for: 'hl-mail', text: 'E-mail address:' }), mail, h('label', { for: 'hl-subj', text: 'Subject:' }), subj), onShow: () => { kind = 2; } },
     ], kind);
     let screenTip = tip;
     ui.dialog({
       title: cur ? 'Edit Hyperlink' : 'Insert Hyperlink', width: 520, focus: kind === 0 ? addr : null,
-      body: h('div', { class: 'col' }, G.row(h('label', { for: 'hl-disp', html: '<u>T</u>ext to display:', style: 'width:110px' }), h('div', { style: 'flex:1' }, disp), ui.button('ScreenTi&p...', async () => { const t = await ui.prompt('ScreenTip text:', screenTip, 'Set Hyperlink ScreenTip'); if (t != null) screenTip = t; }, { class: 'btn small' })), tabs),
+      body: h('div', { class: 'col' }, G.row(h('label', { for: 'hl-disp', html: ui.ampHTML('&Text to display:'), style: 'width:110px' }), h('div', { style: 'flex:1' }, disp), ui.button('ScreenTi&p...', async () => { const t = await ui.prompt('ScreenTip text:', screenTip, 'Set Hyperlink ScreenTip'); if (t != null) screenTip = t; }, { class: 'btn small' })), tabs),
       buttons: (cur ? [{ label: '&Remove Link', onClick: () => { A().removeHyperlink(); } }] : []).concat([{ label: 'OK', primary: true, onClick: () => {
         let link;
         if (kind === 0) { let u = addr.value.trim(); if (!u) return false; if (/^www\./i.test(u)) u = 'http://' + u; link = { url: u }; }
         else if (kind === 1) {
           let a = place.get();
-          if (a && a.startsWith('§')) { const p = D.byId(d, +a.slice(1)); E.edit('Bookmark', () => { a = F().ensureParaBookmark(p, '_Toc'); return E.sel; }); }
+          if (a && a.startsWith('§')) { const p = D.byId(d, +a.slice(1)); E.edit(L.N('Bookmark'), () => { a = F().ensureParaBookmark(p, '_Toc'); return E.sel; }); }
           link = { anchor: a || '_top' };
         } else { const m = mail.value.trim(); if (!m) return false; link = { url: 'mailto:' + m + (subj.value ? '?subject=' + encodeURIComponent(subj.value) : '') }; }
         if (screenTip) link.tip = screenTip;
         const text = disp.value || (kind === 0 ? addr.value : kind === 2 ? mail.value : place.get() || 'Top of the Document');
-        if (!d.styles.Hyperlink) E.edit('Style', () => { D.touchKey(d, 'styles'); d.styles.Hyperlink = D.builtinStyles().Hyperlink; D.stylesChanged(); return E.sel; });
+        if (!d.styles.Hyperlink) E.edit(L.N('Style'), () => { D.touchKey(d, 'styles'); d.styles.Hyperlink = D.builtinStyles().Hyperlink; D.stylesChanged(); return E.sel; });
         E.edit(cur ? 'Edit Hyperlink' : 'Insert Hyperlink', () => {
           if (range && !D.eqPos(range[0], range[1]) && text === selText) { O.formatRange(range[0], range[1], (r) => Object.assign(r, { link, style: 'Hyperlink' })); return { a: range[0], f: range[1] }; }
           E.sel = { a: range[0], f: range[1] };
@@ -494,7 +495,7 @@
 
   /* ================= Insert Object ================= */
   G.insertObject = function () {
-    const types = [['chart', 'Chart'], ['equation', 'Equation'], ['wordart', 'LettersArt'], ['excel', 'Spreadsheet (table)'], ['document', 'Document (inserted as text)'], ['picture', 'Bitmap Image']];
+    const types = [['chart', L.N('Chart')], ['equation', L.N('Equation')], ['wordart', L.N('LettersArt')], ['excel', L.N('Spreadsheet (table)')], ['document', L.N('Document (inserted as text)')], ['picture', L.N('Bitmap Image')]];
     const lb = G.listBox(types.map(([v, l]) => ({ value: v, label: l })), 'chart', { height: 160, onDbl: () => ok.click() });
     const dlg = ui.dialog({ title: 'Object', width: 360, body: ui.tabs([{ label: '&Create New', body: h('div', { class: 'col' }, h('label', { text: 'Object type:' }), lb) }, { label: 'Create from &File', body: h('div', { class: 'col' }, h('div', { class: 'tp-note', text: 'Insert the contents of a .docx, .txt or .htm file, or a picture.' }), ui.button('&Browse...', () => { dlg.close(null); A().insertFileDialog(); })) }]), buttons: [{ label: 'OK', primary: true, onClick: () => {
       const v = lb.get();
@@ -521,7 +522,7 @@
     const svg = { org: '<svg width="56" height="44"><rect x="20" y="2" width="16" height="10" fill="#fdd" stroke="#333"/><path d="M28 12v6M10 18h36M10 18v4M28 18v4M46 18v4" stroke="#333" fill="none"/><rect x="2" y="22" width="16" height="10" fill="#dfd" stroke="#333"/><rect x="20" y="22" width="16" height="10" fill="#dfd" stroke="#333"/><rect x="38" y="22" width="16" height="10" fill="#dfd" stroke="#333"/></svg>', cycle: '<svg width="56" height="44"><circle cx="28" cy="22" r="16" fill="none" stroke="#888" stroke-dasharray="3 2"/><circle cx="28" cy="6" r="5" fill="#9cf" stroke="#333"/><circle cx="42" cy="30" r="5" fill="#fc9" stroke="#333"/><circle cx="14" cy="30" r="5" fill="#cf9" stroke="#333"/></svg>', radial: '<svg width="56" height="44"><path d="M28 22L28 6M28 22L44 32M28 22L12 32" stroke="#333"/><circle cx="28" cy="22" r="7" fill="#fc9" stroke="#333"/><circle cx="28" cy="6" r="5" fill="#9cf" stroke="#333"/><circle cx="44" cy="32" r="5" fill="#9cf" stroke="#333"/><circle cx="12" cy="32" r="5" fill="#9cf" stroke="#333"/></svg>', pyramid: '<svg width="56" height="44"><path d="M28 2L50 42H6z" fill="#fc9" stroke="#333"/><path d="M19 18h18M12 30h32" stroke="#333"/></svg>', venn: '<svg width="56" height="44"><circle cx="22" cy="18" r="12" fill="#9cf" fill-opacity=".6" stroke="#333"/><circle cx="34" cy="18" r="12" fill="#fc9" fill-opacity=".6" stroke="#333"/><circle cx="28" cy="28" r="12" fill="#cf9" fill-opacity=".6" stroke="#333"/></svg>', target: '<svg width="56" height="44"><circle cx="24" cy="24" r="18" fill="#9cf" stroke="#333"/><circle cx="24" cy="24" r="12" fill="#fc9" stroke="#333"/><circle cx="24" cy="24" r="6" fill="#f99" stroke="#333"/></svg>' };
     let pick = 'org';
     const grid = h('div', { class: 'preset-grid' });
-    for (const [k, l] of kinds) { const b = h('button', { type: 'button', class: k === pick ? 'on' : '', 'data-tip': l, 'aria-label': l, html: svg[k] }); b.addEventListener('click', () => { pick = k; L.$$('button', grid).forEach((x) => x.classList.toggle('on', x === b)); name.textContent = l; }); b.addEventListener('dblclick', () => ok.click()); grid.appendChild(b); }
+    for (const [k, l] of kinds) { const b = h('button', { type: 'button', class: k === pick ? 'on' : '', 'data-tip': l, 'aria-label': l, html: svg[k] }); b.addEventListener('click', () => { pick = k; L.$$('button', grid).forEach((x) => x.classList.toggle('on', x === b)); name.textContent = L.t(l); }); b.addEventListener('dblclick', () => ok.click()); grid.appendChild(b); }
     const name = h('div', { class: 'cd-cap', text: kinds[0][1] });
     const dlg = ui.dialog({ title: 'Diagram Gallery', width: 340, body: h('div', { class: 'col' }, h('div', { text: 'Select a diagram type:' }), grid, name), buttons: [{ label: 'OK', primary: true, onClick: () => insertDiagram(pick) }, { label: 'Cancel' }] });
     const ok = dlg.buttons[0];
@@ -570,7 +571,7 @@
     let pick = 0;
     const grid = h('div', { class: 'wa-grid' });
     WA_STYLES.forEach((s, i) => {
-      const b = h('button', { type: 'button', class: i === 0 ? 'on' : '', 'aria-label': 'LettersArt style ' + (i + 1) });
+      const b = h('button', { type: 'button', class: i === 0 ? 'on' : '', 'aria-label': L.t('LettersArt style {0}', i + 1) });
       const sh = { t: 'shape', w: 66, h: 40, fill: Object.assign({ a: 1 }, s.fill), line: s.line ? Object.assign({ dash: 'solid' }, s.line) : { t: 'none' }, warp: s.warp, shadow: s.shadow ? Object.assign({ c: '#808080', a: 0.6 }, s.shadow) : undefined, wordart: { text: 'LettersArt', font: 'Arial Black', b: s.b, i: s.i } };
       b.appendChild(L.drawing.wordartSVG(sh));
       b.addEventListener('click', () => { pick = i; L.$$('button', grid).forEach((x) => x.classList.toggle('on', x === b)); });
@@ -593,14 +594,14 @@
   };
   function editText(it, done) {
     const wa = Object.assign({ text: 'Your Text Here', font: 'Arial Black', sz: 36 }, it.wordart || {});
-    const font = ui.select(G.FONTS().map((f) => [f, f]), wa.font, () => upd(), { id: 'wa-font' });
+    const font = ui.select(G.FONTS().map((f) => [f, f]), wa.font, () => upd(), { id: 'wa-font', translate: 'no' });
     const size = ui.select([8, 10, 12, 14, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 88, 96].map((x) => [x, String(x)]), wa.sz || 36, null, { id: 'wa-size' });
     const b = ui.check('&Bold', !!wa.b, () => upd()), i = ui.check('&Italic', !!wa.i, () => upd());
     const ta = h('textarea', { rows: 5, id: 'wa-text', style: 'width:100%;font-size:20px' });
     ta.value = wa.text;
     const upd = () => { ta.style.fontFamily = L.fontStack(font.value); ta.style.fontWeight = b.input.checked ? 'bold' : 'normal'; ta.style.fontStyle = i.input.checked ? 'italic' : 'normal'; };
     upd();
-    ui.dialog({ title: 'Edit LettersArt Text', width: 440, focus: ta, body: h('div', { class: 'col' }, G.row(G.f('&Font:', font), G.f('&Size:', size), b, i), h('label', { for: 'wa-text', html: '<u>T</u>ext:' }), ta), buttons: [{ label: 'OK', primary: true, onClick: () => done({ text: ta.value || ' ', font: font.value, sz: +size.value, b: b.input.checked || undefined, i: i.input.checked || undefined }) }, { label: 'Cancel' }] });
+    ui.dialog({ title: 'Edit LettersArt Text', width: 440, focus: ta, body: h('div', { class: 'col' }, G.row(G.f('&Font:', font), G.f('&Size:', size), b, i), h('label', { for: 'wa-text', html: ui.ampHTML('&Text:') }), ta), buttons: [{ label: 'OK', primary: true, onClick: () => done({ text: ta.value || ' ', font: font.value, sz: +size.value, b: b.input.checked || undefined, i: i.input.checked || undefined }) }, { label: 'Cancel' }] });
   }
 
   /* ================= Table dialogs ================= */
@@ -608,14 +609,14 @@
     const last = L.store.get('tableDims', { c: 5, r: 2 });
     const cols = G.num(last.c, { min: 1, max: 63, id: 'it-c' }), rows = G.num(last.r, { min: 1, max: 32767, id: 'it-r' });
     const fit = G.radios('it-fit', [['fixed', 'Fi&xed column width:'], ['contents', 'Auto&Fit to contents'], ['window', 'AutoFit to win&dow']], 'fixed');
-    const cw = G.len(null, { id: 'it-cw', autoLabel: 'Auto', min: 9 });
+    const cw = G.len(null, { id: 'it-cw', autoLabel: L.N('Auto'), min: 9 });
     let style = null, look = null;
-    const styleNote = h('div', { class: 'tp-note', text: 'Table style: Table Grid' });
+    const styleNote = h('div', { class: 'tp-note', text: L.t('Table style: {0}', 'Table Grid') });
     const remember = ui.check('Remember dime&nsions for new tables', false, null);
     const fEls = fit.querySelectorAll('.ck');
     ui.dialog({
       title: 'Insert Table', width: 330, focus: cols.input,
-      body: h('div', { class: 'col' }, ui.group('Table size', G.f('Number of &columns:', cols, 'wide'), G.f('Number of &rows:', rows, 'wide')), ui.group('AutoFit behavior', G.row(fEls[0], cw), fEls[1], fEls[2]), G.row(styleNote, ui.button('&AutoFormat...', () => G.tableAutoFormat({ pick: (s, lk) => { style = s; look = lk; styleNote.textContent = 'Table style: ' + s; } }), { class: 'btn small' })), remember),
+      body: h('div', { class: 'col' }, ui.group('Table size', G.f('Number of &columns:', cols, 'wide'), G.f('Number of &rows:', rows, 'wide')), ui.group('AutoFit behavior', G.row(fEls[0], cw), fEls[1], fEls[2]), G.row(styleNote, ui.button('&AutoFormat...', () => G.tableAutoFormat({ pick: (s, lk) => { style = s; look = lk; styleNote.textContent = L.t('Table style: {0}', s); } }), { class: 'btn small' })), remember),
       buttons: [{ label: 'OK', primary: true, onClick: () => {
         if (remember.input.checked) L.store.set('tableDims', { c: cols.get(), r: rows.get() });
         const o = { autofit: fit.get() };
@@ -646,7 +647,7 @@
     const ci = L.tables.cur();
     const curStyle = ci ? (doc().styles[ci.tbl.tblPr.style] || {}).name || 'Table Grid' : 'Table Grid';
     const look = Object.assign({ firstRow: true, firstCol: true, lastRow: false, lastCol: false }, ci ? ci.tbl.tblPr.look || {} : {});
-    const lb = G.listBox(names, names.includes(curStyle) ? curStyle : 'Table Grid', { height: 200, onChange: () => draw() });
+    const lb = G.listBox(names, names.includes(curStyle) ? curStyle : 'Table Grid', { height: 200, translate: 'no', onChange: () => draw() });
     const pv = h('div', { class: 'preview-box', style: 'width:220px;height:170px' });
     const chk = (k, l) => ui.check(l, !!look[k], (v) => { look[k] = v; draw(); });
     const checks = [chk('firstRow', '&Heading rows'), chk('firstCol', 'Fir&st column'), chk('lastRow', '&Last row'), chk('lastCol', 'Last co&lumn')];
@@ -654,7 +655,7 @@
       L.clear(pv);
       const name = lb.get();
       const def = L.tables.STYLES[name];
-      const grid = [['', 'Jan', 'Feb', 'Mar', 'Total'], ['East', '7', '7', '5', '19'], ['West', '6', '4', '7', '17'], ['South', '8', '7', '9', '24'], ['Total', '21', '18', '21', '60']];
+      const grid = [['', L.N('Jan'), L.N('Feb'), L.N('Mar'), L.N('Total')], [L.N('East'), '7', '7', '5', '19'], [L.N('West'), '6', '4', '7', '17'], [L.N('South'), '8', '7', '9', '24'], [L.N('Total'), '21', '18', '21', '60']];
       const t = h('table', { style: 'border-collapse:collapse;font:10px Arial,Arimo,sans-serif;width:200px' });
       const bd = (b) => (b && b.val !== 'nil' ? `${Math.max(1, b.sz || 0.5)}px ${b.val === 'double' ? 'double' : b.val === 'dotted' ? 'dotted' : 'solid'} ${b.color && b.color !== 'auto' ? '#' + b.color : '#000'}` : 'none');
       grid.forEach((row, ri) => {
@@ -723,8 +724,8 @@
     const cellOpts = ui.button('&Options...', () => ui.dialog({ title: 'Cell Options', width: 320, body: h('div', { class: 'col' }, ui.group('Cell margins', cmSame, G.row(G.f('Top:', cmar.t, 'narrow'), G.f('Left:', cmar.l, 'narrow')), G.row(G.f('Bottom:', cmar.b, 'narrow'), G.f('Right:', cmar.r, 'narrow'))), ui.group('Options', noWrap, fitText)), buttons: [{ label: 'OK', primary: true }] }), { class: 'btn small' });
     const tabs = ui.tabs([
       { label: '&Table', body: h('div', { class: 'col' }, ui.group('Size', G.row(tW, tWv, G.f('Measure in:', tWu))), ui.group('Alignment', G.row(align, G.f('&Indent from left:', indent, 'wide'))), ui.group('Text wrapping', wrap), h('div', { class: 'tp-btns' }, ui.button('&Borders and Shading...', () => G.borders(), { class: 'btn small' }), optsBtn)) },
-      { label: '&Row', body: h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: `Rows ${rg.r0 + 1}${rg.r1 > rg.r0 ? '-' + (rg.r1 + 1) : ''}:` }), ui.group('Size', G.row(rH, rHv, G.f('Row height &is:', rRule))), ui.group('Options', rSplit, rHead)) },
-      { label: 'Col&umn', body: h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: `Columns ${rg.c0 + 1}${rg.c1 > rg.c0 ? '-' + (rg.c1 + 1) : ''}:` }), ui.group('Size', G.row(cW, cWv))) },
+      { label: '&Row', body: h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: rg.r1 > rg.r0 ? L.t('Rows {0}-{1}:', rg.r0 + 1, rg.r1 + 1) : L.t('Row {0}:', rg.r0 + 1) }), ui.group('Size', G.row(rH, rHv, G.f('Row height &is:', rRule))), ui.group('Options', rSplit, rHead)) },
+      { label: 'Col&umn', body: h('div', { class: 'col' }, h('div', { class: 'cd-cap', text: rg.c1 > rg.c0 ? L.t('Columns {0}-{1}:', rg.c0 + 1, rg.c1 + 1) : L.t('Column {0}:', rg.c0 + 1) }), ui.group('Size', G.row(cW, cWv))) },
       { label: 'C&ell', body: h('div', { class: 'col' }, ui.group('Size', G.row(ceW, ceWv)), ui.group('Vertical alignment', va), h('div', { class: 'tp-btns' }, cellOpts)) },
     ], tab || 0);
     ui.dialog({
@@ -773,7 +774,7 @@
   G.sort = function () {
     const inTbl = L.tables.inTable();
     const ci = inTbl ? L.tables.cur() : null;
-    const fields = inTbl ? ci.tbl.grid.map((_, i) => ['' + i, 'Column ' + (i + 1)]) : [['0', 'Paragraphs']].concat([1, 2, 3, 4, 5].map((i) => ['' + i, 'Field ' + i]));
+    const fields = inTbl ? ci.tbl.grid.map((_, i) => ['' + i, L.t('Column {0}', i + 1)]) : [['0', L.t('Paragraphs')]].concat([1, 2, 3, 4, 5].map((i) => ['' + i, L.t('Field {0}', i)]));
     const mk = (n, def) => ({ by: ui.select(n ? [['', '(none)']].concat(fields) : fields, def, null, { id: 'so-b' + n }), type: ui.select([['text', 'Text'], ['number', 'Number'], ['date', 'Date']], 'text', null, { id: 'so-t' + n }), dir: G.radios('so-d' + n, [['asc', '&Ascending'], ['desc', '&Descending']], 'asc') });
     const k1 = mk(0, fields[0][0]), k2 = mk(1, ''), k3 = mk(2, '');
     const hdr = G.radios('so-h', [['yes', 'Header &row'], ['no', 'No header ro&w']], inTbl && ci.tbl.rows[0].trPr.header ? 'yes' : 'no');
@@ -796,13 +797,13 @@
     const inp = h('input', { type: 'text', id: 'fo-f', value: guess, style: 'width:100%' });
     const fmt = h('input', { type: 'text', id: 'fo-fmt', list: 'fo-fmts', style: 'width:100%' });
     const dl = h('datalist', { id: 'fo-fmts' }, ...['#,##0', '#,##0.00', '$#,##0.00;($#,##0.00)', '0', '0%', '0.00', '0.00%'].map((x) => h('option', { value: x })));
-    const fn = ui.select([['', 'Paste function']].concat(['ABS', 'AND', 'AVERAGE', 'COUNT', 'DEFINED', 'FALSE', 'IF', 'INT', 'MAX', 'MIN', 'MOD', 'NOT', 'OR', 'PRODUCT', 'ROUND', 'SIGN', 'SUM', 'TRUE'].map((x) => [x, x])), '', (v) => { if (!v) return; inp.value += v + '()'; inp.focus(); inp.setSelectionRange(inp.value.length - 1, inp.value.length - 1); fn.value = ''; }, { id: 'fo-fn' });
-    const bms = ui.select([['', 'Paste bookmark']].concat(Array.from(F().bookmarks().keys()).filter((n) => !n.startsWith('_')).map((n) => [n, n])), '', (v) => { if (v) { inp.value += v; bms.value = ''; } }, { id: 'fo-bm' });
-    ui.dialog({ title: 'Formula', width: 340, focus: inp, body: h('div', { class: 'col' }, h('label', { for: 'fo-f', html: '<u>F</u>ormula:' }), inp, dl, h('label', { for: 'fo-fmt', html: '<u>N</u>umber format:' }), fmt, G.row(fn, bms)), buttons: [{ label: 'OK', primary: true, onClick: () => {
+    const fn = ui.select([['', L.t('Paste function')]].concat(['ABS', 'AND', 'AVERAGE', 'COUNT', 'DEFINED', 'FALSE', 'IF', 'INT', 'MAX', 'MIN', 'MOD', 'NOT', 'OR', 'PRODUCT', 'ROUND', 'SIGN', 'SUM', 'TRUE'].map((x) => [x, x])), '', (v) => { if (!v) return; inp.value += v + '()'; inp.focus(); inp.setSelectionRange(inp.value.length - 1, inp.value.length - 1); fn.value = ''; }, { id: 'fo-fn', translate: 'no' });   // function names
+    const bms = ui.select([['', L.t('Paste bookmark')]].concat(Array.from(F().bookmarks().keys()).filter((n) => !n.startsWith('_')).map((n) => [n, n])), '', (v) => { if (v) { inp.value += v; bms.value = ''; } }, { id: 'fo-bm', translate: 'no' });
+    ui.dialog({ title: 'Formula', width: 340, focus: inp, body: h('div', { class: 'col' }, h('label', { for: 'fo-f', html: ui.ampHTML('&Formula:') }), inp, dl, h('label', { for: 'fo-fmt', html: ui.ampHTML('&Number format:') }), fmt, G.row(fn, bms)), buttons: [{ label: 'OK', primary: true, onClick: () => {
       let c = inp.value.trim();
       if (!c.startsWith('=')) c = '=' + c;
       if (fmt.value.trim()) c += ` \\# "${fmt.value.trim()}"`;
-      A().insertFieldNow(c, 'Formula');
+      A().insertFieldNow(c, L.N('Formula'));
     } }, { label: 'Cancel' }] });
   };
   G.textToTable = function () {

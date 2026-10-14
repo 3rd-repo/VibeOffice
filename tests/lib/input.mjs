@@ -56,14 +56,14 @@ function keyInfo(k) {
 }
 
 /** a new tab on app ('quire', 'ledger', 'lectern') with real input; opts: { width, height, look ('classic',
-    'paper', 'paper2016') } */
+    'paper', 'paper2016'), lang (the UI's language, English by default) } */
 export async function open(app, opts = {}) {
   await ensureChromium();
   const stopServer = await ensureServer();
   // once more if the page didn't come up in time (seen while other sessions share the browser)
-  const page = await openPage(app, { persistence: false, automated: true }).catch((e) => {
+  const page = await openPage(app, { persistence: false, automated: true, lang: opts.lang }).catch((e) => {
     if (!/did not attach/.test(e.message)) throw e;
-    return openPage(app, { persistence: false, automated: true });
+    return openPage(app, { persistence: false, automated: true, lang: opts.lang });
   });
   const { send, evaluate } = page;
   await send('Emulation.setDeviceMetricsOverride', { width: opts.width || 1280, height: opts.height || 800, deviceScaleFactor: 1, mobile: false });
