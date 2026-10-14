@@ -1051,6 +1051,12 @@
       numVal++;
     };
     const sectStartNum = (k) => { const s = sections[k].sect; return s.pgNum && s.pgNum.start != null ? s.pgNum.start : null; };
+    /** the section after section k starts on a new page (not continuous on the same paper, nor in a next column) */
+    const startsPage = (k) => {
+      if (k + 1 >= sections.length) return false;
+      const a = sections[k].sect, b = sections[k + 1].sect, type = b.type || 'nextPage';
+      return !((type === 'continuous' || (type === 'nextColumn' && region.frames.length > 1)) && Math.abs(b.pgW - a.pgW) < 1 && Math.abs(b.pgH - a.pgH) < 1);
+    };
     if (!fromPage) { const sn = sectStartNum(0); if (sn != null) numVal = sn; }
     startPage(false);
     let guard = 0;
@@ -1064,6 +1070,15 @@
       ctx.grid = dg && /^(lines|linesAndChars|snapToChars)$/.test(dg.type || '') && dg.linePitch > 0 ? px(dg.linePitch / 20) : 0;
       const res = LY.flow(fr, blocks, st, sec.to, ctx);
       st = res.st;
+      /* an empty paragraph that only carries the section break, pushed off a full page (or, Word 2013+, past a page
+         break), makes no page of its own when the next section starts on a new page anyway: it stays at the foot of
+         this one, into the margin if need be (the page count Word stores agrees) */
+      if ((res.stop === 'page' ? (d.settings && d.settings.compat) >= 15 : res.stop === 'full' && region.ci + 1 >= region.frames.length)
+        && !res.pbb && st.bi === sec.to - 1 && !st.sub && sec.endPara && !D.plen(sec.endPara) && startsPage(si)) {
+        fr.limit = Infinity;
+        const rest = LY.flow(fr, blocks, st, sec.to, ctx);
+        if (rest.stop === 'done') { st = rest.st; res.stop = 'done'; }
+      }
       /* Word 2013+ (compat 15): a page (or last-column) break that ends the section's last paragraph keeps
          the paragraph mark on its own page, so no empty page is made when the document ends or the next
          section starts on a new page anyway (older modes carry the mark over to a new page) */

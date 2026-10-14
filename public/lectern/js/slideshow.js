@@ -924,6 +924,9 @@
 
   function onKey(e) {
     if (!S.active) return;
+    /* the browser's reload keys would reload the page, and the presentation with it: during the show they do nothing
+       (also with the show's menu or a dialog open) */
+    if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'))) { e.preventDefault(); e.stopPropagation(); return; }
     if (L.ui.dialogOpen()) return;
     if (L.ui.menuOpen()) { if (L.ui.menuKey(e)) { e.preventDefault(); e.stopPropagation(); } return; }
     const k = e.key;

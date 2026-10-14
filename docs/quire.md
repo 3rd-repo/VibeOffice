@@ -40,7 +40,11 @@ Licences for the word lists are in `public/common/dict/LICENSES.txt`.
   whole pixel wide; East Asian documents with a line grid snap their lines to it; a "next column"
   section break in a one-column layout starts a new page; "page break before" on the first paragraph
   of a table breaks before the table; Word 2013+ documents drop space before after a manual page break,
-  and keep the paragraph mark of a page break that ends the document on the same page.
+  and keep the paragraph mark of a page break that ends the document on the same page; an empty
+  paragraph holding only a section break makes no page of its own when the next section starts on a
+  new page anyway: pushed off a full page (or, in Word 2013+ documents, past a page break) it stays at
+  the foot of that page. Of 153 Word-saved corpus files with such a paragraph, 3 more now show
+  Word's stored page count (113), and none moves away from it.
 - Page and section totals are filled in once pagination is complete, and tabbed text around them
   is measured again. Pages are laid out again only from the first page where a new total changes a
   paragraph's height (a line wraps, a footer grows), so a long document with "Page X of Y" opens in
