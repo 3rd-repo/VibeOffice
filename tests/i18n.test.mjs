@@ -58,6 +58,16 @@ test('a context after "|" picks a translation of its own, else the plain text\'s
   assert.equal(VO.i18n.plain('Line|chart'), 'Line');
 });
 
+test('a "|" that is not a context is text: a file name filled into a message, the user\'s own', async () => {
+  for (const [lang, dict] of [['en', null], ['fr', { '\'{0}\' is protected.': '« {0} » est protégé.' }]]) {
+    const VO = await page(lang, dict);
+    const msg = VO.t('\'{0}\' is protected.', 'A|B.pptx');
+    assert.ok(msg.includes('A|B.pptx'), msg);
+    assert.equal(VO.t(msg), msg, 'translated again, as L.h does with a message');
+    for (const s of ['Revenue | Expenses', 'Q1|Q2', 'a|']) assert.equal(VO.t(s), s);
+  }
+});
+
 test('English fetches nothing and changes nothing', async () => {
   const VO = await page('en', null);
   assert.equal(VO.t('&File'), '&File');

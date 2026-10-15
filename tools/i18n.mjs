@@ -134,7 +134,7 @@ function lex(src, i0, line0, untilBrace) {
 
 /* ---------------------------------------------------------------- which strings are UI text */
 /* "Line|chart": UI text with its context (common/i18n.js) */
-const context = /\|[\w -]+$/;
+const context = /(?<=\S)\|[A-Za-z][A-Za-z -]*$/;   // as common/i18n.js plain()
 const looksLikeCode = (s) => /[<>{};=\\|]|:\/\/|^[.#[@$%^]|^\s|\s$|^[\w-]+:[\w-]|["']\s*,|\.(js|css|html|xml|json|png|svg|jpg|docx|xlsx|pptx)\b|^[a-z]+([A-Z][a-z]*)+$/.test(s.replace(/\{\d+\}/g, '').replace(context, ''));
 const hasWords = (s) => /[A-Za-z]{2}/.test(s.replace(/&(?=[A-Za-z])/g, ''));   // "B&y:" has words
 /* "Format Cells", "Save changes?", "Size:", "&Undo", "Insert Picture..." — not "Times New Roman"-like single names */
@@ -271,7 +271,7 @@ const COLLECT = `(scope, skip, where) => {
   return out.size;
 }`;
 async function harvest(args) {
-  const i = args.indexOf('--lang'), lang = i >= 0 ? args[i + 1] : 'qps', apps = args.filter((a, k) => k !== i && k !== i + 1);
+  const i = args.indexOf('--lang'), lang = i >= 0 ? args[i + 1] : 'qps', apps = args.filter((a, k) => i < 0 || (k !== i && k !== i + 1));
   const { ensureServer, openPage } = await import('./ooxml/cdp.mjs');
   const stop = await ensureServer();
   const pause = (ms) => new Promise((r) => setTimeout(r, ms));

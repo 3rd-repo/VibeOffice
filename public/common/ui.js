@@ -42,7 +42,7 @@
   const t = (s, ...args) => (L.t ? L.t(s, ...args) : s);
   /* "&x" marks the access key; "&&" and "& " stay a literal ampersand; "|chart" after the text is its context
      (common/i18n.js), not shown */
-  const plainAmp = (s) => String(s || '').replace(/\|[^|]*$/, '').replace(/&&/g, '\u0000').replace(/&(\S)/g, '$1').replace(/\u0000/g, '&');
+  const plainAmp = (s) => (root.VO && root.VO.i18n ? root.VO.i18n.plain(String(s || '')) : String(s || '')).replace(/&&/g, '\u0000').replace(/&(\S)/g, '$1').replace(/\u0000/g, '&');
   /** a label as shown, without its access key mark */
   const stripAmp = (s) => plainAmp(t(s));
   /** text as HTML, its access key underlined */

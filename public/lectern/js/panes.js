@@ -446,13 +446,13 @@
       slides.forEach(([s, i], n) => {
         const p = page();
         const w = pw * 0.67; const hh = cell(p, s, i, (pw - w) / 2, ph * 0.07, w);
-        p.appendChild(h('div', { class: 'pv-text', style: `left:${pw * 0.1}px;top:${ph * 0.07 + hh + ph * 0.04}px;width:${pw * 0.8}px;height:${ph * 0.4}px;font-size:${pw / 50}px`, text: s.notes || '' }));
+        p.appendChild(h('div', { class: 'pv-text', style: `left:${pw * 0.1}px;top:${ph * 0.07 + hh + ph * 0.04}px;width:${pw * 0.8}px;height:${ph * 0.4}px;font-size:${pw / 50}px`, text: s.notes || '', translate: 'no' }));
         footer(p, n + 1);
       });
     } else if (o.what === 'outline') {
       let p = page(), y = ph * 0.06, pn = 1;
       const lh = pw / 40;
-      const line = (t, indent, bold) => { if (y > ph * 0.92) { footer(p, pn++); p = page(); y = ph * 0.06; } p.appendChild(h('div', { class: 'pv-text', style: `left:${pw * 0.08 + indent}px;top:${y}px;width:${pw * 0.84 - indent}px;font-size:${lh * 0.85}px;${bold ? 'font-weight:bold' : ''}`, text: t })); y += lh * 1.3; };
+      const line = (t, indent, bold) => { if (y > ph * 0.92) { footer(p, pn++); p = page(); y = ph * 0.06; } p.appendChild(h('div', { class: 'pv-text', style: `left:${pw * 0.08 + indent}px;top:${y}px;width:${pw * 0.84 - indent}px;font-size:${lh * 0.85}px;${bold ? 'font-weight:bold' : ''}`, text: t, translate: 'no' })); y += lh * 1.3; };
       slides.forEach(([s, i]) => {
         line(`${i + 1}  ${M.slideTitle(s)}`, 0, true);
         const b = bodyShape(s);

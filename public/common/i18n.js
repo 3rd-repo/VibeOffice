@@ -26,8 +26,10 @@
     return '[' + body + (letters > 2 ? ' ' + '·'.repeat(Math.ceil(letters * 0.4)) : '') + ']';
   };
   const marks = (s) => (s.match(/\{\d+\}/g) || []).sort().join();
-  /** the text without its context: "Line|chart" is "Line" */
-  const plain = (s) => { const i = s.indexOf('|'); return i < 0 ? s : s.slice(0, i); };
+  /** the text without its context: "Line|chart" is "Line". A context is words (letters, spaces, hyphens) right after
+      the "|" that ends the text; other text with a "|" is shown whole, as text that is the user's can reach VO.t again
+      (a file name A|B.docx filled into a message, "Revenue | Expenses") */
+  const plain = (s) => s.replace(/(\S)\|[A-Za-z][A-Za-z -]*$/, '$1');
 
   let dict = null;
   /* in the pseudo-locale, the text asked for that the catalog lacks (tools/i18n.mjs harvest reads it) */

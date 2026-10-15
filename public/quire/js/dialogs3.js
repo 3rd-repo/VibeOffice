@@ -144,7 +144,7 @@
       const c2 = G.color(cur.t === 'grad' && cur.stops ? String(cur.stops[cur.stops.length - 1].c).replace('#', '') : 'FFFFFF', { id: 'fe-c2', automatic: false });
       const colors = G.radios('fe-cols', [['one', 'O&ne color'], ['two', '&Two colors'], ['preset', 'Pr&eset']], 'two');
       const PRESETS = { 'Early Sunset': ['#000082', '#66008F', '#BA0066', '#FF0000', '#FF8200'], Horizon: ['#DCEBF5', '#83A7C3', '#768FB9', '#83A7C3', '#FFFFFF'], Ocean: ['#03D4A8', '#21D6E0', '#0087E6', '#005CBF'], Fire: ['#FFF200', '#FF7A00', '#FF0300', '#4D0808'], Silver: ['#FFFFFF', '#E6E6E6', '#7D8496', '#E6E6E6'], Gold: ['#E6DCAC', '#E6D78A', '#C7AC4C', '#E6D78A', '#E6DCAC'], Rainbow: ['#A603AB', '#0819FB', '#1A8D48', '#FFFF00', '#EE3F17', '#E81766'] };
-      const preset = ui.select([L.N('Early Sunset'), L.N('Horizon'), L.N('Ocean'), L.N('Fire'), L.N('Silver'), L.N('Gold'), L.N('Rainbow')], 'Early Sunset', null, { id: 'fe-pre' });   // PRESETS' names
+      const preset = ui.select([L.N('Early Sunset'), L.N('Horizon'), L.N('Ocean'), L.N('Fire'), L.N('Silver'), L.N('Gold'), L.N('Rainbow')].map((n) => [n, n]), 'Early Sunset', null, { id: 'fe-pre' });   // PRESETS' names
       const style = G.radios('fe-st', [['h', 'Hori&zontal'], ['v', '&Vertical'], ['du', 'Diagonal &up'], ['dd', 'Dia&gonal down'], ['corner', '&From corner'], ['center', 'From ce&nter']], 'h');
       const pattGrid = h('div', { class: 'shape-grid', style: 'grid-template-columns:repeat(8,26px)' });
       let patt = cur.t === 'patt' ? cur.prst : 'pct50';
