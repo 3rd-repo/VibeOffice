@@ -495,7 +495,7 @@
   CSV.writeHTML = function (wb) {
     const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const visible = wb.sheets.filter((s) => s.state === 'visible' && s.kind !== 'chartsheet');
-    let html = `<!DOCTYPE html>\n<html><head><meta charset="utf-8"><meta name="Generator" content="Ledger 2003"><title>${esc((wb.props && wb.props.title) || (wb.fileName || 'Book1').replace(/\.[^.]+$/, ''))}</title>` +
+    let html = `<!DOCTYPE html>\n<html><head><meta charset="utf-8"><meta name="Generator" content="Ledger"><title>${esc((wb.props && wb.props.title) || (wb.fileName || 'Book1').replace(/\.[^.]+$/, ''))}</title>` +
       '<style>body{font-family:Arial,sans-serif;font-size:10pt;margin:8px}h2{font:bold 11pt Tahoma,sans-serif;margin:16px 0 6px}td{padding:0 2px;border:1px solid #DADADA;font-size:10pt}nav a{margin-right:10px}</style></head><body>';
     if (visible.length > 1) html += '<nav>' + visible.map((s, i) => `<a href="#sheet${i + 1}">${esc(s.name)}</a>`).join('') + '</nav>';
     visible.forEach((s, i) => { html += `<h2 id="sheet${i + 1}">${esc(s.name)}</h2>` + CSV.htmlSheet(wb, s); });

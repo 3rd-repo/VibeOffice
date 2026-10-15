@@ -143,7 +143,7 @@
       if (it.custom) { const c = it.custom(() => ui.closeMenus()); el.appendChild(c); return; }
       const disabled = it.disabled || (it.enabled && !it.enabled());
       const checked = it.checked && it.checked();
-      const row = h('div', { class: 'm-item' + (disabled ? ' dis' : '') + (checked ? ' chk' : '') + (it.sub ? ' has-sub' : '') + (it.bold ? ' bold' : ''), role: 'menuitem', 'aria-disabled': disabled ? 'true' : null });
+      const row = h('div', { class: 'm-item' + (disabled ? ' dis' : '') + (checked ? ' chk' : '') + (it.sub ? ' has-sub' : '') + (it.bold ? ' bold' : ''), role: 'menuitem', 'aria-disabled': disabled ? 'true' : null, title: it.tip || null });
       const icoHTML = it.html ? it.html : it.icon ? L.icons.get(it.icon) : checked ? (it.radio ? '<span class="m-radio">●</span>' : '<span class="m-check">✓</span>') : '';
       row.appendChild(h('span', { class: 'm-ico' + (checked && it.icon ? ' on' : ''), html: icoHTML }));
       /* it.raw: data shown as it is (a font's name in a font list, a file's in Recent Files), not UI text; its
@@ -315,7 +315,7 @@
   };
   /** editable combo box (font name / size / zoom); o.options() may include { heading } rows, { sep }, { value, label }
    * and { label, run } actions (the list reopens after the action);
-   * o.note(v): grey text beside an option in the list */
+   * o.note(v): grey text beside an option in the list, or { text, tip } with a tooltip for its row */
   ui.combo = function (o) {
     const wrap = h('div', { class: 'combo', style: `width:${o.width || 120}px`, 'data-tip': o.tip || '' });
     const inp = h('input', { type: 'text', class: 'combo-in', id: o.id, 'aria-label': o.tip || o.id, autocomplete: 'off', spellcheck: 'false' });
@@ -339,11 +339,12 @@
         if (x && x.sep) return { sep: true };
         if (x && x.run) return { label: x.label, run: async () => { await x.run(); btn.click(); } };   // an action, then the list again
         const v = x && typeof x === 'object' ? x.value : x;
+        const note = o.note ? o.note(v) : '';
         return {
           label: String(x && x.label || v).replace(/&/g, '&&'), value: v, raw: true,
           html: '', run: () => { inp.value = v; o.onChange(String(v)); ui.hooks.refocus(); },
           checked: () => String(v) === String(o.value()),
-          key: o.note ? o.note(v) : '',
+          key: note && typeof note === 'object' ? note.text : note, tip: note && note.tip,
         };
       }), { left: r.left, bottom: r.bottom }, { cls: 'combo-list' + (o.listCls ? ' ' + o.listCls : '') });
       if (o.preview) {
@@ -501,16 +502,17 @@
     return d.done;
   };
   /** Help ▸ About, the same in every app: icon, name and version, the app's own paragraphs, the link to the open
-   *  source licenses, the suite's license note (as in the Start Center's About), then the trademark note naming the
-   *  Office program it follows (o: { name, text: [paragraphs], office }) */
+   *  source licenses, the suite's license and font notes (as in the Start Center's About), then the trademark note
+   *  naming the Office program it follows (o: { name, text: [paragraphs], office }) */
   ui.about = function (o) {
     const body = h('div', { class: 'col about' },
       h('div', { class: 'about-head' }, h('span', { html: L.icons.app ? L.icons.app(48) : '' }),
-        h('div', null, h('div', { class: 'about-name', text: t('{0} 2003 Web Edition', o.name) }), h('div', { text: t('Version {0}', L.VERSION) }))),
+        h('div', null, h('div', { class: 'about-name', text: t('{0} Web Edition', o.name) }), h('div', { text: t('Version {0}', L.VERSION) }))),
       ...o.text.map((t) => h('p', { text: t })),
       h('p', null, ...t('Made possible by open source software: {0}.').split('{0}').flatMap((part, i) => (i ? [h('a', { href: root.VO ? root.VO.LICENSES : '../oss-licenses.html', target: '_blank', rel: 'noopener',
         class: 'about-oss', text: 'Open source licenses', onclick: (e) => { if (root.VO) { e.preventDefault(); root.VO.showLicenses(); } } }), part] : [part]))),
       h('p', { text: 'Open source under the Apache License 2.0, provided as is, without warranty. VibeOffice.work is an independent project. Product names in its documentation are trademarks of their owners; VibeOffice.work is not affiliated with them.' }),
+      h('p', { class: 'about-marks', text: 'Font names are used solely to identify the fonts specified in documents and to maintain interoperability with Office Open XML files and the applications that create them; such names may be trademarks of their respective owners. VibeOffice renders text with the fonts installed on your computer. Where a specified font is not installed, VibeOffice substitutes an open-source font supplied with it or another font available on your computer, and the document may therefore appear differently than in other applications. VibeOffice does not include or distribute any commercial font software.' }),
       h('p', { class: 'about-marks', text: t('Microsoft, {0} and Office are trademarks of Microsoft Corporation. {1} is an independent work and is not affiliated with Microsoft.', o.office, o.name) }));
     return ui.dialog({ title: t('About {0}', o.name), width: 420, body, buttons: [{ label: 'OK', primary: true }] });
   };

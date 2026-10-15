@@ -528,7 +528,7 @@
     }
     return { ln, col };
   };
-  A.updateTitle = () => { document.title = `${A.fileName} - Quire 2003`; };
+  A.updateTitle = () => { document.title = `${A.fileName} - Quire`; };
 
   /* ================= rulers ================= */
   A.updateRulers = function () {
@@ -1269,10 +1269,10 @@
     const P = (text, pPr, rPr) => D.para(text ? [D.text(text, rPr || {})] : [], pPr || {});
     const bl = d.main.blocks;
     bl.length = 0;
-    d.props.title = 'Welcome to Quire 2003';
+    d.props.title = 'Welcome to Quire';
     d.props.creator = 'Quire';
-    bl.push(P('Welcome to Quire 2003', { style: 'Title' }));
-    bl.push(P('A word processor in the spirit of Word 2003 — it opens and saves real .docx files.', { style: 'Subtitle' }, { i: true }));
+    bl.push(P('Welcome to Quire', { style: 'Title' }));
+    bl.push(P('A word processor in the spirit of Word — it opens and saves real .docx files.', { style: 'Subtitle' }, { i: true }));
     bl.push(P('Getting around', { style: 'Heading1' }));
     bl.push(D.para([D.text('Type anywhere on this page. Everything works the way you remember: '), D.text('bold', { b: true }), D.text(', '), D.text('italic', { i: true }), D.text(', '), D.text('underline', { u: 'single' }), D.text(', '), D.text('highlighting', { hl: 'yellow' }), D.text(', '), D.text('colors', { color: 'C00000' }), D.text(', styles, bullets, numbering, tables, headers and footers, footnotes, comments, tracked changes, fields and more.')], { jc: 'both' }));
     bl.push(P('Open a document with File ▸ Open, or drop a .docx onto the window. Save with File ▸ Save (Ctrl+S); File ▸ Save As offers Word Document, Word Template, Web Page, Plain Text, Markdown and PDF.', { num: { id: '1', lvl: 0 } }));
@@ -1294,7 +1294,7 @@
     bl.push(fp);
     bl.push(P(''));
     /* header & footer with page numbers */
-    d.hf.h1 = { kind: 'hdr', id: 'h1', blocks: [D.para([D.text('Quire 2003'), D.item('tab'), D.item('tab'), D.text('Sample document')], { style: 'Header' })] };
+    d.hf.h1 = { kind: 'hdr', id: 'h1', blocks: [D.para([D.text('Quire'), D.item('tab'), D.item('tab'), D.text('Sample document')], { style: 'Header' })] };
     const ftr = D.para([D.item('tab'), D.text('Page ')], { style: 'Footer' });
     ftr.runs.push(D.item('fb', { fid: 'f2', instr: ' PAGE ' }), D.item('fs', { fid: 'f2' }), D.text('1'), D.item('fe', { fid: 'f2' }), D.text(' of '), D.item('fb', { fid: 'f3', instr: ' NUMPAGES ' }), D.item('fs', { fid: 'f3' }), D.text('1'), D.item('fe', { fid: 'f3' }));
     d.hf.f1 = { kind: 'ftr', id: 'f1', blocks: [ftr] };

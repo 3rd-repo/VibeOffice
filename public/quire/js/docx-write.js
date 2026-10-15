@@ -840,7 +840,7 @@
   function appXML(doc, stats) {
     const p = doc.props;
     return HEAD + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">' +
-      `<Template>${X(p.template || 'Normal.dotm')}</Template><TotalTime>0</TotalTime><Pages>${stats.pages}</Pages><Words>${stats.words}</Words><Characters>${stats.charsNoSp}</Characters><Application>Quire 2003</Application><DocSecurity>0</DocSecurity><Lines>${stats.lines}</Lines><Paragraphs>${stats.paras}</Paragraphs><ScaleCrop>false</ScaleCrop>` +
+      `<Template>${X(p.template || 'Normal.dotm')}</Template><TotalTime>0</TotalTime><Pages>${stats.pages}</Pages><Words>${stats.words}</Words><Characters>${stats.charsNoSp}</Characters><Application>Quire</Application><DocSecurity>0</DocSecurity><Lines>${stats.lines}</Lines><Paragraphs>${stats.paras}</Paragraphs><ScaleCrop>false</ScaleCrop>` +
       (p.manager ? `<Manager>${X(p.manager)}</Manager>` : '') + `<Company>${X(p.company || '')}</Company><LinksUpToDate>false</LinksUpToDate><CharactersWithSpaces>${stats.chars}</CharactersWithSpaces><SharedDoc>false</SharedDoc><HyperlinksChanged>false</HyperlinksChanged><AppVersion>11.0000</AppVersion></Properties>`;
   }
   function customXML(doc) {

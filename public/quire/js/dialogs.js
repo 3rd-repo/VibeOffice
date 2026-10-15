@@ -183,8 +183,10 @@
       if (r.u === 'none') delete r.u;
       preview(pv.firstChild, r);
       pv.firstChild.textContent = sample();
-      const note = st.font ? L.fontNote(st.font) : '';
-      pvCap.textContent = note ? L.t('{0} is not installed on this computer; {1} is used on screen and in print.', st.font, note) : L.t('This is a TrueType font. This font will be used on both printer and screen.');
+      const used = st.font ? L.fontStandIn(st.font) : '';
+      pvCap.textContent = !used ? L.t('This is a TrueType font. This font will be used on both printer and screen.')
+        : /^(serif|sans-serif|monospace|cursive|fantasy)$/.test(used) ? L.t('{0} is not installed on this computer; a default font is used on screen and in print.', st.font)
+          : L.t('{0} is not installed on this computer; {1} is used on screen and in print.', st.font, used);
     }
     upd();
     /* character spacing */

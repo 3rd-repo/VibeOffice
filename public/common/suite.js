@@ -238,7 +238,7 @@
      repaints every open window of the suite. Canvas-drawn chrome (rulers, sheet headers) redraws on 'vo-look'. */
   const N = (s) => s;   // UI text, translated where it is shown (VO.N, common/i18n.js)
   N('Blank Document'); N('Blank Workbook'); N('Blank Presentation');   // templates.json's Blank entries (tools/templates.mjs)
-  const LOOKS = [{ id: 'classic', name: N('Classic'), note: 'The blue toolbars and menus of Office 2003.' },
+  const LOOKS = [{ id: 'classic', name: N('Classic'), note: 'The classic blue toolbars and menus.' },
     { id: 'paper', name: N('Paper'), note: 'Light and calm: warm paper tones, one teal accent, rounded shapes.' },
     { id: 'paper2016', name: N('Paper 2016'), layout: 'ribbon', note: 'Paper with tabs of commands, grouped by task, instead of menus and toolbars.' }];
   const storedLook = () => { try { return localStorage.getItem('vibeoffice.look') || 'classic'; } catch (e) { return 'classic'; } };

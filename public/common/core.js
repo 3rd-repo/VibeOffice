@@ -1,7 +1,7 @@
 /* VibeOffice — core utilities, shared by Quire, Ledger and Lectern.
  * Shared namespace, DOM helpers, units, colors, events, file I/O, media store, PDF writer.
  * Every other script attaches itself to window.L. Each page names its app before loading this file:
- *   <script>window.L = { APP_ID: 'quire', APP_NAME: 'Quire', APP: 'Quire 2003' };</script>
+ *   <script>window.L = { APP_ID: 'quire', APP_NAME: 'Quire', APP: 'Quire' };</script>
  * APP_ID keeps each app's saved settings apart (localStorage 'quire.…'); APP_NAME and APP appear in messages.
  */
 (function (root) {
@@ -506,12 +506,24 @@
     }
     return 'sans-serif';
   };
-  /** the Font boxes' note beside an Office font name: what draws it on this computer, if not itself */
-  L.fontNote = function (name) {
+  const GENERIC = ['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy'];
+  /** what draws `name` on this computer when it isn't installed: a family, a generic one (serif…), or '' */
+  L.fontStandIn = function (name) {
     if (L.localFonts().includes(name)) return '';   // listed by the browser as installed here
     const used = L.fontUsed(name);
-    if (used.toLowerCase() === String(name).toLowerCase()) return '';
-    return ['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy'].includes(used) ? 'not installed' : used;
+    return used.toLowerCase() === String(name).toLowerCase() ? '' : used;
+  };
+  /** the Font boxes' grey note beside a font name, and its tooltip: what draws it on this computer, if not itself
+      ({ text, tip }, or '' when it is installed) */
+  L.fontNote = function (name) {
+    const used = L.fontStandIn(name);
+    if (!used) return '';
+    const generic = GENERIC.includes(used), t = tr;   // t: UI text (tools/i18n.mjs)
+    return {
+      text: generic ? t('Not installed') : t('Not installed; uses {0}', used),
+      tip: generic ? t('{0} is not installed on this computer, so its text is shown in a default font. The document keeps the font name {0} and shows in that font on computers that have it.', name)
+        : t('{0} is not installed on this computer, so its text is shown in {1}. The document keeps the font name {0} and shows in that font on computers that have it.', name, used),
+    };
   };
   /** @font-face rules for a standalone export (an HTML page): the stand-ins from public/fonts/ that
    * `markup` names, as data: URLs, with bold/italic faces only if the markup uses them. */

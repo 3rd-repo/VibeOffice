@@ -294,7 +294,7 @@
     else A.sbSlide.textContent = n ? L.t('Slide {0} of {1}', E.idx + 1, n) : L.t('No slides');
     A.sbDesign.textContent = M.designName(E.design());
   };
-  A.updateTitle = () => { document.title = `${A.fileName} - Lectern 2003`; };
+  A.updateTitle = () => { document.title = `${A.fileName} - Lectern`; };
 
   /* ================= views ================= */
   A.setView = function (v) {

@@ -532,7 +532,7 @@
       const q = h('input', { type: 'text', id: 'gs-search', placeholder: 'Search help', style: 'flex:1;min-width:0' });
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { P.helpQuery = q.value; TP.show('help'); } });
       b.append(
-        h('div', { class: 'tp-row' }, h('span', { html: L.icons.app(32) }), h('b', { text: 'Lectern 2003 Web Edition', style: 'color:var(--pane-ink)' })),
+        h('div', { class: 'tp-row' }, h('span', { html: L.icons.app(32) }), h('b', { text: 'Lectern Web Edition', style: 'color:var(--pane-ink)' })),
         sec('Search for:', h('div', { class: 'tp-row' }, q, ui.button('Go', () => { P.helpQuery = q.value; TP.show('help'); }, { class: 'btn small' }))),
         sec(L.N('Open'), window.VO ? VO.recentLinks(4) : null, link('open', L.N('Open a presentation (.pptx)...'), () => ui.exec('open')), link('new', 'Create a new presentation...', () => TP.show('new')), link('slideshow', 'View the sample presentation', () => L.app.loadSample())),
         sec(L.N('Learn'), link('help', 'Keyboard shortcuts and help', () => TP.show('help')), link('design', 'Apply a design template', () => TP.show('design')), link('animation', 'Animate your slides', () => TP.show('customAnim'))));

@@ -1,4 +1,4 @@
-# Ledger 2003 — Web Edition
+# Ledger — Web Edition
 
 A spreadsheet in the image of Excel 2003, written in plain HTML and vanilla JavaScript, with
 no libraries, no frameworks, no build step at run time. It opens and saves Office Open XML workbooks

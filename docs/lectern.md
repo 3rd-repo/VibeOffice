@@ -1,4 +1,4 @@
-# Lectern 2003 — Web Edition
+# Lectern — Web Edition
 
 A presentation editor modeled on PowerPoint 2003, written in plain HTML and vanilla JavaScript with no frameworks and no build step. It opens and saves real `.pptx` files. In the suite's Paper 2016 look (Themes on the Start Center, or Tools ▸ Options ▸ General ▸ Theme) a ribbon with PowerPoint 2016's tabs (Home, Insert, Design, Transitions, Animations, Slide Show, Review, View and the tool tabs) takes the place of the menus and toolbars.
 

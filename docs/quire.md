@@ -1,4 +1,4 @@
-# Quire 2003 — Web Edition
+# Quire — Web Edition
 
 A Word 2003–style word processor written in plain HTML and vanilla JavaScript (no build step, no
 libraries). It reads and writes Office Open XML (`.docx`, `.docm`, `.dotx`, `.dotm`) files.
