@@ -39,12 +39,16 @@ Licences for the word lists are in `public/common/dict/LICENSES.txt`.
   line down; table rows are as tall as Word makes them even though the browser draws hairline borders a
   whole pixel wide; East Asian documents with a line grid snap their lines to it (below); a "next column"
   section break in a one-column layout starts a new page; "page break before" on the first paragraph
-  of a table breaks before the table; Word 2013+ documents drop space before after a manual page break,
-  and keep the paragraph mark of a page break that ends the document on the same page; an empty
-  paragraph holding only a section break makes no page of its own when the next section starts on a
-  new page anyway: pushed off a full page (or, in Word 2013+ documents, past a page break) it stays at
-  the foot of that page. Of 153 Word-saved corpus files with such a paragraph, 3 more now show
-  Word's stored page count (113), and none moves away from it.
+  of a table breaks before the table; Word 2013+ documents drop space before after a manual page break;
+  Word 2010+ documents keep the paragraph mark of a page break that ends a section's last paragraph on
+  the page of the break (older ones carry it over to a page of its own); an empty paragraph holding only
+  a section break makes no page of its own when the next section starts on a new page anyway: pushed off
+  a full page, or past a page break unless it has "page break before" of its own, it stays at the foot
+  of that page. Of 153 Word-saved corpus files with such a paragraph, 3 more now show Word's stored page
+  count (113), and none moves away from it; for issue 20, of the 57 Word 2007/2010 files with a page
+  break and a section break or a break at their end, 4 more show it (42 in all), one more comes closer,
+  and none moves away. A centred table wider than its column overhangs both margins evenly, a
+  right-aligned one the left margin.
 - East Asian text is drawn with the run's East Asian font (`w:eastAsia`, or the theme's for the
   document's East Asian language) and marked with its East Asian language, and takes that font's line
   height where it is the taller ([i18n.md](i18n.md), Fonts). A new document follows the UI's language:

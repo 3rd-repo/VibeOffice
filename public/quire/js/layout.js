@@ -523,7 +523,7 @@
   }
 
   /* ================= tables ================= */
-  function tableShell(t, ctx) {
+  function tableShell(t, ctx, room) {
     const d = ctx.doc;
     const { tp, sp } = R.tblProps(d, t);
     const tbl = el('table', 'tbl');
@@ -537,8 +537,11 @@
     tbl.style.width = px(total) + 'px';
     const compat = (d.settings.compat || 11) < 15;
     const ind = (tp.ind || 0) - (compat ? tp.cellMar.l || 0 : 0);
-    if (tp.jc === 'center') tbl.style.marginLeft = tbl.style.marginRight = 'auto';
-    else if (tp.jc === 'right' || tp.jc === 'end') tbl.style.marginLeft = 'auto';
+    /* a centred or right-aligned table wider than its column (room, px) overhangs the margins as in Word: both evenly,
+       or the left one (auto margins would be 0, the whole overhang on the right; issue 20) */
+    const over = room ? px(total) - room : 0;
+    if (tp.jc === 'center') { if (over > 0) tbl.style.marginLeft = -over / 2 + 'px'; else tbl.style.marginLeft = tbl.style.marginRight = 'auto'; }
+    else if (tp.jc === 'right' || tp.jc === 'end') tbl.style.marginLeft = over > 0 ? -over + 'px' : 'auto';
     else if (ind) tbl.style.marginLeft = px(ind) + 'px';
     if (tp.shd) tbl.style.backgroundColor = R.shadeCSS(tp.shd);
     const tb = el('tbody');
@@ -657,7 +660,7 @@
    */
   function placeTable(frame, t, sub, ctx) {
     const scale = LY.scale();
-    const shell = tableShell(t, ctx);
+    const shell = tableShell(t, ctx, frame.width || frame.el.clientWidth);
     const map = R.tblMap(t);
     const startRow = sub ? sub.r : 0;
     let cellStates = sub ? sub.cells : null;
@@ -1114,19 +1117,20 @@
       ctx.grid = dg && /^(lines|linesAndChars|snapToChars)$/.test(dg.type || '') && dg.linePitch > 0 ? px(dg.linePitch / 20) : 0;
       const res = LY.flow(fr, blocks, st, sec.to, ctx);
       st = res.st;
-      /* an empty paragraph that only carries the section break, pushed off a full page (or, Word 2013+, past a page
-         break), makes no page of its own when the next section starts on a new page anyway: it stays at the foot of
-         this one, into the margin if need be (the page count Word stores agrees) */
-      if ((res.stop === 'page' ? (d.settings && d.settings.compat) >= 15 : res.stop === 'full' && region.ci + 1 >= region.frames.length)
-        && !res.pbb && st.bi === sec.to - 1 && !st.sub && sec.endPara && !D.plen(sec.endPara) && startsPage(si)) {
+      /* an empty paragraph that only carries the section break, pushed off a full page or past a page break (unless it
+         has "page break before" of its own), makes no page of its own when the next section starts on a new page
+         anyway: it stays at the foot of this one, into the margin if need be (the page count Word stores agrees; issue 20) */
+      if ((res.stop === 'page' || (res.stop === 'full' && region.ci + 1 >= region.frames.length))
+        && !res.pbb && st.bi === sec.to - 1 && !st.sub && sec.endPara && !D.plen(sec.endPara) && startsPage(si)
+        && !(res.stop === 'page' && D.pProps(d, sec.endPara).pageBreakBefore)) {
         fr.limit = Infinity;
         const rest = LY.flow(fr, blocks, st, sec.to, ctx);
         if (rest.stop === 'done') { st = rest.st; res.stop = 'done'; }
       }
-      /* Word 2013+ (compat 15): a page (or last-column) break that ends the section's last paragraph keeps
-         the paragraph mark on its own page, so no empty page is made when the document ends or the next
-         section starts on a new page anyway (older modes carry the mark over to a new page) */
-      if ((d.settings && d.settings.compat) >= 15 && (res.stop === 'page' || (res.stop === 'column' && region.ci + 1 >= region.frames.length)) && !res.pbb && st.bi >= sec.to) {
+      /* Word 2010+ (compat 14): a page (or last-column) break that ends the section's last paragraph keeps the
+         paragraph mark on its own page, so no empty page is made when the document ends or the next section starts on
+         a new page anyway (older modes carry the mark over to a new page; Word's stored page counts agree, issue 20) */
+      if ((d.settings && d.settings.compat) >= 14 && (res.stop === 'page' || (res.stop === 'column' && region.ci + 1 >= region.frames.length)) && !res.pbb && st.bi >= sec.to) {
         const nt = si + 1 < sections.length ? (sections[si + 1].sect.type || 'nextPage') : null;
         if (!nt || (nt !== 'continuous' && nt !== 'nextColumn')) res.stop = 'done';
       }
