@@ -1,7 +1,7 @@
 [package]
 name = "vibeoffice"
 version = "0.1.0"
-description = "VibeOffice for Windows: the suite in public/ in a native window"
+description = "VibeOffice for Windows and macOS: the suite in public/ in a native window"
 edition = "2021"
 publish = false
 
@@ -41,6 +41,12 @@ windows = { version = "0.62", features = [
 windows-future = "0.3"
 # One VibeOffice per user session: a second start hands its files to the running one (Tauri's own plugin)
 tauri-plugin-single-instance = "2.5.3"
+
+# macOS: links and Finder through NSWorkspace (the sandbox starts no programs), the edition from Info.plist.
+# Tauri's wry and tao already build these; only the classes used are switched on.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSBundle", "NSString", "NSURL"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSWorkspace"] }
 
 [features]
 # Embed public/ in the exe. `--no-default-features` loads devUrl (tools/serve.py) instead.

@@ -132,14 +132,32 @@ impl Host {
 }
 
 /// The script that runs before each page's own: what the pages see as the host, and the desktop app's
-/// default look (Paper) until the user picks one (the pages' head scripts read it).
+/// default look (Paper) until the user picks one (the pages' head scripts read it). `edition`: 'appstore' for the
+/// Mac App Store's, which the store updates (the pages never check), else 'direct'.
 pub fn init_script() -> String {
     format!(
-        "window.__VO_HOST__ = Object.freeze({{ platform: '{}', version: {VERSION}, appVersion: '{}' }});\n\
+        "window.__VO_HOST__ = Object.freeze({{ platform: '{}', version: {VERSION}, appVersion: '{}', edition: '{}' }});\n\
          try {{ if (!localStorage.getItem('vibeoffice.look')) localStorage.setItem('vibeoffice.look', 'paper'); }} catch (e) {{}}",
         std::env::consts::OS, // windows, linux, macos
-        option_env!("VO_VERSION").unwrap_or("dev") // tools/current-tree-version.sh, from build.sh
+        option_env!("VO_VERSION").unwrap_or("dev"), // tools/current-tree-version.sh, from build.sh
+        if app_store() { "appstore" } else { "direct" }
     )
+}
+
+/// Whether this is the Mac App Store edition: `VODistribution` in the bundle's Info.plist (desktop/macos/),
+/// sealed by its signature, so one binary serves the App Store and the DMG.
+#[cfg(target_os = "macos")]
+fn app_store() -> bool {
+    use objc2_foundation::{NSBundle, NSString};
+    NSBundle::mainBundle()
+        .objectForInfoDictionaryKey(&NSString::from_str("VODistribution"))
+        .and_then(|v| v.downcast::<NSString>().ok())
+        .is_some_and(|v| v.to_string() == "appstore")
+}
+
+#[cfg(not(target_os = "macos"))]
+fn app_store() -> bool {
+    false
 }
 
 /// The files the system asked us to open, once: the page that takes them opens them.
@@ -279,17 +297,26 @@ pub(crate) fn system_open(url: &str) -> Result<(), String> {
     }
 }
 
-#[cfg(not(windows))]
+/// macOS: NSWorkspace, which the sandbox allows (no program is started)
+#[cfg(target_os = "macos")]
 pub(crate) fn system_open(url: &str) -> Result<(), String> {
-    let cmd = if cfg!(target_os = "macos") {
-        "open"
+    use objc2_app_kit::NSWorkspace;
+    use objc2_foundation::{NSString, NSURL};
+    let ns = NSURL::URLWithString(&NSString::from_str(url))
+        .ok_or_else(|| format!("{url}: not an address"))?;
+    if NSWorkspace::sharedWorkspace().openURL(&ns) {
+        Ok(())
     } else {
-        "xdg-open"
-    };
-    let mut child = std::process::Command::new(cmd)
+        Err(format!("could not open {url}"))
+    }
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+pub(crate) fn system_open(url: &str) -> Result<(), String> {
+    let mut child = std::process::Command::new("xdg-open")
         .arg(url)
         .spawn()
-        .map_err(|e| format!("{cmd}: {e}"))?;
+        .map_err(|e| format!("xdg-open: {e}"))?;
     std::thread::spawn(move || child.wait());
     Ok(())
 }
@@ -386,7 +413,25 @@ fn reveal(dir: &Path, file: Option<&Path>) -> Result<(), String> {
     system_open(&dir.to_string_lossy())
 }
 
-#[cfg(not(windows))]
+/// macOS: Finder, with the file selected, or the folder opened
+#[cfg(target_os = "macos")]
+fn reveal(dir: &Path, file: Option<&Path>) -> Result<(), String> {
+    use objc2_app_kit::NSWorkspace;
+    use objc2_foundation::{NSArray, NSString, NSURL};
+    let url = |p: &Path| NSURL::fileURLWithPath(&NSString::from_str(&p.to_string_lossy()));
+    let workspace = NSWorkspace::sharedWorkspace();
+    if let Some(file) = file {
+        workspace.activateFileViewerSelectingURLs(&NSArray::from_retained_slice(&[url(file)]));
+        return Ok(());
+    }
+    if workspace.openURL(&url(dir)) {
+        Ok(())
+    } else {
+        Err(format!("could not open {}", dir.display()))
+    }
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
 fn reveal(dir: &Path, _file: Option<&Path>) -> Result<(), String> {
     system_open(&dir.to_string_lossy())
 }
