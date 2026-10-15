@@ -5362,7 +5362,7 @@
  },
  "All Fonts": {
   "where": [
-   "common/core.js:555"
+   "common/core.js:563"
   ]
  },
  "All Quire commands. Double-click one to run it.": {
@@ -5768,12 +5768,12 @@
  },
  "Aptos Display": {
   "where": [
-   "common/core.js:536"
+   "common/core.js:543"
   ]
  },
  "Aptos Narrow": {
   "where": [
-   "common/core.js:536"
+   "common/core.js:543"
   ]
  },
  "Aqua": {
@@ -5811,7 +5811,7 @@
  },
  "Arial Black": {
   "where": [
-   "common/core.js:536",
+   "common/core.js:543",
    "lectern/js/dialogs.js:949",
    "lectern/js/dialogs.js:968",
    "lectern/js/render.js:535"
@@ -7402,7 +7402,7 @@
  },
  "Calibri Light": {
   "where": [
-   "common/core.js:536"
+   "common/core.js:543"
   ]
  },
  "Calibri, Carlito, sans-serif": {
@@ -7729,7 +7729,7 @@
  },
  "Century Gothic": {
   "where": [
-   "common/core.js:536",
+   "common/core.js:543",
    "lectern/js/model.js:110"
   ]
  },
@@ -8893,7 +8893,7 @@
  },
  "Comic Sans MS": {
   "where": [
-   "common/core.js:536"
+   "common/core.js:543"
   ]
  },
  "Comma Style": {
@@ -9573,7 +9573,7 @@
  },
  "Courier New": {
   "where": [
-   "common/core.js:537",
+   "common/core.js:544",
    "lectern/js/model.js:152",
    "quire/js/autocorrect.js:233",
    "quire/js/dialogs.js:474"
@@ -10961,7 +10961,7 @@
  },
  "DengXian Light": {
   "where": [
-   "common/core.js:460"
+   "common/core.js:463"
   ]
  },
  "Denim": {
@@ -13810,7 +13810,7 @@
  },
  "Fonts on This Computer": {
   "where": [
-   "common/core.js:557"
+   "common/core.js:565"
   ]
  },
  "Fonts on this computer": {
@@ -14868,12 +14868,12 @@
  },
  "HG Gothic E": {
   "where": [
-   "common/core.js:457"
+   "common/core.js:460"
   ]
  },
  "HG Mincho E": {
   "where": [
-   "common/core.js:457"
+   "common/core.js:460"
   ]
  },
  "HTML Format": {
@@ -17437,7 +17437,7 @@
  },
  "Load all fonts on your computer...": {
   "where": [
-   "common/core.js:547"
+   "common/core.js:555"
   ]
  },
  "Load fonts on this computer": {
@@ -17623,27 +17623,27 @@
  },
  "MS Gothic": {
   "where": [
-   "common/core.js:455"
+   "common/core.js:458"
   ]
  },
  "MS Mincho": {
   "where": [
-   "common/core.js:455"
+   "common/core.js:458"
   ]
  },
  "MS PGothic": {
   "where": [
-   "common/core.js:455"
+   "common/core.js:458"
   ]
  },
  "MS PMincho": {
   "where": [
-   "common/core.js:455"
+   "common/core.js:458"
   ]
  },
  "MS UI Gothic": {
   "where": [
-   "common/core.js:456"
+   "common/core.js:459"
   ]
  },
  "MS-DOS (OEM 866)": {
@@ -17781,7 +17781,7 @@
  },
  "Malgun Gothic": {
   "where": [
-   "common/core.js:458"
+   "common/core.js:461"
   ]
  },
  "Manual Line Break": {
@@ -18023,7 +18023,7 @@
  },
  "Meiryo UI": {
   "where": [
-   "common/core.js:457"
+   "common/core.js:460"
   ]
  },
  "Memos": {
@@ -18082,7 +18082,7 @@
  },
  "Microsoft JhengHei": {
   "where": [
-   "common/core.js:462"
+   "common/core.js:468"
   ]
  },
  "Microsoft Office Excel Workbook (*.xlsx)": {
@@ -18117,7 +18117,7 @@
  },
  "Microsoft YaHei": {
   "where": [
-   "common/core.js:461"
+   "common/core.js:464"
   ]
  },
  "Microsoft, {0} and Office are trademarks of Microsoft Corporation. {1} is an independent work and is not affiliated with Microsoft.": {
@@ -19216,6 +19216,30 @@
    "lectern/js/panes.js:477"
   ]
  },
+ "Noto Sans CJK SC": {
+  "where": [
+   "common/core.js:467",
+   "common/core.js:547"
+  ]
+ },
+ "Noto Sans SC": {
+  "where": [
+   "common/core.js:467",
+   "common/core.js:547"
+  ]
+ },
+ "Noto Serif CJK SC": {
+  "where": [
+   "common/core.js:467",
+   "common/core.js:547"
+  ]
+ },
+ "Noto Serif SC": {
+  "where": [
+   "common/core.js:467",
+   "common/core.js:547"
+  ]
+ },
  "Nud&ge": {
   "where": [
    "lectern/js/app.js:158",
@@ -20282,7 +20306,7 @@
  },
  "Palatino Linotype": {
   "where": [
-   "common/core.js:537",
+   "common/core.js:544",
    "quire/js/dialogs.js:891"
   ]
  },
@@ -21839,7 +21863,7 @@
  },
  "Recently Used Fonts": {
   "where": [
-   "common/core.js:553"
+   "common/core.js:561"
   ]
  },
  "Recently used": {
@@ -22106,7 +22130,7 @@
  },
  "Reload fonts on your computer...": {
   "where": [
-   "common/core.js:547"
+   "common/core.js:555"
   ]
  },
  "Remember dime&nsions for new tables": {
@@ -25065,7 +25089,7 @@
  },
  "Segoe UI": {
   "where": [
-   "common/core.js:537"
+   "common/core.js:544"
   ]
  },
  "Segoe UI Symbol": {
@@ -26602,6 +26626,16 @@
  "Source": {
   "where": [
    "ledger/js/dialogs.js:978"
+  ]
+ },
+ "Source Han Sans SC": {
+  "where": [
+   "common/core.js:466"
+  ]
+ },
+ "Source Han Serif SC": {
+  "where": [
+   "common/core.js:466"
   ]
  },
  "Source: (the Quire clipboard is empty — copy something first, or press Ctrl+V)": {
@@ -28452,12 +28486,12 @@
  },
  "The fonts on this computer could not be listed: permission was not given. You can allow it in the site settings of your browser.": {
   "where": [
-   "common/core.js:567"
+   "common/core.js:575"
   ]
  },
  "The fonts on this computer could not be listed: {0}": {
   "where": [
-   "common/core.js:567",
+   "common/core.js:575",
    "index.html:535"
   ]
  },
@@ -28774,7 +28808,7 @@
  },
  "Theme Fonts": {
   "where": [
-   "common/core.js:549"
+   "common/core.js:557"
   ]
  },
  "Theme:": {
@@ -29285,7 +29319,7 @@
  },
  "Times New Roman": {
   "where": [
-   "common/core.js:537",
+   "common/core.js:544",
    "lectern/js/dialogs.js:781",
    "lectern/js/dialogs.js:949",
    "quire/js/dialogs.js:178"
@@ -29740,7 +29774,7 @@
  },
  "Trebuchet MS": {
   "where": [
-   "common/core.js:537",
+   "common/core.js:544",
    "lectern/js/dialogs.js:949",
    "lectern/js/model.js:86",
    "lectern/js/model.js:163"
@@ -30747,6 +30781,11 @@
    "index.html:215"
   ]
  },
+ "WenQuanYi Micro Hei": {
+  "where": [
+   "common/core.js:465"
+  ]
+ },
  "West": {
   "where": [
    "quire/js/dialogs2.js:658"
@@ -31254,22 +31293,22 @@
  },
  "Yu Gothic": {
   "where": [
-   "common/core.js:456"
+   "common/core.js:459"
   ]
  },
  "Yu Gothic Light": {
   "where": [
-   "common/core.js:456"
+   "common/core.js:459"
   ]
  },
  "Yu Gothic UI": {
   "where": [
-   "common/core.js:456"
+   "common/core.js:459"
   ]
  },
  "Yu Mincho": {
   "where": [
-   "common/core.js:456"
+   "common/core.js:459"
   ]
  },
  "ZIP Code": {

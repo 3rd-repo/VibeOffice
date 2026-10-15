@@ -440,17 +440,20 @@
     'symbol': '"Segoe UI Symbol",serif',
   };
   /* East Asian fonts (docs/i18n.md, Fonts): Office's names in English and as Japanese, Korean and Chinese Office
-     write them, each with the fonts a Mac, Windows or Linux computer has in their place. None is vendored (several
-     megabytes each, in every offline install). [English name, stack, other names] */
+     write them, and the common open-source Chinese families, each with the fonts a Mac, Windows or Linux computer has
+     in their place. None is vendored (several megabytes each, in every offline install). [English name, stack, other names] */
   const CJK_STACKS = {
     jpSerif: '"Yu Mincho","YuMincho","Hiragino Mincho ProN","Hiragino Mincho Pro","Noto Serif CJK JP","Noto Serif JP","IPAexMincho","IPAMincho",serif',
     jpSans: '"Yu Gothic","YuGothic","Hiragino Sans","Hiragino Kaku Gothic ProN","Meiryo","Noto Sans CJK JP","Noto Sans JP","IPAexGothic","IPAGothic",sans-serif',
     krSerif: '"Batang","AppleMyungjo","Noto Serif CJK KR","Noto Serif KR","UnBatang",serif',
     krSans: '"Malgun Gothic","Apple SD Gothic Neo","Noto Sans CJK KR","Noto Sans KR","UnDotum",sans-serif',
-    scSerif: '"SimSun","Songti SC","STSong","Noto Serif CJK SC","Noto Serif SC","AR PL UMing CN",serif',
-    scSans: '"Microsoft YaHei","DengXian","PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Noto Sans SC","WenQuanYi Micro Hei",sans-serif',
+    scSerif: '"SimSun","Songti SC","STSong","Noto Serif CJK SC","Noto Serif SC","Source Han Serif SC","AR PL UMing CN",serif',
+    scSans: '"Microsoft YaHei","DengXian","PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Noto Sans SC","Source Han Sans SC","WenQuanYi Micro Hei",sans-serif',
     tcSerif: '"PMingLiU","Songti TC","LiSong Pro","Noto Serif CJK TC","Noto Serif TC","AR PL UMing TW",serif',
     tcSans: '"Microsoft JhengHei","PingFang TC","Noto Sans CJK TC","Noto Sans TC",sans-serif',
+    /* Source Han and Noto CJK are the same designs: each stands in for the other first */
+    scOpenSerif: '"Source Han Serif SC","Noto Serif CJK SC","Noto Serif SC","SimSun","Songti SC","STSong","AR PL UMing CN",serif',
+    scOpenSans: '"Source Han Sans SC","Noto Sans CJK SC","Noto Sans SC","Microsoft YaHei","DengXian","PingFang SC","Hiragino Sans GB","WenQuanYi Micro Hei",sans-serif',
   };
   const CJK = [['MS Mincho', 'jpSerif', 'ＭＳ 明朝'], ['MS PMincho', 'jpSerif', 'ＭＳ Ｐ明朝'], ['MS Gothic', 'jpSans', 'ＭＳ ゴシック'], ['MS PGothic', 'jpSans', 'ＭＳ Ｐゴシック'],
     ['MS UI Gothic', 'jpSans'], ['Yu Mincho', 'jpSerif', '游明朝'], ['Yu Gothic', 'jpSans', '游ゴシック'], ['Yu Gothic UI', 'jpSans'], ['Yu Gothic Light', 'jpSans', '游ゴシック Light'],
@@ -459,6 +462,9 @@
     ['Dotum', 'krSans', '돋움'], ['DotumChe', 'krSans', '돋움체'], ['Gungsuh', 'krSerif', '궁서'], ['GungsuhChe', 'krSerif', '궁서체'],
     ['SimSun', 'scSerif', '宋体'], ['NSimSun', 'scSerif', '新宋体'], ['SimHei', 'scSans', '黑体'], ['DengXian', 'scSans', '等线'], ['DengXian Light', 'scSans', '等线 Light'],
     ['Microsoft YaHei', 'scSans', '微软雅黑'], ['KaiTi', 'scSerif', '楷体'], ['FangSong', 'scSerif', '仿宋'],
+    ['WenQuanYi Micro Hei', 'scSans', '文泉驿微米黑', '文泉驛微米黑'],
+    ['Source Han Sans SC', 'scOpenSans', '思源黑体'], ['Source Han Serif SC', 'scOpenSerif', '思源宋体'],
+    ['Noto Sans CJK SC', 'scOpenSans'], ['Noto Sans SC', 'scOpenSans'], ['Noto Serif CJK SC', 'scOpenSerif'], ['Noto Serif SC', 'scOpenSerif'],
     ['PMingLiU', 'tcSerif', '新細明體'], ['MingLiU', 'tcSerif', '細明體'], ['Microsoft JhengHei', 'tcSans', '微軟正黑體'], ['DFKai-SB', 'tcSerif', '標楷體']];
   const CJK_BY = new Map(), ALIAS = new Map();
   for (const [en, stack, ...names] of CJK) { CJK_BY.set(en.toLowerCase(), { en, stack }); for (const n of names) ALIAS.set(n.toLowerCase(), en.toLowerCase()); }
@@ -531,12 +537,14 @@
     return rules.join('\n');
   };
   /* the Font boxes: the fonts English Office users pick most, by Office's names (documents add their own) */
-  /* with a Japanese, Korean or Chinese UI (common/lang.js), that Office's own fonts too, under the names it shows them by */
+  /* with a Japanese, Korean or Chinese UI (common/lang.js), that Office's own fonts too, and common open-source
+     Chinese families under their installed names (sources and English aliases: docs/i18n.md, Fonts) */
   const uiLang = typeof document !== 'undefined' ? (document.documentElement.getAttribute('lang') || 'en') : 'en';
   L.FONT_LIST = ['Aptos', 'Aptos Display', 'Aptos Narrow', 'Arial', 'Arial Black', 'Calibri', 'Calibri Light', 'Cambria', 'Century Gothic', 'Comic Sans MS', 'Consolas',
     'Courier New', 'Garamond', 'Georgia', 'Impact', 'Palatino Linotype', 'Segoe UI', 'Symbol', 'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana', 'Wingdings']
     .concat({ ja: ['游明朝', '游ゴシック', 'ＭＳ 明朝', 'ＭＳ ゴシック', 'ＭＳ Ｐ明朝', 'ＭＳ Ｐゴシック', 'メイリオ'], ko: ['맑은 고딕', '바탕', '바탕체', '굴림', '굴림체', '돋움', '돋움체', '궁서'],
-      'zh-CN': ['宋体', '新宋体', '黑体', '楷体', '仿宋', '等线', '微软雅黑'], 'zh-Hant': ['新細明體', '細明體', '標楷體', '微軟正黑體'] }[uiLang] || []);
+      'zh-CN': ['宋体', '新宋体', '黑体', '楷体', '仿宋', '等线', '微软雅黑', '文泉驿微米黑', '思源黑体', '思源宋体',
+        'Noto Sans CJK SC', 'Noto Sans SC', 'Noto Serif CJK SC', 'Noto Serif SC'], 'zh-Hant': ['新細明體', '細明體', '標楷體', '微軟正黑體'] }[uiLang] || []);
   /** the Font box list in Office's sections: Theme Fonts (the document's heading and body fonts),
    * Recently Used Fonts, All Fonts (L.FONT_LIST plus fonts the document uses), then the computer's
    * fonts once loaded (Chrome and Edge: the first item loads them). Items are strings,

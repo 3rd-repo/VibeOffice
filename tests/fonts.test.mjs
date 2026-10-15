@@ -4,6 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import fs from 'node:fs/promises';
+import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 globalThis.window = globalThis;
@@ -17,6 +19,44 @@ test('localized names are the English fonts', () => {
   assert.equal(L.fontKey('宋体'), 'simsun');
   assert.equal(L.fontKey('Times New Roman'), 'times new roman');
   assert.ok(L.fontIsEA('游ゴシック') && L.fontIsEA('Batang') && !L.fontIsEA('Century'));
+});
+
+test('Simplified Chinese open-source font references retain their families and East Asian fallbacks', async () => {
+  const source = process.env.BASE ? await (await fetch(process.env.BASE + '/common/core.js')).text()
+    : await fs.readFile(new URL('../public/common/core.js', import.meta.url), 'utf8');
+  const refs = [
+    ['文泉驿微米黑', 'WenQuanYi Micro Hei', 'sans-serif'],
+    ['思源黑体', 'Source Han Sans SC', 'sans-serif'],
+    ['思源宋体', 'Source Han Serif SC', 'serif'],
+    ['Noto Sans CJK SC', 'Noto Sans CJK SC', 'sans-serif'], ['Noto Sans SC', 'Noto Sans SC', 'sans-serif'],
+    ['Noto Serif CJK SC', 'Noto Serif CJK SC', 'serif'], ['Noto Serif SC', 'Noto Serif SC', 'serif'],
+  ];
+  for (const lang of ['zh-CN', 'en', 'zh-Hant']) {
+    const c = { document: { documentElement: { getAttribute: () => lang } } }; c.window = c;
+    vm.runInNewContext(source, c);
+    for (const [name, family, generic] of refs) {
+      assert.equal(c.L.FONT_LIST.includes(name), lang === 'zh-CN', name + ': ' + lang);
+      assert.equal(c.L.fontKey(name), family.toLowerCase());
+      assert.ok(c.L.fontIsEA(name) && c.L.fontIsEA(family), name);
+      const stack = c.L.fontStack('Times New Roman', name);
+      assert.ok(stack.includes('"' + name + '"') && stack.includes('"' + family + '"'), stack);
+      assert.ok(stack.endsWith(',' + generic), stack);
+      const serif = generic === 'serif', counterpart = serif ? '"Noto Serif CJK SC"' : '"Noto Sans CJK SC"';
+      if (!family.startsWith('WenQuanYi')) assert.ok(stack.indexOf(counterpart) < stack.indexOf(serif ? '"SimSun"' : '"Microsoft YaHei"'), stack);      assert.ok(c.L.fontStack(name).startsWith('"' + name + '",'), 'the chosen family is tried first');
+    }
+    // Resolve an unavailable family with a controlled set of installed fonts, independently of this machine.
+    c.L.fontInstalled = (f) => ['Noto Sans CJK SC', 'Noto Serif CJK SC', 'Microsoft YaHei', 'SimSun'].includes(f);
+    assert.equal(c.L.fontUsed('思源黑体'), 'Noto Sans CJK SC');
+    assert.equal(c.L.fontUsed('思源宋体'), 'Noto Serif CJK SC');
+    assert.equal(c.L.fontUsed('文泉驿微米黑'), 'Microsoft YaHei');
+    c.L.fontInstalled = (f) => ['WenQuanYi Micro Hei', 'Source Han Sans SC', 'Source Han Serif SC'].includes(f);
+    assert.equal(c.L.fontUsed('文泉驿微米黑'), 'WenQuanYi Micro Hei');
+    assert.equal(c.L.fontUsed('思源宋体'), 'Source Han Serif SC');
+    assert.equal(c.L.fontUsed('宋体'), 'Source Han Serif SC');
+    c.L.fontInstalled = () => false;
+    assert.equal(c.L.fontUsed('思源黑体'), 'sans-serif');
+    assert.equal(c.L.fontUsed('思源宋体'), 'serif');
+  }
 });
 
 test('a run\'s letters come from its Latin font, its East Asian characters from its East Asian font', () => {
