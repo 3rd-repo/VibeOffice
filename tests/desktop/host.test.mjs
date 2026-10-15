@@ -133,6 +133,11 @@ test('the published updater/current.json: a build from 10-08 gets the button, 10
   }
 });
 
+test('desktop: the Mac App Store edition never checks, even when current.json asks for a dialog', () => {
+  const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'nolaunch&appstore&update=dialog');
+  assert.deepEqual(r, { button: false, dialog: false, opened: '' });
+});
+
 test('web: no update check', () => {
   const { r } = shot('', [{ js: update }]);
   assert.deepEqual(r, { button: false, dialog: false, opened: '' });

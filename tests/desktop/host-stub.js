@@ -21,7 +21,9 @@
   const updates = ask && json({ 'show-update-button': ask ? newer : same, 'show-update-dialog': ask === 'dialog' ? newer : same });
   // ?version=v…: the build's version (default v2026.10.11-abc123)
   const appVersion = (/version=(v[0-9.]+-[0-9a-f]{6})/.exec(location.search) || [])[1] || 'v2026.10.11-abc123';
-  window.__VO_HOST__ = Object.freeze({ platform: 'windows', version: 1, appVersion,
+  // ?appstore: the Mac App Store edition, which the store updates (host.rs, init_script)
+  const appStore = /appstore/.test(location.search);
+  window.__VO_HOST__ = Object.freeze({ platform: appStore ? 'macos' : 'windows', version: 1, appVersion, edition: appStore ? 'appstore' : 'direct',
     updates: updates || '/updater/current.json', whatsnew: ask ? json(news) : '/updater/whatsnew.json' });
   window.__TAURI_INTERNALS__ = {
     async invoke(cmd, args) {

@@ -53,8 +53,16 @@
   /** the access key of a label as shown */
   const accessKey = (s) => keyOf(t(s));
   /** a shortcut as shown: its key names in the UI's language (Ctrl+Shift+F12 is Strg+Umschalt+F12 in German), each
-      in the context "key" (a key's Home, not a Home button's) */
-  const keyText = (k) => (k ? String(k).split('+').map((p) => ({ Ctrl: t('Ctrl|key'), Shift: t('Shift|key'), Alt: t('Alt|key'), Del: t('Del|key'), Ins: t('Ins|key'), Esc: t('Esc|key'), Home: t('Home|key'), End: t('End|key'), Enter: t('Enter|key'), Tab: t('Tab|key'), Space: t('Space|key'), Backspace: t('Backspace|key'), 'Page Up': t('Page Up|key'), 'Page Down': t('Page Down|key'), PgUp: t('PgUp|key'), PgDn: t('PgDn|key') })[p] || p).join('+') : '');
+      in the context "key" (a key's Home, not a Home button's). On a Mac, where ⌘ does what Ctrl does, the modifiers
+      are Apple's symbols in Apple's order, without "+": Ctrl+Shift+S is ⇧⌘S */
+  const MAC_MODS = [['Alt', '⌥'], ['Shift', '⇧'], ['Ctrl', '⌘']];
+  const keyName = (p) => ({ Ctrl: t('Ctrl|key'), Shift: t('Shift|key'), Alt: t('Alt|key'), Del: t('Del|key'), Ins: t('Ins|key'), Esc: t('Esc|key'), Home: t('Home|key'), End: t('End|key'), Enter: t('Enter|key'), Tab: t('Tab|key'), Space: t('Space|key'), Backspace: t('Backspace|key'), 'Page Up': t('Page Up|key'), 'Page Down': t('Page Down|key'), PgUp: t('PgUp|key'), PgDn: t('PgDn|key') })[p] || p;
+  const keyText = (k) => {
+    if (!k) return '';
+    const parts = String(k).split('+');
+    if (!L.isMac) return parts.map(keyName).join('+');
+    return MAC_MODS.filter(([m]) => parts.includes(m)).map(([, s]) => s).join('') + parts.filter((p) => !MAC_MODS.some(([m]) => m === p)).map(keyName).join('+');
+  };
   ui.stripAmp = stripAmp;
   ui.plainAmp = plainAmp;
   ui.ampHTML = ampHTML;

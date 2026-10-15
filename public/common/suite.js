@@ -72,6 +72,8 @@
     kind: native ? 'desktop' : 'web',
     platform: native ? native.platform : 'web',
     version: native ? native.version : 0,
+    /** whether this edition looks for its updates (updater/current.json): not the Mac App Store's, which the store updates */
+    updates: !native || native.edition !== 'appstore',
     /** open a web or mail address in the system's browser: a new tab on the web, the default browser in the
      *  desktop app (which also sends every link that leaves the app there) */
     async openUrl(url) {

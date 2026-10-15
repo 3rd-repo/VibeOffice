@@ -1,37 +1,41 @@
-# VibeOffice desktop app (Tauri): Windows first, Linux too
+# VibeOffice desktop app (Tauri): Windows and macOS, Linux too
 
-`desktop/` wraps the suite in `public/` in a native window with [Tauri 2](https://tauri.app). The pages are the same files as the web version, embedded in the binary (brotli) and served from `http://tauri.localhost/` (Windows) or `tauri://localhost/` (Linux). They draw in the system's web view: WebView2 (Edge) on Windows, which every supported Windows 10 and 11 already has; WebKitGTK 4.1 on Linux. The pages reach the system only through `VO.host` (Host interface below).
+`desktop/` wraps the suite in `public/` in a native window with [Tauri 2](https://tauri.app). The pages are the same files as the web version, embedded in the binary (brotli) and served from `http://tauri.localhost/` (Windows) or `tauri://localhost/` (macOS, Linux). They draw in the system's web view: WebView2 (Edge) on Windows, which every supported Windows 10 and 11 already has; WKWebView (WebKit, Safari's engine) on macOS; WebKitGTK 4.1 on Linux. The pages reach the system only through `VO.host` (Host interface below).
 
 | File | What |
 |---|---|
-| `desktop/Cargo.toml` | the crate; size-tuned release profile (`opt-level = "z"`, LTO, one codegen unit, `panic = "abort"`, stripped); Tauri without `dynamic-acl` |
+| `desktop/Cargo.toml` | the crate (on macOS also `objc2-foundation` and `objc2-app-kit`, which Tauri builds anyway, with only the classes used); size-tuned release profile (`opt-level = "z"`, LTO, one codegen unit, `panic = "abort"`, stripped); Tauri without `dynamic-acl` |
 | `desktop/.cargo/config.toml` | builds for `x86_64-pc-windows-gnu` with mingw-w64 by default |
 | `desktop/tauri.conf.json` | app name and identifier, `frontendDist: ../public`, `devUrl` (tools/serve.py), `removeUnusedCommands`; Tauri's bundler is off (the installer is `setup/`) |
-| `desktop/src/main.rs` | one instance on Windows (`second_start`); the main window: system title bar follows `document.title`, file drops go to the page, links out of the app go to the default browser, the UI size on each page load, `__VO_HOST__` before each page |
+| `desktop/src/main.rs` | one instance on Windows (`second_start`); files handed over later (`files_arrived`: another start on Windows, Finder on macOS); the main window: system title bar follows `document.title`, file drops go to the page, links out of the app go to the default browser, the UI size on each page load, `__VO_HOST__` before each page; on macOS the menu bar (`mac_menu`), Finder's files (`RunEvent::Opened`), the Dock (`Reopen`) and staying open with no window (macOS, below) |
 | `desktop/src/host.rs` | the native side of `VO.host`: the `host_*` commands, file handles, `settings.json` |
 | `desktop/src/installation.rs` | what the installer writes and `-uninstall` removes, in one list: files, shortcuts, HKCU registrations (shared with `setup/`) |
 | `desktop/src/installed.rs` | Windows: `vibeoffice.exe -uninstall`, and the first start after installing (taskbar pin request, Default apps) |
 | `desktop/app.manifest` | common controls v6 and `asInvoker` (never asks for administrator rights) |
+| `desktop/macos/` | `Info.plist` (the bundle's, filled in by `build.sh`), `direct.entitlements` and `appstore.entitlements`, `build.sh` (the macOS release, on a Mac: macOS, below) |
+| `desktop/release-notes.md` | the GitHub release's notes, both downloads (either workflow may create the release) |
 | `desktop/setup/` | the installer, `VibeOfficeSetup.exe`: carries the app; its dialog, manifest and version in `setup.rc` |
 | `desktop/capabilities/default.json` | `core:default` for the main window |
-| `desktop/icons/` | `icon.ico` (16–256 px; the exe and the installer), `quire.ico`, `ledger.ico`, `lectern.ico` (document icons, resources 40101–40103 in the exe, numbered after the app icon's 32512 so that stays the exe's first, generated from each app's SVG by `tools/desktop-icons.py`), and `icon.png` (128 px, Linux window icon; Tauri embeds it as raw RGBA, so keep it small) |
+| `desktop/icons/` | `icon.icns` (macOS: the app icon on Apple's grid, 16–1024 px, from `public/icons/icon.svg` by `tools/desktop-icons.py`), `icon.ico` (16–256 px; the exe and the installer), `quire.ico`, `ledger.ico`, `lectern.ico` (document icons, resources 40101–40103 in the exe, numbered after the app icon's 32512 so that stays the exe's first, generated from each app's SVG by `tools/desktop-icons.py`), and `icon.png` (128 px, Linux window icon; Tauri embeds it as raw RGBA, so keep it small) |
 | `desktop/licenses/` | license texts of what ships with the app but is not a crate (`WebView2Loader.txt`, from the WebView2 SDK package), and in `crates/` those of the crates whose package has none (taken from their repositories), for `public/oss-licenses.html` |
 | `desktop/patches/option-ext/` | our own stand-in for the `option-ext` crate (MPL-2.0), which `dirs-sys` uses through Tauri: the one method it needs, Apache-2.0, put in its place by `[patch.crates-io]` in `Cargo.toml` (AGENTS.md, Code from other projects) |
 | `desktop/build.sh` | release build: the exe, the installer and the zip in `desktop/target/dist/` |
 | `.github/workflows/windows.yml` | CI, run by hand: `build.sh` on Ubuntu; the zip as the run's artifact and a GitHub release |
+| `.github/workflows/macos.yml` | CI, run by hand: `macos/build.sh` on a macOS runner, a smoke run with screenshots; the DMG in the version's GitHub release; the App Store package to App Store Connect when asked (macOS, below) |
 | `tests/desktop/` | `host.test.mjs` and `host-stub.js` (Host interface, below); `setup-wine.py`, the installer end to end in Wine (The installer, below) |
 
 ## Host interface
 
-One interface between the pages and what runs them, so a page never asks which: `VO.host` in `public/common/suite.js`. In a browser (tab or installed PWA) it is built on the browser's APIs; in the desktop app on the commands in `desktop/src/host.rs`, called over Tauri's IPC (`window.__TAURI_INTERNALS__.invoke`). The desktop app announces itself before each page's scripts with `window.__VO_HOST__ = { platform, version, appVersion }`; the same script makes Paper the desktop app's look until the user picks one (`vibeoffice.look`).
+One interface between the pages and what runs them, so a page never asks which: `VO.host` in `public/common/suite.js`. In a browser (tab or installed PWA) it is built on the browser's APIs; in the desktop app on the commands in `desktop/src/host.rs`, called over Tauri's IPC (`window.__TAURI_INTERNALS__.invoke`). The desktop app announces itself before each page's scripts with `window.__VO_HOST__ = { platform, version, appVersion, edition }` (`edition`: `'appstore'` for the Mac App Store's, else `'direct'`); the same script makes Paper the desktop app's look until the user picks one (`vibeoffice.look`).
 
 | `VO.host` | Web | Desktop |
 |---|---|---|
 | `kind` | `'web'` | `'desktop'` |
-| `platform` | `'web'` | `'windows'`, `'linux'` (Rust's `std::env::consts::OS`) |
+| `platform` | `'web'` | `'windows'`, `'macos'`, `'linux'` (Rust's `std::env::consts::OS`) |
+| `updates` | `true` (the page never checks) | `true`; `false` in the Mac App Store edition, which the store updates (the Start Center never checks) |
 | `version` | `0` | `host::VERSION`, raised when a command changes shape |
-| `onFiles(fn)` | `launchQueue` (the PWA's file handlers) | `host_launch_files`, then `host_read` for each; again on `vo-files`, when another start of the app hands over its files (Windows) |
-| `openUrl(url)` | a new tab | `host_open_url`: http, https and mailto only, to the system (`ShellExecuteW`, `xdg-open`) |
+| `onFiles(fn)` | `launchQueue` (the PWA's file handlers) | `host_launch_files`, then `host_read` for each; again on `vo-files`, when another start of the app hands over its files (Windows) or Finder does (macOS) |
+| `openUrl(url)` | a new tab | `host_open_url`: http, https and mailto only, to the system (`ShellExecuteW`, `NSWorkspace openURL:`, `xdg-open`) |
 | `newWindow(url)` | `window.open` (false if blocked) | `host_new_window`: one of the app's own pages (same scheme, host and port) in a full window (`doc-N`) with the host script and handlers |
 | `closeWindow()` | `false` | `host_close_window`: closes an app window (true); the Start Center's (`main`) stays (false) |
 | `uiScale()`, `setUiScale(n)` | `null` (the browser's own zoom does it) | `host_ui_scale`, `host_set_ui_scale`: the web view's zoom, 0.5–4, every window, kept in `settings.json` |
@@ -65,14 +69,14 @@ folder, decided natively (`on_download` in `main.rs`, `host::download_destinatio
 web pages), always straight in Downloads under the bare file name, never over an existing file (`Budget (1).csv`).
 When it is written, the native side tells that window the name the file got (`vo-download`; never a path), and the
 app shows *Saved to Downloads folder: <name>* with **Browse** (`ui.toast` with an action). Browse is
-`host_show_downloads()`: no arguments; it opens the Downloads folder and, on Windows, selects the file this window
-last saved (`explorer /select`), the one the native side wrote.
+`host_show_downloads()`: no arguments; it opens the Downloads folder and, on Windows and macOS, selects the file
+this window last saved (`explorer /select`; Finder, `activateFileViewerSelectingURLs:`), the one the native side wrote.
 
 ## Versions and updates
 
 A version is `v<yyyy>.<mm>.<dd>-<6 hex>`, the date (UTC) and commit of the tree it was built from, e.g. `v2026.10.11-d2134d`: `tools/current-tree-version.sh [commit]` prints it. `build.sh` stamps it into the app and the installer (`VO_VERSION`, shown as `VO.VERSION` on the Start Center and in About); the release is tagged with it, and the zip keeps one name. Windows wants numbers: the exes' file version is `2026.10.11`. A plain `cargo build` says `dev`.
 
-`public/updater/current.json`, edited by hand (nothing updates it): per policy, per platform (`web`, `macos`, `windows`, `linux`), the version an edition must be at least.
+`public/updater/current.json`, edited by hand (nothing updates it): per policy, per platform (`web`, `macos`, `windows`, `linux`), the version an edition must be at least. The Mac App Store edition never reads it (`VO.host.updates`): the store updates it.
 
     { "show-update-button": { "windows": "v2026.10.11-000000", … },
       "show-update-dialog": { "windows": "v2026.10.11-000000", … } }
@@ -84,6 +88,8 @@ A version is `v<yyyy>.<mm>.<dd>-<6 hex>`, the date (UTC) and commit of the tree 
 When the Start Center opens, the desktop app reads `https://vibeoffice.work/updater/current.json` (the site sends `Access-Control-Allow-Origin: *`; nothing about the user or their files is sent). Older than `show-update-dialog`: the Update dialog, at most once a day (`vibeoffice.updateAsked`), listing the `whatsnew.json` entries newer than this version, newest first (by date; the dialog shows without them if that file cannot be read); older than `show-update-button`: the Update VibeOffice button in the Start Center. `whatsnew.json` is read only when an update is due. Update opens `https://vibeoffice.work/updater/?from_version=<version>&current_platform=<platform>` in the default browser. Offline, or a file that is not this JSON: nothing is shown. A `dev` build is newer than any dated version and never asks. To try both against the published file without asking anyone else: keep `show-update-dialog` older than `show-update-button` (`v2026.10.05` and `v2026.10.11`) and build exes stamped in between and before (`VO_VERSION=v2026.10.08-000000` → the button only; `v2026.10.01-000000` → the dialog), e.g. `VO_VERSION=… TAURI_CONFIG='{"version":"2026.10.8"}' cargo build --release`; the dialog shows once a day per profile (`vibeoffice.updateAsked`). `tests/desktop/host.test.mjs` checks the repo's `current.json` the same way.
 
 ## Building
+
+Windows (below); macOS: `desktop/macos/build.sh`, on a Mac (macOS, below).
 
 Needs Rust with the `x86_64-pc-windows-gnu` target, mingw-w64 (`x86_64-w64-mingw32-gcc`, `windres`) and `zip`; builds on Linux, no Windows SDK.
 
@@ -116,9 +122,84 @@ The installer runs from Downloads, so it loads nothing from its own folder: it i
 
 `python3 tests/desktop/setup-wine.py desktop/target/dist/VibeOfficeSetup.exe` runs it end to end in Wine (needs wine, Xvfb, xdotool, ImageMagick), in its own prefix in `./tmp/setup-wine` with screenshots of both dialogs: install from a folder holding only the installer (files, shortcuts, registry, no extension default), again with that version (no dialog), uninstall (all gone, another program's `OpenWithProgids` entry kept). Regenerate the document icons after changing an app's SVG with `python3 tools/desktop-icons.py` (`rsvg-convert` from librsvg2-bin, and ImageMagick).
 
+## macOS: the DMG and the Mac App Store
+
+One universal binary (Apple silicon and Intel, macOS 13 or later), bundled twice, the two editions told apart by
+`VODistribution` in the bundle's `Info.plist`, which the signature seals (`host::app_store`):
+
+- **direct**: `VibeOffice-macOS.dmg` in the GitHub release, signed with Developer ID, notarized and stapled. It checks
+  for updates as Windows does (`updater/current.json`, `macos`).
+- **appstore**: `VibeOffice-macOS-AppStore.pkg` for App Store Connect (TestFlight, then review), signed for the store
+  with its provisioning profile. `edition: 'appstore'`: the Start Center never checks for updates, the store updates it
+  (App Review guideline 2.4.5), so it has no network entitlement either.
+
+Both run in the App Sandbox, so trying the DMG tries the store's edition too (`desktop/macos/*.entitlements`): the
+files the user picks in an Open dialog or opens from Finder, the Downloads folder (where saves go for now: Saving,
+above), printing, and in the DMG the network for the update check. Links go to the browser and Browse to Finder through
+NSWorkspace, which the sandbox allows; no program is started.
+
+The Mac's ways (`main.rs`):
+
+- Files from Finder (a double-click, Open With, a drop on the Dock icon) arrive as `RunEvent::Opened`, at start or
+  while the app runs, and open as launch files do; the sandbox lets the app read them. `Info.plist` lists .docx, .xlsx
+  and .pptx (Quire Document, Ledger Worksheet, Lectern Presentation), as the Windows installer does: in Open With, never
+  taking the default (`LSHandlerRank` Alternate); the system draws their icons from the app's.
+- The app stays open, with its menu bar, after its last window closes; a click on the Dock icon brings the Start
+  Center back; Quit (⌘Q) ends it.
+- The menu bar (`mac_menu`): the app menu (About, Services, Hide, Quit), File ▸ Close Window, Edit with Cut, Copy, Paste
+  and Select All (WKWebView gets ⌘X, ⌘C, ⌘V and ⌘A through them), View ▸ Full Screen, Window, Help. No Undo or Redo
+  there: they would run WebKit's own undo, not the document's; ⌘Z reaches the page, as in Safari.
+- ⌘ does what Ctrl does in every app, and on a Mac shortcuts show as ⌘, ⌥ and ⇧ (`ui.keyText`; Safari too).
+
+**Building**, on a Mac with Xcode's command line tools and Rust's `aarch64-apple-darwin` and `x86_64-apple-darwin`:
+
+    desktop/macos/build.sh        # desktop/target/dist/: VibeOffice.app, and the DMG and package it can sign
+
+It builds both binaries, joins them (`lipo`) and bundles `VibeOffice.app`; then, by the identities in the keychain
+(found by name; `MACOS_DEVELOPER_ID`, `MACOS_APPSTORE_ID`, `MACOS_INSTALLER_ID` choose others):
+
+- none: the app signed ad hoc, to try on that Mac (and the CI smoke run);
+- Developer ID Application: the DMG (the app and an Applications link), notarized with an App Store Connect API key
+  (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH`, the .p8 file) and stapled;
+- Apple Distribution and Mac Installer Distribution, with `MACOS_PROVISION_PROFILE` (the profile's path): the App Store
+  package.
+
+The bundle's version is the date (`2026.10.15`), its build number the commit's UTC time (`2026.1015.641`), which rises
+with every commit, as App Store Connect requires.
+
+From Linux the crate only type-checks for macOS: linking needs Apple's SDK, which its licence allows on Apple hardware
+only, so nothing here links, bundles or runs. After `rustup target add aarch64-apple-darwin x86_64-apple-darwin`
+(clang compiles the one Objective-C file of `objc2` for the check):
+
+    cd desktop && CC_aarch64_apple_darwin=clang CFLAGS_aarch64_apple_darwin=--target=arm64-apple-macos11 \
+      cargo check --release --target aarch64-apple-darwin
+
+**CI**, run by hand: Actions ▸ macOS ▸ Run workflow (`.github/workflows/macos.yml`, on `macos-15`). It builds, then
+opens the app alone and with a .docx, a .csv and a .md (`open -a`, as Finder does) and keeps a screenshot after each
+(artifact `VibeOffice-macOS-smoke`, with the app's log). With the signing secrets it adds the DMG to the version's
+GitHub release (the tag Windows uses, so one release holds both; `desktop/release-notes.md`) and, with *app_store*
+ticked, uploads the package to App Store Connect (`altool`). Without them the app is signed ad hoc and nothing is
+released: artifact `VibeOffice-macOS-unsigned`, which starts after `xattr -dr com.apple.quarantine VibeOffice.app`.
+
+The signing material is in the secrets of the `release` environment (Settings ▸ Environments; limit it to `main`, so
+runs from other branches and from forks never see them):
+
+| Secret | What |
+|---|---|
+| `MACOS_DEVELOPER_ID_P12`, `MACOS_DEVELOPER_ID_PASSWORD` | the Developer ID Application certificate and key, a .p12 in base64 (only the team's Account Holder can create it) |
+| `MACOS_APPSTORE_P12`, `MACOS_APPSTORE_PASSWORD` | the Apple Distribution and Mac Installer Distribution certificates and keys, one .p12 in base64 |
+| `MACOS_PROVISION_PROFILE` | the Mac App Store Connect provisioning profile for `work.vibeoffice.desktop`, in base64 |
+| `APPLE_TEAM_ID` | the team ID (otherwise read from the identity's name) |
+| `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` | an App Store Connect API team key (the .p8 file's text) with the lowest role that works (Developer; App Manager if the upload is refused): notarizing and uploading |
+
+Before the first upload: the app's record in App Store Connect (bundle ID `work.vibeoffice.desktop`) and the answers to
+its export compliance questions (`crypto.js` encrypts and opens password-protected Office files with standard AES and
+SHA), after which `ITSAppUsesNonExemptEncryption` goes into `Info.plist`. Submitting for review waits for real saving
+(todos/DESKTOP_REAL_SAVE.md, Phase 2): until then every save lands in Downloads.
+
 ## Linux
 
-Not supported for now (2026-10-13): no Linux release is made, and Windows is the desktop app. The build below still works for development. The binary links the system's GTK 3 (LGPL-2.1-or-later), WebKitGTK (LGPL and BSD) and libsoup dynamically, which the LGPL allows (AGENTS.md, Code from other projects); the licence check below covers only the Rust crates, not these native libraries, so before a Linux release they are listed too, and what a package bundles is told apart from what it requires of the system.
+Not supported for now (2026-10-13): no Linux release is made; Windows and macOS are the desktop app. The build below still works for development. The binary links the system's GTK 3 (LGPL-2.1-or-later), WebKitGTK (LGPL and BSD) and libsoup dynamically, which the LGPL allows (AGENTS.md, Code from other projects); the licence check below covers only the Rust crates, not these native libraries, so before a Linux release they are listed too, and what a package bundles is told apart from what it requires of the system.
 
 The same crate builds for Linux against WebKitGTK 4.1, GTK 3 and libsoup 3 (`libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libsoup-3.0-dev`):
 
@@ -138,13 +219,14 @@ Run it with a file to open: `target/x86_64-unknown-linux-gnu/release/vibeoffice 
 | `VibeOffice-Windows-x64.zip` | 5.8 MB |
 | `vibeoffice`, Linux release | 7.2 MB |
 
-Licenses: `tools/oss-licenses.py` lists every crate compiled into the app and its installer, on Windows and Linux (Linux's native GTK and WebKitGTK libraries are not crates and are not covered: Linux above; 168 today: the workspace's members and their normal dependencies all the way down, with features as the build resolves them, from `cargo tree`; not what only build scripts or Tauri's procedural macros use, such as `cssparser`, `selectors` and `dtoa-short`, MPL-2.0, which never reach the binary), with the license files from each package, and the DLL installed beside the exe (`WebView2Loader.dll`), in `public/oss-licenses.html`; run it after changing a dependency. It stops if a shipped crate's licence needs copyleft; `--check` (also in `node --test tests/licenses.test.mjs`) checks the page against the crates that ship.
+Licenses: `tools/oss-licenses.py` lists every crate compiled into the app and its installer, on Windows, macOS and Linux (Linux's native GTK and WebKitGTK libraries are not crates and are not covered: Linux above; 168 today: the workspace's members and their normal dependencies all the way down, with features as the build resolves them, from `cargo tree`; not what only build scripts or Tauri's procedural macros use, such as `cssparser`, `selectors` and `dtoa-short`, MPL-2.0, which never reach the binary), with the license files from each package, and the DLL installed beside the exe (`WebView2Loader.dll`), in `public/oss-licenses.html`; run it after changing a dependency. It stops if a shipped crate's licence needs copyleft; `--check` (also in `node --test tests/licenses.test.mjs`) checks the page against the crates that ship.
 
 No exe packers (UPX): antivirus flags packed exes. The largest pages are the thesaurus (`common/dict/en.thes`, 2 MB) and the two word lists (650 KB each).
 
 ## Results
 
 - Linux (Debian 13, WebKitGTK 2.52.6, Xfce): Start Center, all three apps; `vibeoffice Budget.csv` opens it in Ledger and `Notes.md` in Quire, the title bar follows the document; Recent Files and the look are kept between runs. With no network at all (`unshare -rn`), a fresh profile: everything loads, in Paper; the GitHub button goes to `xdg-open`; UI size 150 % and 200 % scale the whole UI, sharp, and are back after a restart; the Start Center keeps Settings reachable in its narrow layout. Started with `Budget.csv`, the Start Center stays and Ledger opens in a window of its own; Quire from the Start Center opens a third window, and its File ▸ Exit closes only that one.
+- macOS (2026-10-15): type-checks for `aarch64-apple-darwin` and `x86_64-apple-darwin` on Linux; not yet built or run on a Mac (the first build is the CI's).
 - Not yet run against the published site: the update check (the site has no `updater/current.json` yet).
 - Installer (2026-10-11), Wine 10.0, `tests/desktop/setup-wine.py`: passes. The dialog shows the pinning hint (Wine has no TaskbarManager); install writes the three files, both shortcuts and the HKCU values; the same version again shows no dialog; uninstall (Enter) leaves no folder, shortcut or value of VibeOffice's and keeps another program's. `cargo test` (Windows target, under Wine): 5 passed. Wine cannot show the app itself (no WebView2), the pin prompt or Default apps.
 - Windows: built, not yet run. To check, as a user without administrator rights: install (the dialog at 100 % and 200 %), the pin prompt on an up-to-date Windows 11 and the hint on Windows 10, Default apps opening at VibeOffice's page, a double-clicked .docx afterwards; Open with lists VibeOffice for .docx, .xlsx and .pptx with their document icons; an update while the app runs; Uninstall from Apps & features; all three apps, saving, drops.
@@ -153,6 +235,7 @@ No exe packers (UPX): antivirus flags packed exes. The largest pages are the the
 
 - GNU builds import `WebView2Loader.dll`, installed beside the exe (Microsoft's static loader is MSVC-only).
 - Saving goes to the Downloads folder (Saving, above); writing the real file is planned in todos/DESKTOP_REAL_SAVE.md.
+- macOS: the menu bar is in English whatever the UI's language; the system draws the document icons (the app's icon on a page) rather than Quire's, Ledger's and Lectern's.
 - Linux: opening a file while the app runs starts a second process with its own Start Center, and closing the Start Center's window leaves no way back to it but starting the app again (Windows has one instance, which brings it back).
 - The Start Center's wording is the web's ("Office suite in your browser", "Recent files are kept in this browser only").
 - Code signing (SmartScreen warns about unsigned installers).

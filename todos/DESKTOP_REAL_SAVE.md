@@ -4,6 +4,10 @@ Status: planned 2026-10-11, not started. Read docs/desktop.md (Host interface) f
 0 harden the host as it is (from the audit below), 1 native storage and one document per window (saves still go to
 Downloads), 2 saving to real files, 3 folder access in sandboxed builds. Mark each task when it is done and verified.
 
+The macOS port came first (2026-10-15; docs/desktop.md, macOS): both Mac editions already run in the App Sandbox, so
+Phase 3's Allow Access… applies to them, and on a Mac `~/.vibeoffice` (Phase 1) is inside the app's container. The Mac
+App Store submission waits for Phase 2.
+
 ## Tasks
 
 Phase 0: harden the host as it is

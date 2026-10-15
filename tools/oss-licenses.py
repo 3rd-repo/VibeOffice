@@ -10,7 +10,8 @@ The site: VibeOffice itself (LICENSE), the fonts (public/fonts/LICENSES.txt), th
 other projects (public/common/licenses/; each file says "Derived from <name> …"); their license files are read by the
 page when an entry is opened, or kept in it. The desktop app: every crate compiled into the app and its installer
 (the workspace's members and their normal dependencies, all the way down; not what only build scripts or procedural
-macros use), on Windows (x86_64-pc-windows-gnu) or Linux (x86_64-unknown-linux-gnu), with the license files from the
+macros use), on Windows (x86_64-pc-windows-gnu), Linux (x86_64-unknown-linux-gnu) or macOS (aarch64-apple-darwin; the
+universal binary's x86_64 half has the same crates), with the license files from the
 crate's package (cargo metadata; the sources must be downloaded, as after a build), and the DLLs that ship beside the
 exe (desktop/licenses/; a crate whose package has no license file has the one from its repository in
 desktop/licenses/crates/). A shipped crate whose licence needs copyleft stops it. Identical texts are kept once. Run it
@@ -19,7 +20,7 @@ import hashlib, html, json, os, re, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'public', 'oss-licenses.html')
-TARGETS = {'windows': 'x86_64-pc-windows-gnu', 'linux': 'x86_64-unknown-linux-gnu'}
+TARGETS = {'windows': 'x86_64-pc-windows-gnu', 'macos': 'aarch64-apple-darwin', 'linux': 'x86_64-unknown-linux-gnu'}
 LICENSE_FILE = re.compile(r'^(licen[cs]e|copying|copyright|notice|unlicense)', re.I)
 
 E = html.escape
@@ -92,9 +93,9 @@ def license_texts(package):
         if os.path.isfile(kept):
             names.append(kept)
     out = []
-    for path in names:
+    for path in names:   # named as in the package, or as kept here
         with open(path, encoding='utf-8', errors='replace') as f:
-            out.append((os.path.relpath(path, folder), f.read().strip()))
+            out.append((os.path.relpath(path, ROOT if path.startswith(ROOT + os.sep) else folder), f.read().strip()))
     return out
 
 
@@ -188,14 +189,15 @@ def main():
         print(f'{os.path.relpath(OUT, ROOT)}: lists the {len(wanted)} shipped crates; none needs a copyleft licence')
         return
 
-    names = {'windows': 'Windows', 'linux': 'Linux'}
+    names = {'windows': 'Windows', 'macos': 'macOS', 'linux': 'Linux'}
     desktop = work('WebView2Loader.dll', 'BSD-3-Clause (Microsoft WebView2 SDK)', [('aka.ms/webview2', 'https://aka.ms/webview2')],
                    'Finds the system\'s WebView2 (Edge) runtime; ships beside vibeoffice.exe. Copyright Microsoft Corporation.', files='Windows', texts_=[webview2])
     missing = []
     for c in sorted(crates.values(), key=lambda c: (c['name'].lower(), c['version'])):
         if not c['texts']:
             missing.append(c['name'])
-        where = ' and '.join(names[p] for p in TARGETS if p in c['platforms'])
+        on = [names[p] for p in TARGETS if p in c['platforms']]
+        where = ', '.join(on[:-1]) + ' and ' + on[-1] if len(on) > 1 else on[0]   # Windows, macOS and Linux
         desktop += work(f"{c['name']} {c['version']}", c['license'], [(re.sub(r'^https?://', '', c['url']).rstrip('/'), c['url'])], '',
                         files=where + ('' if c['texts'] else ' · no license file in the package: see its repository'), texts_=c['texts'])
 

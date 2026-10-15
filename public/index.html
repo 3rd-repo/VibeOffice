@@ -475,11 +475,12 @@ VO.i18n.whenReady(function () {
   });
   $('cachingreload').addEventListener('click', () => location.reload());
 
-  /* Updates (desktop app): an Update button, or once a day a dialog, when updater/current.json asks for it */
+  /* Updates (desktop app): an Update button, or once a day a dialog, when updater/current.json asks for it; the Mac
+     App Store edition is updated by the store (VO.host.updates) */
   const download = () => VO.host.openUrl(VO.updateUrl()).catch((e) => status(String(e)));
   $('update').addEventListener('click', download);
   $('updatedlg').addEventListener('close', () => { if ($('updatedlg').returnValue === 'download') download(); });
-  if (VO.host.kind === 'desktop') {
+  if (VO.host.kind === 'desktop' && VO.host.updates) {
     VO.checkUpdate().then(({ ask, news }) => {
       if (!ask) return;
       $('updatenews').replaceChildren(...news.flatMap((n) => [h('b', { translate: 'no' }, n.version), h('p', { translate: 'no' }, n.text)]));
