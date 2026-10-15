@@ -65,7 +65,7 @@ VibeOffice is plain HTML and JavaScript with no build step. Read [AGENTS.md](AGE
 
 ## Legal
 
-**License: Apache License 2.0**, see [LICENSE](LICENSE) (see below).
+**License: Apache License 2.0**, see [LICENSE](LICENSE) (see below about code from other projects).
 
 **Independent.** VibeOffice is not affiliated with, endorsed by or sponsored by Microsoft Corporation, The Document Foundation or any other maker of office software. Microsoft, Word, Excel, PowerPoint and Office are trademarks of Microsoft Corporation, and LibreOffice is a trademark of The Document Foundation. Other names are trademarks of their owners. They appear here only to say which files VibeOffice works with and which programs it was tested against. In the apps, menu, command and template names follow Office's where people know them, so the apps feel familiar.
 

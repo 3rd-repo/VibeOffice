@@ -33,6 +33,7 @@ async function page(lang, dict) {
     document: { documentElement: html, currentScript: { src: 'http://127.0.0.1/common/i18n.js' }, readyState: 'complete', createTreeWalker: () => ({ currentNode: null, nextNode: () => null }) },
     fetch: async (url) => ({ ok: true, json: async () => (String(url).endsWith('/' + (lang === 'qps' ? 'en' : lang) + '.json') ? dict : null) }) };
   context.window.window = context.window;
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'public/common/lang.js'), 'utf8'), context);
   vm.runInNewContext(fs.readFileSync(path.join(root, 'public/common/i18n.js'), 'utf8'), context);
   await context.window.VO.i18n.ready;
   return context.window.VO;

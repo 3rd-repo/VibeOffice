@@ -1,5 +1,5 @@
 /* The UI's language (docs/i18n.md): one choice for the whole suite, localStorage 'vibeoffice.lang' (auto, en, ja,
- * ko, fr, de; qps, the pseudo-locale, for developers), with ?lang= overriding it for one page. Each page's head script
+ * ko, fr, de, zh-CN, zh-Hant; qps, the pseudo-locale, for developers), with ?lang= overriding it for one page. common/lang.js
  * resolves it before the first paint into <html lang> (auto: the first of the browser's languages we have, else
  * English), which this reads. The dictionary, public/common/i18n/<lang>.json, maps the English text to its
  * translation; it is fetched once, and VO.i18n.whenReady(fn) runs fn once it is here (at once for English).
@@ -9,12 +9,9 @@
 (function () {
   'use strict';
   const VO = window.VO || (window.VO = {});
-  /* [id, name]: each language named in itself, as language pickers do */
-  const LANGS = [['auto', 'Auto'], ['en', 'English'], ['ja', '日本語'], ['ko', '한국어'], ['fr', 'Français'], ['de', 'Deutsch']];
-  const UI = ['en', 'ja', 'ko', 'fr', 'de', 'qps'];
   const doc = typeof document !== 'undefined' ? document : null;
   const tag = (doc && doc.documentElement.getAttribute('lang')) || 'en';
-  const lang = tag === 'qps-ploc' ? 'qps' : UI.includes(tag.split('-')[0]) ? tag.split('-')[0] : 'en';
+  const lang = VO.lang.normalize(tag) || 'en';
 
   /* qps: each string of the English catalog (i18n/en.json, tools/i18n.mjs) mechanically changed, as a complete
      translation would change it: it stands out (accented, in brackets) and is about 40% longer, as French and German
@@ -53,9 +50,8 @@
     .catch(() => {})
     .then(() => { loaded = true; });
 
-  const store = (v) => { try { if (v == null) return localStorage.getItem('vibeoffice.lang') || 'auto'; localStorage.setItem('vibeoffice.lang', v); } catch (e) { return 'auto'; } };
   VO.i18n = {
-    /** the language of this page's UI: 'en', 'ja', 'ko', 'fr', 'de' or 'qps' */
+    /** the language of this page's UI (common/lang.js) */
     lang,
     /** the locales argument of toLocaleDateString and the like for dates the UI shows: the UI's language, or with
         English the browser's own (an English UI in Britain writes 14 Oct) */
@@ -96,17 +92,5 @@
     const run = () => VO.i18n.whenReady(() => translateTree(doc.documentElement));
     if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', run); else run();
   }
-  /* the setting, shown in Settings and Tools ▸ Options; a change applies to the pages opened after it */
-  VO.lang = {
-    /** [{ id, name }] */
-    list: () => LANGS.map(([id, name]) => ({ id, name })),
-    /** the stored choice ('auto' or a language) */
-    get: () => store(),
-    set(id) {
-      if (!LANGS.some(([l]) => l === id) || id === store()) return;
-      store(id);
-      if ('BroadcastChannel' in window) new BroadcastChannel('vibeoffice').postMessage('lang');
-    },
-  };
   if (window.L) { window.L.t = t; window.L.N = VO.N; }
 })();

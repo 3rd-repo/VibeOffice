@@ -4279,12 +4279,12 @@
  },
  "1 file": {
   "where": [
-   "index.html:512"
+   "index.html:513"
   ]
  },
  "1 file, with unsaved changes": {
   "where": [
-   "index.html:512"
+   "index.html:513"
   ]
  },
  "1 page": {
@@ -4651,7 +4651,7 @@
  },
  "A newer version of VibeOffice is available. This one is {0}.": {
   "where": [
-   "index.html:433"
+   "index.html:434"
   ]
  },
  "A pasted slicer or timeline will be saved as a plain shape and won't filter anything, because its table or pivot table isn't in this workbook.": {
@@ -4788,12 +4788,12 @@
  },
  "About": {
   "where": [
-   "index.html:200"
+   "index.html:201"
   ]
  },
  "About VibeOffice.work": {
   "where": [
-   "index.html:262"
+   "index.html:263"
   ]
  },
  "About {0}": {
@@ -4803,12 +4803,12 @@
  },
  "About {0} MB, kept by VibeOffice on this computer.": {
   "where": [
-   "index.html:514"
+   "index.html:515"
   ]
  },
  "About {0} MB, kept in this browser.": {
   "where": [
-   "index.html:514"
+   "index.html:515"
   ]
  },
  "Above selected item": {
@@ -5362,7 +5362,7 @@
  },
  "All Fonts": {
   "where": [
-   "common/core.js:554"
+   "common/core.js:555"
   ]
  },
  "All Quire commands. Double-click one to run it.": {
@@ -5763,7 +5763,7 @@
  },
  "Apps": {
   "where": [
-   "index.html:183"
+   "index.html:184"
   ]
  },
  "Aptos Display": {
@@ -5978,7 +5978,7 @@
  "Auto (as the browser)": {
   "where": [
    "common/ui.js:636",
-   "index.html:524"
+   "index.html:525"
   ]
  },
  "Auto Outline": {
@@ -7292,7 +7292,7 @@
  },
  "Caching resources for offline use": {
   "where": [
-   "index.html:471"
+   "index.html:472"
   ]
  },
  "Calc &Now (F9)": {
@@ -8222,7 +8222,7 @@
  },
  "Choose how VibeOffice.work looks. Every open window changes with it.": {
   "where": [
-   "index.html:256"
+   "index.html:257"
   ]
  },
  "Chooses a value or action to perform from a list of values, based on an index number.": {
@@ -8356,8 +8356,8 @@
  },
  "Clear Recent Documents": {
   "where": [
-   "index.html:208",
-   "index.html:248"
+   "index.html:209",
+   "index.html:249"
   ]
  },
  "Clear Tab": {
@@ -8402,7 +8402,7 @@
  },
  "Click here to reload": {
   "where": [
-   "index.html:193"
+   "index.html:194"
   ]
  },
  "Click icon to add picture": {
@@ -9631,8 +9631,8 @@
  },
  "Create File": {
   "where": [
-   "index.html:180",
-   "index.html:414"
+   "index.html:181",
+   "index.html:415"
   ]
  },
  "Create Graphic": {
@@ -11172,22 +11172,22 @@
  },
  "Discard the unsaved changes": {
   "where": [
-   "index.html:356"
+   "index.html:357"
   ]
  },
  "Discard the unsaved changes to {0}": {
   "where": [
-   "index.html:357"
+   "index.html:358"
   ]
  },
  "Discard the unsaved changes to “{0}”?": {
   "where": [
-   "index.html:359"
+   "index.html:360"
   ]
  },
  "Discard the unsaved changes to “{0}”? The saved version stays in the list.": {
   "where": [
-   "index.html:359"
+   "index.html:360"
   ]
  },
  "Display drawing &guides on screen": {
@@ -11461,7 +11461,7 @@
  },
  "Documents": {
   "where": [
-   "index.html:389"
+   "index.html:390"
   ]
  },
  "Dodecagon": {
@@ -11618,12 +11618,12 @@
  },
  "Download": {
   "where": [
-   "index.html:227"
+   "index.html:228"
   ]
  },
  "Download it now? Your documents and Recent Files stay as they are.": {
   "where": [
-   "index.html:226"
+   "index.html:227"
   ]
  },
  "Downward diagonal": {
@@ -11759,7 +11759,7 @@
  },
  "Drop a document here or pick an app on the left side to create one.": {
   "where": [
-   "index.html:215"
+   "index.html:216"
   ]
  },
  "Drop a document to open it, or pictures to insert them": {
@@ -11774,7 +11774,7 @@
  },
  "Drop to open": {
   "where": [
-   "index.html:217"
+   "index.html:218"
   ]
  },
  "Drops rows or columns from the start or end of an array.": {
@@ -12264,7 +12264,7 @@
  },
  "Enter": {
   "where": [
-   "ledger/index.html:20"
+   "ledger/index.html:21"
   ]
  },
  "Enter + and − to move relative to the current location. Example: +4 will move forward four items.": {
@@ -12666,7 +12666,7 @@
  },
  "Everything runs in your browser; documents are opened and saved on your own computer. The Recent Files list keeps a copy of each file in this browser so it can be reopened; Clear Recent Documents removes them.": {
   "where": [
-   "index.html:265"
+   "index.html:266"
   ]
  },
  "Exactly": {
@@ -12964,7 +12964,7 @@
  },
  "Feedback on our GitHub": {
   "where": [
-   "index.html:194"
+   "index.html:195"
   ]
  },
  "Fi&nd": {
@@ -13810,12 +13810,12 @@
  },
  "Fonts on This Computer": {
   "where": [
-   "common/core.js:556"
+   "common/core.js:557"
   ]
  },
  "Fonts on this computer": {
   "where": [
-   "index.html:242"
+   "index.html:243"
   ]
  },
  "Foot&notes": {
@@ -13888,7 +13888,7 @@
  },
  "Forget the list": {
   "where": [
-   "index.html:244"
+   "index.html:245"
   ]
  },
  "Form": {
@@ -14173,7 +14173,7 @@
  },
  "Formula Bar": {
   "where": [
-   "ledger/index.html:21"
+   "ledger/index.html:22"
   ]
  },
  "Formula Is": {
@@ -15824,7 +15824,7 @@
    "ledger/js/dialogs3.js:78",
    "ledger/js/panes.js:132",
    "ledger/js/ribbon.js:58",
-   "ledger/index.html:20"
+   "ledger/index.html:21"
   ]
  },
  "Insert Greeting Line": {
@@ -16208,7 +16208,7 @@
  },
  "Install VibeOffice.work": {
   "where": [
-   "index.html:191"
+   "index.html:192"
   ]
  },
  "Ins|key": {
@@ -16378,7 +16378,7 @@
  },
  "Just updated successfully": {
   "where": [
-   "index.html:193"
+   "index.html:194"
   ]
  },
  "Justified": {
@@ -16414,12 +16414,12 @@
  },
  "Kept by VibeOffice on this computer.": {
   "where": [
-   "index.html:514"
+   "index.html:515"
   ]
  },
  "Kept in this browser.": {
   "where": [
-   "index.html:514"
+   "index.html:515"
   ]
  },
  "Key assignments": {
@@ -16522,7 +16522,7 @@
  },
  "Language of menus, dialogs and new documents:": {
   "where": [
-   "index.html:235"
+   "index.html:236"
   ]
  },
  "Language:": {
@@ -16627,7 +16627,7 @@
  },
  "Later": {
   "where": [
-   "index.html:227"
+   "index.html:228"
   ]
  },
  "Latin Extended-A": {
@@ -16708,7 +16708,7 @@
  },
  "Lectern": {
   "where": [
-   "index.html:186"
+   "index.html:187"
   ]
  },
  "Lectern &Help": {
@@ -16718,8 +16718,8 @@
  },
  "Lectern 2003": {
   "where": [
-   "lectern/index.html:7",
-   "lectern/index.html:302"
+   "lectern/index.html:8",
+   "lectern/index.html:303"
   ]
  },
  "Lectern 2003 Web Edition": {
@@ -16729,7 +16729,7 @@
  },
  "Lectern 2003 presentation editor": {
   "where": [
-   "lectern/index.html:282"
+   "lectern/index.html:283"
   ]
  },
  "Lectern Help": {
@@ -16739,7 +16739,7 @@
  },
  "Ledger": {
   "where": [
-   "index.html:185"
+   "index.html:186"
   ]
  },
  "Ledger &Help": {
@@ -16759,7 +16759,7 @@
  },
  "Ledger 2003 spreadsheet": {
   "where": [
-   "ledger/index.html:13"
+   "ledger/index.html:14"
   ]
  },
  "Ledger Help": {
@@ -17437,13 +17437,13 @@
  },
  "Load all fonts on your computer...": {
   "where": [
-   "common/core.js:546"
+   "common/core.js:547"
   ]
  },
  "Load fonts on this computer": {
   "where": [
-   "index.html:244",
-   "index.html:500"
+   "index.html:245",
+   "index.html:501"
   ]
  },
  "Loading the dictionary...": {
@@ -17696,7 +17696,7 @@
  "Made possible by open source software: {0}.": {
   "where": [
    "common/ui.js:503",
-   "index.html:436"
+   "index.html:437"
   ]
  },
  "Magnification": {
@@ -18529,7 +18529,7 @@
  },
  "Name Box": {
   "where": [
-   "ledger/index.html:19"
+   "ledger/index.html:20"
   ]
  },
  "Name of the person who last saved the document": {
@@ -18549,7 +18549,7 @@
  },
  "Names": {
   "where": [
-   "ledger/index.html:19"
+   "ledger/index.html:20"
   ]
  },
  "Names in &workbook:": {
@@ -18601,7 +18601,7 @@
  },
  "Never saved": {
   "where": [
-   "index.html:369"
+   "index.html:370"
   ]
  },
  "New": {
@@ -18708,17 +18708,17 @@
  },
  "New blank document": {
   "where": [
-   "index.html:390"
+   "index.html:391"
   ]
  },
  "New blank presentation": {
   "where": [
-   "index.html:390"
+   "index.html:391"
   ]
  },
  "New blank spreadsheet": {
   "where": [
-   "index.html:390"
+   "index.html:391"
   ]
  },
  "New chart": {
@@ -18735,7 +18735,7 @@
  },
  "New document from “{0}”": {
   "where": [
-   "index.html:390"
+   "index.html:391"
   ]
  },
  "New line in a cell": {
@@ -18756,7 +18756,7 @@
  },
  "New presentation from “{0}”": {
   "where": [
-   "index.html:390"
+   "index.html:391"
   ]
  },
  "New slide": {
@@ -18766,7 +18766,7 @@
  },
  "New spreadsheet from “{0}”": {
   "where": [
-   "index.html:390"
+   "index.html:391"
   ]
  },
  "New, Open, Save": {
@@ -19485,7 +19485,7 @@
  },
  "Office suite in your browser": {
   "where": [
-   "index.html:176"
+   "index.html:177"
   ]
  },
  "Offset:": {
@@ -19604,7 +19604,7 @@
  },
  "Open File…": {
   "where": [
-   "index.html:178"
+   "index.html:179"
   ]
  },
  "Open a presentation (.pptx)...": {
@@ -19620,13 +19620,13 @@
  "Open source licenses": {
   "where": [
    "common/ui.js:504",
-   "index.html:436"
+   "index.html:437"
   ]
  },
  "Open source under the Apache License 2.0, provided as is, without warranty. VibeOffice.work is an independent project. Product names in its documentation are trademarks of their owners; VibeOffice.work is not affiliated with them.": {
   "where": [
    "common/ui.js:505",
-   "index.html:268"
+   "index.html:269"
   ]
  },
  "Open the unsaved version": {
@@ -19636,7 +19636,7 @@
  },
  "Open the version saved before the changes": {
   "where": [
-   "index.html:370"
+   "index.html:371"
   ]
  },
  "Open the welcome document": {
@@ -21063,8 +21063,8 @@
  },
  "Presentations": {
   "where": [
-   "index.html:186",
-   "index.html:389"
+   "index.html:187",
+   "index.html:390"
   ]
  },
  "Preserve formatting during updates": {
@@ -21528,7 +21528,7 @@
  },
  "Quire": {
   "where": [
-   "index.html:184"
+   "index.html:185"
   ]
  },
  "Quire &Help": {
@@ -21539,8 +21539,8 @@
  "Quire 2003": {
   "where": [
    "quire/js/app.js:1297",
-   "quire/index.html:11",
-   "quire/index.html:356"
+   "quire/index.html:12",
+   "quire/index.html:357"
   ]
  },
  "Quire 2003 Web Edition": {
@@ -21550,7 +21550,7 @@
  },
  "Quire 2003 word processor": {
   "where": [
-   "quire/index.html:332"
+   "quire/index.html:333"
   ]
  },
  "Quire Help": {
@@ -21821,25 +21821,25 @@
  },
  "Recent Files": {
   "where": [
-   "index.html:179",
-   "index.html:206",
-   "index.html:246",
-   "index.html:414"
+   "index.html:180",
+   "index.html:207",
+   "index.html:247",
+   "index.html:415"
   ]
  },
  "Recent Files are not available here.": {
   "where": [
-   "index.html:515"
+   "index.html:516"
   ]
  },
  "Recent Files are not available in this browser ({0}).": {
   "where": [
-   "index.html:346"
+   "index.html:347"
   ]
  },
  "Recently Used Fonts": {
   "where": [
-   "common/core.js:552"
+   "common/core.js:553"
   ]
  },
  "Recently used": {
@@ -22101,12 +22101,12 @@
  },
  "Reload fonts on this computer": {
   "where": [
-   "index.html:500"
+   "index.html:501"
   ]
  },
  "Reload fonts on your computer...": {
   "where": [
-   "common/core.js:546"
+   "common/core.js:547"
   ]
  },
  "Remember dime&nsions for new tables": {
@@ -22172,7 +22172,7 @@
  },
  "Remove all files from the Recent Files list? The files on your computer are not touched.": {
   "where": [
-   "index.html:380"
+   "index.html:381"
   ]
  },
  "Remove character / paragraph formatting": {
@@ -22182,12 +22182,12 @@
  },
  "Remove from list": {
   "where": [
-   "index.html:356"
+   "index.html:357"
   ]
  },
  "Remove from the list: {0}": {
   "where": [
-   "index.html:357"
+   "index.html:358"
   ]
  },
  "Remove personal information from file properties on save": {
@@ -24736,7 +24736,7 @@
  },
  "Saved version": {
   "where": [
-   "index.html:370"
+   "index.html:371"
   ]
  },
  "Saved {0}": {
@@ -25466,7 +25466,7 @@
    "lectern/js/dialogs.js:1043",
    "ledger/js/dialogs2.js:135",
    "ledger/js/dialogs2.js:397",
-   "index.html:198"
+   "index.html:199"
   ]
  },
  "Sh&adow": {
@@ -25599,7 +25599,7 @@
  },
  "Sheets": {
   "where": [
-   "ledger/index.html:31"
+   "ledger/index.html:32"
   ]
  },
  "Sheets in new work&book:": {
@@ -26084,7 +26084,7 @@
  },
  "Size of menus, toolbars, documents and everything else:": {
   "where": [
-   "index.html:238"
+   "index.html:239"
   ]
  },
  "Size:": {
@@ -26863,7 +26863,7 @@
  },
  "Spreadsheet": {
   "where": [
-   "index.html:185"
+   "index.html:186"
   ]
  },
  "Spreadsheet (table)": {
@@ -26878,7 +26878,7 @@
  },
  "Spreadsheets": {
   "where": [
-   "index.html:389"
+   "index.html:390"
   ]
  },
  "Square": {
@@ -26976,7 +26976,7 @@
  },
  "Start": {
   "where": [
-   "index.html:175"
+   "index.html:176"
   ]
  },
  "Start &After Previous": {
@@ -28212,17 +28212,17 @@
  },
  "The Font boxes also list the {0} fonts installed on this computer.": {
   "where": [
-   "index.html:501"
+   "index.html:502"
   ]
  },
  "The Font boxes list the frequently used Office fonts and the document's own.": {
   "where": [
-   "index.html:503"
+   "index.html:504"
   ]
  },
  "The Font boxes list the frequently used Office fonts and the document's own. They can also list the fonts installed on this computer, once you allow it.": {
   "where": [
-   "index.html:502"
+   "index.html:503"
   ]
  },
  "The Normal style cannot be deleted.": {
@@ -28447,18 +28447,18 @@
  },
  "The fonts on this computer could not be listed: permission was not given.": {
   "where": [
-   "index.html:534"
+   "index.html:535"
   ]
  },
  "The fonts on this computer could not be listed: permission was not given. You can allow it in the site settings of your browser.": {
   "where": [
-   "common/core.js:566"
+   "common/core.js:567"
   ]
  },
  "The fonts on this computer could not be listed: {0}": {
   "where": [
-   "common/core.js:566",
-   "index.html:534"
+   "common/core.js:567",
+   "index.html:535"
   ]
  },
  "The formula contains an error.": {
@@ -28494,7 +28494,7 @@
  },
  "The list is empty.": {
   "where": [
-   "index.html:516"
+   "index.html:517"
   ]
  },
  "The list range is not valid.": {
@@ -28698,7 +28698,7 @@
  },
  "The templates could not be loaded.": {
   "where": [
-   "index.html:396"
+   "index.html:397"
   ]
  },
  "The text is not marked as English, so it was not checked. Use Tools ▸ Language ▸ Set Language to mark it.": {
@@ -28774,7 +28774,7 @@
  },
  "Theme Fonts": {
   "where": [
-   "common/core.js:548"
+   "common/core.js:549"
   ]
  },
  "Theme:": {
@@ -28786,8 +28786,8 @@
   "where": [
    "lectern/js/ribbon.js:47",
    "quire/js/ribbon.js:41",
-   "index.html:199",
-   "index.html:254"
+   "index.html:200",
+   "index.html:255"
   ]
  },
  "Then &by": {
@@ -28883,7 +28883,7 @@
  },
  "These settings apply to every app of VibeOffice.work.": {
   "where": [
-   "index.html:233"
+   "index.html:234"
   ]
  },
  "Thick": {
@@ -29490,7 +29490,7 @@
  },
  "Today, {0}": {
   "where": [
-   "index.html:339"
+   "index.html:340"
   ]
  },
  "Toggle between text and object selection": {
@@ -29882,7 +29882,7 @@
  },
  "UI size": {
   "where": [
-   "index.html:237"
+   "index.html:238"
   ]
  },
  "URL...": {
@@ -30101,8 +30101,8 @@
  },
  "Unsaved changes": {
   "where": [
-   "index.html:369",
-   "index.html:372"
+   "index.html:370",
+   "index.html:373"
   ]
  },
  "Unsaved changes from {0}": {
@@ -30199,8 +30199,8 @@
  },
  "Update VibeOffice": {
   "where": [
-   "index.html:190",
-   "index.html:222"
+   "index.html:191",
+   "index.html:223"
   ]
  },
  "Update field / toggle field codes": {
@@ -30215,8 +30215,8 @@
  },
  "Updating cached resources": {
   "where": [
-   "index.html:192",
-   "index.html:471"
+   "index.html:193",
+   "index.html:472"
   ]
  },
  "Uppercase": {
@@ -30352,7 +30352,7 @@
  },
  "Use your browser's zoom: Ctrl and + makes everything larger, Ctrl and − smaller, Ctrl and 0 the usual size (⌘ on a Mac).": {
   "where": [
-   "index.html:240"
+   "index.html:241"
   ]
  },
  "Used in This Presentation": {
@@ -30454,7 +30454,7 @@
  "Version {0}": {
   "where": [
    "common/ui.js:501",
-   "index.html:434"
+   "index.html:435"
   ]
  },
  "Vertical": {
@@ -30541,17 +30541,17 @@
  },
  "VibeOffice.work can't open “{0}”. It opens documents (.docx, .rtf), spreadsheets (.xlsx, .csv) and presentations (.pptx).": {
   "where": [
-   "index.html:322"
+   "index.html:323"
   ]
  },
  "VibeOffice.work keeps Recent Files and unsaved changes in this browser, and Safari's Lockdown Mode turns that off.\n\nTo allow it for this site only: tap aA in the address bar, tap Website Settings, and turn off Lockdown Mode. Safari reloads the page.": {
   "where": [
-   "index.html:284"
+   "index.html:285"
   ]
  },
  "VibeOffice.work: Quire (documents), Ledger (spreadsheets) and Lectern (presentations).": {
   "where": [
-   "index.html:264"
+   "index.html:265"
   ]
  },
  "Vie&w": {
@@ -30744,7 +30744,7 @@
  },
  "Welcome to VibeOffice.work.": {
   "where": [
-   "index.html:214"
+   "index.html:215"
   ]
  },
  "West": {
@@ -31029,7 +31029,7 @@
  },
  "Word processor": {
   "where": [
-   "index.html:184"
+   "index.html:185"
   ]
  },
  "Words": {
@@ -31092,7 +31092,7 @@
  },
  "Worksheet grid": {
   "where": [
-   "ledger/index.html:25"
+   "ledger/index.html:26"
   ]
  },
  "Worksheets": {
@@ -31173,7 +31173,7 @@
  },
  "Yesterday, {0}": {
   "where": [
-   "index.html:340"
+   "index.html:341"
   ]
  },
  "You cannot change part of an array.": {
@@ -31229,7 +31229,7 @@
  },
  "Your files stay on this computer. Recent files are kept in this browser only.": {
   "where": [
-   "index.html:196"
+   "index.html:197"
   ]
  },
  "Your initials from User Information": {
@@ -31826,7 +31826,7 @@
  },
  "{0} KB": {
   "where": [
-   "index.html:372"
+   "index.html:373"
   ]
  },
  "{0} Minutes": {
@@ -31893,12 +31893,12 @@
  },
  "{0} files": {
   "where": [
-   "index.html:512"
+   "index.html:513"
   ]
  },
  "{0} files, {1} with unsaved changes": {
   "where": [
-   "index.html:512"
+   "index.html:513"
   ]
  },
  "{0} found a problem with content in {1} and repaired the presentation.": {

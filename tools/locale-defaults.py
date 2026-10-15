@@ -2,7 +2,7 @@
 
   python3 tools/locale-defaults.py [~/corpora]
 
-Scans the Office-saved files of the corpora (tools/corpora.sh) for the ones a Japanese, Korean, French or German
+Scans the Office-saved files of the corpora (tools/corpora.sh) for the ones a Japanese, Korean, Chinese, French or German
 Office made, and prints the most common value of each default with its count:
 
   Word        page size and margins, document grid, docDefaults fonts, size and languages, the Normal style's
@@ -11,14 +11,19 @@ Office made, and prints the most common value of each default with its count:
   PowerPoint  the slide size, the theme's Latin and East Asian fonts, the text language
 
 Which language made a file: Word, the East Asian language Office set for its theme fonts (themeFontLang eastAsia)
-for Japanese and Korean, the documents' language (docDefaults w:lang) for French and German; Excel, the default
-font's charset (128 Japanese, 129 Korean) or the first sheet's name (Feuil1, Tabelle1); PowerPoint, the text
+for Japanese, Korean and Chinese, the documents' language (docDefaults w:lang) for French and German; Excel, the default
+font's charset (128 Japanese, 129 Korean, 134 Simplified Chinese, 136 Traditional Chinese) or the first sheet's name (Feuil1, Tabelle1); PowerPoint, the text
 language of its default text style.
 """
 import collections, os, re, sys, zipfile
 
 CORPORA = os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else '~/corpora')
-LANGS = ['ja', 'ko', 'fr', 'de']
+LANGS = ['ja', 'ko', 'zh-CN', 'zh-Hant', 'fr', 'de']
+
+
+def chinese(tag):
+    tag = tag.lower()
+    return ('zh-Hant' if re.match(r'^zh-(?:tw|hk|mo|hant)(?:-|$)', tag) else 'zh-CN') if tag == 'zh' or tag.startswith('zh-') else None
 
 
 def read(z, name):
@@ -42,7 +47,7 @@ def theme_fonts(xml):
         body = m.group(1)
         out[part + ' latin'] = attr(body, 'a:latin', 'typeface')
         out[part + ' ea'] = attr(body, 'a:ea', 'typeface')
-        for script in ('Jpan', 'Hang'):
+        for script in ('Jpan', 'Hang', 'Hans', 'Hant'):
             f = re.search(r'<a:font script="' + script + r'" typeface="([^"]*)"', body)
             if f:
                 out[part + ' ' + script] = f.group(1)
@@ -61,13 +66,15 @@ def word(path):
     tfl = attr(sett, 'w:themeFontLang', 'w:eastAsia') or ''
     dd = (re.search(r'<w:docDefaults>.*?</w:docDefaults>', sty, re.S) or [''])[0]
     lang = attr(dd, 'w:lang', 'w:val') or ''
-    which = 'ja' if tfl.startswith('ja') else 'ko' if tfl.startswith('ko') else 'fr' if lang.startswith('fr') else 'de' if lang.startswith('de') else None
+    which = chinese(tfl) or ('ja' if tfl.startswith('ja') else 'ko' if tfl.startswith('ko') else 'fr' if lang.startswith('fr') else 'de' if lang.startswith('de') else None)
     if not which:
         return None
     normal = (re.search(r'<w:style [^>]*w:default="1"[^>]*w:type="paragraph"[^>]*>.*?</w:style>|<w:style [^>]*w:type="paragraph"[^>]*w:default="1"[^>]*>.*?</w:style>', sty, re.S) or [''])[0]
-    # a Japanese or Korean Office's Normal style is justified, without widow control (an English one set to edit
-    # Japanese or Korean is not)
-    if which in ('ja', 'ko') and not ('w:val="both"' in normal and re.search(r'<w:widowControl w:val="(0|false)"', normal)):
+    # Japanese, Korean and Simplified Chinese Normal styles are justified without widow control.
+    # Traditional Chinese has no widow control, but need not be justified. This excludes English defaults.
+    if which in ('ja', 'ko', 'zh-CN') and not ('w:val="both"' in normal and re.search(r'<w:widowControl w:val="(0|false)"', normal)):
+        return None
+    if which == 'zh-Hant' and not re.search(r'<w:widowControl w:val="(0|false)"', normal):
         return None
     sect = (re.findall(r'<w:sectPr\b.*?</w:sectPr>', doc, re.S) or [''])[-1]
     v = {
@@ -98,7 +105,7 @@ def excel(path):
     font = (re.search(r'<fonts\b[^>]*>\s*<font>(.*?)</font>', sty, re.S) or [None, ''])[1]
     charset = attr(font, 'charset', 'val')
     sheet = attr(wb, 'sheet', 'name') or ''
-    which = 'ja' if charset == '128' else 'ko' if charset == '129' else 'fr' if sheet.startswith('Feuil') else 'de' if sheet.startswith('Tabelle') else None
+    which = {'128': 'ja', '129': 'ko', '134': 'zh-CN', '136': 'zh-Hant'}.get(charset) or ('fr' if sheet.startswith('Feuil') else 'de' if sheet.startswith('Tabelle') else None)
     if not which:
         return None
     first = sorted(n for n in z.namelist() if n.startswith('xl/worksheets/sheet'))[:1]
@@ -115,7 +122,7 @@ def powerpoint(path):
         return None
     pres = read(z, 'ppt/presentation.xml')
     lang = attr((re.search(r'<p:defaultTextStyle>.*?</p:defaultTextStyle>', pres, re.S) or [''])[0], 'a:defRPr', 'lang') or ''
-    which = next((l for l in LANGS if lang.startswith(l)), None)
+    which = chinese(lang) or next((l for l in LANGS if lang.startswith(l)), None)
     if not which:
         return None
     v = {'slide size': '%s x %s %s' % (attr(pres, 'p:sldSz', 'cx'), attr(pres, 'p:sldSz', 'cy'), attr(pres, 'p:sldSz', 'type')), 'text lang': lang}

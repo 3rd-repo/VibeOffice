@@ -213,7 +213,9 @@
 :is([data-look="paper"], [data-look="paper2016"]) dialog form button:hover { background: var(--p-accent-ink); }
 :is([data-look="paper"], [data-look="paper2016"]) .combo-in { font-size: 11px; }   /* the boxes' widths are set for 11 px text */
 
-/* the UI's language (<html lang>, common/i18n.js): Japanese and Korean text in the fonts made for those UIs, after each
+/* the UI's language (<html lang>, common/lang.js): Japanese, Korean and Chinese text in the fonts made for those UIs, after each
    look's own fonts, which have no such letters */
 :root:lang(ja) { --ui-cjk: "Meiryo UI", "Yu Gothic UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", sans-serif; }
 :root:lang(ko) { --ui-cjk: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR", "Noto Sans KR", sans-serif; }
+:root:lang(zh-CN) { --ui-cjk: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", sans-serif; }
+:root:lang(zh-Hant) { --ui-cjk: "Microsoft JhengHei UI", "Microsoft JhengHei", "PingFang TC", "Noto Sans CJK TC", "Noto Sans TC", sans-serif; }

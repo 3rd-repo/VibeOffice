@@ -274,7 +274,7 @@
       value: () => (E.sel ? styleState() : ''), onChange: (v) => A.applyStyleByName(v),
     }, o)),
     font: (o) => ui.combo(Object.assign({ id: 'tb-font', width: 136, tip: 'Font', options: () => A.fontOptions(), preview: (v) => `font-family:${L.fontStack(v)};font-size:13px`, note: L.fontNote, listCls: 'fonts', value: () => { const v = E.uniformRun('font'); return v || ''; }, onChange: (v) => A.setFont(v) }, o)),
-    size: (o) => ui.combo(Object.assign({ id: 'tb-size', width: 40, tip: 'Font Size', options: () => L.SIZE_LIST, value: () => { const v = E.uniformRun('sz'); return v ? String(L.round(v, 1)) : ''; }, onChange: (v) => A.setFontSize(parseFloat(v)) }, o)),
+    size: (o) => ui.combo(Object.assign({ id: 'tb-size', width: 48, tip: 'Font Size', options: () => L.SIZE_LIST, value: () => { const v = E.uniformRun('sz'); return v ? String(L.round(v, 1)) : ''; }, onChange: (v) => A.setFontSize(parseFloat(v)) }, o)),
     zoom: (o) => ui.combo(Object.assign({ id: 'tb-zoom', width: 74, tip: 'Zoom', options: () => ['500%', '200%', '150%', '100%', '75%', '50%', '25%', '10%'].concat([L.N('Page Width'), L.N('Text Width'), L.N('Whole Page'), L.N('Two Pages')].map((v) => ({ value: v, label: L.t(v) }))), value: () => Math.round(LY.zoom * 100) + '%', onChange: (v) => A.zoomTo(v) }, o)),
   };
   function buildToolbars() {

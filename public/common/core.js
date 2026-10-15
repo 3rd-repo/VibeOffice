@@ -531,11 +531,12 @@
     return rules.join('\n');
   };
   /* the Font boxes: the fonts English Office users pick most, by Office's names (documents add their own) */
-  /* with a Japanese or Korean UI (common/i18n.js), that Office's own fonts too, under the names it shows them by */
-  const uiLang = typeof document !== 'undefined' ? (document.documentElement.getAttribute('lang') || 'en').split('-')[0] : 'en';
+  /* with a Japanese, Korean or Chinese UI (common/lang.js), that Office's own fonts too, under the names it shows them by */
+  const uiLang = typeof document !== 'undefined' ? (document.documentElement.getAttribute('lang') || 'en') : 'en';
   L.FONT_LIST = ['Aptos', 'Aptos Display', 'Aptos Narrow', 'Arial', 'Arial Black', 'Calibri', 'Calibri Light', 'Cambria', 'Century Gothic', 'Comic Sans MS', 'Consolas',
     'Courier New', 'Garamond', 'Georgia', 'Impact', 'Palatino Linotype', 'Segoe UI', 'Symbol', 'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana', 'Wingdings']
-    .concat({ ja: ['游明朝', '游ゴシック', 'ＭＳ 明朝', 'ＭＳ ゴシック', 'ＭＳ Ｐ明朝', 'ＭＳ Ｐゴシック', 'メイリオ'], ko: ['맑은 고딕', '바탕', '바탕체', '굴림', '굴림체', '돋움', '돋움체', '궁서'] }[uiLang] || []);
+    .concat({ ja: ['游明朝', '游ゴシック', 'ＭＳ 明朝', 'ＭＳ ゴシック', 'ＭＳ Ｐ明朝', 'ＭＳ Ｐゴシック', 'メイリオ'], ko: ['맑은 고딕', '바탕', '바탕체', '굴림', '굴림체', '돋움', '돋움체', '궁서'],
+      'zh-CN': ['宋体', '新宋体', '黑体', '楷体', '仿宋', '等线', '微软雅黑'], 'zh-Hant': ['新細明體', '細明體', '標楷體', '微軟正黑體'] }[uiLang] || []);
   /** the Font box list in Office's sections: Theme Fonts (the document's heading and body fonts),
    * Recently Used Fonts, All Fonts (L.FONT_LIST plus fonts the document uses), then the computer's
    * fonts once loaded (Chrome and Edge: the first item loads them). Items are strings,

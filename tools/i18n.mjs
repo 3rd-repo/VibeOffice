@@ -30,7 +30,7 @@ import { pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const PUB = path.join(root, 'public');
-const LANGS = ['ja', 'ko', 'fr', 'de'];
+const LANGS = ['ja', 'ko', 'fr', 'de', 'zh-CN', 'zh-Hant'];
 const catalogFile = path.join(PUB, 'common/i18n/en.json');
 
 /* files with no UI text of their own: readers, writers, engines (text they put in files or errors they throw are

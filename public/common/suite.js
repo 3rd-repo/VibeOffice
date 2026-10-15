@@ -18,7 +18,7 @@
  */
 (function () {
   'use strict';
-  const VO = (window.VO = {});
+  const VO = (window.VO = window.VO || {});   // keep the language choice made before the first paint
   VO.VERSION = 'dev';   // the published copy says v<yyyy>.<mm>.<dd>-<6 hex> (tools/current-tree-version.sh, stamped by the sync script)
   if (window.__VO_HOST__ && window.__VO_HOST__.appVersion) VO.VERSION = window.__VO_HOST__.appVersion;   // the desktop app's build
   /** a version's date as a number (20261011), or null for a version without one (dev); copies before

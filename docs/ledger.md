@@ -31,7 +31,7 @@ script list in `tools/ledger/build/make.py`, then run `python3 tools/ledger/buil
 Invoice, Timecard, Personal Monthly Budget, Task Tracker, Shopping List, Weekly Schedule), Open, Close, Save, Save As with every format listed under
 *File formats*, Save as Web Page, Page Setup, Print Area, Print Preview, Print (to PDF), Send To,
 Properties. Several workbooks can be open at once (Window menu). A new workbook follows the UI's
-language: A4, and a Japanese or Korean Excel's default font and row height ([i18n.md](i18n.md), Defaults).
+language: A4, and Japanese, Korean or Chinese defaults for font and row height ([i18n.md](i18n.md), Defaults).
 
 **Edit.** Multi-level Undo and Redo, including structural changes (inserting or deleting rows,
 sorting, moving sheets). Cut, Copy, Paste, Paste Special (values, formulas, formats, comments,

@@ -305,9 +305,10 @@
     const table = { arial: { 8: 11.25, 9: 12, 10: 12.75, 11: 14.25, 12: 15, 14: 18, 16: 20.25, 18: 23.25, 20: 25.5, 24: 30 }, calibri: { 8: 11.25, 9: 12, 10: 12.75, 11: 15, 12: 15.75, 14: 18.75, 16: 21, 18: 23.25, 20: 26.25, 24: 31.5 } };
     const t = table[name] || (/calibri|aptos|segoe/.test(name) ? table.calibri : null);
     if (t && t[sz]) return t[sz];
-    /* East Asian fonts, from their size in a Japanese or Korean Excel's blank workbook: ＭＳ Ｐゴシック 11 has rows of 13.5
-       (the corpora's Japanese workbooks), 游ゴシック 11 of 18.75 and 맑은 고딕 11 of 16.5 (Office's; unverified) */
-    const ea = { 'ms pgothic': 13.5, 'ms gothic': 13.5, 'yu gothic': 18.75, 'malgun gothic': 16.5 }[name];
+    /* East Asian fonts, from their size in localized Excel workbooks: ＭＳ Ｐゴシック 11 has rows of 13.5
+       (the corpora's Japanese workbooks), 宋体 11 of 13.5 and 新細明體 11 of 14.25 (Chinese workbooks);
+       游ゴシック 11 of 18.75 and 맑은 고딕 11 of 16.5 (Office's; unverified) */
+    const ea = { 'ms pgothic': 13.5, 'ms gothic': 13.5, 'yu gothic': 18.75, 'malgun gothic': 16.5, simsun: 13.5, pmingliu: 14.25 }[name];
     return Math.round(sz * (ea ? ea / 11 : 1.275) * 4) / 4;
   };
   M.defaultRowPt = (sh) => sh.defRowH ?? (sh.extra.formatKeep?.legacyNamespace ? sh.fileDefRowH : null) ?? M.fontRowPt(sh.wb.defaultFont);
