@@ -1,5 +1,6 @@
 // Drive an app page in the Chromium at CDP 127.0.0.1:9222: run JS steps, take screenshots,
-// and report console errors, exceptions and any request that leaves 127.0.0.1.
+// and report console errors, exceptions and any request that leaves 127.0.0.1. A Content-Security-Policy
+// refusal, a window the page opens or a page of another site in the tab fails the run (exit code 1).
 //
 //   node tools/shot.mjs <page> [steps.json | 'inline json'] [--w 1280 --h 800]
 //                       [--qs query] [--ready 'expr'] [--out dir] [--keep] [--transparent]
@@ -23,6 +24,7 @@ import fs from 'fs';
 import path from 'path';
 import net from 'net';
 import { spawn } from 'child_process';
+import { WATCH_CSP, leaves } from './ooxml/cdp.mjs';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const argv = process.argv.slice(2);
@@ -67,7 +69,11 @@ ws.onmessage = (e) => {
   if (m.method === 'Runtime.exceptionThrown') logs.push(`[exception] ${p.exceptionDetails.exception?.description ?? p.exceptionDetails.text}`);
   if (m.method === 'Runtime.consoleAPICalled' && /error|warn/.test(p.type)) logs.push(`[${p.type}] ${p.args.map((a) => a.value ?? a.description).join(' ')}`);
   if (m.method === 'Log.entryAdded' && /error|warning/.test(p.entry.level)) logs.push(`[${p.entry.level}] ${p.entry.text} ${p.entry.url ?? ''}`);
+  if (m.method === 'Page.windowOpen') logs.push(`[WINDOW] ${p.url}`);
+  if (m.method === 'Page.frameNavigated' && !p.frame.parentId && leaves(p.frame.url, BASE)) logs.push(`[NAVIGATION] ${p.frame.url}`);
 };
+/** what fails the run, as well as an aborted step: a CSP refusal, a window opened, a page of another site */
+const fatal = (l) => /^\[(error|log)\] \[CSP\]|^\[(WINDOW|NAVIGATION)\]/.test(l);
 // every call fails after stepMs instead of waiting forever on a hung page; a closed socket (crashed
 // tab) fails whatever is still pending
 const send = (method, params = {}, ms = stepMs) => new Promise((res, rej) => {
@@ -94,6 +100,7 @@ try {
   await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
   if (transparent) await send('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
 
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: WATCH_CSP });
   for (const f of pre ? pre.split(',') : []) await send('Page.addScriptToEvaluateOnNewDocument', { source: fs.readFileSync(f, 'utf8') });
 
   const t0 = Date.now();
@@ -137,4 +144,6 @@ try {
   ws.close();
   server?.kill();
 }
-if (failed) process.exit(1);
+const refused = logs.filter(fatal);
+if (refused.length && !failed) console.log(`FAILED: ${refused.length} CSP refusal(s), window(s) or navigation(s) above`);
+if (failed || refused.length) process.exit(1);

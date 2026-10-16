@@ -29,21 +29,29 @@ pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Resu
         .initialization_script(host::init_script())
         // The pages take dropped files themselves (Start Center, each app).
         .disable_drag_drop_handler()
-        // Links out of the app (the Start Center's GitHub button, hyperlinks in documents and
-        // slide shows) open in the default browser, not in this window or a bare popup.
-        .on_navigation(|url| {
-            if !host::is_external(url) {
-                return true;
+        // Links out of the app (the Start Center's GitHub button, the licences page's) open in the default
+        // browser if they are ones it may open (host::leave), never in this window or a bare popup. The
+        // suite's own windows come from VO.host.newWindow (host_new_window), with the network rules.
+        .on_navigation({
+            let (app, label) = (app.clone(), label.to_string());
+            move |url| {
+                if !host::is_external(url) {
+                    return true;
+                }
+                host::leave(&app, &label, url);
+                false
             }
-            let _ = host::open_external(url);
-            false
         })
-        .on_new_window(|url, _| {
-            if !host::is_external(&url) {
-                return NewWindowResponse::Allow;
+        .on_new_window({
+            let (app, label) = (app.clone(), label.to_string());
+            move |url, _| {
+                if host::is_external(&url) {
+                    host::leave(&app, &label, &url);
+                } else {
+                    eprintln!("not opened: a bare window for {url}");
+                }
+                NewWindowResponse::Deny
             }
-            let _ = host::open_external(&url);
-            NewWindowResponse::Deny
         })
         // Saving, for now: every save is a download into the Downloads folder (host::download_destination
         // decides what may be written where); the window is then told the name the file got.
@@ -81,6 +89,9 @@ pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Resu
         // The UI size (Settings), as each page starts: WebKitGTK resets the zoom on the first load.
         .on_page_load(|window, payload| {
             if payload.event() == PageLoadEvent::Started {
+                window
+                    .state::<host::Host>()
+                    .page_started(window.label(), payload.url());
                 let scale = window.state::<host::Host>().ui_scale();
                 let _ = window.set_zoom(scale);
             }

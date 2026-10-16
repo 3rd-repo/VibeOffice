@@ -8,7 +8,7 @@ Every response carries `Cache-Control: no-store`, so edited HTML and scripts are
 
 ## Screenshots and console errors: tools/shot.mjs
 
-Drives a page in the Chromium listening on CDP 127.0.0.1:9222 (start one with `chromium --remote-debugging-port=9222 --remote-allow-origins=*`, or `--headless=new` on a machine without a display). It starts `tools/serve.py` if nothing listens on :8760.
+Drives a page in the Chromium listening on CDP 127.0.0.1:9222 (start one with `chromium --remote-debugging-port=9222 --remote-allow-origins=*`, or `--headless=new` on a machine without a display). It starts `tools/serve.py` if nothing listens on :8760. It prints console errors, exceptions and requests that leave 127.0.0.1, and fails (exit code 1) on a refusal of the pages' Content-Security-Policy, a window the page opens or a page of another site in the tab (docs/suite.md, Security); the UI tests' `t.clean()` fails on the same.
 
     node tools/shot.mjs ledger/ '[{"wait":1000,"shot":"ledger.png"}]'
     node tools/shot.mjs quire/ steps.json --w 1440 --h 900 --out /tmp/shots
@@ -186,7 +186,10 @@ Its generated DOCX originals, saves and edits can be compared independently in L
 
 ## Hostile documents: tests/hostile/
 
-Documents written to attack the suite (todos/HARDENING.md, phase 3). `export-html.test.mjs` (about 6 s, in the quick
+Documents written to attack the suite (todos/HARDENING.md, phase 3), and checks that the tests would see an attack.
+`helpers.test.mjs`: `t.clean()` fails on a refusal of the pages' policy, a window the page opens and a page of
+another site in the tab. `tests/csp.test.mjs` (Node, in a second) checks that every page carries the policy and no
+inline script (`node tools/csp.mjs --check`). `export-html.test.mjs` (about 6 s, in the quick
 check when an HTML writer changes) gives each app a document whose font names, colours, notes and link addresses
 are markup, writes Save as Web Page (and Quire's and Ledger's clipboard HTML), and checks the result as a document
 of its own: no element, attribute or script the writer didn't make, the names still there as text, the page's own

@@ -29,7 +29,7 @@ Keep them current: a change to an app's features, formats or source layout updat
 ## Design rules
 
 - **Important: interoperability with Microsoft Office.** A file saved here opens in Word, Excel and PowerPoint without a repair prompt, with everything the user did not change intact and their edits as they made them. The UI uses Office's names (fonts, features, file types), so it matches what Office shows, except for brand-like feature names, which get our own: **IntelliArt** for SmartArt and **LettersArt** for WordArt. The code keeps Office's names everywhere (identifiers, file names, comments, command ids, model types such as `wordart` and `smartart.js`), so it maps directly onto the file format; docs say SmartArt or WordArt when they mean the file format.
-- Static files, vanilla JavaScript, no frameworks and no build step at run time. Ledger's `index.html` is generated: edit `tools/ledger/build/` and run `python3 tools/ledger/build/make.py`, never the output.
+- Static files, vanilla JavaScript, no frameworks and no build step at run time. No inline scripts, `on…=` handlers, `eval` or `new Function`: every page's Content-Security-Policy runs only our own script files (`tools/csp.mjs`; docs/suite.md, Security). Ledger's `index.html` is generated: edit `tools/ledger/build/` and run `python3 tools/ledger/build/make.py`, never the output.
 - Everything runs in the browser; documents never leave the machine. No back end, no accounts.
 - Chromium is the tier-1 browser: our layout engine always aligns to Chromium first (pages, lines and positions measured there against Office); other browsers just need to be functional.
 - Nothing from third-party servers: no CDNs, web fonts or analytics; vendored files go in `public/common/`, fonts in `public/fonts/` (`tools/fonts.py`), word lists in `public/common/dict/` (`tools/dict.py` for British English), each with their licences.
@@ -55,7 +55,7 @@ Keep them current: a change to an app's features, formats or source layout updat
 ## Tools (details in docs/testing.md)
 
 - `tools/serve.py`: no-cache server for `public/` on 127.0.0.1:8760.
-- Chromium with CDP at 127.0.0.1:9222. `tools/shot.mjs <page> [steps]` drives a page over CDP, takes screenshots and reports console errors and any request that leaves 127.0.0.1. **Never close the browser's other tabs** (Chromium quits with its last tab).
+- Chromium with CDP at 127.0.0.1:9222. `tools/shot.mjs <page> [steps]` drives a page over CDP, takes screenshots and reports console errors and any request that leaves 127.0.0.1; a refusal of the pages' policy, a window opened or a page of another site fails it. **Never close the browser's other tabs** (Chromium quits with its last tab).
 - `tools/quick.mjs [REV]`: the quick check after a change (the tests covering the files changed); `tools/ui-full.mjs`: the whole UI suite before a release, recorded for `tools/ui-tested.sh`, which `tools/web-release.sh` and `../cf-vibeoffice/sync-cf-pages.sh` run.
 - `tools/older.mjs [REV] -- <tests>`: runs today's tests against `public/` as it was at REV (default: before the uncommitted or last change), so a fix's regression test can be seen failing there.
 - `tools/oss-licenses.py`: regenerates `public/oss-licenses.html` (Open source licenses, linked from About) from the license files in `public/`, the desktop app's direct crates and its DLL; run it after changing a font, a word list or a desktop dependency.

@@ -23,7 +23,7 @@ def src(s):
     return rel
 tags = '\n'.join(f'<script src="{src(s)}"></script>' for s in SCRIPTS)
 body = tpl.replace('/*CSS*/', css).replace('<!--SCRIPTS-->', tags)
-out = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+out = ('<!doctype html>\n<html lang="en" data-app="ledger" data-app-name="Ledger">\n<head>\n<meta charset="utf-8">\n'
        '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' + body + '\n</html>\n')
 open(os.path.join(APP, 'index.html'), 'w').write(out)
 print('public/ledger/index.html', len(out), 'bytes;', tags.count('<script'), 'scripts')

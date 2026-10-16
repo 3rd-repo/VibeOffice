@@ -58,7 +58,7 @@
         return new TextEncoder().encode(files[args.handle].text).buffer;
       }
       if (cmd === 'host_open_url') {
-        if (!/^(https?|mailto):/.test(args.url)) throw `not a web or mail address: ${args.url}`;
+        if (!/^https:\/\/(vibeoffice\.work\/|github\.com\/tcchen2026\/VibeOffice(\/|$))/.test(args.url)) throw `not one of VibeOffice's addresses: ${args.url}`;
         sessionStorage.opened = args.url;
         return null;
       }

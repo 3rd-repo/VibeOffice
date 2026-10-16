@@ -212,7 +212,7 @@
  },
  "&Apply": {
   "where": [
-   "lectern/js/app.js:705",
+   "lectern/js/app.js:708",
    "lectern/js/dialogs.js:554",
    "lectern/js/dialogs.js:605",
    "quire/js/dialogs.js:873"
@@ -691,7 +691,7 @@
  },
  "&Color:": {
   "where": [
-   "lectern/js/app.js:1466",
+   "lectern/js/app.js:1469",
    "lectern/js/dialogs.js:99",
    "lectern/js/dialogs.js:445",
    "ledger/js/dialogs.js:218"
@@ -922,7 +922,7 @@
  },
  "&Date last updated": {
   "where": [
-   "lectern/js/app.js:1570"
+   "lectern/js/app.js:1573"
   ]
  },
  "&Date line:": {
@@ -1172,7 +1172,7 @@
  },
  "&Edit Text": {
   "where": [
-   "lectern/js/app.js:1728"
+   "lectern/js/app.js:1731"
   ]
  },
  "&Edit Wrap Points": {
@@ -1352,7 +1352,7 @@
  },
  "&Finish": {
   "where": [
-   "lectern/js/app.js:1573",
+   "lectern/js/app.js:1576",
    "ledger/js/csv.js:365",
    "ledger/js/dialogs2.js:258",
    "ledger/js/dialogs2.js:834"
@@ -1422,7 +1422,7 @@
  },
  "&Footer:": {
   "where": [
-   "lectern/js/app.js:1572",
+   "lectern/js/app.js:1575",
    "ledger/js/dialogs3.js:393",
    "ledger/js/dialogs3.js:401",
    "quire/js/dialogs.js:742"
@@ -1651,7 +1651,7 @@
  },
  "&Grouping": {
   "where": [
-   "lectern/js/app.js:1730"
+   "lectern/js/app.js:1733"
   ]
  },
  "&Growth": {
@@ -2543,7 +2543,7 @@
  "&Order": {
   "where": [
    "lectern/js/app.js:157",
-   "lectern/js/app.js:1730",
+   "lectern/js/app.js:1733",
    "quire/js/app.js:400"
   ]
  },
@@ -2685,12 +2685,12 @@
  },
  "&Paste as Lectern objects": {
   "where": [
-   "lectern/js/app.js:1685"
+   "lectern/js/app.js:1688"
   ]
  },
  "&Paste as slides": {
   "where": [
-   "lectern/js/app.js:1685"
+   "lectern/js/app.js:1688"
   ]
  },
  "&Paste...": {
@@ -3454,7 +3454,7 @@
  },
  "&Style:": {
   "where": [
-   "lectern/js/app.js:1466",
+   "lectern/js/app.js:1469",
    "lectern/js/dialogs.js:412"
   ]
  },
@@ -3539,7 +3539,7 @@
  },
  "&Table": {
   "where": [
-   "lectern/js/app.js:1729",
+   "lectern/js/app.js:1732",
    "quire/js/commands.js:424",
    "quire/js/commands.js:428",
    "quire/js/dialogs2.js:726"
@@ -3657,7 +3657,7 @@
  },
  "&Title:": {
   "where": [
-   "lectern/js/app.js:1572",
+   "lectern/js/app.js:1575",
    "lectern/js/dialogs.js:901",
    "ledger/js/dialogs.js:694",
    "ledger/js/dialogs2.js:120"
@@ -3984,7 +3984,7 @@
  },
  "&Width:": {
   "where": [
-   "lectern/js/app.js:1466",
+   "lectern/js/app.js:1469",
    "lectern/js/dialogs.js:568",
    "quire/js/dialogs.js:395",
    "quire/js/dialogs3.js:98"
@@ -4284,12 +4284,12 @@
  },
  "1 file": {
   "where": [
-   "index.html:522"
+   "start.js:244"
   ]
  },
  "1 file, with unsaved changes": {
   "where": [
-   "index.html:522"
+   "start.js:244"
   ]
  },
  "1 page": {
@@ -4314,7 +4314,7 @@
  },
  "1 slide: {0}": {
   "where": [
-   "lectern/js/app.js:1615"
+   "lectern/js/app.js:1618"
   ]
  },
  "1. Formatting restrictions": {
@@ -4656,7 +4656,7 @@
  },
  "A newer version of VibeOffice is available. This one is {0}.": {
   "where": [
-   "index.html:437"
+   "start.js:159"
   ]
  },
  "A pasted slicer or timeline will be saved as a plain shape and won't filter anything, because its table or pivot table isn't in this workbook.": {
@@ -4793,12 +4793,12 @@
  },
  "About": {
   "where": [
-   "index.html:203"
+   "index.html:204"
   ]
  },
  "About VibeOffice.work": {
   "where": [
-   "index.html:265"
+   "index.html:266"
   ]
  },
  "About {0}": {
@@ -4808,12 +4808,12 @@
  },
  "About {0} MB, kept by VibeOffice on this computer.": {
   "where": [
-   "index.html:524"
+   "start.js:246"
   ]
  },
  "About {0} MB, kept in this browser.": {
   "where": [
-   "index.html:524"
+   "start.js:246"
   ]
  },
  "Above selected item": {
@@ -5044,7 +5044,7 @@
  },
  "Add Effect": {
   "where": [
-   "lectern/js/app.js:778",
+   "lectern/js/app.js:781",
    "lectern/js/panes.js:794",
    "lectern/js/panes.js:797"
   ]
@@ -5262,7 +5262,7 @@
  },
  "Align": {
   "where": [
-   "lectern/js/app.js:1055",
+   "lectern/js/app.js:1058",
    "lectern/js/ribbon.js:90",
    "lectern/js/ribbon.js:98",
    "ledger/js/commands.js:150"
@@ -5338,7 +5338,7 @@
  },
  "Alignment": {
   "where": [
-   "lectern/js/app.js:1175",
+   "lectern/js/app.js:1178",
    "lectern/js/ribbon.js:118",
    "ledger/js/dialogs.js:303",
    "ledger/js/dialogs2.js:576"
@@ -5372,7 +5372,7 @@
  },
  "All Fonts": {
   "where": [
-   "common/core.js:575"
+   "common/core.js:588"
   ]
  },
  "All Quire commands. Double-click one to run it.": {
@@ -5576,7 +5576,7 @@
  },
  "Animation Scheme": {
   "where": [
-   "lectern/js/app.js:742"
+   "lectern/js/app.js:745"
   ]
  },
  "Animation Schemes": {
@@ -5671,8 +5671,8 @@
  },
  "Apply Design Template": {
   "where": [
-   "lectern/js/app.js:675",
-   "lectern/js/app.js:718",
+   "lectern/js/app.js:678",
+   "lectern/js/app.js:721",
    "lectern/js/panes.js:694"
   ]
  },
@@ -5684,7 +5684,7 @@
  },
  "Apply Transition to All": {
   "where": [
-   "lectern/js/app.js:769"
+   "lectern/js/app.js:772"
   ]
  },
  "Apply a color scheme:": {
@@ -5773,17 +5773,17 @@
  },
  "Apps": {
   "where": [
-   "index.html:185"
+   "index.html:186"
   ]
  },
  "Aptos Display": {
   "where": [
-   "common/core.js:555"
+   "common/core.js:568"
   ]
  },
  "Aptos Narrow": {
   "where": [
-   "common/core.js:555"
+   "common/core.js:568"
   ]
  },
  "Aqua": {
@@ -5821,7 +5821,7 @@
  },
  "Arial Black": {
   "where": [
-   "common/core.js:555",
+   "common/core.js:568",
    "lectern/js/dialogs.js:949",
    "lectern/js/dialogs.js:968",
    "lectern/js/render.js:535"
@@ -5988,7 +5988,7 @@
  "Auto (as the browser)": {
   "where": [
    "common/ui.js:668",
-   "index.html:534"
+   "start.js:256"
   ]
  },
  "Auto Outline": {
@@ -6039,7 +6039,7 @@
  },
  "AutoContent Wizard": {
   "where": [
-   "lectern/js/app.js:1572"
+   "lectern/js/app.js:1575"
   ]
  },
  "AutoCorr&ect": {
@@ -6161,7 +6161,7 @@
  },
  "AutoShape defaults set": {
   "where": [
-   "lectern/js/app.js:1105"
+   "lectern/js/app.js:1108"
   ]
  },
  "AutoShapes": {
@@ -6694,7 +6694,7 @@
  },
  "Bold": {
   "where": [
-   "lectern/js/app.js:1165",
+   "lectern/js/app.js:1168",
    "lectern/js/commands.js:107",
    "lectern/js/dialogs.js:67",
    "ledger/js/dialogs.js:197"
@@ -6812,8 +6812,8 @@
  "Borders": {
   "where": [
    "lectern/js/app.js:205",
-   "lectern/js/app.js:1428",
-   "lectern/js/app.js:1466",
+   "lectern/js/app.js:1431",
+   "lectern/js/app.js:1469",
    "lectern/js/ribbon.js:111"
   ]
  },
@@ -6831,7 +6831,7 @@
  "Bottom": {
   "where": [
    "common/charts.js:395",
-   "lectern/js/app.js:1465",
+   "lectern/js/app.js:1468",
    "lectern/js/dialogs.js:453",
    "ledger/js/dialogs.js:170"
   ]
@@ -6904,7 +6904,7 @@
  },
  "Brainstorming Session": {
   "where": [
-   "lectern/js/app.js:1559"
+   "lectern/js/app.js:1562"
   ]
  },
  "Brass": {
@@ -6947,7 +6947,7 @@
  },
  "Brightness": {
   "where": [
-   "lectern/js/app.js:1295",
+   "lectern/js/app.js:1298",
    "quire/js/app.js:432"
   ]
  },
@@ -7111,7 +7111,7 @@
  },
  "Bullets": {
   "where": [
-   "lectern/js/app.js:1196",
+   "lectern/js/app.js:1199",
    "lectern/js/commands.js:117",
    "quire/js/commands.js:43",
    "quire/js/commands.js:359"
@@ -7302,7 +7302,7 @@
  },
  "Caching resources for offline use": {
   "where": [
-   "index.html:475"
+   "start.js:197"
   ]
  },
  "Calc &Now (F9)": {
@@ -7412,7 +7412,7 @@
  },
  "Calibri Light": {
   "where": [
-   "common/core.js:555"
+   "common/core.js:568"
   ]
  },
  "Calibri, Carlito, sans-serif": {
@@ -7734,7 +7734,7 @@
  },
  "Century Gothic": {
   "where": [
-   "common/core.js:555",
+   "common/core.js:568",
    "lectern/js/model.js:110"
   ]
  },
@@ -7761,7 +7761,7 @@
  },
  "Change AutoShape": {
   "where": [
-   "lectern/js/app.js:1108"
+   "lectern/js/app.js:1111"
   ]
  },
  "Change Cas&e...": {
@@ -7910,8 +7910,8 @@
  "Chart": {
   "where": [
    "common/charts.js:438",
-   "lectern/js/app.js:1482",
-   "lectern/js/app.js:1484",
+   "lectern/js/app.js:1485",
+   "lectern/js/app.js:1487",
    "lectern/js/ribbon.js:40"
   ]
  },
@@ -8029,7 +8029,7 @@
  },
  "Check for updates": {
   "where": [
-   "index.html:193"
+   "index.html:194"
   ]
  },
  "Check grammar as you type": {
@@ -8232,7 +8232,7 @@
  },
  "Choose how VibeOffice.work looks. Every open window changes with it.": {
   "where": [
-   "index.html:259"
+   "index.html:260"
   ]
  },
  "Chooses a value or action to perform from a list of values, based on an index number.": {
@@ -8308,7 +8308,7 @@
  },
  "Clear": {
   "where": [
-   "lectern/js/app.js:965",
+   "lectern/js/app.js:968",
    "lectern/js/textedit.js:786",
    "ledger/js/ops.js:232",
    "ledger/js/ribbon.js:39"
@@ -8366,8 +8366,8 @@
  },
  "Clear Recent Documents": {
   "where": [
-   "index.html:211",
-   "index.html:251"
+   "index.html:212",
+   "index.html:252"
   ]
  },
  "Clear Tab": {
@@ -8382,7 +8382,7 @@
  },
  "Click a button to apply borders:": {
   "where": [
-   "lectern/js/app.js:1466"
+   "lectern/js/app.js:1469"
   ]
  },
  "Click a cell and type, then press Enter (moves down), Tab (moves right) or an arrow key. F2 edits the active cell; Alt+Enter starts a new line inside a cell. Ctrl+Enter fills the typed entry into every selected cell. Numbers, dates (3/14/2026, 14-Mar), times (9:30 AM), percentages (12%) and currency ($1,200) are recognised and formatted automatically. Start an entry with an apostrophe to keep it as text.": {
@@ -8407,12 +8407,12 @@
  },
  "Click an object or select text to apply the formatting.": {
   "where": [
-   "lectern/js/app.js:1241"
+   "lectern/js/app.js:1244"
   ]
  },
  "Click here to reload": {
   "where": [
-   "index.html:196"
+   "index.html:197"
   ]
  },
  "Click icon to add picture": {
@@ -8432,7 +8432,7 @@
  },
  "Click the color in the picture you want to make transparent.": {
   "where": [
-   "lectern/js/app.js:1300"
+   "lectern/js/app.js:1303"
   ]
  },
  "Click to add first slide": {
@@ -8515,7 +8515,7 @@
   "where": [
    "common/ui.js:411",
    "common/ui.js:504",
-   "lectern/js/app.js:909",
+   "lectern/js/app.js:912",
    "lectern/js/dialogs.js:221"
   ]
  },
@@ -8696,7 +8696,7 @@
  },
  "Color Scheme": {
   "where": [
-   "lectern/js/app.js:683"
+   "lectern/js/app.js:686"
   ]
  },
  "Color Schemes": {
@@ -8903,7 +8903,7 @@
  },
  "Comic Sans MS": {
   "where": [
-   "common/core.js:555"
+   "common/core.js:568"
   ]
  },
  "Comma Style": {
@@ -9215,7 +9215,7 @@
  },
  "Contrast": {
   "where": [
-   "lectern/js/app.js:1295",
+   "lectern/js/app.js:1298",
    "quire/js/app.js:432"
   ]
  },
@@ -9588,7 +9588,7 @@
  },
  "Courier New": {
   "where": [
-   "common/core.js:556",
+   "common/core.js:569",
    "lectern/js/model.js:152",
    "quire/js/autocorrect.js:233",
    "quire/js/dialogs.js:476"
@@ -9646,8 +9646,8 @@
  },
  "Create File": {
   "where": [
-   "index.html:182",
-   "index.html:418"
+   "start.js:140",
+   "index.html:183"
   ]
  },
  "Create Graphic": {
@@ -10313,7 +10313,7 @@
  },
  "D&esign:": {
   "where": [
-   "lectern/js/app.js:1572"
+   "lectern/js/app.js:1575"
   ]
  },
  "D&estination:": {
@@ -10675,7 +10675,7 @@
  },
  "Decrease Font Size": {
   "where": [
-   "lectern/js/app.js:1182",
+   "lectern/js/app.js:1185",
    "lectern/js/commands.js:115"
   ]
  },
@@ -10891,7 +10891,7 @@
  },
  "Delete Slide": {
   "where": [
-   "lectern/js/app.js:624"
+   "lectern/js/app.js:627"
   ]
  },
  "Delete Style": {
@@ -10911,7 +10911,7 @@
  },
  "Delete Title Master": {
   "where": [
-   "lectern/js/app.js:889"
+   "lectern/js/app.js:892"
   ]
  },
  "Delete columns": {
@@ -10957,7 +10957,7 @@
  },
  "Demote": {
   "where": [
-   "lectern/js/app.js:1199",
+   "lectern/js/app.js:1202",
    "lectern/js/diagram.js:419",
    "lectern/js/diagram.js:633",
    "quire/js/commands.js:521"
@@ -10976,7 +10976,7 @@
  },
  "DengXian Light": {
   "where": [
-   "common/core.js:463"
+   "common/core.js:465"
   ]
  },
  "Denim": {
@@ -11187,22 +11187,22 @@
  },
  "Discard the unsaved changes": {
   "where": [
-   "index.html:360"
+   "start.js:82"
   ]
  },
  "Discard the unsaved changes to {0}": {
   "where": [
-   "index.html:361"
+   "start.js:83"
   ]
  },
  "Discard the unsaved changes to “{0}”?": {
   "where": [
-   "index.html:363"
+   "start.js:85"
   ]
  },
  "Discard the unsaved changes to “{0}”? The saved version stays in the list.": {
   "where": [
-   "index.html:363"
+   "start.js:85"
   ]
  },
  "Display drawing &guides on screen": {
@@ -11263,7 +11263,7 @@
  },
  "Distribute": {
   "where": [
-   "lectern/js/app.js:1074"
+   "lectern/js/app.js:1077"
   ]
  },
  "Distribute &Horizontally": {
@@ -11476,7 +11476,7 @@
  },
  "Documents": {
   "where": [
-   "index.html:393"
+   "start.js:115"
   ]
  },
  "Dodecagon": {
@@ -11633,12 +11633,12 @@
  },
  "Download": {
   "where": [
-   "index.html:230"
+   "index.html:231"
   ]
  },
  "Download it now? Your documents and Recent Files stay as they are.": {
   "where": [
-   "index.html:229"
+   "index.html:230"
   ]
  },
  "Downward diagonal": {
@@ -11769,12 +11769,12 @@
  },
  "Drop a .pptx to open it, or pictures to insert them": {
   "where": [
-   "lectern/js/app.js:1871"
+   "lectern/js/app.js:1874"
   ]
  },
  "Drop a document here or pick an app on the left side to create one.": {
   "where": [
-   "index.html:218"
+   "index.html:219"
   ]
  },
  "Drop a document to open it, or pictures to insert them": {
@@ -11789,7 +11789,7 @@
  },
  "Drop to open": {
   "where": [
-   "index.html:220"
+   "index.html:221"
   ]
  },
  "Drops rows or columns from the start or end of an array.": {
@@ -11804,14 +11804,14 @@
  },
  "Duplicate": {
   "where": [
-   "lectern/js/app.js:982",
+   "lectern/js/app.js:985",
    "lectern/js/editor.js:569",
    "lectern/js/panes.js:564"
   ]
  },
  "Duplicate Slide": {
   "where": [
-   "lectern/js/app.js:612"
+   "lectern/js/app.js:615"
   ]
  },
  "Dutch (Netherlands)": {
@@ -11926,7 +11926,7 @@
  },
  "Edit Chart Data...": {
   "where": [
-   "lectern/js/app.js:1484"
+   "lectern/js/app.js:1487"
   ]
  },
  "Edit Co&mment": {
@@ -11936,7 +11936,7 @@
  },
  "Edit Color Scheme": {
   "where": [
-   "lectern/js/app.js:705"
+   "lectern/js/app.js:708"
   ]
  },
  "Edit Color Schemes...": {
@@ -11970,7 +11970,7 @@
  },
  "Edit LettersArt Text": {
   "where": [
-   "lectern/js/app.js:1506",
+   "lectern/js/app.js:1509",
    "lectern/js/dialogs.js:976",
    "quire/js/dialogs2.js:604"
   ]
@@ -12279,7 +12279,7 @@
  },
  "Enter": {
   "where": [
-   "ledger/index.html:21"
+   "ledger/index.html:22"
   ]
  },
  "Enter + and − to move relative to the current location. Example: +4 will move forward four items.": {
@@ -12681,7 +12681,7 @@
  },
  "Everything runs in your browser; documents are opened and saved on your own computer. The Recent Files list keeps a copy of each file in this browser so it can be reopened; Clear Recent Documents removes them.": {
   "where": [
-   "index.html:268"
+   "index.html:269"
   ]
  },
  "Exactly": {
@@ -12724,7 +12724,7 @@
  },
  "Exit Edit Text": {
   "where": [
-   "lectern/js/app.js:1734"
+   "lectern/js/app.js:1737"
   ]
  },
  "Expand": {
@@ -12979,7 +12979,7 @@
  },
  "Feedback on our GitHub": {
   "where": [
-   "index.html:197"
+   "index.html:198"
   ]
  },
  "Fi&nd": {
@@ -13147,7 +13147,7 @@
  },
  "Fill": {
   "where": [
-   "lectern/js/app.js:1466",
+   "lectern/js/app.js:1469",
    "lectern/js/dialogs.js:410",
    "lectern/js/dialogs.js:411",
    "ledger/js/dialogs.js:169"
@@ -13160,7 +13160,7 @@
  },
  "Fill &color:": {
   "where": [
-   "lectern/js/app.js:1466"
+   "lectern/js/app.js:1469"
   ]
  },
  "Fill Across Worksheets": {
@@ -13172,8 +13172,8 @@
  "Fill Color": {
   "where": [
    "lectern/js/app.js:206",
-   "lectern/js/app.js:1119",
-   "lectern/js/app.js:1451",
+   "lectern/js/app.js:1122",
+   "lectern/js/app.js:1454",
    "lectern/js/commands.js:123"
   ]
  },
@@ -13519,7 +13519,7 @@
  },
  "Flip": {
   "where": [
-   "lectern/js/app.js:1083",
+   "lectern/js/app.js:1086",
    "quire/js/commands.js:511",
    "quire/js/commands.js:512"
   ]
@@ -13730,7 +13730,7 @@
  "Font": {
   "where": [
    "lectern/js/app.js:183",
-   "lectern/js/app.js:1159",
+   "lectern/js/app.js:1162",
    "lectern/js/dialogs.js:104",
    "lectern/js/dialogs.js:111"
   ]
@@ -13742,7 +13742,7 @@
  },
  "Font Color": {
   "where": [
-   "lectern/js/app.js:1157",
+   "lectern/js/app.js:1160",
    "lectern/js/commands.js:122",
    "ledger/js/app.js:984",
    "ledger/js/commands.js:169"
@@ -13751,7 +13751,7 @@
  "Font Size": {
   "where": [
    "lectern/js/app.js:184",
-   "lectern/js/app.js:1160",
+   "lectern/js/app.js:1163",
    "ledger/js/app.js:536",
    "quire/js/app.js:277"
   ]
@@ -13787,7 +13787,7 @@
  "Font names are used solely to identify the fonts specified in documents and to maintain interoperability with Office Open XML files and the applications that create them; such names may be trademarks of their respective owners. VibeOffice renders text with the fonts installed on your computer. Where a specified font is not installed, VibeOffice substitutes an open-source font supplied with it or another font available on your computer, and the document may therefore appear differently than in other applications. VibeOffice does not include or distribute any commercial font software.": {
   "where": [
    "common/ui.js:538",
-   "index.html:272"
+   "index.html:273"
   ]
  },
  "Font size": {
@@ -13831,12 +13831,12 @@
  },
  "Fonts on This Computer": {
   "where": [
-   "common/core.js:577"
+   "common/core.js:590"
   ]
  },
  "Fonts on this computer": {
   "where": [
-   "index.html:245"
+   "index.html:246"
   ]
  },
  "Foot&notes": {
@@ -13853,7 +13853,7 @@
  },
  "Footer (optional)": {
   "where": [
-   "lectern/js/app.js:1568"
+   "lectern/js/app.js:1571"
   ]
  },
  "Footer Placeholder": {
@@ -13909,7 +13909,7 @@
  },
  "Forget the list": {
   "where": [
-   "index.html:247"
+   "index.html:248"
   ]
  },
  "Form": {
@@ -14031,7 +14031,7 @@
  },
  "Format Table": {
   "where": [
-   "lectern/js/app.js:1467",
+   "lectern/js/app.js:1470",
    "lectern/js/dialogs.js:394"
   ]
  },
@@ -14194,7 +14194,7 @@
  },
  "Formula Bar": {
   "where": [
-   "ledger/index.html:22"
+   "ledger/index.html:23"
   ]
  },
  "Formula Is": {
@@ -14812,7 +14812,7 @@
  },
  "Group": {
   "where": [
-   "lectern/js/app.js:995",
+   "lectern/js/app.js:998",
    "ledger/js/app.js:1124",
    "ledger/js/dialogs.js:399",
    "ledger/js/ribbon.js:68"
@@ -14889,12 +14889,12 @@
  },
  "HG Gothic E": {
   "where": [
-   "common/core.js:460"
+   "common/core.js:462"
   ]
  },
  "HG Mincho E": {
   "where": [
-   "common/core.js:460"
+   "common/core.js:462"
   ]
  },
  "HTML Format": {
@@ -14938,8 +14938,8 @@
  },
  "Harbor & Pine — 2027 Expansion (sample)": {
   "where": [
-   "lectern/js/app.js:957",
-   "lectern/js/app.js:2176"
+   "lectern/js/app.js:960",
+   "lectern/js/app.js:2179"
   ]
  },
  "He&ader:": {
@@ -15152,7 +15152,7 @@
  },
  "Hide Slide": {
   "where": [
-   "lectern/js/app.js:656",
+   "lectern/js/app.js:659",
    "lectern/js/commands.js:144"
   ]
  },
@@ -15564,7 +15564,7 @@
  },
  "Increase Font Size": {
   "where": [
-   "lectern/js/app.js:1182",
+   "lectern/js/app.js:1185",
    "lectern/js/commands.js:114"
   ]
  },
@@ -15730,7 +15730,7 @@
  },
  "Insert Chart": {
   "where": [
-   "lectern/js/app.js:1476",
+   "lectern/js/app.js:1479",
    "lectern/js/commands.js:88",
    "lectern/js/render.js:572",
    "ledger/js/xchart.js:408"
@@ -15788,7 +15788,7 @@
  },
  "Insert Date": {
   "where": [
-   "lectern/js/app.js:1217",
+   "lectern/js/app.js:1220",
    "ledger/js/commands.js:249",
    "quire/js/commands.js:374",
    "quire/js/commands.js:537"
@@ -15845,7 +15845,7 @@
    "ledger/js/dialogs3.js:78",
    "ledger/js/panes.js:132",
    "ledger/js/ribbon.js:58",
-   "ledger/index.html:21"
+   "ledger/index.html:22"
   ]
  },
  "Insert Greeting Line": {
@@ -15884,7 +15884,7 @@
  },
  "Insert LettersArt": {
   "where": [
-   "lectern/js/app.js:1495",
+   "lectern/js/app.js:1498",
    "lectern/js/commands.js:84",
    "quire/js/commands.js:294",
    "quire/js/dialogs2.js:590"
@@ -15934,7 +15934,7 @@
  },
  "Insert Picture": {
   "where": [
-   "lectern/js/app.js:1262",
+   "lectern/js/app.js:1265",
    "lectern/js/commands.js:82",
    "lectern/js/render.js:572",
    "ledger/js/app.js:1278"
@@ -15980,12 +15980,12 @@
  },
  "Insert Slide Number": {
   "where": [
-   "lectern/js/app.js:1217"
+   "lectern/js/app.js:1220"
   ]
  },
  "Insert Slides": {
   "where": [
-   "lectern/js/app.js:932"
+   "lectern/js/app.js:935"
   ]
  },
  "Insert Spreadsheet": {
@@ -16002,7 +16002,7 @@
  },
  "Insert Table": {
   "where": [
-   "lectern/js/app.js:1334",
+   "lectern/js/app.js:1337",
    "lectern/js/commands.js:89",
    "lectern/js/dialogs.js:691",
    "lectern/js/render.js:572"
@@ -16015,7 +16015,7 @@
  },
  "Insert Text Box": {
   "where": [
-   "lectern/js/app.js:1227",
+   "lectern/js/app.js:1230",
    "ledger/js/drawing.js:531",
    "quire/js/drawtool.js:80"
   ]
@@ -16029,7 +16029,7 @@
  },
  "Insert Title Master": {
   "where": [
-   "lectern/js/app.js:883",
+   "lectern/js/app.js:886",
    "lectern/js/ribbon.js:76"
   ]
  },
@@ -16229,7 +16229,7 @@
  },
  "Install VibeOffice.work": {
   "where": [
-   "index.html:194"
+   "index.html:195"
   ]
  },
  "Ins|key": {
@@ -16321,7 +16321,7 @@
  },
  "Italic": {
   "where": [
-   "lectern/js/app.js:1165",
+   "lectern/js/app.js:1168",
    "lectern/js/commands.js:108",
    "lectern/js/dialogs.js:67",
    "ledger/js/dialogs.js:197"
@@ -16399,7 +16399,7 @@
  },
  "Just updated successfully": {
   "where": [
-   "index.html:196"
+   "index.html:197"
   ]
  },
  "Justified": {
@@ -16435,12 +16435,12 @@
  },
  "Kept by VibeOffice on this computer.": {
   "where": [
-   "index.html:524"
+   "start.js:246"
   ]
  },
  "Kept in this browser.": {
   "where": [
-   "index.html:524"
+   "start.js:246"
   ]
  },
  "Key assignments": {
@@ -16543,7 +16543,7 @@
  },
  "Language of menus, dialogs and new documents:": {
   "where": [
-   "index.html:238"
+   "index.html:239"
   ]
  },
  "Language:": {
@@ -16648,7 +16648,7 @@
  },
  "Later": {
   "where": [
-   "index.html:230"
+   "index.html:231"
   ]
  },
  "Latin Extended-A": {
@@ -16729,8 +16729,8 @@
  },
  "Lectern": {
   "where": [
-   "index.html:188",
-   "lectern/index.html:8"
+   "index.html:189",
+   "lectern/index.html:9"
   ]
  },
  "Lectern &Help": {
@@ -16750,13 +16750,13 @@
  },
  "Lectern presentation editor": {
   "where": [
-   "lectern/index.html:283"
+   "lectern/index.html:284"
   ]
  },
  "Ledger": {
   "where": [
-   "index.html:187",
-   "ledger/index.html:1"
+   "index.html:188",
+   "ledger/index.html:2"
   ]
  },
  "Ledger &Help": {
@@ -16858,7 +16858,7 @@
  },
  "Ledger spreadsheet": {
   "where": [
-   "ledger/index.html:14"
+   "ledger/index.html:15"
   ]
  },
  "Left": {
@@ -17089,7 +17089,7 @@
  },
  "LettersArt Style": {
   "where": [
-   "lectern/js/app.js:1510"
+   "lectern/js/app.js:1513"
   ]
  },
  "LettersArt Styles": {
@@ -17262,7 +17262,7 @@
  },
  "Line Color": {
   "where": [
-   "lectern/js/app.js:1132",
+   "lectern/js/app.js:1135",
    "lectern/js/commands.js:124",
    "quire/js/app.js:413",
    "quire/js/commands.js:498"
@@ -17285,7 +17285,7 @@
   "where": [
    "lectern/js/app.js:201",
    "lectern/js/app.js:231",
-   "lectern/js/app.js:1144",
+   "lectern/js/app.js:1147",
    "lectern/js/ribbon.js:97"
   ]
  },
@@ -17454,13 +17454,13 @@
  },
  "Load all fonts on your computer...": {
   "where": [
-   "common/core.js:567"
+   "common/core.js:580"
   ]
  },
  "Load fonts on this computer": {
   "where": [
-   "index.html:247",
-   "index.html:510"
+   "start.js:232",
+   "index.html:248"
   ]
  },
  "Loading the dictionary...": {
@@ -17640,27 +17640,27 @@
  },
  "MS Gothic": {
   "where": [
-   "common/core.js:458"
+   "common/core.js:460"
   ]
  },
  "MS Mincho": {
   "where": [
-   "common/core.js:458"
+   "common/core.js:460"
   ]
  },
  "MS PGothic": {
   "where": [
-   "common/core.js:458"
+   "common/core.js:460"
   ]
  },
  "MS PMincho": {
   "where": [
-   "common/core.js:458"
+   "common/core.js:460"
   ]
  },
  "MS UI Gothic": {
   "where": [
-   "common/core.js:459"
+   "common/core.js:461"
   ]
  },
  "MS-DOS (OEM 866)": {
@@ -17713,7 +17713,7 @@
  "Made possible by open source software: {0}.": {
   "where": [
    "common/ui.js:535",
-   "index.html:440"
+   "start.js:162"
   ]
  },
  "Magnification": {
@@ -17798,7 +17798,7 @@
  },
  "Malgun Gothic": {
   "where": [
-   "common/core.js:461"
+   "common/core.js:463"
   ]
  },
  "Manual Line Break": {
@@ -18040,7 +18040,7 @@
  },
  "Meiryo UI": {
   "where": [
-   "common/core.js:460"
+   "common/core.js:462"
   ]
  },
  "Memos": {
@@ -18099,7 +18099,7 @@
  },
  "Microsoft JhengHei": {
   "where": [
-   "common/core.js:468"
+   "common/core.js:470"
   ]
  },
  "Microsoft Office Excel Workbook (*.xlsx)": {
@@ -18134,12 +18134,12 @@
  },
  "Microsoft YaHei": {
   "where": [
-   "common/core.js:464"
+   "common/core.js:466"
   ]
  },
  "Middle": {
   "where": [
-   "lectern/js/app.js:1465",
+   "lectern/js/app.js:1468",
    "lectern/js/dialogs.js:453"
   ]
  },
@@ -18385,7 +18385,7 @@
  },
  "Move Paragraph": {
   "where": [
-   "lectern/js/app.js:1209"
+   "lectern/js/app.js:1212"
   ]
  },
  "Move Sheet": {
@@ -18395,7 +18395,7 @@
  },
  "Move Slide": {
   "where": [
-   "lectern/js/app.js:645"
+   "lectern/js/app.js:648"
   ]
  },
  "Move Tab": {
@@ -18541,7 +18541,7 @@
  },
  "Name Box": {
   "where": [
-   "ledger/index.html:20"
+   "ledger/index.html:21"
   ]
  },
  "Name of the person who last saved the document": {
@@ -18561,7 +18561,7 @@
  },
  "Names": {
   "where": [
-   "ledger/index.html:20"
+   "ledger/index.html:21"
   ]
  },
  "Names in &workbook:": {
@@ -18613,7 +18613,7 @@
  },
  "Never saved": {
   "where": [
-   "index.html:373"
+   "start.js:95"
   ]
  },
  "New": {
@@ -18681,7 +18681,7 @@
   "where": [
    "lectern/js/app.js:199",
    "lectern/js/app.js:215",
-   "lectern/js/app.js:594",
+   "lectern/js/app.js:597",
    "lectern/js/commands.js:74"
   ]
  },
@@ -18720,17 +18720,17 @@
  },
  "New blank document": {
   "where": [
-   "index.html:394"
+   "start.js:116"
   ]
  },
  "New blank presentation": {
   "where": [
-   "index.html:394"
+   "start.js:116"
   ]
  },
  "New blank spreadsheet": {
   "where": [
-   "index.html:394"
+   "start.js:116"
   ]
  },
  "New chart": {
@@ -18747,7 +18747,7 @@
  },
  "New document from “{0}”": {
   "where": [
-   "index.html:394"
+   "start.js:116"
   ]
  },
  "New line in a cell": {
@@ -18768,7 +18768,7 @@
  },
  "New presentation from “{0}”": {
   "where": [
-   "index.html:394"
+   "start.js:116"
   ]
  },
  "New slide": {
@@ -18778,7 +18778,7 @@
  },
  "New spreadsheet from “{0}”": {
   "where": [
-   "index.html:394"
+   "start.js:116"
   ]
  },
  "New, Open, Save": {
@@ -19165,12 +19165,12 @@
  },
  "Not installed": {
   "where": [
-   "common/core.js:523"
+   "common/core.js:525"
   ]
  },
  "Not installed; uses {0}": {
   "where": [
-   "common/core.js:523"
+   "common/core.js:525"
   ]
  },
  "Not {0}": {
@@ -19190,7 +19190,7 @@
  },
  "Notes": {
   "where": [
-   "lectern/js/app.js:909",
+   "lectern/js/app.js:912",
    "lectern/js/panes.js:296",
    "lectern/js/panes.js:396",
    "lectern/js/panes.js:398"
@@ -19240,26 +19240,26 @@
  },
  "Noto Sans CJK SC": {
   "where": [
-   "common/core.js:467",
-   "common/core.js:559"
+   "common/core.js:469",
+   "common/core.js:572"
   ]
  },
  "Noto Sans SC": {
   "where": [
-   "common/core.js:467",
-   "common/core.js:559"
+   "common/core.js:469",
+   "common/core.js:572"
   ]
  },
  "Noto Serif CJK SC": {
   "where": [
-   "common/core.js:467",
-   "common/core.js:559"
+   "common/core.js:469",
+   "common/core.js:572"
   ]
  },
  "Noto Serif SC": {
   "where": [
-   "common/core.js:467",
-   "common/core.js:559"
+   "common/core.js:469",
+   "common/core.js:572"
   ]
  },
  "Nud&ge": {
@@ -19270,7 +19270,7 @@
  },
  "Nudge": {
   "where": [
-   "lectern/js/app.js:1094",
+   "lectern/js/app.js:1097",
    "quire/js/drawing.js:591"
   ]
  },
@@ -19383,7 +19383,7 @@
  },
  "Numbering": {
   "where": [
-   "lectern/js/app.js:1196",
+   "lectern/js/app.js:1199",
    "lectern/js/commands.js:116",
    "quire/js/commands.js:43",
    "quire/js/commands.js:105"
@@ -19531,7 +19531,7 @@
  },
  "Office suite in your browser": {
   "where": [
-   "index.html:178"
+   "index.html:179"
   ]
  },
  "Offset:": {
@@ -19650,7 +19650,7 @@
  },
  "Open File…": {
   "where": [
-   "index.html:180"
+   "index.html:181"
   ]
  },
  "Open a presentation (.pptx)...": {
@@ -19666,13 +19666,13 @@
  "Open source licenses": {
   "where": [
    "common/ui.js:536",
-   "index.html:440"
+   "start.js:162"
   ]
  },
  "Open source under the Apache License 2.0, provided as is, without warranty. VibeOffice.work is an independent project. Product names in its documentation are trademarks of their owners; VibeOffice.work is not affiliated with them.": {
   "where": [
    "common/ui.js:537",
-   "index.html:271"
+   "index.html:272"
   ]
  },
  "Open the unsaved version": {
@@ -19682,7 +19682,7 @@
  },
  "Open the version saved before the changes": {
   "where": [
-   "index.html:374"
+   "start.js:96"
   ]
  },
  "Open the welcome document": {
@@ -19776,7 +19776,7 @@
  },
  "Order": {
   "where": [
-   "lectern/js/app.js:1038",
+   "lectern/js/app.js:1041",
    "ledger/js/drawing.js:409"
   ]
  },
@@ -20207,7 +20207,7 @@
  },
  "Page Setup": {
   "where": [
-   "lectern/js/app.js:827",
+   "lectern/js/app.js:830",
    "lectern/js/dialogs.js:570",
    "ledger/js/dialogs3.js:421",
    "ledger/js/dialogs3.js:426"
@@ -20328,7 +20328,7 @@
  },
  "Palatino Linotype": {
   "where": [
-   "common/core.js:556",
+   "common/core.js:569",
    "quire/js/dialogs.js:893"
   ]
  },
@@ -20495,10 +20495,10 @@
  },
  "Paste": {
   "where": [
-   "lectern/js/app.js:1639",
-   "lectern/js/app.js:1653",
+   "lectern/js/app.js:1642",
    "lectern/js/app.js:1656",
-   "lectern/js/app.js:1673"
+   "lectern/js/app.js:1659",
+   "lectern/js/app.js:1676"
   ]
  },
  "Paste &Link": {
@@ -20557,12 +20557,12 @@
  },
  "Paste Slides": {
   "where": [
-   "lectern/js/app.js:1644"
+   "lectern/js/app.js:1647"
   ]
  },
  "Paste Special": {
   "where": [
-   "lectern/js/app.js:1686",
+   "lectern/js/app.js:1689",
    "ledger/js/clipboard.js:190",
    "ledger/js/dialogs.js:614",
    "ledger/js/panes.js:130"
@@ -20576,7 +20576,7 @@
  },
  "Paste as &Unformatted Text": {
   "where": [
-   "lectern/js/app.js:1685"
+   "lectern/js/app.js:1688"
   ]
  },
  "Paste as Hyperlink": {
@@ -20733,8 +20733,8 @@
  },
  "Photo Album": {
   "where": [
-   "lectern/js/app.js:1517",
-   "lectern/js/app.js:1519",
+   "lectern/js/app.js:1520",
+   "lectern/js/app.js:1522",
    "lectern/js/dialogs.js:999"
   ]
  },
@@ -20799,7 +20799,7 @@
  },
  "Picture Color": {
   "where": [
-   "lectern/js/app.js:1294",
+   "lectern/js/app.js:1297",
    "quire/js/app.js:431"
   ]
  },
@@ -21094,12 +21094,12 @@
  },
  "Presentation title": {
   "where": [
-   "lectern/js/app.js:1567"
+   "lectern/js/app.js:1570"
   ]
  },
  "Presentation type:": {
   "where": [
-   "lectern/js/app.js:1572"
+   "lectern/js/app.js:1575"
   ]
  },
  "Presentation: {0}": {
@@ -21109,8 +21109,8 @@
  },
  "Presentations": {
   "where": [
-   "index.html:188",
-   "index.html:393"
+   "start.js:115",
+   "index.html:189"
   ]
  },
  "Preserve formatting during updates": {
@@ -21384,7 +21384,7 @@
  },
  "Project Overview": {
   "where": [
-   "lectern/js/app.js:1557"
+   "lectern/js/app.js:1560"
   ]
  },
  "Project Status Report": {
@@ -21394,7 +21394,7 @@
  },
  "Promote": {
   "where": [
-   "lectern/js/app.js:1199",
+   "lectern/js/app.js:1202",
    "lectern/js/diagram.js:419",
    "lectern/js/diagram.js:632",
    "quire/js/commands.js:520"
@@ -21574,8 +21574,8 @@
  },
  "Quire": {
   "where": [
-   "index.html:186",
-   "quire/index.html:12"
+   "index.html:187",
+   "quire/index.html:13"
   ]
  },
  "Quire &Help": {
@@ -21671,7 +21671,7 @@
  },
  "Quire word processor": {
   "where": [
-   "quire/index.html:333"
+   "quire/index.html:334"
   ]
  },
  "R&eading Layout": {
@@ -21845,7 +21845,7 @@
  },
  "Reading design...": {
   "where": [
-   "lectern/js/app.js:710"
+   "lectern/js/app.js:713"
   ]
  },
  "Ready": {
@@ -21861,25 +21861,25 @@
  },
  "Recent Files": {
   "where": [
-   "index.html:181",
-   "index.html:209",
-   "index.html:249",
-   "index.html:418"
+   "start.js:140",
+   "index.html:182",
+   "index.html:210",
+   "index.html:250"
   ]
  },
  "Recent Files are not available here.": {
   "where": [
-   "index.html:525"
+   "start.js:247"
   ]
  },
  "Recent Files are not available in this browser ({0}).": {
   "where": [
-   "index.html:350"
+   "start.js:72"
   ]
  },
  "Recently Used Fonts": {
   "where": [
-   "common/core.js:573"
+   "common/core.js:586"
   ]
  },
  "Recently used": {
@@ -21930,7 +21930,7 @@
  },
  "Recommending a Strategy": {
   "where": [
-   "lectern/js/app.js:1556"
+   "lectern/js/app.js:1559"
   ]
  },
  "Record macro": {
@@ -21955,7 +21955,7 @@
  },
  "Recovered the unsaved changes. Save the presentation to keep them.": {
   "where": [
-   "lectern/js/app.js:2190"
+   "lectern/js/app.js:2193"
   ]
  },
  "Recovered the unsaved changes. Save the workbook to keep them.": {
@@ -22141,12 +22141,12 @@
  },
  "Reload fonts on this computer": {
   "where": [
-   "index.html:510"
+   "start.js:232"
   ]
  },
  "Reload fonts on your computer...": {
   "where": [
-   "common/core.js:567"
+   "common/core.js:580"
   ]
  },
  "Remember dime&nsions for new tables": {
@@ -22212,7 +22212,7 @@
  },
  "Remove all files from the Recent Files list? The files on your computer are not touched.": {
   "where": [
-   "index.html:384"
+   "start.js:106"
   ]
  },
  "Remove character / paragraph formatting": {
@@ -22222,12 +22222,12 @@
  },
  "Remove from list": {
   "where": [
-   "index.html:360"
+   "start.js:82"
   ]
  },
  "Remove from the list: {0}": {
   "where": [
-   "index.html:361"
+   "start.js:83"
   ]
  },
  "Remove personal information from file properties on save": {
@@ -22446,7 +22446,7 @@
  },
  "Reset Picture": {
   "where": [
-   "lectern/js/app.js:1296",
+   "lectern/js/app.js:1299",
    "lectern/js/commands.js:193",
    "quire/js/commands.js:490"
   ]
@@ -24350,7 +24350,7 @@
  },
  "Rotate": {
   "where": [
-   "lectern/js/app.js:1082",
+   "lectern/js/app.js:1085",
    "lectern/js/editor.js:632",
    "quire/js/commands.js:489",
    "quire/js/commands.js:509"
@@ -24776,7 +24776,7 @@
  },
  "Saved version": {
   "where": [
-   "index.html:374"
+   "start.js:96"
   ]
  },
  "Saved {0}": {
@@ -25105,7 +25105,7 @@
  },
  "Segoe UI": {
   "where": [
-   "common/core.js:556"
+   "common/core.js:569"
   ]
  },
  "Segoe UI Symbol": {
@@ -25376,7 +25376,7 @@
  },
  "Selling a Product or Service": {
   "where": [
-   "lectern/js/app.js:1561"
+   "lectern/js/app.js:1564"
   ]
  },
  "Semi-block": {
@@ -25477,7 +25477,7 @@
  },
  "Set Transparent Color": {
   "where": [
-   "lectern/js/app.js:1322",
+   "lectern/js/app.js:1325",
    "lectern/js/commands.js:194"
   ]
  },
@@ -25506,7 +25506,7 @@
    "lectern/js/dialogs.js:1043",
    "ledger/js/dialogs2.js:135",
    "ledger/js/dialogs2.js:397",
-   "index.html:201"
+   "index.html:202"
   ]
  },
  "Sh&adow": {
@@ -25539,8 +25539,8 @@
  },
  "Shadow": {
   "where": [
-   "lectern/js/app.js:1154",
-   "lectern/js/app.js:1165",
+   "lectern/js/app.js:1157",
+   "lectern/js/app.js:1168",
    "lectern/js/commands.js:110",
    "lectern/js/ribbon.js:89"
   ]
@@ -25639,7 +25639,7 @@
  },
  "Sheets": {
   "where": [
-   "ledger/index.html:32"
+   "ledger/index.html:33"
   ]
  },
  "Sheets in new work&book:": {
@@ -26124,7 +26124,7 @@
  },
  "Size of menus, toolbars, documents and everything else:": {
   "where": [
-   "index.html:241"
+   "index.html:242"
   ]
  },
  "Size:": {
@@ -26210,7 +26210,7 @@
  },
  "Slide &number": {
   "where": [
-   "lectern/js/app.js:1570",
+   "lectern/js/app.js:1573",
    "lectern/js/dialogs.js:594"
   ]
  },
@@ -26242,7 +26242,7 @@
  },
  "Slide Layout": {
   "where": [
-   "lectern/js/app.js:666",
+   "lectern/js/app.js:669",
    "lectern/js/panes.js:645"
   ]
  },
@@ -26332,7 +26332,7 @@
  },
  "Slide Transition": {
   "where": [
-   "lectern/js/app.js:762",
+   "lectern/js/app.js:765",
    "lectern/js/commands.js:143",
    "lectern/js/panes.js:844"
   ]
@@ -26383,7 +26383,7 @@
  },
  "Slide {0}:": {
   "where": [
-   "lectern/js/app.js:909"
+   "lectern/js/app.js:912"
   ]
  },
  "Slide...": {
@@ -26416,7 +26416,7 @@
  },
  "Slides from Outline": {
   "where": [
-   "lectern/js/app.js:913"
+   "lectern/js/app.js:916"
   ]
  },
  "Slides per page:": {
@@ -26646,12 +26646,12 @@
  },
  "Source Han Sans SC": {
   "where": [
-   "common/core.js:466"
+   "common/core.js:468"
   ]
  },
  "Source Han Serif SC": {
   "where": [
-   "common/core.js:466"
+   "common/core.js:468"
   ]
  },
  "Source: (the Quire clipboard is empty — copy something first, or press Ctrl+V)": {
@@ -26666,7 +26666,7 @@
  },
  "Source: {0}": {
   "where": [
-   "lectern/js/app.js:1685"
+   "lectern/js/app.js:1688"
   ]
  },
  "South": {
@@ -26734,7 +26734,7 @@
  },
  "Speaker Notes": {
   "where": [
-   "lectern/js/app.js:909",
+   "lectern/js/app.js:912",
    "lectern/js/commands.js:145"
   ]
  },
@@ -26761,7 +26761,7 @@
  },
  "Spelling": {
   "where": [
-   "lectern/js/app.js:1248",
+   "lectern/js/app.js:1251",
    "lectern/js/commands.js:131",
    "lectern/js/dialogs.js:859",
    "lectern/js/ribbon.js:63"
@@ -26818,7 +26818,7 @@
  },
  "Spelling is checked as you type: misspelled words get a wavy red underline while you edit text.\nHold Shift and right-click a flagged word to see your browser's suggestions.": {
   "where": [
-   "lectern/js/app.js:1248"
+   "lectern/js/app.js:1251"
   ]
  },
  "Spelling suggestions come from your browser. Hold Shift while right-clicking a word to see them.": {
@@ -26871,7 +26871,7 @@
  },
  "Split Cell divides a merged cell back into its original cells. Select a merged cell first.": {
   "where": [
-   "lectern/js/app.js:1404"
+   "lectern/js/app.js:1407"
   ]
  },
  "Split Cells": {
@@ -26913,7 +26913,7 @@
  },
  "Spreadsheet": {
   "where": [
-   "index.html:187"
+   "index.html:188"
   ]
  },
  "Spreadsheet (table)": {
@@ -26928,7 +26928,7 @@
  },
  "Spreadsheets": {
   "where": [
-   "index.html:393"
+   "start.js:115"
   ]
  },
  "Square": {
@@ -27026,7 +27026,7 @@
  },
  "Start": {
   "where": [
-   "index.html:177"
+   "index.html:178"
   ]
  },
  "Start &After Previous": {
@@ -27170,7 +27170,7 @@
  },
  "Status Report": {
   "where": [
-   "lectern/js/app.js:1558"
+   "lectern/js/app.js:1561"
   ]
  },
  "Status bar": {
@@ -27404,7 +27404,7 @@
  },
  "Subscript": {
   "where": [
-   "lectern/js/app.js:1171",
+   "lectern/js/app.js:1174",
    "lectern/js/commands.js:112",
    "quire/js/commands.js:329",
    "quire/js/panes.js:502"
@@ -27478,7 +27478,7 @@
  },
  "Summary Slide": {
   "where": [
-   "lectern/js/app.js:900",
+   "lectern/js/app.js:903",
    "lectern/js/commands.js:128"
   ]
  },
@@ -27519,7 +27519,7 @@
  },
  "Superscript": {
   "where": [
-   "lectern/js/app.js:1171",
+   "lectern/js/app.js:1174",
    "lectern/js/commands.js:111",
    "quire/js/commands.js:330",
    "quire/js/panes.js:502"
@@ -27678,7 +27678,7 @@
  "Table": {
   "where": [
    "lectern/js/app.js:207",
-   "lectern/js/app.js:1367",
+   "lectern/js/app.js:1370",
    "lectern/js/ribbon.js:38",
    "lectern/js/ribbon.js:114"
   ]
@@ -28039,7 +28039,7 @@
  },
  "Text &alignment:": {
   "where": [
-   "lectern/js/app.js:1466"
+   "lectern/js/app.js:1469"
   ]
  },
  "Text &anchor point:": {
@@ -28076,7 +28076,7 @@
  },
  "Text Box": {
   "where": [
-   "lectern/js/app.js:1466",
+   "lectern/js/app.js:1469",
    "lectern/js/commands.js:86",
    "lectern/js/dialogs.js:467",
    "lectern/js/ribbon.js:42"
@@ -28245,7 +28245,7 @@
  },
  "That design could not be read: {0}": {
   "where": [
-   "lectern/js/app.js:724"
+   "lectern/js/app.js:727"
   ]
  },
  "That file is no longer available here. Open it again from your computer.": {
@@ -28262,17 +28262,17 @@
  },
  "The Font boxes also list the {0} fonts installed on this computer.": {
   "where": [
-   "index.html:511"
+   "start.js:233"
   ]
  },
  "The Font boxes list the frequently used Office fonts and the document's own.": {
   "where": [
-   "index.html:513"
+   "start.js:235"
   ]
  },
  "The Font boxes list the frequently used Office fonts and the document's own. They can also list the fonts installed on this computer, once you allow it.": {
   "where": [
-   "index.html:512"
+   "start.js:234"
   ]
  },
  "The Normal style cannot be deleted.": {
@@ -28497,18 +28497,18 @@
  },
  "The fonts on this computer could not be listed: permission was not given.": {
   "where": [
-   "index.html:544"
+   "start.js:266"
   ]
  },
  "The fonts on this computer could not be listed: permission was not given. You can allow it in the site settings of your browser.": {
   "where": [
-   "common/core.js:587"
+   "common/core.js:600"
   ]
  },
  "The fonts on this computer could not be listed: {0}": {
   "where": [
-   "common/core.js:587",
-   "index.html:544"
+   "common/core.js:600",
+   "start.js:266"
   ]
  },
  "The formula contains an error.": {
@@ -28544,7 +28544,7 @@
  },
  "The list is empty.": {
   "where": [
-   "index.html:526"
+   "start.js:248"
   ]
  },
  "The list range is not valid.": {
@@ -28695,7 +28695,7 @@
  },
  "The selected slides have no titles to summarize.": {
   "where": [
-   "lectern/js/app.js:896"
+   "lectern/js/app.js:899"
   ]
  },
  "The selection contains multiple data values. Merging into one cell will keep the upper-left most data only.": {
@@ -28748,7 +28748,7 @@
  },
  "The templates could not be loaded.": {
   "where": [
-   "index.html:400"
+   "start.js:122"
   ]
  },
  "The text is not marked as English, so it was not checked. Use Tools ▸ Language ▸ Set Language to mark it.": {
@@ -28824,7 +28824,7 @@
  },
  "Theme Fonts": {
   "where": [
-   "common/core.js:569"
+   "common/core.js:582"
   ]
  },
  "Theme:": {
@@ -28836,8 +28836,8 @@
   "where": [
    "lectern/js/ribbon.js:47",
    "quire/js/ribbon.js:41",
-   "index.html:202",
-   "index.html:257"
+   "index.html:203",
+   "index.html:258"
   ]
  },
  "Then &by": {
@@ -28933,7 +28933,7 @@
  },
  "These settings apply to every app of VibeOffice.work.": {
   "where": [
-   "index.html:236"
+   "index.html:237"
   ]
  },
  "Thick": {
@@ -29209,7 +29209,7 @@
  },
  "This picture cannot be edited.": {
   "where": [
-   "lectern/js/app.js:1316"
+   "lectern/js/app.js:1319"
   ]
  },
  "This pivot table will be saved as plain cells, because a column it uses was deleted from its source data.": {
@@ -29272,7 +29272,7 @@
  },
  "This version is over two months old.": {
   "where": [
-   "index.html:193"
+   "index.html:194"
   ]
  },
  "This video or sound will be saved as a picture and will no longer play, because its picture was replaced.": {
@@ -29345,7 +29345,7 @@
  },
  "Times New Roman": {
   "where": [
-   "common/core.js:556",
+   "common/core.js:569",
    "lectern/js/dialogs.js:781",
    "lectern/js/dialogs.js:949",
    "quire/js/dialogs.js:178"
@@ -29555,7 +29555,7 @@
  },
  "Today, {0}": {
   "where": [
-   "index.html:343"
+   "start.js:65"
   ]
  },
  "Toggle between text and object selection": {
@@ -29607,7 +29607,7 @@
  "Top": {
   "where": [
    "common/charts.js:395",
-   "lectern/js/app.js:1465",
+   "lectern/js/app.js:1468",
    "lectern/js/dialogs.js:453",
    "ledger/js/dialogs.js:170"
   ]
@@ -29751,7 +29751,7 @@
  },
  "Training": {
   "where": [
-   "lectern/js/app.js:1560"
+   "lectern/js/app.js:1563"
   ]
  },
  "Transition": {
@@ -29762,7 +29762,7 @@
  },
  "Transition applied to all slides": {
   "where": [
-   "lectern/js/app.js:772"
+   "lectern/js/app.js:775"
   ]
  },
  "Transition to This Slide": {
@@ -29805,7 +29805,7 @@
  },
  "Trebuchet MS": {
   "where": [
-   "common/core.js:556",
+   "common/core.js:569",
    "lectern/js/dialogs.js:949",
    "lectern/js/model.js:86",
    "lectern/js/model.js:163"
@@ -29924,7 +29924,7 @@
  },
  "Typing": {
   "where": [
-   "lectern/js/app.js:1862",
+   "lectern/js/app.js:1865",
    "lectern/js/diagram.js:438",
    "lectern/js/diagram.js:487",
    "lectern/js/diagram.js:497"
@@ -29947,7 +29947,7 @@
  },
  "UI size": {
   "where": [
-   "index.html:240"
+   "index.html:241"
   ]
  },
  "URL...": {
@@ -30007,7 +30007,7 @@
  },
  "Underline": {
   "where": [
-   "lectern/js/app.js:1165",
+   "lectern/js/app.js:1168",
    "lectern/js/commands.js:109",
    "quire/js/commands.js:325",
    "quire/js/commands.js:326"
@@ -30073,7 +30073,7 @@
  },
  "Ungroup": {
   "where": [
-   "lectern/js/app.js:1011",
+   "lectern/js/app.js:1014",
    "ledger/js/app.js:1124",
    "ledger/js/dialogs.js:399",
    "ledger/js/ribbon.js:68"
@@ -30166,8 +30166,8 @@
  },
  "Unsaved changes": {
   "where": [
-   "index.html:373",
-   "index.html:376"
+   "start.js:95",
+   "start.js:98"
   ]
  },
  "Unsaved changes from {0}": {
@@ -30182,7 +30182,7 @@
  },
  "Untitled": {
   "where": [
-   "lectern/js/app.js:1615"
+   "lectern/js/app.js:1618"
   ]
  },
  "Up": {
@@ -30264,8 +30264,8 @@
  },
  "Update VibeOffice": {
   "where": [
-   "index.html:192",
-   "index.html:225"
+   "index.html:193",
+   "index.html:226"
   ]
  },
  "Update field / toggle field codes": {
@@ -30280,8 +30280,8 @@
  },
  "Updating cached resources": {
   "where": [
-   "index.html:195",
-   "index.html:475"
+   "start.js:197",
+   "index.html:196"
   ]
  },
  "Uppercase": {
@@ -30417,7 +30417,7 @@
  },
  "Use your browser's zoom: Ctrl and + makes everything larger, Ctrl and − smaller, Ctrl and 0 the usual size (⌘ on a Mac).": {
   "where": [
-   "index.html:243"
+   "index.html:244"
   ]
  },
  "Used in This Presentation": {
@@ -30519,7 +30519,7 @@
  "Version {0}": {
   "where": [
    "common/ui.js:533",
-   "index.html:438"
+   "start.js:160"
   ]
  },
  "Vertical": {
@@ -30606,17 +30606,17 @@
  },
  "VibeOffice.work can't open “{0}”. It opens documents (.docx, .rtf), spreadsheets (.xlsx, .csv) and presentations (.pptx).": {
   "where": [
-   "index.html:326"
+   "start.js:48"
   ]
  },
  "VibeOffice.work keeps Recent Files and unsaved changes in this browser, and Safari's Lockdown Mode turns that off.\n\nTo allow it for this site only: tap aA in the address bar, tap Website Settings, and turn off Lockdown Mode. Safari reloads the page.": {
   "where": [
-   "index.html:288"
+   "start.js:10"
   ]
  },
  "VibeOffice.work: Quire (documents), Ledger (spreadsheets) and Lectern (presentations).": {
   "where": [
-   "index.html:267"
+   "index.html:268"
   ]
  },
  "Vie&w": {
@@ -30809,12 +30809,12 @@
  },
  "Welcome to VibeOffice.work.": {
   "where": [
-   "index.html:217"
+   "index.html:218"
   ]
  },
  "WenQuanYi Micro Hei": {
   "where": [
-   "common/core.js:465"
+   "common/core.js:467"
   ]
  },
  "West": {
@@ -31099,7 +31099,7 @@
  },
  "Word processor": {
   "where": [
-   "index.html:186"
+   "index.html:187"
   ]
  },
  "Words": {
@@ -31162,7 +31162,7 @@
  },
  "Worksheet grid": {
   "where": [
-   "ledger/index.html:26"
+   "ledger/index.html:27"
   ]
  },
  "Worksheets": {
@@ -31243,7 +31243,7 @@
  },
  "Yesterday, {0}": {
   "where": [
-   "index.html:344"
+   "start.js:66"
   ]
  },
  "You cannot change part of an array.": {
@@ -31276,7 +31276,7 @@
  },
  "Your Text Here": {
   "where": [
-   "lectern/js/app.js:1488",
+   "lectern/js/app.js:1491",
    "lectern/js/dialogs.js:972",
    "quire/js/dialogs2.js:584",
    "quire/js/dialogs2.js:596"
@@ -31299,7 +31299,7 @@
  },
  "Your files stay on this computer. Recent files are kept in this browser only.": {
   "where": [
-   "index.html:199"
+   "index.html:200"
   ]
  },
  "Your initials from User Information": {
@@ -31324,22 +31324,22 @@
  },
  "Yu Gothic": {
   "where": [
-   "common/core.js:459"
+   "common/core.js:461"
   ]
  },
  "Yu Gothic Light": {
   "where": [
-   "common/core.js:459"
+   "common/core.js:461"
   ]
  },
  "Yu Gothic UI": {
   "where": [
-   "common/core.js:459"
+   "common/core.js:461"
   ]
  },
  "Yu Mincho": {
   "where": [
-   "common/core.js:459"
+   "common/core.js:461"
   ]
  },
  "ZIP Code": {
@@ -31891,7 +31891,7 @@
  },
  "{0} KB": {
   "where": [
-   "index.html:376"
+   "start.js:98"
   ]
  },
  "{0} Minutes": {
@@ -31963,12 +31963,12 @@
  },
  "{0} files": {
   "where": [
-   "index.html:522"
+   "start.js:244"
   ]
  },
  "{0} files, {1} with unsaved changes": {
   "where": [
-   "index.html:522"
+   "start.js:244"
   ]
  },
  "{0} found a problem with content in {1} and repaired the presentation.": {
@@ -31998,12 +31998,12 @@
  },
  "{0} is not installed on this computer, so its text is shown in a default font. The document keeps the font name {0} and shows in that font on computers that have it.": {
   "where": [
-   "common/core.js:524"
+   "common/core.js:526"
   ]
  },
  "{0} is not installed on this computer, so its text is shown in {1}. The document keeps the font name {0} and shows in that font on computers that have it.": {
   "where": [
-   "common/core.js:525"
+   "common/core.js:527"
   ]
  },
  "{0} is not installed on this computer; a default font is used on screen and in print.": {
@@ -32058,7 +32058,7 @@
  },
  "{0} objects: {1}": {
   "where": [
-   "lectern/js/app.js:1605"
+   "lectern/js/app.js:1608"
   ]
  },
  "{0} of 24 - Clipboard. Click an item to paste.": {
@@ -32107,7 +32107,7 @@
   "where": [
    "lectern/js/app.js:128",
    "lectern/js/app.js:203",
-   "lectern/js/app.js:1461",
+   "lectern/js/app.js:1464",
    "quire/js/app.js:418"
   ]
  },
@@ -32123,7 +32123,7 @@
  },
  "{0} slides: {1}": {
   "where": [
-   "lectern/js/app.js:1615"
+   "lectern/js/app.js:1618"
   ]
  },
  "{0} toolbar": {

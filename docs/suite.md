@@ -2,7 +2,8 @@
 
 | File | What it does |
 |---|---|
-| `public/index.html` | The Start Center |
+| `public/index.html`, `public/start.js` | The Start Center: its page and its code |
+| `public/common/look.js` | The look before the first paint, first in every page's `<head>` (Looks) |
 | `public/common/suite.js` | `window.VO`, loaded by the Start Center and before every app's own scripts |
 | `public/manifest.webmanifest` | Install metadata: icons, shortcuts, file handlers, screenshots |
 | `public/sw.js` | Service worker: the published site cached for offline use, one version per page (on vibeoffice.work, and 127.0.0.1 for a published copy) |
@@ -97,7 +98,7 @@ One copy of everything the three apps share; a change here is a change in every 
 
 What each app provides:
 
-- before `core.js`: `<script>window.L = { APP_ID: 'quire', APP_NAME: 'Quire', APP: 'Quire' };</script>`. `APP_ID` prefixes the app's settings in localStorage (`quire.…`), so it must never change.
+- its name on its page's `<html>`: `data-app="quire" data-app-name="Quire"`, which `core.js` reads as `L.APP_ID` and `L.APP_NAME` (no inline script: Security). `APP_ID` prefixes the app's settings in localStorage (`quire.…`), so it must never change.
 - in its `app.js`, at load: `L.icons.app` (its icon), `ui.hooks = { beforeExec, refocus, commitEdit }` (its editor around commands, toolbar boxes and dialogs); Lectern also `ui.schemeColors` / `ui.currentDesign` (theme colours in colour menus) and PowerPoint's `L.SIZE_LIST`.
 - a spelling UI sets `L.spell.refreshSoon` if it draws underlines (Quire).
 
@@ -142,16 +143,52 @@ from inside the file, no requests, and no script but the page's own, allowed by 
 
 Version: `VO.VERSION` in `suite.js` is the one version string (`L.VERSION` reads it); it says `dev` in the repository, the desktop app's build sets it, and the published copy stamps it. The format is `v<yyyy>.<mm>.<dd>-<6 hex>`, the date (UTC) and commit of the tree (`tools/current-tree-version.sh`, e.g. `v2026.10.11-d2134d`; copies before said `2026.10.8f8494`). `VO.compareVersions(a, b)` compares two by their dates alone (negative, 0, positive; `dev` is newer than any dated version, an old-format one counts as day 0 of its month). `VO.isOutdated(v, now)`: whether a version is two calendar months past its day (never `dev`), for Check for updates. The Start Center (under its privacy note, and in About) and each app's Help ▸ About show it. `public/updater/current.json` names, per policy and platform, the oldest version that needs no Update button or dialog, and `public/updater/whatsnew.json` what each version brought, for the Update dialog (docs/desktop.md, Versions and updates).
 
+## Security: the pages' policy
+
+Every page carries one Content-Security-Policy, as a `<meta http-equiv>` first in its `<head>`, so it travels with
+the files: the site, the PWA's offline copy (the service worker serves it from its cache, where a server's header
+never reaches), the desktop app's pages and the local tests. `tools/csp.mjs` holds it and writes it into the pages
+and the sources other tools build pages from (Ledger's template, `tools/oss-licenses.py`); `--check`, run by
+`tests/csp.test.mjs`, fails on a page without it or with an inline script, an `on…=` handler or a `javascript:` URL.
+
+    default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
+    font-src 'self' data:; connect-src 'self' data: blob: https://vibeoffice.work ipc: http://ipc.localhost;
+    worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'
+
+- **Scripts:** our own files only. The browser refuses inline scripts and handlers, `eval` and `new Function`, and
+  `javascript:` URLs. So no page has an inline script: the look is `common/look.js`, the Start Center's code
+  `start.js`, the licences page's `oss-licenses.js`, and an app names itself on `<html>` (`data-app`). Code that
+  needs a handler adds it with `addEventListener`.
+- **Styles** may be inline (`style` attributes are everywhere, and CSS can run no script). Pictures, fonts and data
+  come from the site or from inside the page (`data:`, `blob:`).
+- **Connections:** the site, the update check (`https://vibeoffice.work`), and the desktop app's IPC (`ipc:` on macOS
+  and Linux, `http://ipc.localhost` on Windows). On Windows this also closes WebSockets, which WebView2's request
+  filter may not see (docs/desktop.md, Network).
+- **`form-action 'none'`:** the Start Center's `<form method="dialog">` only closes its dialog, which isn't a
+  submission the policy governs.
+- **To add a source:** change `POLICY` in `tools/csp.mjs`, run it (it rebuilds Ledger's page), and run
+  `python3 tools/oss-licenses.py`. Say why here.
+
+What the policy doesn't cover:
+- **Navigation:** where the window goes, or a window it opens. Document links never navigate (Hyperlinks, above), and
+  the desktop app opens only our own addresses in the browser (docs/desktop.md).
+- **The service worker:** a worker takes its policy from its script's response headers, not from a page.
+- **Files we export:** they carry their own (HTML we write, above).
+
+Tests see a refusal: `tools/shot.mjs` fails on one, and the UI tests' `t.clean()` does too, and on a window the page
+opens or a page of another site in the tab (`tests/hostile/helpers.test.mjs`). Chromium itself reports a refusal
+only to its Log domain, so both listen for `securitypolicyviolation` in the page.
+
 ## Looks
 
 The chrome (menus, toolbars, task panes, dialogs, status bar, rulers, sheet headers) can be drawn in more than one look: **Classic** (Office 2003 blue, the default), **Paper** (warm light chrome with one teal accent and rounded shapes) and **Paper 2016** (Paper's colours with a ribbon of tabs instead of the menu bar and toolbars, see The ribbon). The user picks one on the Start Center (Themes, beside About: a card per look, its preview drawn from that look's settings via `data-look` on the card) or in Tools ▸ Options ▸ General ▸ Theme of any app; it applies to the whole suite and every open window at once.
 
 - `common/looks.css` holds every chrome colour, font and shadow as a named setting (`--chrome-line`, `--pane-ink`, `--btn-a`, `--hdr-sel-a`, …), one block per look keyed by `data-look="…"` (on `<html>`, or on any element to preview a look inside another); Classic's block is also `:root`, the default. Paper adds a few shape rules a colour cannot express (rounded trays, pill tabs), scoped `:is([data-look="paper"], [data-look="paper2016"])`; Paper 2016 shares Paper's block and adds nothing of its own but the layout. `ui.css`, each app's CSS and the Start Center use only these settings for chrome.
 - Only chrome is themed. Document content (pages, cells, slides, comments, revisions, objects and their handles, Excel's in-cell buttons), icons and colour swatches keep their colours in every look.
-- Each page's head sets `data-look` from `localStorage['vibeoffice.look']` (default `classic`) and `data-layout` (`ribbon` for Paper 2016, otherwise `bars`) on `<html>` before the stylesheets load, so a page never flashes the wrong look. The key is suite-wide (not `L.store`, which is per app).
+- Each page's head loads `common/look.js`, which sets `data-look` from `localStorage['vibeoffice.look']` (default `classic`) and `data-layout` (`ribbon` for Paper 2016, otherwise `bars`) on `<html>` before the stylesheets load, so a page never flashes the wrong look. The key is suite-wide (not `L.store`, which is per app).
 - `VO.look` (`suite.js`): `list()` (`[{ id, name, note, layout }]`), `get()`, `layout()` (`'bars'` or `'ribbon'`), `set(id)`. `set` saves the choice, switches this page, updates `<meta name="theme-color">` from `--theme-color`, posts `'look'` on the `vibeoffice` BroadcastChannel (other windows switch too) and fires `vo-look` on `window`. `ui.lookField()` is the Options dialogs' Theme drop-down.
 - Chrome drawn on canvases reads settings with `L.lookColor(name, fallback)` (cached, cleared on `vo-look`) and redraws through `L.onLook(fn)`: Quire's and Lectern's rulers, Ledger's row and column headers and cell selection (`RD.lookColors`). Ledger's gridlines, frozen-pane lines and page breaks are the sheet's own.
-- To add a look: copy Classic's block, give it a new `data-look` name and values, add it to `LOOKS` in `suite.js` (with `layout: 'ribbon'` for a ribbon look; the head scripts name the ribbon looks too). `node --test tests/looks.test.mjs` checks that every look sets every setting, that every setting the chrome uses exists and that `ui.css` has no colours of its own.
+- To add a look: copy Classic's block, give it a new `data-look` name and values, add it to `LOOKS` in `suite.js` (with `layout: 'ribbon'` for a ribbon look; `common/look.js` names the ribbon looks too). `node --test tests/looks.test.mjs` checks that every look sets every setting, that every setting the chrome uses exists and that `ui.css` has no colours of its own.
 
 ### The ribbon
 

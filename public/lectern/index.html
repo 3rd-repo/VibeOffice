@@ -1,8 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-app="lectern" data-app-name="Lectern">
 <head>
 <meta charset="utf-8">
-<script>try{var d=document.documentElement,l=localStorage.getItem('vibeoffice.look')||'classic';d.dataset.look=l;d.dataset.layout=l==='paper2016'?'ribbon':'bars'}catch(e){}</script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob: https://vibeoffice.work ipc: http://ipc.localhost; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<script src="../common/look.js"></script>
 <script src="../common/lang.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lectern</title>
@@ -300,7 +301,6 @@
   <div class="statusbar" id="statusbar"></div>
 </div>
 <script src="../common/suite.js"></script>
-<script>window.L = { APP_ID: 'lectern', APP_NAME: 'Lectern', APP: 'Lectern' };</script>
 <script src="../common/core.js"></script>
 <script src="../common/i18n.js"></script>
 <script src="../common/locales.js"></script>

@@ -28,6 +28,8 @@ pub struct Host {
     settings: Mutex<Settings>,
     /// window label -> the file its last save went to (downloads, until real saving: todos/DESKTOP_REAL_SAVE.md)
     downloads: Mutex<HashMap<String, PathBuf>>,
+    /// window label -> the page it shows (as each page starts loading), for `leave`
+    pages: Mutex<HashMap<String, Url>>,
 }
 
 /// What the native side keeps for itself, in settings.json in the app's config folder: what has to apply
@@ -241,14 +243,63 @@ pub fn host_close_window(window: WebviewWindow) -> Result<bool, String> {
     Ok(true)
 }
 
-/// Opens a web or mail address in the system's browser or mail program.
+/// Opens one of VibeOffice's own web addresses in the system's browser (the update page: VO.host.openUrl).
 #[tauri::command]
 pub fn host_open_url(url: String) -> Result<(), String> {
     let parsed = Url::parse(&url).map_err(|e| format!("{url}: {e}"))?;
-    if !is_external(&parsed) {
-        return Err(format!("not a web or mail address: {url}"));
+    if !is_ours(&parsed) {
+        return Err(format!("not one of VibeOffice's addresses: {url}"));
     }
     open_external(&parsed)
+}
+
+/// The addresses the app itself sends to the browser: its site and its source.
+pub fn is_ours(url: &Url) -> bool {
+    url.scheme() == "https"
+        && url.port().is_none()
+        && match url.host_str() {
+            Some("vibeoffice.work") => true,
+            Some("github.com") => {
+                url.path() == "/tcchen2026/VibeOffice"
+                    || url.path().starts_with("/tcchen2026/VibeOffice/")
+            }
+            _ => false,
+        }
+}
+
+/// Whether a page may send `url` to the browser: our own addresses from any page, and any web address from
+/// the licences page, whose links go to the works it credits. Nothing else: a document's hyperlinks never
+/// navigate (the pages show them in a dialog), so anything else leaving the app is unexpected.
+pub fn may_open(page: Option<&Url>, url: &Url) -> bool {
+    let licences = page.is_some_and(|p| !is_external(p) && p.path() == "/oss-licenses.html");
+    is_ours(url) || (licences && matches!(url.scheme(), "http" | "https"))
+}
+
+impl Host {
+    /// A window's page starts loading: the page `leave` judges its links by.
+    pub fn page_started(&self, label: &str, url: &Url) {
+        self.pages.lock().unwrap().insert(label.into(), url.clone());
+    }
+}
+
+/// A window wants to leave the app for `url` (a link, a new window): it goes to the browser if `may_open`
+/// lets it, otherwise nowhere.
+pub fn leave(app: &AppHandle, label: &str, url: &Url) {
+    let page = app
+        .state::<Host>()
+        .pages
+        .lock()
+        .unwrap()
+        .get(label)
+        .cloned();
+    if may_open(page.as_ref(), url) {
+        let _ = open_external(url);
+    } else {
+        eprintln!(
+            "not opened: {url} (from {})",
+            page.map_or_else(String::new, |p| p.to_string())
+        );
+    }
 }
 
 /// Whether a page wants to leave the app: http(s) to another host, or mailto. The app's own pages
@@ -452,6 +503,52 @@ fn describe(path: &Path, e: std::io::Error) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_our_own_addresses_leave_for_the_browser_but_the_licences_page_credits_others() {
+        let u = |s: &str| Url::parse(s).unwrap();
+        for ours in [
+            "https://vibeoffice.work/updater/?from_version=v2026.10.16-abc123&current_platform=windows",
+            "https://github.com/tcchen2026/VibeOffice",
+            "https://github.com/tcchen2026/VibeOffice/issues",
+        ] {
+            assert!(is_ours(&u(ours)), "{ours}");
+        }
+        for other in [
+            "https://example.com/",
+            "http://vibeoffice.work/",
+            "https://vibeoffice.work:8443/",
+            "https://www.vibeoffice.work/",
+            "https://github.com/tcchen2026/VibeOfficeEvil",
+            "https://github.com/someone/else",
+            "mailto:someone@example.com",
+            "file:///etc/passwd",
+        ] {
+            assert!(!is_ours(&u(other)), "{other}");
+        }
+        let app = u("http://tauri.localhost/quire/");
+        let licences = u("http://tauri.localhost/oss-licenses.html");
+        let crate_home = u("https://github.com/tauri-apps/tauri");
+        assert!(!may_open(Some(&app), &crate_home), "not from an app's page");
+        assert!(!may_open(None, &crate_home), "nor from a page not known");
+        assert!(
+            may_open(Some(&licences), &crate_home),
+            "from the licences page"
+        );
+        assert!(may_open(Some(&licences), &u("http://wordlist.aspell.net/")));
+        assert!(!may_open(Some(&licences), &u("mailto:someone@example.com")));
+        assert!(
+            !may_open(
+                Some(&u("https://example.com/oss-licenses.html")),
+                &crate_home
+            ),
+            "another site's page of that name"
+        );
+        assert!(may_open(
+            Some(&app),
+            &u("https://github.com/tcchen2026/VibeOffice")
+        ));
+    }
 
     #[test]
     fn launch_files_are_the_files_among_the_arguments_relative_to_the_starts_folder() {

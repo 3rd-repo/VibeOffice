@@ -1,15 +1,17 @@
 /* VibeOffice — core utilities, shared by Quire, Ledger and Lectern.
  * Shared namespace, DOM helpers, units, colors, events, file I/O, media store, PDF writer.
- * Every other script attaches itself to window.L. Each page names its app before loading this file:
- *   <script>window.L = { APP_ID: 'quire', APP_NAME: 'Quire', APP: 'Quire' };</script>
+ * Every other script attaches itself to window.L. Each page names its app on its <html> (no inline script:
+ * the pages' Content-Security-Policy):
+ *   <html lang="en" data-app="quire" data-app-name="Quire">
  * APP_ID keeps each app's saved settings apart (localStorage 'quire.…'); APP_NAME and APP appear in messages.
  */
 (function (root) {
   'use strict';
   const L = root.L || (root.L = {});
+  const named = root.document?.documentElement?.dataset || {};
   L.VERSION = root.VO?.VERSION || 'dev';   // one version for the suite: common/suite.js
-  L.APP_ID = L.APP_ID || 'vibeoffice';
-  L.APP_NAME = L.APP_NAME || 'VibeOffice';
+  L.APP_ID = L.APP_ID || named.app || 'vibeoffice';
+  L.APP_NAME = L.APP_NAME || named.appName || 'VibeOffice';
   L.APP = L.APP || L.APP_NAME;
 
   /* ---------- DOM ---------- */

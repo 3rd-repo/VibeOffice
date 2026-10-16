@@ -73,12 +73,14 @@ test('desktop: a save says where it went, and Browse shows it', () => {
     failed: 'The file could not be saved to the Downloads folder.', button: false });
 });
 
-test('desktop: openUrl goes to the system', () => {
+test('desktop: openUrl sends our own addresses to the system, and nothing else', () => {
   const { r } = shot('', [{ js: `await VO.host.openUrl('https://github.com/tcchen2026/VibeOffice');
-    let bad = ''; try { await VO.host.openUrl('file:///C:/Windows/notepad.exe'); } catch (e) { bad = String(e); }
+    const bad = []; for (const url of ['file:///C:/Windows/notepad.exe', 'https://example.com/', 'mailto:someone@example.com'])
+      try { await VO.host.openUrl(url); } catch (e) { bad.push(String(e)); }
     return JSON.stringify({ opened: sessionStorage.opened, bad });` }], '--pre', path.join(root, 'tests/desktop/host-stub.js'), '--qs', 'nolaunch');
   assert.equal(r.opened, 'https://github.com/tcchen2026/VibeOffice');
-  assert.match(r.bad, /not a web or mail address/);
+  assert.equal(r.bad.length, 3);
+  for (const e of r.bad) assert.match(e, /not one of VibeOffice's addresses/);
 });
 
 const settings = `document.getElementById('settings').click(); await new Promise((r) => setTimeout(r, 400));

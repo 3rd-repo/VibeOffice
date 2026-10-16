@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-app="quire" data-app-name="Quire">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob: https://vibeoffice.work ipc: http://ipc.localhost; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<script>try{var d=document.documentElement,l=localStorage.getItem('vibeoffice.look')||'classic';d.dataset.look=l;d.dataset.layout=l==='paper2016'?'ribbon':'bars'}catch(e){}</script>
+<script src="../common/look.js"></script>
 <script src="../common/lang.js"></script>
 <link rel="stylesheet" href="../common/looks.css">
 <link rel="stylesheet" href="../common/ui.css">
@@ -354,7 +355,6 @@ body.bluebg .pages .pc, body.bluebg .pages .pc span { color: #fff !important; }
   <div class="statusbar" id="statusbar"></div>
 </div>
 <script src="../common/suite.js"></script>
-<script>window.L = { APP_ID: 'quire', APP_NAME: 'Quire', APP: 'Quire' };</script>
 <script src="../common/core.js"></script>
 <script src="../common/i18n.js"></script>
 <script src="../common/locales.js"></script>

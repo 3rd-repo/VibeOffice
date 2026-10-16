@@ -36,7 +36,7 @@ One interface between the pages and what runs them, so a page never asks which: 
 | `updates` | `true` (the page never checks) | `true`; `false` in the Mac App Store edition, which the store updates (the Start Center never checks) |
 | `version` | `0` | `host::VERSION`, raised when a command changes shape |
 | `onFiles(fn)` | `launchQueue` (the PWA's file handlers) | `host_launch_files`, then `host_read` for each; again on `vo-files`, when another start of the app hands over its files (Windows) or Finder does (macOS) |
-| `openUrl(url)` | a new tab | `host_open_url`: http, https and mailto only, to the system (`ShellExecuteW`, `NSWorkspace openURL:`, `xdg-open`) |
+| `openUrl(url)` | a new tab | `host_open_url`: VibeOffice's own addresses only (`host::is_ours`: https://vibeoffice.work/, the GitHub repository), to the system (`ShellExecuteW`, `NSWorkspace openURL:`, `xdg-open`) |
 | `newWindow(url)` | `window.open` (false if blocked) | `host_new_window`: one of the app's own pages (same scheme, host and port) in a full window (`doc-N`) with the host script and handlers |
 | `closeWindow()` | `false` | `host_close_window`: closes an app window (true); the Start Center's (`main`) stays (false) |
 | `uiScale()`, `setUiScale(n)` | `null` (the browser's own zoom does it) | `host_ui_scale`, `host_set_ui_scale`: the web view's zoom, 0.5–4, every window, kept in `settings.json` |
@@ -45,7 +45,7 @@ One interface between the pages and what runs them, so a page never asks which: 
 
 `fn(files)` gets `File` objects; the Start Center calls `onFiles` and opens the first file in its app (`VO.handoff`). The service worker is registered only on the web.
 
-Links: besides `openUrl`, the native side sends every navigation or new window that leaves the app (http(s) to another host, mailto) to the default browser (`on_navigation`, `on_new_window` in `main.rs`): the Start Center's GitHub button needs no change. A document's hyperlinks are never opened: the apps show them to copy (docs/suite.md, Hyperlinks). The app's own pages (`tauri://localhost`, `http://tauri.localhost`; devUrl in a dev build), `blob:`, `data:` and `about:` stay in the app.
+Links: besides `openUrl`, a navigation or new window that leaves the app (http(s) to another host, mailto; `on_navigation`, `on_new_window` in `main.rs`) goes to the default browser only if `host::may_open` lets it: VibeOffice's own addresses from any page (the Start Center's GitHub button), and any web address from the licences page, whose links credit other projects; anything else opens nothing (a line on stderr). A document's hyperlinks never navigate: the apps show them to copy (docs/suite.md, Hyperlinks). The app's own pages (`tauri://localhost`, `http://tauri.localhost`; devUrl in a dev build), `blob:`, `data:` and `about:` stay in the app, and a page can't open a bare window of its own: the suite's windows come from `VO.host.newWindow`, with the network rules.
 
 UI size (Settings on the Start Center): the web view's zoom, as Ctrl + in a browser, so canvases stay sharp and clicks land where they should. CSS `zoom` on the page was measured and does not work: at 200 % every click on Ledger's grid landed on B4 and menus opened at twice their place. `settings.json` (the app's config folder: `%APPDATA%\work.vibeoffice.desktop\`, `~/.config/work.vibeoffice.desktop/`) keeps it, and it is applied as each page starts loading (WebKitGTK resets the zoom on the first load).
 
@@ -60,7 +60,7 @@ Windows: as when the PWA is installed, the Start Center stays in its window and 
 
 Planned: `open({ accept })` (the system's Open dialog), `save(handle, blob)` and `saveAs(name, blob)` (in place, as File ▸ Save does in Office) and one instance on Linux (today each start there is a process of its own).
 
-`node --test tests/desktop/host.test.mjs` checks the page side in Chromium: `tests/desktop/host-stub.js` plays the desktop host (run before each page with `tools/shot.mjs --pre`; `?nolaunch` and `?update=button|dialog` set the scene): a launch file opens in its app once, with no service worker and the build's version; `openUrl` refuses anything but web and mail addresses; Settings sets the UI size (the web points to the browser's zoom); the update policies; versions compare by date.
+`node --test tests/desktop/host.test.mjs` checks the page side in Chromium: `tests/desktop/host-stub.js` plays the desktop host (run before each page with `tools/shot.mjs --pre`; `?nolaunch` and `?update=button|dialog` set the scene): a launch file opens in its app once, with no service worker and the build's version; `openUrl` refuses anything but VibeOffice's own addresses; Settings sets the UI size (the web points to the browser's zoom); the update policies; versions compare by date.
 
 ## Saving (for now)
 
@@ -115,8 +115,9 @@ the Start Center. The macOS smoke run sets it and fails without `blocked`. On Wi
 WebView2's filter; the pages' own Content-Security-Policy refuses it there (todos/HARDENING.md, phase 1).
 
 The app's own pages and IPC (`tauri://`, `ipc://`; `http://tauri.localhost` and `http://ipc.localhost` on Windows) and
-`data:` and `blob:` are not the network; a dev build also reaches its dev server (127.0.0.1). Links still open in the
-default browser, which is not the app. The sandbox can't name a host: the DMG has the network entitlement
+`data:` and `blob:` are not the network; a dev build also reaches its dev server (127.0.0.1). Our own links still open
+in the default browser, which is not the app. The pages' Content-Security-Policy (docs/suite.md, Security) is the
+same limit from the other side: `connect-src` names the site and the IPC sources (`ipc:`, `http://ipc.localhost`). The sandbox can't name a host: the DMG has the network entitlement
 (`network.client`) for the update check, which is why the rules live in the web view; the App Store edition has none.
 What the system and WebView2 do on their own (Edge's updates, certificate checks) is theirs.
 

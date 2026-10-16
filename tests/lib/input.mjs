@@ -177,8 +177,13 @@ export async function open(app, opts = {}) {
     painting: () => evaluate(`!!document.querySelector('.painting')`),
     /** what has the keyboard: the focused element's id, else its class, else its tag */
     focused: () => evaluate(`(() => { const a = document.activeElement; return a ? (a.id || (typeof a.className === 'string' && a.className) || a.tagName) : null; })()`),
-    /** no console errors and no request off 127.0.0.1 so far */
-    clean() { assert.deepEqual(page.errors, [], 'browser errors'); assert.deepEqual(page.requests, [], 'external requests'); },
+    /** no console errors or CSP refusals, no request off 127.0.0.1, no window opened and no page of another site so far */
+    clean() {
+      assert.deepEqual(page.errors, [], 'browser errors');
+      assert.deepEqual(page.windows, [], 'windows opened');
+      assert.deepEqual(page.navigations, [], 'navigations to another site');
+      assert.deepEqual(page.requests, [], 'external requests');
+    },
   };
   return t;
 }

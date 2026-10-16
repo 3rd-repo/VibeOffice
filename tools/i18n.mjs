@@ -235,9 +235,7 @@ function gather() {
   }
   for (const rel of HTML) {
     const src = fs.readFileSync(path.join(PUB, rel), 'utf8');
-    scanHTML(rel, src, add);
-    /* the page's own script (the Start Center's), its lines where they are in the page */
-    scanJS(rel, src.replace(/<script>([\s\S]*?)<\/script>|[^\n]/g, (m, js) => (js != null ? ' '.repeat(8) + js + ' '.repeat(9) : ' ')), add, fragment);
+    scanHTML(rel, src, add);   // no page has a script of its own (tools/csp.mjs): the Start Center's is start.js
   }
   scanHTML('ledger/index.html', fs.readFileSync(path.join(root, LEDGER_TEMPLATE), 'utf8'), add);
   const out = {};
