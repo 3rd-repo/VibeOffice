@@ -14,8 +14,14 @@ use tauri::{
 };
 
 /// A window of the suite: the Start Center ("main") or an app (host_new_window). Every window gets the
-/// host script, title, link, drop and UI size handling, and the network rules (net.rs).
+/// host script, title, link, drop and UI size handling, and the network rules (net.rs): on Windows and macOS
+/// it starts on about:blank and goes to its page once they are on (`net::guard`).
 pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Result<WebviewWindow> {
+    #[cfg(any(windows, target_os = "macos"))]
+    let (url, page) = (
+        WebviewUrl::External(net::BLANK.parse().expect("about:blank")),
+        net::page_url(app, url),
+    );
     let window = WebviewWindowBuilder::new(app, label, url)
         .title("VibeOffice")
         .inner_size(1280.0, 820.0)
@@ -63,8 +69,13 @@ pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Resu
             }
             _ => true,
         })
-        // The system title bar shows the page's title, as in the installed PWA.
+        // The system title bar shows the page's title, as in the installed PWA (not about:blank's, nor
+        // the network probe's).
         .on_document_title_changed(|window, title| {
+            #[cfg(any(windows, target_os = "macos"))]
+            if title == net::BLANK || net::probe::reported(&window, &title) {
+                return;
+            }
             let _ = window.set_title(&title);
         })
         // The UI size (Settings), as each page starts: WebKitGTK resets the zoom on the first load.
@@ -75,13 +86,16 @@ pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Resu
             }
             // The first start after installing: what the user chose in the installer
             #[cfg(windows)]
-            if payload.event() == PageLoadEvent::Finished && window.label() == "main" {
+            if payload.event() == PageLoadEvent::Finished
+                && window.label() == "main"
+                && matches!(payload.url().scheme(), "http" | "https")
+            {
                 installed::after_install(&window);
             }
         })
         .build()?;
     #[cfg(any(windows, target_os = "macos"))]
-    window.with_webview(net::apply)?;
+    net::guard(&window, page)?;
     Ok(window)
 }
 
@@ -229,9 +243,9 @@ fn main() {
                     STARTED.store(true, std::sync::atomic::Ordering::SeqCst);
                 }
             };
-            // macOS: once WebKit has compiled the network rules, so the first page never runs without them
+            // macOS: once WebKit has compiled the network rules (without them, no window opens)
             #[cfg(target_os = "macos")]
-            net::prepare(start);
+            net::prepare(app.handle(), start);
             #[cfg(not(target_os = "macos"))]
             start();
             Ok(())

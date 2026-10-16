@@ -196,7 +196,8 @@ fn confirm() -> Option<bool> {
     (button == 100).then_some(checked.as_bool())
 }
 
-fn message(text: &str, style: MESSAGEBOX_STYLE) -> MESSAGEBOX_RESULT {
+/// A message box titled VibeOffice (also net.rs's alert)
+pub(crate) fn message(text: &str, style: MESSAGEBOX_STYLE) -> MESSAGEBOX_RESULT {
     unsafe {
         MessageBoxW(
             None,

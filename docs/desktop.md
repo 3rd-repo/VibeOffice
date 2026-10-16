@@ -9,7 +9,7 @@
 | `desktop/tauri.conf.json` | app name and identifier, `frontendDist: ../public`, `devUrl` (tools/serve.py), `removeUnusedCommands`; Tauri's bundler is off (the installer is `setup/`) |
 | `desktop/src/main.rs` | one instance on Windows (`second_start`); files handed over later (`files_arrived`: another start on Windows, Finder on macOS); the main window: system title bar follows `document.title`, file drops go to the page, links out of the app go to the default browser, the UI size on each page load, `__VO_HOST__` before each page; on macOS the menu bar (`mac_menu`), Finder's files (`RunEvent::Opened`), the Dock (`Reopen`) and staying open with no window (macOS, below) |
 | `desktop/src/host.rs` | the native side of `VO.host`: the `host_*` commands, file handles, `settings.json` |
-| `desktop/src/net.rs` | the network rules: each window's web view reaches `https://vibeoffice.work/` alone (Network, below) |
+| `desktop/src/net.rs` | the network rules: each window's web view reaches `https://vibeoffice.work/` alone, or the window never loads its page; `VO_NET_PROBE` (Network, below) |
 | `desktop/src/installation.rs` | what the installer writes and `-uninstall` removes, in one list: files, shortcuts, HKCU registrations (shared with `setup/`) |
 | `desktop/src/installed.rs` | Windows: `vibeoffice.exe -uninstall`, and the first start after installing (taskbar pin request, Default apps) |
 | `desktop/app.manifest` | common controls v6 and `asInvoker` (never asks for administrator rights) |
@@ -96,12 +96,23 @@ whatever makes it (a page, a picture or frame in a document, a worker), is refus
 
 - macOS: a WebKit content rule list (the format of Safari's content blockers): block `^https?://` and `^wss?://`, then
   let `^https://vibeoffice\.work/` through. WebKit compiles it at start (and keeps it compiled in the app's container);
-  the Start Center opens only then, and each window gets it as it is made, before its page runs. The smoke run fails
-  without it (stderr: `network rules: only https://vibeoffice.work/`).
+  the Start Center opens only then.
 - Windows: WebView2 hands every request of a window to `net::allowed` first (`AddWebResourceRequestedFilter` for `*`,
   workers included where WebView2 has `ICoreWebView2_22`); a refused one gets a 403 instead. WebSocket connections
   may not pass through that event (WebView2 documents it for HTTP requests), but no page opens one.
 - Linux: no rules (no release).
+
+It fails closed (`net::guard`). Each window starts on `about:blank` and goes to its page only once the rules are on
+its web view, so no page of the app runs without them. If they can't be set, the window closes without loading its
+page and a system alert says why; when it was the only window, the app quits (exit code 1). On macOS, if WebKit
+refuses to compile the rules, no window opens at all.
+
+The rules are checked from a page: with `VO_NET_PROBE=1`, the Start Center's window first loads a probe page of its
+own (a `data:` URL with no policy of its own, so only the rules can refuse anything). It tries a picture from
+github.com, a fetch of api.github.com and a WebSocket to echo.websocket.org, with a picture from vibeoffice.work as the
+control, and prints `network probe: blocked` on stderr, or `REACHED` and what got through. Then the window goes on to
+the Start Center. The macOS smoke run sets it and fails without `blocked`. On Windows a WebSocket may get through
+WebView2's filter; the pages' own Content-Security-Policy refuses it there (todos/HARDENING.md, phase 1).
 
 The app's own pages and IPC (`tauri://`, `ipc://`; `http://tauri.localhost` and `http://ipc.localhost` on Windows) and
 `data:` and `blob:` are not the network; a dev build also reaches its dev server (127.0.0.1). Links still open in the
@@ -248,7 +259,7 @@ No exe packers (UPX): antivirus flags packed exes. The largest pages are the the
 ## Results
 
 - Linux (Debian 13, WebKitGTK 2.52.6, Xfce): Start Center, all three apps; `vibeoffice Budget.csv` opens it in Ledger and `Notes.md` in Quire, the title bar follows the document; Recent Files and the look are kept between runs. With no network at all (`unshare -rn`), a fresh profile: everything loads, in Paper; the GitHub button goes to `xdg-open`; UI size 150 % and 200 % scale the whole UI, sharp, and are back after a restart; the Start Center keeps Settings reachable in its narrow layout. Started with `Budget.csv`, the Start Center stays and Ledger opens in a window of its own; Quire from the Start Center opens a third window, and its File ▸ Exit closes only that one.
-- macOS (2026-10-15, the CI's first run, macos-15): builds universal (arm64 and x86_64, 15.3 MB), signed ad hoc; the smoke run opens the Start Center, then `linecases.docx` in Quire, `Budget.csv` in Ledger and `Notes.md` in Quire, each in a window of its own in the one running process, under the App Sandbox with no denials, and quits cleanly. Not yet used by a person on a Mac (menus, ⌘ keys, saving, Browse, links, the Dock). The network rules (2026-10-16) type-check for both and pass `cargo test`; not yet run.
+- macOS (2026-10-15, the CI's first run, macos-15): builds universal (arm64 and x86_64, 15.3 MB), signed ad hoc; the smoke run opens the Start Center, then `linecases.docx` in Quire, `Budget.csv` in Ledger and `Notes.md` in Quire, each in a window of its own in the one running process, under the App Sandbox with no denials, and quits cleanly. Not yet used by a person on a Mac (menus, ⌘ keys, saving, Browse, links, the Dock). The network rules (2026-10-16; failing closed, with the probe, the same day) type-check for both and pass `cargo test`; not yet run.
 - Not yet run against the published site: the update check (the site has no `updater/current.json` yet).
 - Installer (2026-10-11), Wine 10.0, `tests/desktop/setup-wine.py`: passes. The dialog shows the pinning hint (Wine has no TaskbarManager); install writes the three files, both shortcuts and the HKCU values; the same version again shows no dialog; uninstall (Enter) leaves no folder, shortcut or value of VibeOffice's and keeps another program's. `cargo test` (Windows target, under Wine): 5 passed. Wine cannot show the app itself (no WebView2), the pin prompt or Default apps.
 - Windows: built, not yet run. To check, as a user without administrator rights: install (the dialog at 100 % and 200 %), the pin prompt on an up-to-date Windows 11 and the hint on Windows 10, Default apps opening at VibeOffice's page, a double-clicked .docx afterwards; Open with lists VibeOffice for .docx, .xlsx and .pptx with their document icons; an update while the app runs; Uninstall from Apps & features; all three apps, saving, drops.

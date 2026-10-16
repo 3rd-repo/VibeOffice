@@ -3,6 +3,14 @@
 //! http(s) and ws(s) request, whatever makes it (a page, a picture or frame in a document, a worker):
 //! WKWebView through a content rule list (macOS), WebView2 by answering the request itself (Windows).
 //! Links still open in the default browser (host::open_external), which is not the app.
+//!
+//! It fails closed: a window starts on about:blank and goes to its page only once the rules are on its web
+//! view (`guard`); if they can't be, the window closes and says why, and the app quits when it was the only
+//! one. `VO_NET_PROBE=1` checks that they work: before the Start Center's page, its window tries to reach
+//! another site and prints `network probe: blocked` (or what it reached) on stderr (the macOS smoke run).
+
+#[cfg(any(windows, target_os = "macos"))]
+use tauri::{AppHandle, Manager, Url, WebviewUrl, WebviewWindow};
 
 /// The one site the pages may reach.
 const SITE_HOST: &str = "vibeoffice.work";
@@ -51,14 +59,158 @@ fn rules() -> String {
     format!("[{}]", rules.join(","))
 }
 
-/// A new window's web view, as it is made (open_window): from now on it loads only what `allowed` lets.
+/// Where a window starts, until its rules are on (`guard`).
 #[cfg(any(windows, target_os = "macos"))]
-pub fn apply(webview: tauri::webview::PlatformWebview) {
+pub const BLANK: &str = "about:blank";
+
+/// The address Tauri gives `url` (as its manager/webview.rs does): the app's own pages at tauri://localhost
+/// (macOS) or http://tauri.localhost (Windows), the dev server in a dev build.
+#[cfg(any(windows, target_os = "macos"))]
+pub fn page_url(app: &AppHandle, url: WebviewUrl) -> Option<Url> {
+    let base = if cfg!(feature = "custom-protocol") {
+        Url::parse(if cfg!(windows) {
+            "http://tauri.localhost/"
+        } else {
+            "tauri://localhost/"
+        })
+        .ok()?
+    } else {
+        app.config().build.dev_url.clone()?
+    };
+    match url {
+        WebviewUrl::App(path) if path.to_str() == Some("index.html") => Some(base),
+        WebviewUrl::App(path) => base.join(&path.to_string_lossy()).ok(),
+        WebviewUrl::External(url) | WebviewUrl::CustomProtocol(url) => Some(url),
+        _ => None,
+    }
+}
+
+/// A window open_window has just made, on about:blank: the rules go on its web view, then it goes to `page`.
+/// If they can't, it never gets there (`refuse`).
+#[cfg(any(windows, target_os = "macos"))]
+pub fn guard(window: &WebviewWindow, page: Option<Url>) -> tauri::Result<()> {
+    let w = window.clone();
+    window.with_webview(move |webview| {
+        let page = page.ok_or_else(|| "the window has no page".to_string());
+        match apply(webview).and(page) {
+            Ok(page) if w.label() == "main" && probe::wanted() => probe::start(&w, page),
+            Ok(page) => {
+                let _ = w.navigate(page);
+            }
+            Err(why) => refuse(&w, &why),
+        }
+    })
+}
+
+/// The rules on a window's web view: WebKit's compiled list (macOS), WebView2's request filter (Windows).
+#[cfg(any(windows, target_os = "macos"))]
+fn apply(webview: tauri::webview::PlatformWebview) -> Result<(), String> {
     #[cfg(target_os = "macos")]
-    mac::apply(webview.controller());
+    return mac::apply(webview.controller());
     #[cfg(windows)]
-    if let Err(e) = win::apply(&webview.controller(), webview.environment()) {
-        eprintln!("network rules: {e}");
+    return win::apply(&webview.controller(), webview.environment()).map_err(|e| e.to_string());
+}
+
+/// A window whose rules couldn't be set: it closes without loading its page, and says why; with no other
+/// window open, the app quits.
+#[cfg(any(windows, target_os = "macos"))]
+fn refuse(window: &WebviewWindow, why: &str) {
+    eprintln!("network rules: {why}");
+    alert(&format!(
+        "VibeOffice could not limit this window to https://{SITE_HOST}/, so it did not open it.\n\n{why}"
+    ));
+    let app = window.app_handle().clone();
+    if app
+        .webview_windows()
+        .keys()
+        .all(|label| label == window.label())
+    {
+        app.exit(1);
+    } else {
+        let _ = window.destroy();
+    }
+}
+
+/// A message the user must read, in the system's own dialog.
+#[cfg(any(windows, target_os = "macos"))]
+fn alert(text: &str) {
+    #[cfg(target_os = "macos")]
+    mac::alert(text);
+    #[cfg(windows)]
+    crate::installed::message(
+        text,
+        windows::Win32::UI::WindowsAndMessaging::MB_OK
+            | windows::Win32::UI::WindowsAndMessaging::MB_ICONERROR,
+    );
+}
+
+/// `VO_NET_PROBE=1`: whether the rules refuse what they should, seen from a page. Before going to its page,
+/// the Start Center's window loads a page of its own (a data: URL, with no policy of its own to block
+/// anything first), which tries a picture, a fetch and a WebSocket on other sites, with a picture from
+/// https://vibeoffice.work/ as the control, and puts the result in its title; `reported` prints it and sends
+/// the window on to its page.
+#[cfg(any(windows, target_os = "macos"))]
+pub mod probe {
+    use std::{collections::HashMap, sync::Mutex};
+    use tauri::{Url, WebviewWindow};
+
+    /// The page each probing window goes to afterwards
+    static NEXT: Mutex<Option<HashMap<String, Url>>> = Mutex::new(None);
+
+    pub fn wanted() -> bool {
+        std::env::var_os("VO_NET_PROBE").is_some_and(|v| v == "1")
+    }
+
+    const PAGE: &str = r#"<!doctype html><title>network probe</title><script>
+const image = (src) => new Promise((done) => { const i = new Image(); i.onload = () => done(true); i.onerror = () => done(false);
+  setTimeout(() => done(false), 10000); i.src = src + '?' + Date.now(); });
+const socket = (src) => new Promise((done) => { try { const s = new WebSocket(src); s.onopen = () => { s.close(); done(true); };
+  s.onerror = () => done(false); setTimeout(() => done(false), 10000); } catch (e) { done(false); } });
+(async () => {
+  const control = await image('https://vibeoffice.work/icons/icon-192.png'), reached = [];
+  if (await image('https://github.com/favicon.ico')) reached.push('a picture');
+  if (await fetch('https://api.github.com/zen', { cache: 'no-store' }).then(() => true, () => false)) reached.push('a fetch');
+  if (await socket('wss://echo.websocket.org/')) reached.push('a WebSocket');
+  document.title = 'network probe: ' + (reached.length ? 'REACHED ' + reached.join(', ')
+    : control ? 'blocked' : 'no control (https://vibeoffice.work/ did not load either)');
+})();
+</script>"#;
+
+    pub fn start(window: &WebviewWindow, page: Url) {
+        NEXT.lock()
+            .unwrap()
+            .get_or_insert_with(HashMap::new)
+            .insert(window.label().into(), page);
+        let encoded: String = PAGE
+            .bytes()
+            .map(|b| match b {
+                b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'.' | b'_' => {
+                    (b as char).to_string()
+                }
+                _ => format!("%{b:02X}"),
+            })
+            .collect();
+        let url = format!("data:text/html;charset=utf-8,{encoded}");
+        let _ = window.navigate(Url::parse(&url).expect("a data: URL"));
+    }
+
+    /// A title from the probe page (not one to show): the result is printed and the window goes on to its page.
+    pub fn reported(window: &WebviewWindow, title: &str) -> bool {
+        if !title.starts_with("network probe") {
+            return false;
+        }
+        if let Some(result) = title.strip_prefix("network probe: ") {
+            eprintln!("network probe: {result}");
+            if let Some(page) = NEXT
+                .lock()
+                .unwrap()
+                .as_mut()
+                .and_then(|n| n.remove(window.label()))
+            {
+                let _ = window.navigate(page);
+            }
+        }
+        true
     }
 }
 
@@ -69,53 +221,51 @@ pub use mac::prepare;
 mod mac {
     use block2::RcBlock;
     use objc2::{rc::Retained, MainThreadMarker};
+    use objc2_app_kit::NSAlert;
     use objc2_foundation::{NSError, NSString};
     use objc2_web_kit::{WKContentRuleList, WKContentRuleListStore, WKUserContentController};
     use std::cell::RefCell;
 
-    /// The compiled rules once WebKit has them, and the web views made before that, waiting for them
-    /// (main thread only, as WebKit is).
-    #[derive(Default)]
-    struct Rules {
-        list: Option<Retained<WKContentRuleList>>,
-        waiting: Vec<Retained<WKUserContentController>>,
-    }
     thread_local! {
-        static RULES: RefCell<Rules> = RefCell::default();
+        /// The compiled rules, once WebKit has them (main thread only, as WebKit is)
+        static RULES: RefCell<Option<Retained<WKContentRuleList>>> = const { RefCell::new(None) };
     }
 
     /// Compiles the rules (WebKit keeps them, compiled, in the app's container), then calls `ready` on the
-    /// main thread: setup opens the Start Center only then, so no page runs without them. If WebKit
-    /// refuses them, the app still starts and says so on stderr.
-    pub fn prepare(ready: impl FnOnce() + 'static) {
+    /// main thread: setup opens the Start Center only then. If WebKit refuses them, no window opens: the
+    /// app says why and quits.
+    pub fn prepare(app: &super::AppHandle, ready: impl FnOnce() + 'static) {
         let mtm = MainThreadMarker::new().expect("network rules: not on the main thread");
-        let Some(store) = (unsafe { WKContentRuleListStore::defaultStore(mtm) }) else {
-            eprintln!("network rules: no content rule list store");
-            return ready();
+        let refused = {
+            let app = app.clone();
+            move |why: String| {
+                eprintln!("network rules: {why}");
+                alert(&format!(
+                    "VibeOffice could not limit its windows to https://{}/, so it did not start.\n\n{why}",
+                    super::SITE_HOST
+                ));
+                app.exit(1);
+            }
         };
-        let ready = RefCell::new(Some(ready));
+        let Some(store) = (unsafe { WKContentRuleListStore::defaultStore(mtm) }) else {
+            return refused("no content rule list store".into());
+        };
+        let then = RefCell::new(Some((ready, refused)));
         let done = RcBlock::new(move |list: *mut WKContentRuleList, error: *mut NSError| {
+            let Some((ready, refused)) = then.borrow_mut().take() else {
+                return;
+            };
             match unsafe { Retained::retain(list) } {
                 Some(list) => {
                     eprintln!("network rules: only https://{}/", super::SITE_HOST);
-                    RULES.with_borrow_mut(|rules| {
-                        for controller in rules.waiting.drain(..) {
-                            unsafe { controller.addContentRuleList(&list) };
-                        }
-                        rules.list = Some(list);
-                    });
+                    RULES.set(Some(list));
+                    ready();
                 }
                 None => {
                     let why =
                         unsafe { error.as_ref() }.map(|e| e.localizedDescription().to_string());
-                    eprintln!(
-                        "network rules: WebKit refused them: {}",
-                        why.unwrap_or_default()
-                    );
+                    refused(format!("WebKit refused them: {}", why.unwrap_or_default()));
                 }
-            }
-            if let Some(ready) = ready.borrow_mut().take() {
-                ready();
             }
         });
         unsafe {
@@ -127,18 +277,28 @@ mod mac {
         }
     }
 
-    /// The rules on a web view's user content controller (wry's WKUserContentController), now or as soon
-    /// as they are compiled.
-    pub fn apply(controller: *mut std::ffi::c_void) {
-        let Some(controller) =
-            (unsafe { Retained::retain(controller.cast::<WKUserContentController>()) })
-        else {
+    /// The rules on a web view's user content controller (wry's WKUserContentController).
+    pub fn apply(controller: *mut std::ffi::c_void) -> Result<(), String> {
+        let controller = unsafe { Retained::retain(controller.cast::<WKUserContentController>()) }
+            .ok_or("the web view has no user content controller")?;
+        RULES.with_borrow(|list| match list {
+            Some(list) => {
+                unsafe { controller.addContentRuleList(list) };
+                Ok(())
+            }
+            None => Err("the rules are not compiled".into()),
+        })
+    }
+
+    /// A modal alert (NSAlert), on the main thread.
+    pub fn alert(text: &str) {
+        let Some(mtm) = MainThreadMarker::new() else {
             return;
         };
-        RULES.with_borrow_mut(|rules| match &rules.list {
-            Some(list) => unsafe { controller.addContentRuleList(list) },
-            None => rules.waiting.push(controller),
-        });
+        let alert = NSAlert::new(mtm);
+        alert.setMessageText(&NSString::from_str("VibeOffice"));
+        alert.setInformativeText(&NSString::from_str(text));
+        alert.runModal();
     }
 }
 

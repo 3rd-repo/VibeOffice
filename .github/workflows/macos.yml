@@ -103,7 +103,8 @@ jobs:
           cp tests/quire/lines/linecases.docx "$out/files/"
           printf 'Item,Cost\nRent,900\nFood,250\n' > "$out/files/Budget.csv"
           printf '# Notes\n\nHello from the smoke run.\n' > "$out/files/Notes.md"
-          open --stderr "$out/stderr.log" -a "$app"
+          # VO_NET_PROBE: before the Start Center, its window tries other sites and prints what it reached (net.rs)
+          open --env VO_NET_PROBE=1 --stderr "$out/stderr.log" -a "$app"
           sleep 20
           screencapture -x "$out/1-start-center.png"
           n=2
@@ -116,7 +117,7 @@ jobs:
           osascript -e 'quit app "VibeOffice"' || pkill -x vibeoffice || true
           log show --last 5m --predicate 'process == "vibeoffice"' --style compact > "$out/app.log" 2>&1 || true
           cat "$out/stderr.log"
-          grep -q '^network rules: only https://vibeoffice.work/' "$out/stderr.log" || { echo "::error::no network rules"; exit 1; }
+          grep -q '^network probe: blocked$' "$out/stderr.log" || { echo "::error::the network rules did not block the probe (stderr.log)"; exit 1; }
 
       - uses: actions/upload-artifact@v4
         if: always()

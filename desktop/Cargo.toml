@@ -44,13 +44,14 @@ tauri-plugin-single-instance = "2.5.3"
 # The network rules (src/net.rs): WebView2's request filter (the version wry uses)
 webview2-com = "0.39"
 
-# macOS: links and Finder through NSWorkspace (the sandbox starts no programs), the edition from Info.plist.
+# macOS: links and Finder through NSWorkspace (the sandbox starts no programs), the edition from Info.plist,
+# NSAlert when the network rules can't be set (src/net.rs).
 # Tauri's wry and tao already build these; only the classes used are switched on.
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 block2 = "0.6"
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSBundle", "NSError", "NSString", "NSURL"] }
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSWorkspace"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSAlert", "NSApplication", "NSWorkspace"] }
 # The network rules (src/net.rs): WebKit's content rule list
 objc2-web-kit = { version = "0.3", default-features = false, features = ["std", "block2", "WKContentRuleList", "WKContentRuleListStore", "WKUserContentController"] }
 
