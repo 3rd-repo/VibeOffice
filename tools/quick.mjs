@@ -29,7 +29,8 @@ changed = [...new Set(changed)];
 const SECONDS = { 'tests/ui/smoke.test.mjs': 20, 'tests/ui/quire.test.mjs': 175, 'tests/ui/ledger.test.mjs': 130, 'tests/ui/lectern.test.mjs': 130,
   'tests/ui/focus.test.mjs': 265, 'tests/ui/focus.test.mjs :: classic': 90, 'tests/ui/drag.test.mjs': 45, 'tests/ui/gestures.test.mjs': 480, 'tests/ui/painter.test.mjs': 40, 'tests/ui/textmap.test.mjs': 165,
   'tests/ledger/*.test.js': 5, 'tests/quire/*.test.js': 1, 'tests/quire/lines.test.mjs': 5, 'tests/from-issues/*/*.test.mjs': 1, 'tests/scout.test.mjs': 190, 'tests/desktop/host.test.mjs': 32, 'tests/sw.test.mjs': 10,
-  'tests/ribbon.test.mjs': 5, 'tests/search.test.mjs': 4, 'tests/ooxml/check.test.mjs': 3, 'tests/i18n.test.mjs': 1, 'tests/fonts.test.mjs': 1, 'tests/locales.test.mjs': 15 };
+  'tests/ribbon.test.mjs': 5, 'tests/search.test.mjs': 4, 'tests/ooxml/check.test.mjs': 3, 'tests/i18n.test.mjs': 1, 'tests/fonts.test.mjs': 1, 'tests/locales.test.mjs': 15,
+  'tests/hostile/export-html.test.mjs': 6 };
 const RULES = [
   [/^public\/(quire|ledger|lectern|common)\/|^public\/[^/]+\.(html|js|css)$/, ['tests/ui/smoke.test.mjs', 'tests/licenses.test.mjs', 'tests/from-issues/*/*.test.mjs', 'tests/i18n.test.mjs']],   // and the reported issues' tests, the English catalog
   [/^public\/ledger\/|^tools\/ledger\//, ['tests/ledger/*.test.js', 'tests/ui/ledger.test.mjs']],
@@ -58,6 +59,7 @@ const RULES = [
   [/^tests\/lib\/input\.mjs$|^tools\/ooxml\/cdp\.mjs$/, ['tests/ui/smoke.test.mjs']],
   [/^public\/oss-licenses\.html$|^tools\/oss-licenses\.py$|^desktop\/(Cargo|patches|licenses)/, ['tests/licenses.test.mjs']],
   [/^desktop\/src\//, ['tests/desktop/host.test.mjs']],
+  [/^public\/common\/core\.js$|^public\/quire\/js\/htmlio\.js$|^public\/ledger\/js\/(csv|clipboard)\.js$|^public\/lectern\/js\/app\.js$/, ['tests/hostile/export-html.test.mjs']],   // HTML we write: no markup from the document
   [/^tests\/.*\.test\.(mjs|js)$/, (f) => [f]],   // a test changed: itself
 ];
 const picked = new Set();

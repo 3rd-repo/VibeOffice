@@ -184,6 +184,15 @@ pagination; mark placement in rotated, RTL and vertical text at 75%, 100% and 15
 identical exported page pixels with marks off/on, plus native print styling.
 Its generated DOCX originals, saves and edits can be compared independently in LibreOffice.
 
+## Hostile documents: tests/hostile/
+
+Documents written to attack the suite (todos/HARDENING.md, phase 3). `export-html.test.mjs` (about 6 s, in the quick
+check when an HTML writer changes) gives each app a document whose font names, colours, notes and link addresses
+are markup, writes Save as Web Page (and Quire's and Ledger's clipboard HTML), and checks the result as a document
+of its own: no element, attribute or script the writer didn't make, the names still there as text, the page's own
+policy (`L.exportCSP`) in place; then it opens each page from a local server, where nothing of the document runs
+and Lectern's own script still does.
+
 ## Ledger: tests/ledger/
 
 The engine and the file readers and writers load in Node through `load.js` (the shared ones from `public/common/`; a missing file is an error), so most checks run without a browser.

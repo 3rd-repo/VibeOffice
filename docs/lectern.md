@@ -103,7 +103,7 @@ New presentations, templates and the sample are *Widescreen (16:9)* (13.33 × 7.
 * **.pptx** — standard PresentationML. Exports pass the OOXML schema validator and open in LibreOffice and python-pptx; they are meant for PowerPoint 2007 and later, Keynote and Google Slides. With a password to open, the file is encrypted.
 * **.ppsx / .potx** — show and template variants (standalone page only).
 * **PDF** — one slide per page, or exactly what Print Preview shows (handouts, notes pages, outline).
-* **Single-file web page**, **PNG** of the current slide, **plain-text outline**.
+* **Single-file web page** (its one script allowed by its hash in the page's own security policy), **PNG** of the current slide, **plain-text outline**.
 
 Pictures survive a round trip in every form they come in: SVG pictures keep the vector original next to a PNG copy, linked pictures keep their link, pictures whose image is missing keep their frame, and a transparent colour (Picture toolbar ▸ Set Transparent Color, or `a:clrChange` in a file) is stored as a setting, not baked into the image.
 

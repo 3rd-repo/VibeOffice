@@ -554,16 +554,19 @@
     const notes = pres.slides.filter((s) => !s.hidden).map((s) => s.notes || '');
     const title = L.esc(pres.props.title || A.fileName);
     const fonts = await L.embedFonts(slides.join(''));   // the stand-ins the slides name, inside the page
-    return new Blob([`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
-<style>${fonts}</style>
-<style>html,body{height:100%;margin:0;background:#1e1e1e;color:#eee;font:13px Tahoma,Verdana,sans-serif}#stage{position:absolute;left:0;top:0;transform-origin:0 0}#bar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;align-items:center;justify-content:center;padding:8px;background:rgba(0,0,0,.6)}button{font:inherit;padding:4px 12px}#notes{max-width:70ch;white-space:pre-wrap;color:#ccc}${slideCSS()}</style></head><body>
-<div id="stage"></div><div id="bar"><button id="prev" aria-label="Previous slide">◀</button><span id="num"></span><button id="next" aria-label="Next slide">▶</button></div>
-<script>const S=${JSON.stringify(slides)};const N=${JSON.stringify(notes)};const W=${pres.W},H=${pres.H};let i=0;const st=document.getElementById('stage');
+    /* the page's data as script text: JSON with every < escaped, so no note or slide can end the <script> */
+    const json = (x) => JSON.stringify(x).replace(/</g, '\\u003c');
+    const script = `const S=${json(slides)};const N=${json(notes)};const W=${pres.W},H=${pres.H};let i=0;const st=document.getElementById('stage');
 function fit(){const k=Math.min(innerWidth/W,(innerHeight-44)/H);st.style.transform='translate('+((innerWidth-W*k)/2)+'px,'+((innerHeight-44-H*k)/2)+'px) scale('+k+')';}
 function show(n){i=Math.max(0,Math.min(S.length-1,n));st.innerHTML=S[i];document.getElementById('num').textContent=(i+1)+' / '+S.length;}
 document.getElementById('prev').onclick=()=>show(i-1);document.getElementById('next').onclick=()=>show(i+1);
 addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' ','Enter'].includes(e.key))show(i+1);if(['ArrowLeft','PageUp','Backspace'].includes(e.key))show(i-1);if(e.key==='Home')show(0);if(e.key==='End')show(S.length-1);});
-addEventListener('resize',fit);fit();show(0);<\/script></body></html>`], { type: 'text/html' });
+addEventListener('resize',fit);fit();show(0);`;
+    return new Blob([`<!doctype html><html lang="en"><head><meta charset="utf-8">${L.exportCSP(script)}<meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
+<style>${fonts}</style>
+<style>html,body{height:100%;margin:0;background:#1e1e1e;color:#eee;font:13px Tahoma,Verdana,sans-serif}#stage{position:absolute;left:0;top:0;transform-origin:0 0}#bar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;align-items:center;justify-content:center;padding:8px;background:rgba(0,0,0,.6)}button{font:inherit;padding:4px 12px}#notes{max-width:70ch;white-space:pre-wrap;color:#ccc}${slideCSS()}</style></head><body>
+<div id="stage"></div><div id="bar"><button id="prev" aria-label="Previous slide">◀</button><span id="num"></span><button id="next" aria-label="Next slide">▶</button></div>
+<script>${script}<\/script></body></html>`], { type: 'text/html' });
   };
 
   /* ================= history ================= */

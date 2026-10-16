@@ -114,7 +114,7 @@ Licences for the word lists are in `public/common/dict/LICENSES.txt`.
 | Word Document `.docx` / `.docm` | yes | yes |
 | Strict Open XML `.docx` | yes | standard Transitional OOXML (recorded, not shown) |
 | Word Template `.dotx` / `.dotm` | yes | yes |
-| Web Page `.htm` / `.html` | yes | yes (single file, images inlined) |
+| Web Page `.htm` / `.html` | yes | yes (single file, images inlined, with its own security policy: no scripts) |
 | Rich Text Format `.rtf` | yes | yes |
 | Plain Text `.txt` | yes | yes |
 | Markdown `.md` / `.markdown` (GitHub flavour) | yes | yes |
