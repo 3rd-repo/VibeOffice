@@ -25,6 +25,13 @@ t('_(* #,##0_);_(* \\(#,##0\\);_(* "-"_);_(@_)', 'txt', ' txt ');
 t('0.00\\%', 5, '5.00%'); t('"Total: "0', 7, 'Total: 7'); t('0 "items"', 3, '3 items'); t('General', true, 'TRUE');
 t('#,##0.0', 0.05, '0.1'); t('0', 2.5, '3'); t('0', -2.5, '-3'); t('0.0', 0.15, '0.2'); t('0.0', 0.25, '0.3');
 t('mm/dd/yy', 45000, '03/15/23'); t('h AM/PM', 0.6, '2 PM'); t('A/P', 0.6, 'P'); t('hh:mm a/p', 0.1, '02:24 a');
+// aaa/aaaa: the weekday in the tag's language, as Excel shows it (2023-03-15 is a Wednesday); untagged or another language, English
+t('aaa', 45000, 'Wed'); t('aaaa', 45000, 'Wednesday'); t('[$-411]aaa', 45000, '水'); t('[$-411]aaaa', 45000, '水曜日'); t('[$-412]aaa', 45000, '수'); t('[$-412]aaaa', 45000, '수요일');
+t('[$-804]aaa', 45000, '三'); t('[$-804]aaaa', 45000, '星期三'); t('[$-404]aaaa', 45000, '星期三'); t('[$-40C]aaa', 45000, 'mer.'); t('[$-40C]aaaa', 45000, 'mercredi');
+t('[$-407]aaa', 45000, 'Mi'); t('[$-407]aaaa', 45000, 'Mittwoch'); t('[$-1060411]aaaa', 45000, '水曜日'); t('[$-ja-JP]aaa', 45000, '水'); t('[$-419]aaaa', 45000, 'Wednesday');
+t('[$-411]yyyy"年"m"月"d"日"(aaa)', 45000, '2023年3月15日(水)'); t('[$-804]ddd', 45000, 'Wed'); t('"aaa"aaa', 45000, 'aaaWed'); t('\\aaaa', 45000, 'aWed'); t('[$-411]aaa', 1, '日');
+const b = (what, got, exp) => { n++; if (got !== exp) { fail++; console.log('FAIL', what, got, 'expected', exp); } };
+b("isDate('[$-411]aaaa')", NF.isDate('[$-411]aaaa'), true); b("isTimeOnly('aaa')", NF.isTimeOnly('aaa'), false);
 console.log(n - fail + '/' + n + ' passed');
 // input parsing
 const p = (s, v, f) => { n++; const r = NF.parseInput(s); const ok = (typeof v === 'object' && v ? JSON.stringify(r.v) === JSON.stringify(v) : r.v === v) && (f === undefined || r.fmt === f); if (!ok) { fail++; console.log('PARSE FAIL', s, JSON.stringify(r), 'expected', v, f); } };
@@ -32,3 +39,4 @@ p('123', 123); p('1,234', 1234, '#,##0'); p('$1,234.50', 1234.5); p('12%', 0.12,
 p('1/2/2024', 45293, 'm/d/yyyy'); p('2024-01-02', 45293); p('10:30', 10.5 / 24, 'h:mm'); p('10:30 PM', 22.5 / 24, 'h:mm AM/PM'); p('15-Jan-24', 45306, 'd-mmm-yy'); p('Jan 2024', 45292, 'mmm-yy');
 p('0 1/2', 0.5, '# ?/?'); p('#N/A', { e: '#N/A' }); p('-5', -5); p('1,23', '1,23'); p('  42  ', 42);
 console.log(n - fail + '/' + n + ' total passed');
+if (fail) process.exitCode = 1;

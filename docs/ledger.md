@@ -101,6 +101,12 @@ searchable topics, the keyboard-shortcut reference and a function reference for 
 - Number formats follow Excel to the letter: sections and conditions, colours, `[h]:mm` elapsed time,
   fractions, scientific and engineering notation, `_` and `*` padding, locale and currency tags, and
   the General format that shows as many digits as the column has room for (otherwise `####`).
+  `aaa` and `aaaa` show the weekday, short and full, in the language of the format's tag, as Excel
+  does: `[$-411]` 水 and 水曜日, `[$-412]` 수 and 수요일, `[$-804]` and `[$-404]` 三 and 星期三,
+  `[$-40C]` mer. and mercredi, `[$-407]` Mi and Mittwoch (a Windows language ID or a tag such as
+  `[$-ja-JP]`). Untagged, or in another language, they are English, as `ddd` and `dddd` are, whatever
+  the UI's language. LibreOffice shows the same except Korean, in Hanja (水, 水曜日). Cells and `TEXT`
+  use the same formatter, and a weekday-only format counts as a date.
 
 ### Charts, pictures and drawing
 
