@@ -7,7 +7,9 @@ folder: another copy of the site instead, e.g. a published copy (tools/web-relea
 the service worker, which caches on 127.0.0.1 only what is stamped with a version (docs/testing.md).
 
 Every response carries Cache-Control: no-store, and conditional requests are
-ignored, so edited HTML/JS modules are always re-fetched on reload.
+ignored, so edited HTML/JS modules are always re-fetched on reload. Every GET also carries the site's own headers
+(public/_headers, read as Cloudflare Pages reads it, on each request), so local pages run as the published ones do;
+_headers itself is not served, as on Cloudflare.
 
 POST /__feedback takes the F11 bug reports of myvr games (public/common/myvr/app/feedback.js)
 and writes issues/<yyyymmdd>/<hhmmss>-<game>-<words>.json and .png (with an empty "solution",
@@ -22,6 +24,7 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 
 ROOT = (os.path.abspath(sys.argv[2]) if len(sys.argv) > 2
         else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'public'))
@@ -98,6 +101,44 @@ def save_feedback(body, now=None):
     raise FeedbackError(500, 'too many reports with this name')
 
 
+def header_rules(text):
+    """A _headers file (Cloudflare Pages' format; the subset public/common/headers.js reads, and
+    tests/headers.test.mjs keeps the two alike): [(path regex, [(name, value)], [removed lower-case names])]."""
+    literal = lambda s: re.sub(r':\w+', '[^/]+', re.sub(r'([.+?^${}()|\[\]\\])', r'\\\1', s))
+    rules = []
+    for line in text.splitlines():
+        if not line.strip() or line.lstrip().startswith('#'):
+            continue
+        if not line[0].isspace():
+            path = line.strip()
+            if not path.startswith('/') or path.count('*') > 1:
+                raise ValueError(f'_headers: not a path this site uses: {path}')
+            rules.append((re.compile('^' + '.*'.join(literal(p) for p in path.split('*')) + '$'), [], []))
+            continue
+        m = re.match(r'^\s+(?:!\s*([\w-]+)|([\w-]+):\s*(.*?))\s*$', line)
+        if not rules or not m:
+            raise ValueError(f'_headers: {line.strip()}')
+        if m.group(1):
+            rules[-1][2].append(m.group(1).lower())
+        else:
+            rules[-1][1].append((m.group(2), m.group(3)))
+    return rules
+
+
+def headers_for(rules, path):
+    """The headers the rules give a request's path, [(name, value)]: a header two matching rules set is joined with
+    ', ', and '! Name' in a matching rule removes it."""
+    out, gone = {}, set()
+    for rx, sets, removes in rules:
+        if not rx.match(path):
+            continue
+        for name, value in sets:
+            k = name.lower()
+            out[k] = (out[k][0], out[k][1] + ', ' + value) if k in out else (name, value)
+        gone.update(removes)
+    return [v for k, v in out.items() if k not in gone]
+
+
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
                       '.js': 'text/javascript', '.mjs': 'text/javascript', '.webmanifest': 'application/manifest+json',
@@ -111,7 +152,20 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
         for h in ('If-Modified-Since', 'If-None-Match'):
             if h in self.headers:
                 del self.headers[h]
+        if self._path() == '/_headers':   # Cloudflare reads it and doesn't serve it
+            self.send_error(404)
+            return None
         return super().send_head()
+
+    def _path(self):
+        return urllib.parse.unquote(urllib.parse.urlsplit(self.path).path)
+
+    def _site_headers(self):
+        try:
+            with open(os.path.join(ROOT, '_headers'), encoding='utf-8') as f:
+                return headers_for(header_rules(f.read()), self._path())
+        except FileNotFoundError:
+            return []
 
     def do_POST(self):
         if self.path.split('?')[0] != '/__feedback':
@@ -156,6 +210,9 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(data)
 
     def end_headers(self):
+        if self.command in ('GET', 'HEAD'):
+            for name, value in self._site_headers():
+                self.send_header(name, value)
         self.send_header('Cache-Control', 'no-store, max-age=0')
         self.send_header('Pragma', 'no-cache')
         self.send_header('Expires', '0')

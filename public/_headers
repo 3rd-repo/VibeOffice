@@ -1,0 +1,14 @@
+# The site's response headers, in Cloudflare Pages' format (docs/suite.md, Security). Cloudflare reads this file and
+# doesn't serve it; the service worker puts the same headers on the pages it serves from its cache (common/headers.js),
+# and tools/serve.py on the local server's. The Content-Security-Policy is the pages' own (tools/csp.mjs writes it
+# here too) with frame-ancestors, which only a header can carry. Never set a header in two rules that match the same
+# path: Cloudflare joins their values with a comma (tests/headers.test.mjs fails on it). "! Name" removes one.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob: https://vibeoffice.work ipc: http://ipc.localhost; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Strict-Transport-Security: max-age=31536000
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), usb=(), serial=(), hid=(), payment=(), local-fonts=(self)
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  X-Frame-Options: DENY

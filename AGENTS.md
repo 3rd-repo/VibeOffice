@@ -54,7 +54,7 @@ Keep them current: a change to an app's features, formats or source layout updat
 
 ## Tools (details in docs/testing.md)
 
-- `tools/serve.py`: no-cache server for `public/` on 127.0.0.1:8760.
+- `tools/serve.py`: no-cache server for `public/` on 127.0.0.1:8760, with the site's headers (`public/_headers`).
 - Chromium with CDP at 127.0.0.1:9222. `tools/shot.mjs <page> [steps]` drives a page over CDP, takes screenshots and reports console errors and any request that leaves 127.0.0.1; a refusal of the pages' policy, a window opened or a page of another site fails it. **Never close the browser's other tabs** (Chromium quits with its last tab).
 - `tools/quick.mjs [REV]`: the quick check after a change (the tests covering the files changed); `tools/ui-full.mjs`: the whole UI suite before a release, recorded for `tools/ui-tested.sh`, which `tools/web-release.sh` and `../cf-vibeoffice/sync-cf-pages.sh` run.
 - `tools/older.mjs [REV] -- <tests>`: runs today's tests against `public/` as it was at REV (default: before the uncommitted or last change), so a fix's regression test can be seen failing there.

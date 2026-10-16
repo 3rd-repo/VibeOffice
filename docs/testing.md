@@ -4,7 +4,7 @@
 
     python3 tools/serve.py          # http://127.0.0.1:8760/, no caching
 
-Every response carries `Cache-Control: no-store`, so edited HTML and scripts are always re-fetched. Serve rather than open from disk: a `file://` page cannot fetch the proofing dictionaries, and password-protected files need WebCrypto, which wants https or localhost.
+Every response carries `Cache-Control: no-store`, so edited HTML and scripts are always re-fetched, and the site's own headers (`public/_headers`, read as Cloudflare reads it: the Content-Security-Policy with `frame-ancestors`, COOP, …; docs/suite.md, Security), so local pages run as the published ones do. A server started before a change to `tools/serve.py` sends the old headers: restart it. Serve rather than open from disk: a `file://` page cannot fetch the proofing dictionaries, and password-protected files need WebCrypto, which wants https or localhost.
 
 ## Screenshots and console errors: tools/shot.mjs
 

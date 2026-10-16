@@ -16,14 +16,17 @@
  * - Install: download the version's zip, the whole site in one file, and unpack it into the cache
  *   "vibeoffice-<version>" with the apps' own ZIP engine (common/zip.js: the browser's inflate, or its own in
  *   JavaScript), every file checked against the size and CRC-32 the zip's directory records, its Content-Type
- *   from its extension. One file means one consistent version, whatever the server does meanwhile. Any failure
- *   (offline, a short download, a damaged zip, storage full) fails the install: the half-filled cache is deleted,
- *   the earlier worker goes on serving, and the browser tries again on a later visit. Progress goes to every open
- *   page as { type: 'vo-cache', state: 'progress', update, progress (0 to 1: the download, then the unpacking),
- *   received and total (the zip's bytes; total 0 if the server didn't say), version }, then { state: 'failed',
- *   error } or, once the new worker has taken over (activate, so a reload gets the new version), { state: 'done',
- *   update }; the Start Center shows it, and offers a reload after an update. The new worker takes over at once
- *   (skipWaiting, clients.claim), which is safe because of the next point.
+ *   from its extension and the site's other headers from the zip's _headers, as Cloudflare would send them
+ *   (common/headers.js: the Content-Security-Policy with frame-ancestors, and the rest; a page from the cache gets
+ *   what a page from the server gets). One file means one consistent version, whatever the server does meanwhile.
+ *   Any failure (offline, a short download, a damaged zip, an unreadable _headers, storage full) fails the
+ *   install: the half-filled cache is deleted, the earlier worker goes on serving, and the browser tries again on
+ *   a later visit. Progress goes to every open page as { type: 'vo-cache', state: 'progress', update, progress
+ *   (0 to 1: the download, then the unpacking), received and total (the zip's bytes; total 0 if the server didn't
+ *   say), version }, then { state: 'failed', error } or, once the new worker has taken over (activate, so a
+ *   reload gets the new version), { state: 'done', update }; the Start Center shows it, and offers a reload after
+ *   an update. The new worker takes over at once (skipWaiting, clients.claim), which is safe because of the next
+ *   point.
  * - Each page keeps the version it was loaded with: a page (client) is served only from its own version's cache,
  *   recorded in the cache "vibeoffice-clients" (client id → version), so a page that is open while an update
  *   lands never mixes files of two versions. Navigations (a new page, a reload) get the newest version. No
@@ -39,7 +42,7 @@
  */
 'use strict';
 
-importScripts('common/zip.js');   // L.zip, the apps' ZIP engine; a change to it is a change to this worker too
+importScripts('common/zip.js', 'common/headers.js');   // L.zip, the apps' ZIP engine (a change to it is a change to this worker too); L.headers
 
 const VERSION = 'dev';   // stamped by tools/web-release.sh
 /** the origins this worker caches on: the published site, and 127.0.0.1 (any port) for a published copy served locally */
@@ -112,6 +115,13 @@ async function filesOf(zip, url) {
   return list;
 }
 
+/** the site's header rules, from the zip's _headers (Cloudflare's format; none if the zip has no such file); a file
+ *  that can't be read fails the install rather than serving the pages without their headers */
+async function rulesOf(files) {
+  const entry = files.find((e) => e.name === '_headers');
+  return entry ? self.L.headers.parse(new TextDecoder().decode(await entry.bytes())) : [];
+}
+
 /** whether an earlier version is cached: this install or activation is an update, not the first visit */
 const earlier = async () => (await caches.keys()).some((n) => n.startsWith(PREFIX + 'v') && n !== cacheOf(VERSION));
 
@@ -131,12 +141,14 @@ async function precache() {
     total = received;
     report(0.8, true);
     const files = await filesOf(zip, url);
+    const rules = await rulesOf(files);
     const cache = await caches.open(name);
     let done = 0;
     await pool(files, 4, async (entry) => {
       const bytes = await entry.bytes();
       if (bytes.length !== entry.usize || self.L.zip.crc32(bytes) !== entry.crc) throw new Error(`${entry.name}: damaged in the zip (size or CRC-32)`);
-      await cache.put(keyOf(entry.name), new Response(bytes, { headers: { 'Content-Type': typeOf(entry.name) } }));
+      const headers = { ...self.L.headers.for(rules, '/' + entry.name), 'Content-Type': typeOf(entry.name) };
+      await cache.put(keyOf(entry.name), new Response(bytes, { headers }));
       report(0.8 + 0.2 * (++done / files.length));
     });
     report(1, true);

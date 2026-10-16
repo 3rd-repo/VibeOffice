@@ -1,8 +1,8 @@
 // The service worker (public/sw.js) with the published site's files (tools/web-release.sh), in the Chromium at CDP
 // 127.0.0.1:9222. Staged copies of public/ are served on 127.0.0.1 (an allowed origin), on a port of their own:
-// first install and its progress, offline pages, an update (the new version's zip) while an open page keeps its
-// version, old caches going once no page uses them, a damaged zip failing the install, and no worker on any other
-// origin.
+// first install and its progress (and the site's headers on what the cache serves), offline pages, an update (the
+// new version's zip) while an open page keeps its version, old caches going once no page uses them, a damaged zip
+// failing the install, and no worker on any other origin.
 //
 //   node --test tests/sw.test.mjs
 import { test } from 'node:test';
@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { execFileSync } from 'node:child_process';
+import { HEADER } from '../tools/csp.mjs';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const CDP = process.env.CDP || 'http://127.0.0.1:9222';
@@ -138,6 +139,9 @@ test('the service worker caches the published site, a version per page', { timeo
   assert.equal(await a.js(cacheNames), `vibeoffice-clients vibeoffice-${V1}`);
   assert.equal(await a.js(`caches.open('vibeoffice-${V1}').then((c) => c.keys()).then((k) => k.length)`), count(v1));
   assert.equal(await a.js(`caches.match('${site.origin}/common/ui.css').then((r) => r.headers.get('Content-Type'))`), 'text/css; charset=utf-8');
+  /* and the site's own headers (the zip's _headers, as Cloudflare sends them): a page from the cache gets the policy with frame-ancestors */
+  assert.deepEqual(JSON.parse(await a.js(`caches.match('${site.origin}/index.html').then((r) => JSON.stringify(['Content-Security-Policy', 'X-Frame-Options', 'Cross-Origin-Opener-Policy'].map((h) => r.headers.get(h))))`)),
+    [HEADER, 'DENY', 'same-origin']);
   const first = await a.js('__voCache');
   assert.ok(first.some((d) => d.state === 'progress' && d.update === false), 'progress on the first install');
   assert.equal(first.at(-1).state, 'done');
@@ -175,7 +179,7 @@ test('the service worker caches the published site, a version per page', { timeo
   await a.until(`navigator.serviceWorker.getRegistration().then((r) => r.active && !r.waiting && !r.installing)`, 'the new worker to take over');
   assert.ok((await a.js('__voCache')).some((d) => d.state === 'progress' && d.update === true), 'progress says update');
   assert.equal(await a.js("document.getElementById('cachingreload').hidden"), false, 'the Just updated notice');
-  const fetched = site.log.filter((p) => p !== '/sw.js' && p !== '/common/zip.js');   // the worker's own scripts, compared for the update
+  const fetched = site.log.filter((p) => !['/sw.js', '/common/zip.js', '/common/headers.js'].includes(p));   // the worker's own scripts, compared for the update
   assert.deepEqual(fetched, [`/updater/web-${V2}.zip`]);
   assert.equal(await a.js(cssOf), 'v1', 'the open page keeps its version');
   /* the browser stops idle workers: the restarted one still knows which version the open page uses */

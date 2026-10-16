@@ -30,7 +30,8 @@ const SECONDS = { 'tests/ui/smoke.test.mjs': 20, 'tests/ui/quire.test.mjs': 175,
   'tests/ui/focus.test.mjs': 265, 'tests/ui/focus.test.mjs :: classic': 90, 'tests/ui/drag.test.mjs': 45, 'tests/ui/gestures.test.mjs': 480, 'tests/ui/painter.test.mjs': 40, 'tests/ui/textmap.test.mjs': 165,
   'tests/ledger/*.test.js': 5, 'tests/quire/*.test.js': 1, 'tests/quire/lines.test.mjs': 5, 'tests/from-issues/*/*.test.mjs': 1, 'tests/scout.test.mjs': 190, 'tests/desktop/host.test.mjs': 32, 'tests/sw.test.mjs': 10,
   'tests/ribbon.test.mjs': 5, 'tests/search.test.mjs': 4, 'tests/ooxml/check.test.mjs': 3, 'tests/i18n.test.mjs': 1, 'tests/fonts.test.mjs': 1, 'tests/locales.test.mjs': 15,
-  'tests/hostile/export-html.test.mjs': 6, 'tests/hostile/helpers.test.mjs': 7, 'tests/csp.test.mjs': 1 };
+  'tests/hostile/export-html.test.mjs': 6, 'tests/hostile/helpers.test.mjs': 7, 'tests/csp.test.mjs': 1,
+  'tests/headers.test.mjs': 1 };
 const RULES = [
   [/^public\/(quire|ledger|lectern|common)\/|^public\/[^/]+\.(html|js|css)$/, ['tests/ui/smoke.test.mjs', 'tests/licenses.test.mjs', 'tests/from-issues/*/*.test.mjs', 'tests/i18n.test.mjs']],   // and the reported issues' tests, the English catalog
   [/^public\/ledger\/|^tools\/ledger\//, ['tests/ledger/*.test.js', 'tests/ui/ledger.test.mjs']],
@@ -43,7 +44,8 @@ const RULES = [
   [/^public\/common\/ribbon\.js$|^public\/[^/]+\/js\/ribbon\.js$/, ['tests/ribbon.test.mjs']],
   [/^public\/common\/search\.js$/, ['tests/search.test.mjs']],
   [/^public\/common\/smartart/, ['tests/smartart.test.mjs']],
-  [/^public\/common\/zip\.js$|^public\/sw\.js$/, ['tests/sw.test.mjs']],
+  [/^public\/common\/(zip|headers)\.js$|^public\/sw\.js$|^public\/_headers$/, ['tests/sw.test.mjs']],
+  [/^public\/common\/headers\.js$|^public\/_headers$|^tools\/serve\.py$|^tools\/csp\.mjs$/, ['tests/headers.test.mjs']],   // the site's headers
   [/^public\/common\/crypto\.js$/, ['tests/crypto.test.mjs']],
   [/^public\/common\/spell\.js$/, ['tests/autocorrect.test.mjs']],
   [/^public\/common\/geometry\.js$|^public\/ledger\/js\/render\.js$|^tools\/patterns\//, ['tests/patterns.test.mjs']],
@@ -57,7 +59,7 @@ const RULES = [
   [/^public\/common\/locales\.js$|^public\/quire\/js\/(app|dmodel|docx-write)\.js$|^public\/ledger\/js\/(app|xlsx-write)\.js$|^public\/lectern\/js\/(model|pptx-write)\.js$/, ['tests/locales.test.mjs']],
   [/^tests\/lib\/gestures\.mjs$/, ['tests/ui/gestures.test.mjs']],
   [/^tests\/lib\/input\.mjs$|^tools\/ooxml\/cdp\.mjs$/, ['tests/ui/smoke.test.mjs', 'tests/hostile/helpers.test.mjs']],
-  [/^public\/[^/]+\.html$|^public\/[^/]+\/index\.html$|^tools\/csp\.mjs$|^tools\/ledger\/build\/|^tools\/oss-licenses\.py$/, ['tests/csp.test.mjs']],   // the pages' policy
+  [/^public\/[^/]+\.html$|^public\/[^/]+\/index\.html$|^public\/_headers$|^tools\/csp\.mjs$|^tools\/ledger\/build\/|^tools\/oss-licenses\.py$/, ['tests/csp.test.mjs']],   // the pages' policy
   [/^public\/oss-licenses\.html$|^tools\/oss-licenses\.py$|^desktop\/(Cargo|patches|licenses)/, ['tests/licenses.test.mjs']],
   [/^desktop\/src\//, ['tests/desktop/host.test.mjs']],
   [/^public\/common\/core\.js$|^public\/quire\/js\/htmlio\.js$|^public\/ledger\/js\/(csv|clipboard)\.js$|^public\/lectern\/js\/app\.js$/, ['tests/hostile/export-html.test.mjs']],   // HTML we write: no markup from the document

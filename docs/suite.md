@@ -4,6 +4,7 @@
 |---|---|
 | `public/index.html`, `public/start.js` | The Start Center: its page and its code |
 | `public/common/look.js` | The look before the first paint, first in every page's `<head>` (Looks) |
+| `public/_headers`, `public/common/headers.js` | The site's response headers, in Cloudflare Pages' format, and their reader for the service worker (Security) |
 | `public/common/suite.js` | `window.VO`, loaded by the Start Center and before every app's own scripts |
 | `public/manifest.webmanifest` | Install metadata: icons, shortcuts, file handlers, screenshots |
 | `public/sw.js` | Service worker: the published site cached for offline use, one version per page (on vibeoffice.work, and 127.0.0.1 for a published copy) |
@@ -172,8 +173,36 @@ and the sources other tools build pages from (Ledger's template, `tools/oss-lice
 What the policy doesn't cover:
 - **Navigation:** where the window goes, or a window it opens. Document links never navigate (Hyperlinks, above), and
   the desktop app opens only our own addresses in the browser (docs/desktop.md).
-- **The service worker:** a worker takes its policy from its script's response headers, not from a page.
+- **The service worker:** a worker takes its policy from its script's response headers, not from a page: the
+  header below.
 - **Files we export:** they carry their own (HTML we write, above).
+
+**The site's headers** (`public/_headers`, Cloudflare Pages' format, published with the rest; Cloudflare reads it and
+doesn't serve it). One rule, `/*`:
+
+| Header | Value | Why |
+|---|---|---|
+| `Content-Security-Policy` | the pages' policy and `frame-ancestors 'none'` | no other site shows the pages in a frame (only a header can say so); the service worker's own policy |
+| `Strict-Transport-Security` | `max-age=31536000` | https only, for a year; not `includeSubDomains`, which would bind every subdomain |
+| `X-Content-Type-Options` | `nosniff` | a file is only what its type says |
+| `Referrer-Policy` | `no-referrer` | an address opened from the suite isn't told where it came from |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=(), usb=(), serial=(), hid=(), payment=(), local-fonts=(self)` | nothing the suite doesn't use; the computer's fonts (Local Font Access) stay |
+| `Cross-Origin-Opener-Policy` | `same-origin` | no other site's window holds a handle on ours |
+| `Cross-Origin-Resource-Policy` | `same-origin` | no other site embeds our files |
+| `X-Frame-Options` | `DENY` | `frame-ancestors` for old browsers |
+
+- **The update check** is a CORS request (the desktop app's `fetch` of `updater/*.json`): Cloudflare's own
+  `Access-Control-Allow-Origin: *` answers it, and CORP applies only to what a page embeds. So `_headers` sets
+  no CORS header, which would replace Cloudflare's.
+- **One rule per header:** Cloudflare joins a header that two matching rules set with a comma (`same-origin,
+  cross-origin` is no value at all), so a header is never set in two rules that match the same path; `! Name`
+  removes one.
+- **The copies Cloudflare doesn't serve** send the same: the service worker on what it serves from its cache
+  (`common/headers.js`), and `tools/serve.py` locally. `tools/csp.mjs` keeps the policy line equal to the pages'.
+  `tests/headers.test.mjs` checks the file, that no path gets a header from two rules, that the two readers agree,
+  and the local server's responses; `tests/sw.test.mjs` the cached pages.
+- After publishing, check the live headers: `curl -sI https://vibeoffice.work/`, `/sw.js` and
+  `/updater/current.json` (still with one `access-control-allow-origin: *`), then an update check from the desktop app.
 
 Tests see a refusal: `tools/shot.mjs` fails on one, and the UI tests' `t.clean()` does too, and on a window the page
 opens or a page of another site in the tab (`tests/hostile/helpers.test.mjs`). Chromium itself reports a refusal
@@ -367,7 +396,7 @@ Icons: edit the SVGs, then render the PNGs in Chromium:
 
 **Publishing.** First the whole UI suite, `node tools/ui-full.mjs` (docs/testing.md); both scripts below warn when it has not passed on this `public/` (`tools/ui-tested.sh`). `../cf-vibeoffice/sync-cf-pages.sh` copies `public/` and runs `tools/web-release.sh <copy> <version>`, which stamps the version (`tools/current-tree-version.sh`) into the copy's `common/suite.js` and `sw.js` and packs `updater/web-<version>.zip` (Info-ZIP `zip`): every file but `sw.js`, `updater/` and hidden files, about 4.4 MB for the 10.5 MB site. The changed `sw.js` is what makes browsers install the new worker. In the repository `VERSION` stays `'dev'`, and an unstamped worker caches nothing.
 
-**Install.** The worker downloads the version's zip, the whole site in one file (so one consistent version, whatever the server does meanwhile), and unpacks it into the cache `vibeoffice-<version>` with the apps' own ZIP engine (`importScripts('common/zip.js')`: the browser's inflate where there is one, its JavaScript inflater otherwise), each file checked against the size and CRC-32 in the zip's central directory and given the `Content-Type` of its extension. The whole site is cached, the dictionaries too, so spelling works offline; every update downloads the whole zip again. Anything failing (offline, a download shorter than its `Content-Length`, a damaged zip or one the reader had to repair, a name the site can't have, storage full) fails the install: the half-filled cache goes, the earlier worker goes on serving, and the browser tries again on a later visit. Old caches are deleted only after the new worker has activated, never during install: until then the earlier worker still serves the open pages from its cache.
+**Install.** The worker downloads the version's zip, the whole site in one file (so one consistent version, whatever the server does meanwhile), and unpacks it into the cache `vibeoffice-<version>` with the apps' own ZIP engine (`importScripts('common/zip.js')`: the browser's inflate where there is one, its JavaScript inflater otherwise), each file checked against the size and CRC-32 in the zip's central directory and given the `Content-Type` of its extension and the site's other headers from the zip's `_headers`, as Cloudflare sends them (`common/headers.js`; Security), so a page from the cache gets the policy with `frame-ancestors` as a page from the server does. The whole site is cached, the dictionaries too, so spelling works offline; every update downloads the whole zip again. Anything failing (offline, a download shorter than its `Content-Length`, a damaged zip or one the reader had to repair, a name the site can't have, a `_headers` it can't read, storage full) fails the install: the half-filled cache goes, the earlier worker goes on serving, and the browser tries again on a later visit. Old caches are deleted only after the new worker has activated, never during install: until then the earlier worker still serves the open pages from its cache.
 
 **One version per page.** Each page is served from the cache of the version it was loaded with (the cache `vibeoffice-clients` records page → version), so an app page open while an update lands goes on loading scripts of its own version, never a mix (the apps load 20–45 classic scripts that must match). Navigations get the newest version. So the new worker takes over at once (`skipWaiting`, `clients.claim`) with no "reload to update" prompt: each page updates the next time it loads. An old version's cache goes once no open page uses it, checked on activation and on each navigation, and never while a newer worker is still installing.
 
