@@ -2,13 +2,10 @@
 // <meta http-equiv>, first in <head>, so it travels with the files: the site, the PWA's offline copy (served from
 // the service worker's cache, where a server's header never reaches) and the desktop app's pages.
 //
-// The site sends it as a header too (public/_headers, with frame-ancestors, which only a header can carry).
-//
-//   node tools/csp.mjs           write it into the pages, the sources that make pages (Ledger's template,
-//                                tools/oss-licenses.py) and public/_headers, then rebuild Ledger's page
+//   node tools/csp.mjs           write it into the pages and the sources that make pages (Ledger's template,
+//                                tools/oss-licenses.py), then rebuild Ledger's page
 //   node tools/csp.mjs --check   exit 1 if a page or source lacks the policy, has another, has it after a script,
-//                                or has an inline script, an on…= handler or a javascript: URL; or if
-//                                public/_headers has another
+//                                or has an inline script, an on…= handler or a javascript: URL
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -34,9 +31,6 @@ export const POLICY = [
 ].join('; ');
 
 const META = `<meta http-equiv="Content-Security-Policy" content="${POLICY}">`;
-/** the header copy: the policy, and no site may show the pages in a frame */
-export const HEADER = `${POLICY}; frame-ancestors 'none'`;
-const HEADERS = 'public/_headers', HEADER_LINE = /^(\s+Content-Security-Policy:\s*)(.*)$/m;
 const FOUND = /<meta http-equiv="Content-Security-Policy" content="[^"]*">/g;
 /** the pages, and the sources other tools build pages from */
 export const PAGES = ['public/index.html', 'public/quire/index.html', 'public/lectern/index.html', 'public/ledger/index.html', 'public/oss-licenses.html'];
@@ -73,15 +67,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     for (const file of [...PAGES, ...SOURCES]) {
       for (const p of problems(fs.readFileSync(path.join(root, file), 'utf8'))) { console.log(`${file}: ${p}`); bad++; }
     }
-    const header = HEADER_LINE.exec(fs.readFileSync(path.join(root, HEADERS), 'utf8'));
-    if (!header || header[2] !== HEADER) { console.log(`${HEADERS}: ${header ? 'another policy' : 'no Content-Security-Policy'}`); bad++; }
-    console.log(bad ? `${bad} problem(s): node tools/csp.mjs writes the policy; scripts go in files` : 'the policy is in every page and in public/_headers');
+    console.log(bad ? `${bad} problem(s): node tools/csp.mjs writes the policy; scripts go in files` : 'the policy is in every page');
     process.exit(bad ? 1 : 0);
   }
   for (const file of [...SOURCES, ...PAGES.filter((p) => p !== 'public/ledger/index.html')]) write(file);
-  const headers = path.join(root, HEADERS), text = fs.readFileSync(headers, 'utf8');
-  if (!HEADER_LINE.test(text)) throw new Error(`${HEADERS}: no Content-Security-Policy line to write`);
-  fs.writeFileSync(headers, text.replace(HEADER_LINE, (m, lead) => lead + HEADER));
   execFileSync('python3', [path.join(root, 'tools/ledger/build/make.py')], { stdio: 'inherit' });
-  console.log('written:', [...PAGES, ...SOURCES, HEADERS].join(', '));
+  console.log('written:', [...PAGES, ...SOURCES].join(', '));
 }
