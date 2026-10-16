@@ -27,9 +27,9 @@ const quire = (lang) => saved('quire', lang, 'L.docx.write(L.D.doc)', ['word/doc
 const ledger = (lang) => saved('ledger', lang, 'L.xlsxWrite.write(L.app.books[L.app.cur].wb)', ['xl/styles.xml', 'xl/worksheets/sheet1.xml']);
 const lectern = (lang) => saved('lectern', lang, 'L.pptx.write(L.pres)', ['ppt/presentation.xml', 'ppt/theme/theme1.xml', 'ppt/slides/slide1.xml']);
 
-for (const [lang, font, pitch, size, tab, charset, row, script] of [
-  ['zh-CN', '宋体', 312, 21, 420, 134, 13.5, 'Hans'],
-  ['zh-Hant', '新細明體', 360, 24, 480, 136, 14.25, 'Hant'],
+for (const [lang, font, pitch, size, tab, charset, row, script, tag] of [
+  ['zh-CN', '宋体', 312, 21, 420, 134, 13.5, 'Hans', 'zh-CN'],
+  ['zh-Hant', '新細明體', 360, 24, 480, 136, 14.25, 'Hant', 'zh-HK'],   // a tag Word knows: it ignores zh-Hant
 ]) test('Chinese defaults survive saving in all three apps: ' + lang, async () => {
   const q = await quire(lang), w = q['word/styles.xml'], set = q['word/settings.xml'];
   assert.match(q['word/document.xml'], /<w:pgSz w:w="11906" w:h="16838"/);
@@ -37,14 +37,14 @@ for (const [lang, font, pitch, size, tab, charset, row, script] of [
   assert.ok(w.includes('w:eastAsia="' + font + '"'));
   assert.ok(w.includes('<w:sz w:val="' + size + '"/>'));
   assert.ok(set.includes('<w:defaultTabStop w:val="' + tab + '"/>'));
-  assert.ok(set.includes('w:eastAsia="' + lang + '"'));
+  assert.ok(set.includes('w:eastAsia="' + tag + '"'));
   const x = await ledger(lang);
   assert.ok(x['xl/styles.xml'].includes('<name val="' + font + '"/>'));
   assert.ok(x['xl/styles.xml'].includes('<charset val="' + charset + '"/>'));
   assert.ok(x['xl/worksheets/sheet1.xml'].includes('defaultRowHeight="' + row + '"'));
   assert.match(x['xl/worksheets/sheet1.xml'], /<pageSetup [^>]*paperSize="9"/);
   const p = await lectern(lang);
-  assert.ok(p['ppt/presentation.xml'].includes('lang="' + lang + '"'));
+  assert.ok(p['ppt/presentation.xml'].includes('lang="' + tag + '"'));
   assert.ok(p['ppt/theme/theme1.xml'].includes('script="' + script + '" typeface="' + font + '"'));
 });
 

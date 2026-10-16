@@ -21,6 +21,7 @@
  *       851/992 (12), 18pt grid (10), 12pt (12), tabs 480 (12), 新細明體 theme (13).
  *       Both use compressPunctuation. The older Latin face is Times New Roman, as the English default.
  *       Excel: 宋体 11 (3 files) / 新細明體 11 (1); PowerPoint: 宋体 theme (6/10) / 新細明體 (3/3).
+ *       Traditional Chinese text is tagged zh-HK, a region tag as Office's (Word ignores zh-Hant: [MS-OI29500] ST_Lang).
  */
 (function (root) {
   'use strict';
@@ -62,12 +63,12 @@
     'zh-Hant': {
       unit: 'cm',
       sect: Object.assign({}, A4, { mt: tw(1440), mr: tw(1800), mb: tw(1440), ml: tw(1800), hdr: tw(851), ftr: tw(992), docGrid: { type: 'lines', linePitch: 360 } }),
-      rPr: { font: 'Times New Roman', fontEA: '新細明體', sz: 12, lang: 'en-US', langEA: 'zh-Hant' },
+      rPr: { font: 'Times New Roman', fontEA: '新細明體', sz: 12, lang: 'en-US', langEA: 'zh-HK' },
       pPr: { widow: false },
-      defTab: tw(480), charSpacing: 'compressPunctuation', themeLang: { val: 'en-US', eastAsia: 'zh-Hant' },
+      defTab: tw(480), charSpacing: 'compressPunctuation', themeLang: { val: 'en-US', eastAsia: 'zh-HK' },
       themeEA: { minor: '新細明體', major: '新細明體' },
       sheet: { font: '新細明體', sz: 11, charset: 136, family: 2, paper: 9 },
-      slide: { fontEA: '新細明體', lang: 'zh-Hant' },
+      slide: { fontEA: '新細明體', lang: 'zh-HK' },
     },
     fr: {
       unit: 'cm',
