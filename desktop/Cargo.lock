@@ -3958,14 +3958,18 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 name = "vibeoffice"
 version = "0.1.0"
 dependencies = [
+ "block2",
+ "objc2",
  "objc2-app-kit",
  "objc2-foundation",
+ "objc2-web-kit",
  "rfd",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-single-instance",
+ "webview2-com",
  "windows",
  "windows-future",
 ]

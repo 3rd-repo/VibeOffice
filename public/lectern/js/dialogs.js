@@ -1080,7 +1080,7 @@
   }
 
   /* ---------- About ---------- */
-  D.about = () => ui.about({ name: 'Lectern', office: 'PowerPoint', text: [
-    L.N('A presentation editor in the style of Microsoft Office PowerPoint that runs entirely in your browser. Presentations are read and written as Office Open XML (.pptx, .pptm); nothing is uploaded.'),
+  D.about = () => ui.about({ name: 'Lectern', text: [
+    L.N('A presentation editor that runs entirely in your browser. Presentations are read and written as Office Open XML (.pptx, .pptm); nothing is uploaded.'),
     'Slide shows play in the browser, and presentations export to PDF, PNG pictures and web pages.'] });
 })();

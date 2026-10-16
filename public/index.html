@@ -37,6 +37,7 @@
   .big:hover, .big:focus-visible { background: var(--menu-hot); border-color: var(--card-hot-border); }
   .big.on { background: linear-gradient(var(--surface), var(--start-on-b)); border-color: var(--tb-border); }
   .big svg { flex: none; }
+  .big small { display: block; color: var(--muted); font-size: 11px; font-weight: normal; text-wrap: balance; }
   .sec h2 { margin: 0 0 4px; padding: 0 8px 3px; font-size: 12px; color: var(--pane-ink); border-bottom: 1px solid var(--start-rule); }
   .new { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border: 1px solid transparent; border-radius: 3px; color: var(--pane-link); }
   .new:hover, .new:focus-visible { background: var(--menu-hot); border-color: var(--card-hot-border); }
@@ -189,6 +190,7 @@
     <div class="grow"></div>
     <div>
       <button class="big" id="update" type="button" hidden><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="#1f8a4c"/><path d="M10 5v7.5M6.5 9.5l3.5 3.5 3.5-3.5" fill="none" stroke="#fff" stroke-width="2"/><path d="M6 15.5h8" stroke="#fff" stroke-width="1.6"/></svg>Update VibeOffice</button>
+      <button class="big" id="updatecheck" type="button" hidden><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="#1f8a4c"/><path d="M10 5v7.5M6.5 9.5l3.5 3.5 3.5-3.5" fill="none" stroke="#fff" stroke-width="2"/><path d="M6 15.5h8" stroke="#fff" stroke-width="1.6"/></svg><span>Check for updates<small>This version is over two months old.</small></span></button>
       <button class="big" id="install" type="button" hidden><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="16" height="12" rx="1.5" fill="#fff" stroke="#3b619c"/><path d="M10 5.5v6M7 9l3 3 3-3" fill="none" stroke="#1f8a4c" stroke-width="1.8"/><path d="M6 17.5h8" stroke="#3b619c"/></svg>Install VibeOffice.work</button>
       <div class="caching" id="caching" role="status" hidden><span id="cachingtext">Updating cached resources</span><progress id="cachingbar" max="1" value="0"></progress><span id="cachingsize"></span></div>
       <button class="updated" id="cachingreload" type="button" hidden><span class="mark" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9.5"/><path d="M5.6 10.3l3 3 5.9-6.2"/></svg></span><span><b>Just updated successfully</b><small>Click here to reload</small></span></button>
@@ -476,23 +478,28 @@ VO.i18n.whenReady(function () {
   });
   $('cachingreload').addEventListener('click', () => location.reload());
 
-  /* Updates (desktop app): an Update button, or once a day a dialog, when updater/current.json asks for it; the Mac
-     App Store edition is updated by the store (VO.host.updates) */
+  /* Updates (desktop app): an Update button, or once a day a dialog, when updater/current.json asks for it. Everywhere
+     (the site, the installed PWA, the desktop app), a version over two months old shows Check for updates instead,
+     even when current.json cannot be read; it waits up to 5 s for the check, so the two buttons don't swap places.
+     Both open the updater page. The Mac App Store edition is updated by the store (VO.host.updates) */
   const download = () => VO.host.openUrl(VO.updateUrl()).catch((e) => status(String(e)));
   $('update').addEventListener('click', download);
+  $('updatecheck').addEventListener('click', download);
   $('updatedlg').addEventListener('close', () => { if ($('updatedlg').returnValue === 'download') download(); });
-  if (VO.host.kind === 'desktop' && VO.host.updates) {
-    VO.checkUpdate().then(({ ask, news }) => {
-      if (!ask) return;
-      $('updatenews').replaceChildren(...news.flatMap((n) => [h('b', { translate: 'no' }, n.version), h('p', { translate: 'no' }, n.text)]));
-      $('updatenews').hidden = !news.length;
-      $('update').hidden = false;
-      const today = new Date().toDateString();
-      if (ask === 'dialog' && localStorage.getItem('vibeoffice.updateAsked') !== today) {
-        try { localStorage.setItem('vibeoffice.updateAsked', today); } catch (e) { /* asks again next time */ }
-        $('updatedlg').showModal();
-      }
-    }).catch((e) => console.info('update check:', e.message));   // offline: nothing to show
+  const checked = VO.host.kind === 'desktop' && VO.host.updates ? VO.checkUpdate().then(({ ask, news }) => {
+    if (!ask) return;
+    $('updatenews').replaceChildren(...news.flatMap((n) => [h('b', { translate: 'no' }, n.version), h('p', { translate: 'no' }, n.text)]));
+    $('updatenews').hidden = !news.length;
+    $('update').hidden = false;
+    $('updatecheck').hidden = true;
+    const today = new Date().toDateString();
+    if (ask === 'dialog' && localStorage.getItem('vibeoffice.updateAsked') !== today) {
+      try { localStorage.setItem('vibeoffice.updateAsked', today); } catch (e) { /* asks again next time */ }
+      $('updatedlg').showModal();
+    }
+  }).catch((e) => console.info('update check:', e.message)) : null;   // offline: nothing to show
+  if (VO.host.updates && VO.isOutdated()) {
+    Promise.race([checked, new Promise((r) => setTimeout(r, 5000))]).then(() => { $('updatecheck').hidden = !$('update').hidden; });
   }
 
   /* Settings: what applies to every app. UI size is the desktop app's zoom (VO.host); on the web the browser's own */

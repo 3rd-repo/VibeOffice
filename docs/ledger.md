@@ -61,7 +61,9 @@ bar, status bar, Header and Footer, Comments, Full Screen and Zoom (10–400 %, 
 
 **Insert.** Cells, Rows, Columns, Worksheet, Chart (the four-step Chart Wizard), Symbol, Page Break,
 Function (Insert Function and Function Arguments with live results and help for every function),
-Name (Define, Paste, Create, Apply), Comment, Picture from file, AutoShapes, Text Box, Hyperlink.
+Name (Define, Paste, Create, Apply), Comment, Picture from file, AutoShapes, Text Box, Hyperlink. Open
+Hyperlink goes to a reference in the workbook; a web, mail or file address is shown to copy, never opened
+(docs/suite.md, Hyperlinks).
 
 **Format.** Format Cells with all six tabs (Number with the full category list and custom formats,
 Alignment with indent, rotation, wrap, shrink and merge, Font, Border, Patterns, Protection), Row and

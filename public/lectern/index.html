@@ -254,8 +254,8 @@
 .show .stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .show .layer { position: absolute; left: 0; top: 0; }
 .show .sl .shp.has-link, .show .sl span[data-link] { pointer-events: auto; cursor: pointer; }
-.show canvas.ink { position: absolute; left: 0; top: 0; z-index: 3; }
-.show.pen canvas.ink { cursor: crosshair; }
+.show canvas.ink { position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none; }   /* links on the slide take clicks */
+.show.pen canvas.ink { pointer-events: auto; cursor: crosshair; }
 .show .blank { position: absolute; inset: 0; z-index: 6; }
 .show .endscreen { position: absolute; inset: 0; z-index: 5; display: flex; align-items: flex-start; justify-content: center; padding-top: 18px; color: #fff; font: 14px Tahoma, var(--ui-font); background: #000; }
 .show .popbar { position: absolute; left: 12px; bottom: 12px; z-index: 7; display: flex; gap: 4px; opacity: 0; transition: opacity .25s; }

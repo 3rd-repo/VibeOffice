@@ -839,8 +839,7 @@
     if (l.location) { if (!A.goToRef(l.location)) ui.msg('Reference is not valid.', { icon: 'warn' }); return; }
     if (!l.target) return;
     if (/^#/.test(l.target)) { A.goToRef(l.target.slice(1)); return; }
-    if (/^(https?:|mailto:|ftp:)/i.test(l.target)) { const a = h('a', { href: l.target, target: '_blank', rel: 'noopener noreferrer' }); document.body.appendChild(a); a.click(); a.remove(); return; }
-    ui.msg(L.t('Cannot open the specified file.\n\n{0}', l.target), { icon: 'warn' });
+    ui.linkDialog(l.target);   // a web or mail address, or a file: shown to copy, never opened from here
   };
   /** Alt+Down: validation list, else the column's distinct entries */
   A.pickList = function () {

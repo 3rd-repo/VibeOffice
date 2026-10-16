@@ -188,7 +188,7 @@
       void idx;
       return false;
     };
-    document.body.appendChild(el);
+    (document.fullscreenElement || document.body).appendChild(el);   // over a slide show, as dialogs
     /* position */
     const r = el.getBoundingClientRect();
     let x, y;
@@ -425,7 +425,7 @@
     });
     dlg.append(titleBar, body, foot);
     overlay.appendChild(dlg);
-    document.body.appendChild(overlay);
+    (document.fullscreenElement || document.body).appendChild(overlay);   // over a slide show, which is full screen
     /* center */
     const r = dlg.getBoundingClientRect();
     dlg.style.left = Math.max(4, (window.innerWidth - r.width) / 2) + 'px';
@@ -484,6 +484,29 @@
   };
   ui.dialogKey = (e) => { const top = dlgStack[dlgStack.length - 1]; return top ? top.keys(e) || true : false; };
 
+  /** A document's hyperlink, which the suite never opens itself: a link in a file can lead anywhere, so it shows
+   *  the address with a warning and Copy, to paste into the browser's address bar (or, for mail, into a message).
+   *  Every app's Open Hyperlink, Ctrl+click and slide show link come here; links within the document don't. */
+  ui.linkDialog = function (url) {
+    const mail = /^mailto:/i.test(url);
+    const box = h('input', { type: 'text', class: 'link-url', readonly: true, value: url, spellcheck: 'false', 'aria-label': t('Address') });
+    const copied = h('p', { class: 'link-copied', role: 'status' });
+    const body = h('div', { class: 'col' },
+      h('p', { text: t('This link goes to:') }), box,
+      h('p', { text: mail ? t('To write to this address, copy it and paste it into your e-mail program.')
+        : t('Links in documents can lead to harmful sites. If you trust this one, copy its address and paste it into your browser\'s address bar.') }),
+      copied);
+    const copy = async () => {
+      try { await navigator.clipboard.writeText(url); } catch (e) { box.select(); document.execCommand('copy'); }
+      copied.textContent = t('Copied.');
+    };
+    // Copy leaves the dialog open (false), so the address can be pasted while it shows
+    const d = ui.dialog({ title: t('Hyperlink'), width: 440, body, buttons: [{ label: '&Copy Address', primary: true, onClick: () => { copy(); return false; } }, { label: 'Close' }] });
+    box.focus();
+    box.select();
+    return d;
+  };
+
   /** Message box. Returns Promise<buttonIndex|null> */
   ui.msg = function (text, o) {
     o = o || {};
@@ -502,8 +525,8 @@
     return d.done;
   };
   /** Help ▸ About, the same in every app: icon, name and version, the app's own paragraphs, the link to the open
-   *  source licenses, the suite's license and font notes (as in the Start Center's About), then the trademark note
-   *  naming the Office program it follows (o: { name, text: [paragraphs], office }) */
+   *  source licenses, and the suite's license and font notes (as in the Start Center's About).
+   *  Descriptions stay general, without naming another company's products (o: { name, text: [paragraphs] }). */
   ui.about = function (o) {
     const body = h('div', { class: 'col about' },
       h('div', { class: 'about-head' }, h('span', { html: L.icons.app ? L.icons.app(48) : '' }),
@@ -512,8 +535,7 @@
       h('p', null, ...t('Made possible by open source software: {0}.').split('{0}').flatMap((part, i) => (i ? [h('a', { href: root.VO ? root.VO.LICENSES : '../oss-licenses.html', target: '_blank', rel: 'noopener',
         class: 'about-oss', text: 'Open source licenses', onclick: (e) => { if (root.VO) { e.preventDefault(); root.VO.showLicenses(); } } }), part] : [part]))),
       h('p', { text: 'Open source under the Apache License 2.0, provided as is, without warranty. VibeOffice.work is an independent project. Product names in its documentation are trademarks of their owners; VibeOffice.work is not affiliated with them.' }),
-      h('p', { class: 'about-marks', text: 'Font names are used solely to identify the fonts specified in documents and to maintain interoperability with Office Open XML files and the applications that create them; such names may be trademarks of their respective owners. VibeOffice renders text with the fonts installed on your computer. Where a specified font is not installed, VibeOffice substitutes an open-source font supplied with it or another font available on your computer, and the document may therefore appear differently than in other applications. VibeOffice does not include or distribute any commercial font software.' }),
-      h('p', { class: 'about-marks', text: t('Microsoft, {0} and Office are trademarks of Microsoft Corporation. {1} is an independent work and is not affiliated with Microsoft.', o.office, o.name) }));
+      h('p', { class: 'about-marks', text: 'Font names are used solely to identify the fonts specified in documents and to maintain interoperability with Office Open XML files and the applications that create them; such names may be trademarks of their respective owners. VibeOffice renders text with the fonts installed on your computer. Where a specified font is not installed, VibeOffice substitutes an open-source font supplied with it or another font available on your computer, and the document may therefore appear differently than in other applications. VibeOffice does not include or distribute any commercial font software.' }));
     return ui.dialog({ title: t('About {0}', o.name), width: 420, body, buttons: [{ label: 'OK', primary: true }] });
   };
   ui.prompt = function (label, value, title) {

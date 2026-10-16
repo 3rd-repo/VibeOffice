@@ -124,6 +124,13 @@
   /** the page the Update button opens (in the system's browser): it gets this edition's version and platform */
   VO.updateUrl = () => 'https://vibeoffice.work/updater/?from_version=' + encodeURIComponent(VO.VERSION)
     + '&current_platform=' + encodeURIComponent(VO.host.platform);
+  /** whether a version (by default this one) is over two months old on `now`, by its date: the Start Center then
+   *  offers to check for updates, wherever the version runs (the site, the installed PWA's cache, the desktop app)
+   *  and whether or not current.json can be read. A dev build never is. */
+  VO.isOutdated = (v = VO.VERSION, now = new Date()) => {
+    const d = versionDay(v);
+    return d !== null && now >= new Date(Math.floor(d / 10000), Math.floor(d / 100) % 100 + 1, d % 100 || 1);
+  };
   /** { ask: 'dialog', 'button' or null (up to date), news: [{ version, text }] }: when an update is due, the
    *  whatsnew.json entries newer than this version, newest first (none if that file cannot be read).
    *  Throws when current.json cannot be read (offline). */

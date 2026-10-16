@@ -93,7 +93,8 @@ jobs:
           echo "version=$(tools/current-tree-version.sh)" >> "$GITHUB_OUTPUT"
 
       # The app as a user starts it: alone, then with a document, a workbook as CSV and Markdown handed over as Finder
-      # does (open -a), each a window of its own; a screenshot after each
+      # does (open -a), each a window of its own; a screenshot after each. Its stderr must say WebKit took the network
+      # rules (desktop/src/net.rs: only https://vibeoffice.work/).
       - name: Smoke
         run: |
           app="$PWD/desktop/target/dist/VibeOffice.app"
@@ -102,7 +103,7 @@ jobs:
           cp tests/quire/lines/linecases.docx "$out/files/"
           printf 'Item,Cost\nRent,900\nFood,250\n' > "$out/files/Budget.csv"
           printf '# Notes\n\nHello from the smoke run.\n' > "$out/files/Notes.md"
-          open -a "$app"
+          open --stderr "$out/stderr.log" -a "$app"
           sleep 20
           screencapture -x "$out/1-start-center.png"
           n=2
@@ -114,6 +115,8 @@ jobs:
           done
           osascript -e 'quit app "VibeOffice"' || pkill -x vibeoffice || true
           log show --last 5m --predicate 'process == "vibeoffice"' --style compact > "$out/app.log" 2>&1 || true
+          cat "$out/stderr.log"
+          grep -q '^network rules: only https://vibeoffice.work/' "$out/stderr.log" || { echo "::error::no network rules"; exit 1; }
 
       - uses: actions/upload-artifact@v4
         if: always()

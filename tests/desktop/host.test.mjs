@@ -98,10 +98,12 @@ test('web: Settings points to the browser\'s zoom', () => {
 });
 
 const update = `await new Promise((r) => setTimeout(r, 500));
-  const out = { button: !document.getElementById('update').hidden, dialog: document.getElementById('updatedlg').open };
+  const out = { button: !document.getElementById('update').hidden, check: !document.getElementById('updatecheck').hidden,
+    dialog: document.getElementById('updatedlg').open };
   if (out.dialog) out.news = [...document.querySelectorAll('#updatenews > *')].map((e) => e.textContent);
   if (out.dialog) { const d = document.getElementById('updatedlg'); d.querySelector('button[value=download]').click(); }
   else if (out.button) document.getElementById('update').click();
+  else if (out.check) document.getElementById('updatecheck').click();
   await new Promise((r) => setTimeout(r, 200));
   out.opened = sessionStorage.opened || '';
   localStorage.removeItem('vibeoffice.updateAsked');
@@ -111,17 +113,17 @@ const URL_ = 'https://vibeoffice.work/updater/?from_version=v2026.10.11-abc123&c
 
 test('desktop: up to date, no Update button', () => {
   const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'nolaunch');
-  assert.deepEqual(r, { button: false, dialog: false, opened: '' });
+  assert.deepEqual(r, { button: false, check: false, dialog: false, opened: '' });
 });
 
 test('desktop: show-update-button shows the button, which opens the updater page', () => {
   const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'nolaunch&update=button');
-  assert.deepEqual(r, { button: true, dialog: false, opened: URL_ });
+  assert.deepEqual(r, { button: true, check: false, dialog: false, opened: URL_ });
 });
 
 test('desktop: show-update-dialog asks with a dialog, with what is new', () => {
   const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'nolaunch&update=dialog');
-  assert.deepEqual(r, { button: true, dialog: true, opened: URL_,
+  assert.deepEqual(r, { button: true, check: false, dialog: true, opened: URL_,
     news: ['v2026.10.14-000000', 'Fourteenth.', 'v2026.10.12-000000', 'Twelfth.\nSecond line.'] }, 'what is new since this version, newest first');
 });
 
@@ -133,14 +135,45 @@ test('the published updater/current.json: a build from 10-08 gets the button, 10
   }
 });
 
-test('desktop: the Mac App Store edition never checks, even when current.json asks for a dialog', () => {
-  const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'nolaunch&appstore&update=dialog');
-  assert.deepEqual(r, { button: false, dialog: false, opened: '' });
+test('desktop: a version over two months old offers to check for updates, when current.json asks nothing or cannot be read', () => {
+  for (const policy of ['none', 'offline']) {
+    const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', `nolaunch&update=${policy}&version=v2026.08.16-000000`);
+    assert.deepEqual(r, { button: false, check: true, dialog: false,
+      opened: 'https://vibeoffice.work/updater/?from_version=v2026.08.16-000000&current_platform=windows' }, policy);
+  }
+  const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'nolaunch&update=none&version=v2026.08.17-000000');
+  assert.deepEqual(r, { button: false, check: false, dialog: false, opened: '' }, 'a day short of two months');
+});
+
+test('desktop: when current.json asks for an update, an old version gets the Update button, not Check for updates', () => {
+  const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'nolaunch&update=button&version=v2026.07.01-000000');
+  assert.deepEqual({ button: r.button, check: r.check, opened: r.opened }, { button: true, check: false,
+    opened: 'https://vibeoffice.work/updater/?from_version=v2026.07.01-000000&current_platform=windows' });
+});
+
+test('desktop: the Mac App Store edition never checks nor offers to, even when current.json asks for a dialog', () => {
+  const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'nolaunch&appstore&update=dialog&version=v2026.07.01-000000');
+  assert.deepEqual(r, { button: false, check: false, dialog: false, opened: '' });
 });
 
 test('web: no update check', () => {
   const { r } = shot('', [{ js: update }]);
-  assert.deepEqual(r, { button: false, dialog: false, opened: '' });
+  assert.deepEqual(r, { button: false, check: false, dialog: false, opened: '' });
+});
+
+test('web and the installed PWA: a copy over two months old offers to check for updates', () => {
+  const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'web&version=v2026.08.16-000000');
+  assert.deepEqual(r, { button: false, check: true, dialog: false,
+    opened: 'https://vibeoffice.work/updater/?from_version=v2026.08.16-000000&current_platform=web' });
+  assert.deepEqual(shot('', [{ js: update }], '--pre', stub, '--qs', 'web&version=v2026.10.01-000000').r,
+    { button: false, check: false, dialog: false, opened: '' }, 'two weeks old');
+});
+
+test('a version is outdated two calendar months after its day', () => {
+  const { r } = shot('', [{ js: `const o = (v, y, m, d) => VO.isOutdated(v, new Date(y, m - 1, d)); return JSON.stringify([
+    o('v2026.08.16-abc123', 2026, 10, 16), o('v2026.08.17-abc123', 2026, 10, 16), o('v2026.12.31-abc123', 2027, 3, 2),
+    o('v2026.12.31-abc123', 2027, 3, 3), o('2026.08.8f8494', 2026, 10, 1), o('dev', 2099, 1, 1), VO.isOutdated()]);` }]);
+  assert.deepEqual(r, [true, false, false, true, true, false, false], 'a dev build is never outdated');
 });
 
 test('versions compare by date alone', () => {

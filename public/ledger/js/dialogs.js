@@ -984,7 +984,7 @@
     const opts = h('div', { class: 'col' }, ui.check('Show Standard and Formatting toolbars on &two rows', true, null), ui.check('Show Screen&Tips on toolbars', true, null), ui.check('Show shortcut &keys in ScreenTips', true, null));
     ui.dialog({ title: 'Customize', width: 380, body: ui.tabs([{ label: 'Toolbars', body: box }, { label: 'Options', body: opts }]), buttons: [{ label: 'Close', primary: true }] });
   };
-  D.about = () => ui.about({ name: 'Ledger', office: 'Excel', text: [
-    L.N('A spreadsheet in the style of Microsoft Office Excel that runs entirely in your browser. Workbooks are read and written as Office Open XML (.xlsx, .xlsm), CSV and text; nothing is uploaded.'),
+  D.about = () => ui.about({ name: 'Ledger', text: [
+    L.N('A spreadsheet that runs entirely in your browser. Workbooks are read and written as Office Open XML (.xlsx, .xlsm), CSV and text; nothing is uploaded.'),
     'The calculation engine implements more than 450 worksheet functions, array and dynamic-array formulas, structured references and iterative calculation.'] });
 })(typeof window !== 'undefined' ? window : globalThis);

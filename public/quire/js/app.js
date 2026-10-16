@@ -1058,7 +1058,7 @@
     const items = ['cut', 'copy', 'paste', '-'];
     if (E.objSel) items.push({ label: 'Text W&rapping', sub: () => A.wrapItems() }, 'formatObject', '-');
     const ln = e.target.closest && e.target.closest('[data-link]');
-    if (ln) items.push('hyperlink', { label: '&Open Hyperlink', run: () => { const a = document.createElement('a'); a.href = ln.dataset.link; a.target = '_blank'; a.rel = 'noopener'; a.click(); } }, { label: '&Remove Hyperlink', run: () => ui.exec('removeHyperlink') }, '-');
+    if (ln) items.push('hyperlink', { label: '&Open Hyperlink', run: () => L.ed.followLink(ln.dataset.link) }, { label: '&Remove Hyperlink', run: () => ui.exec('removeHyperlink') }, '-');
     if (inTable) items.push({ label: '&Insert', sub: ['colLeft', 'colRight', 'rowAbove', 'rowBelow', 'insertCells'] }, { label: '&Delete', sub: ['deleteTable', 'deleteCols', 'deleteRows', 'deleteCells'] }, 'mergeCells', 'splitCells', '-', 'distRows', 'distCols', '-', 'bordersDlg', { label: 'Cell Alignment', sub: ['cellTop', 'cellMiddle', 'cellBottom'] }, 'tableAutoFormat', 'tableProps', '-');
     const f = L.fields && L.fields.at(E.sel && E.sel.f);
     if (f) items.push('updateField', 'editField', 'toggleCodes', '-');

@@ -4,7 +4,20 @@
 // __stubSecondStart(name, text): another start of the app hands this one a file (main.rs, second_start).
 // Records in sessionStorage: hostCalls (each command), opened (host_open_url), uiScale, newWindow, closed
 // (host_close_window), swRegister (service worker registrations).
+// The clock says 2026-10-16 (?today=yyyy-mm-dd another day), so the versions here don't grow old (VO.isOutdated).
+// ?web: no host, only the version a published copy of the site is stamped with.
 (() => {
+  const RealDate = Date;
+  const shift = RealDate.parse(((/today=(\d{4}-\d{2}-\d{2})/.exec(location.search) || [])[1] || '2026-10-16') + 'T12:00') - RealDate.now();
+  window.Date = class extends RealDate {
+    constructor(...a) { if (a.length) super(...a); else super(RealDate.now() + shift); }
+    static now() { return RealDate.now() + shift; }
+  };
+  if (/[?&]web\b/.test(location.search)) {   // links open in a new tab: recorded instead
+    window.__VO_HOST__ = { appVersion: (/version=(v[0-9.]+-[0-9a-f]{6})/.exec(location.search) || [])[1] || 'v2026.10.11-abc123' };
+    window.open = (url) => { sessionStorage.opened = url; return null; };
+    return;
+  }
   const files = [{ name: 'Budget.csv', text: 'Item,Cost\nRent,900\nFood,250\n' }];
   const later = [];   // handles a second start handed over
   window.__stubSecondStart = (name, text) => {
@@ -12,13 +25,17 @@
     window.dispatchEvent(new Event('vo-files'));
   };
   const log = (k) => { sessionStorage[k] = (sessionStorage[k] ? sessionStorage[k] + ' ' : '') + location.pathname; };
-  // ?update=button / ?update=dialog: updater/current.json asks this version to update; otherwise the site's own file
-  const ask = (/update=(button|dialog)/.exec(location.search) || [])[1];
+  // ?update=button / ?update=dialog: updater/current.json asks this version to update; ?update=none asks nothing of
+  // any version since January; ?update=offline: it cannot be read; otherwise the site's own file
+  const ask = (/update=(button|dialog|none|offline)/.exec(location.search) || [])[1];
   const newer = { web: 'v2026.10.12-000000', macos: 'v2026.10.12-000000', windows: 'v2026.10.12-000000', linux: 'v2026.10.12-000000' };
   const same = { web: 'v2026.10.11-000000', macos: 'v2026.10.11-000000', windows: 'v2026.10.11-000000', linux: 'v2026.10.11-000000' };
   const news = { 'v2026.10.10-000000': 'Older.', 'v2026.10.12-000000': 'Twelfth.\nSecond line.', 'v2026.10.11-def456': 'Same day.', 'v2026.10.14-000000': 'Fourteenth.' };
   const json = (o) => 'data:application/json,' + encodeURIComponent(JSON.stringify(o));
-  const updates = ask && json({ 'show-update-button': ask ? newer : same, 'show-update-dialog': ask === 'dialog' ? newer : same });
+  const january = { web: 'v2026.01.01-000000', macos: 'v2026.01.01-000000', windows: 'v2026.01.01-000000', linux: 'v2026.01.01-000000' };
+  const policy = { button: { 'show-update-button': newer, 'show-update-dialog': same }, dialog: { 'show-update-button': newer, 'show-update-dialog': newer },
+    none: { 'show-update-button': january, 'show-update-dialog': january } }[ask];
+  const updates = ask === 'offline' ? 'data:,not JSON' : policy && json(policy);
   // ?version=v…: the build's version (default v2026.10.11-abc123)
   const appVersion = (/version=(v[0-9.]+-[0-9a-f]{6})/.exec(location.search) || [])[1] || 'v2026.10.11-abc123';
   // ?appstore: the Mac App Store edition, which the store updates (host.rs, init_script)

@@ -9,6 +9,7 @@
 | `desktop/tauri.conf.json` | app name and identifier, `frontendDist: ../public`, `devUrl` (tools/serve.py), `removeUnusedCommands`; Tauri's bundler is off (the installer is `setup/`) |
 | `desktop/src/main.rs` | one instance on Windows (`second_start`); files handed over later (`files_arrived`: another start on Windows, Finder on macOS); the main window: system title bar follows `document.title`, file drops go to the page, links out of the app go to the default browser, the UI size on each page load, `__VO_HOST__` before each page; on macOS the menu bar (`mac_menu`), Finder's files (`RunEvent::Opened`), the Dock (`Reopen`) and staying open with no window (macOS, below) |
 | `desktop/src/host.rs` | the native side of `VO.host`: the `host_*` commands, file handles, `settings.json` |
+| `desktop/src/net.rs` | the network rules: each window's web view reaches `https://vibeoffice.work/` alone (Network, below) |
 | `desktop/src/installation.rs` | what the installer writes and `-uninstall` removes, in one list: files, shortcuts, HKCU registrations (shared with `setup/`) |
 | `desktop/src/installed.rs` | Windows: `vibeoffice.exe -uninstall`, and the first start after installing (taskbar pin request, Default apps) |
 | `desktop/app.manifest` | common controls v6 and `asInvoker` (never asks for administrator rights) |
@@ -44,7 +45,7 @@ One interface between the pages and what runs them, so a page never asks which: 
 
 `fn(files)` gets `File` objects; the Start Center calls `onFiles` and opens the first file in its app (`VO.handoff`). The service worker is registered only on the web.
 
-Links: besides `openUrl`, the native side sends every navigation or new window that leaves the app (http(s) to another host, mailto) to the default browser (`on_navigation`, `on_new_window` in `main.rs`): the Start Center's GitHub button and the `target="_blank"` links the apps open for hyperlinks need no change. The app's own pages (`tauri://localhost`, `http://tauri.localhost`; devUrl in a dev build), `blob:`, `data:` and `about:` stay in the app.
+Links: besides `openUrl`, the native side sends every navigation or new window that leaves the app (http(s) to another host, mailto) to the default browser (`on_navigation`, `on_new_window` in `main.rs`): the Start Center's GitHub button needs no change. A document's hyperlinks are never opened: the apps show them to copy (docs/suite.md, Hyperlinks). The app's own pages (`tauri://localhost`, `http://tauri.localhost`; devUrl in a dev build), `blob:`, `data:` and `about:` stay in the app.
 
 UI size (Settings on the Start Center): the web view's zoom, as Ctrl + in a browser, so canvases stay sharp and clicks land where they should. CSS `zoom` on the page was measured and does not work: at 200 % every click on Ledger's grid landed on B4 and menus opened at twice their place. `settings.json` (the app's config folder: `%APPDATA%\work.vibeoffice.desktop\`, `~/.config/work.vibeoffice.desktop/`) keeps it, and it is applied as each page starts loading (WebKitGTK resets the zoom on the first load).
 
@@ -85,7 +86,28 @@ A version is `v<yyyy>.<mm>.<dd>-<6 hex>`, the date (UTC) and commit of the tree 
 
     { "v2026.10.11-000000": "VibeOffice for Windows and Linux: …" }
 
-When the Start Center opens, the desktop app reads `https://vibeoffice.work/updater/current.json` (the site sends `Access-Control-Allow-Origin: *`; nothing about the user or their files is sent). Older than `show-update-dialog`: the Update dialog, at most once a day (`vibeoffice.updateAsked`), listing the `whatsnew.json` entries newer than this version, newest first (by date; the dialog shows without them if that file cannot be read); older than `show-update-button`: the Update VibeOffice button in the Start Center. `whatsnew.json` is read only when an update is due. Update opens `https://vibeoffice.work/updater/?from_version=<version>&current_platform=<platform>` in the default browser. Offline, or a file that is not this JSON: nothing is shown. A `dev` build is newer than any dated version and never asks. To try both against the published file without asking anyone else: keep `show-update-dialog` older than `show-update-button` (`v2026.10.05` and `v2026.10.11`) and build exes stamped in between and before (`VO_VERSION=v2026.10.08-000000` → the button only; `v2026.10.01-000000` → the dialog), e.g. `VO_VERSION=… TAURI_CONFIG='{"version":"2026.10.8"}' cargo build --release`; the dialog shows once a day per profile (`vibeoffice.updateAsked`). `tests/desktop/host.test.mjs` checks the repo's `current.json` the same way.
+When the Start Center opens, the desktop app reads `https://vibeoffice.work/updater/current.json` (the site sends `Access-Control-Allow-Origin: *`; nothing about the user or their files is sent). Older than `show-update-dialog`: the Update dialog, at most once a day (`vibeoffice.updateAsked`), listing the `whatsnew.json` entries newer than this version, newest first (by date; the dialog shows without them if that file cannot be read); older than `show-update-button`: the Update VibeOffice button in the Start Center. `whatsnew.json` is read only when an update is due. Update opens `https://vibeoffice.work/updater/?from_version=<version>&current_platform=<platform>` in the default browser. Offline, or a file that is not this JSON: nothing is shown from it. Apart from `current.json`, a version over two months old (`VO.isOutdated`: two calendar months after its day) shows Check for updates ("This version is over two months old."), which opens the same page; it waits up to 5 s for the check and gives way to the Update button when `current.json` asks, so the two never show together. The site and the installed PWA show it too (docs/suite.md). A `dev` build is newer than any dated version and never asks. To try both against the published file without asking anyone else: keep `show-update-dialog` older than `show-update-button` (`v2026.10.05` and `v2026.10.11`) and build exes stamped in between and before (`VO_VERSION=v2026.10.08-000000` → the button only; `v2026.10.01-000000` → the dialog), e.g. `VO_VERSION=… TAURI_CONFIG='{"version":"2026.10.8"}' cargo build --release`; the dialog shows once a day per profile (`vibeoffice.updateAsked`). `tests/desktop/host.test.mjs` checks the repo's `current.json` the same way.
+
+## Network
+
+The pages may reach `https://vibeoffice.work/` alone, for the update check (`updater/current.json` and `whatsnew.json`);
+the app itself makes no connections (`desktop/src/net.rs`). Every other http, https, ws and wss request a window makes,
+whatever makes it (a page, a picture or frame in a document, a worker), is refused before it leaves the machine:
+
+- macOS: a WebKit content rule list (the format of Safari's content blockers): block `^https?://` and `^wss?://`, then
+  let `^https://vibeoffice\.work/` through. WebKit compiles it at start (and keeps it compiled in the app's container);
+  the Start Center opens only then, and each window gets it as it is made, before its page runs. The smoke run fails
+  without it (stderr: `network rules: only https://vibeoffice.work/`).
+- Windows: WebView2 hands every request of a window to `net::allowed` first (`AddWebResourceRequestedFilter` for `*`,
+  workers included where WebView2 has `ICoreWebView2_22`); a refused one gets a 403 instead. WebSocket connections
+  may not pass through that event (WebView2 documents it for HTTP requests), but no page opens one.
+- Linux: no rules (no release).
+
+The app's own pages and IPC (`tauri://`, `ipc://`; `http://tauri.localhost` and `http://ipc.localhost` on Windows) and
+`data:` and `blob:` are not the network; a dev build also reaches its dev server (127.0.0.1). Links still open in the
+default browser, which is not the app. The sandbox can't name a host: the DMG has the network entitlement
+(`network.client`) for the update check, which is why the rules live in the web view; the App Store edition has none.
+What the system and WebView2 do on their own (Edge's updates, certificate checks) is theirs.
 
 ## Building
 
@@ -226,7 +248,7 @@ No exe packers (UPX): antivirus flags packed exes. The largest pages are the the
 ## Results
 
 - Linux (Debian 13, WebKitGTK 2.52.6, Xfce): Start Center, all three apps; `vibeoffice Budget.csv` opens it in Ledger and `Notes.md` in Quire, the title bar follows the document; Recent Files and the look are kept between runs. With no network at all (`unshare -rn`), a fresh profile: everything loads, in Paper; the GitHub button goes to `xdg-open`; UI size 150 % and 200 % scale the whole UI, sharp, and are back after a restart; the Start Center keeps Settings reachable in its narrow layout. Started with `Budget.csv`, the Start Center stays and Ledger opens in a window of its own; Quire from the Start Center opens a third window, and its File ▸ Exit closes only that one.
-- macOS (2026-10-15): type-checks for `aarch64-apple-darwin` and `x86_64-apple-darwin` on Linux; not yet built or run on a Mac (the first build is the CI's).
+- macOS (2026-10-15, the CI's first run, macos-15): builds universal (arm64 and x86_64, 15.3 MB), signed ad hoc; the smoke run opens the Start Center, then `linecases.docx` in Quire, `Budget.csv` in Ledger and `Notes.md` in Quire, each in a window of its own in the one running process, under the App Sandbox with no denials, and quits cleanly. Not yet used by a person on a Mac (menus, ⌘ keys, saving, Browse, links, the Dock). The network rules (2026-10-16) type-check for both and pass `cargo test`; not yet run.
 - Not yet run against the published site: the update check (the site has no `updater/current.json` yet).
 - Installer (2026-10-11), Wine 10.0, `tests/desktop/setup-wine.py`: passes. The dialog shows the pinning hint (Wine has no TaskbarManager); install writes the three files, both shortcuts and the HKCU values; the same version again shows no dialog; uninstall (Enter) leaves no folder, shortcut or value of VibeOffice's and keeps another program's. `cargo test` (Windows target, under Wine): 5 passed. Wine cannot show the app itself (no WebView2), the pin prompt or Default apps.
 - Windows: built, not yet run. To check, as a user without administrator rights: install (the dialog at 100 % and 200 %), the pin prompt on an up-to-date Windows 11 and the hint on Windows 10, Default apps opening at VibeOffice's page, a double-clicked .docx afterwards; Open with lists VibeOffice for .docx, .xlsx and .pptx with their document icons; an update while the app runs; Uninstall from Apps & features; all three apps, saving, drops.

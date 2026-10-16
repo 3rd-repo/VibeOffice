@@ -6,6 +6,7 @@ mod host;
 mod installation;
 #[cfg(windows)]
 mod installed;
+mod net;
 
 use tauri::{
     webview::{DownloadEvent, NewWindowResponse, PageLoadEvent},
@@ -13,9 +14,9 @@ use tauri::{
 };
 
 /// A window of the suite: the Start Center ("main") or an app (host_new_window). Every window gets the
-/// host script, title, link, drop and UI size handling.
+/// host script, title, link, drop and UI size handling, and the network rules (net.rs).
 pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Result<WebviewWindow> {
-    WebviewWindowBuilder::new(app, label, url)
+    let window = WebviewWindowBuilder::new(app, label, url)
         .title("VibeOffice")
         .inner_size(1280.0, 820.0)
         .min_inner_size(640.0, 480.0)
@@ -78,7 +79,10 @@ pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Resu
                 installed::after_install(&window);
             }
         })
-        .build()
+        .build()?;
+    #[cfg(any(windows, target_os = "macos"))]
+    window.with_webview(net::apply)?;
+    Ok(window)
 }
 
 /// The Start Center's window has been made once (setup): until then, files that arrive wait for it.
@@ -215,8 +219,21 @@ fn main() {
         ])
         .setup(|app| {
             app.state::<host::Host>().load_settings(app.handle());
-            open_window(app.handle(), "main", WebviewUrl::default())?;
-            STARTED.store(true, std::sync::atomic::Ordering::SeqCst);
+            let start = {
+                let app = app.handle().clone();
+                move || {
+                    if let Err(e) = open_window(&app, "main", WebviewUrl::default()) {
+                        eprintln!("the Start Center: {e}");
+                        app.exit(1);
+                    }
+                    STARTED.store(true, std::sync::atomic::Ordering::SeqCst);
+                }
+            };
+            // macOS: once WebKit has compiled the network rules, so the first page never runs without them
+            #[cfg(target_os = "macos")]
+            net::prepare(start);
+            #[cfg(not(target_os = "macos"))]
+            start();
             Ok(())
         })
         .build(tauri::generate_context!())
