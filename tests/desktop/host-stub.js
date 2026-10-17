@@ -1,9 +1,11 @@
-// The desktop host (desktop/src/host.rs) as seen by the pages, for Chromium: run before each page's
+// The desktop host (desktop/src/host.rs, doc.rs) as seen by the pages, for Chromium: run before each page's
 // scripts with  node tools/shot.mjs '' steps.json --pre tests/desktop/host-stub.js
-// The app was "started with" Budget.csv (not with ?nolaunch); launch files are taken once per tab, as once per process there.
-// __stubSecondStart(name, text): another start of the app hands this one a file (main.rs, second_start).
-// Records in sessionStorage: hostCalls (each command), opened (host_open_url), uiScale, newWindow, closed
-// (host_close_window), swRegister (service worker registrations).
+// This tab plays every new window the native side would make (it goes to that window's address). The disk holds
+// FILES; the Open dialog "chooses" ?pick=<names> (comma-separated; none: Cancel). Recent Files start empty, or as
+// ?recent=<names> (each a file's entry; a name ending in * has unsaved changes); ?doc pages hold ?file=<name> (or
+// what the last window made was given). Records in sessionStorage: hostCalls (each command, with the page),
+// opened (host_open_url), uiScale, newWindow, closed (host_close_window), focused (host_focus), dialogs (the Open
+// dialog's labels), chose (the Save dialog's arguments), saves (each write), swRegister (service worker registrations).
 // The clock says 2026-10-16 (?today=yyyy-mm-dd another day), so the versions here don't grow old (VO.isOutdated).
 // ?web: no host, only the version a published copy of the site is stamped with.
 (() => {
@@ -18,12 +20,6 @@
     window.open = (url) => { sessionStorage.opened = url; return null; };
     return;
   }
-  const files = [{ name: 'Budget.csv', text: 'Item,Cost\nRent,900\nFood,250\n' }];
-  const later = [];   // handles a second start handed over
-  window.__stubSecondStart = (name, text) => {
-    later.push(files.push({ name, text }) - 1);
-    window.dispatchEvent(new Event('vo-files'));
-  };
   const log = (k) => { sessionStorage[k] = (sessionStorage[k] ? sessionStorage[k] + ' ' : '') + location.pathname; };
   // ?update=button / ?update=dialog: updater/current.json asks this version to update; ?update=none asks nothing of
   // any version since January; ?update=offline: it cannot be read; otherwise the site's own file
@@ -42,23 +38,133 @@
   const appStore = /appstore/.test(location.search);
   window.__VO_HOST__ = Object.freeze({ platform: appStore ? 'macos' : 'windows', version: 1, appVersion, edition: appStore ? 'appstore' : 'direct',
     updates: updates || '/updater/current.json', whatsnew: ask ? json(news) : '/updater/whatsnew.json' });
+  // the commands each kind of window may call (desktop/permissions/host.toml, desktop/capabilities/); the licences
+  // page none
+  const kind = /^\/(index\.html)?$/.test(location.pathname) ? 'start' : /^\/(quire|ledger|lectern)\//.test(location.pathname) ? 'app' : 'none';
+  const app = kind === 'app' ? location.pathname.split('/')[1] : null;
+  const grants = {
+    start: ['host_open', 'host_open_recent', 'host_new_document', 'host_recent', 'host_recent_preview', 'host_recent_remove',
+      'host_recent_clear', 'host_new_window', 'host_open_url', 'host_ui_scale', 'host_set_ui_scale'],
+    app: ['host_document', 'host_document_bytes', 'host_open', 'host_open_recent', 'host_new_document', 'host_recent',
+      'host_recent_preview', 'host_set_preview', 'host_set_draft', 'host_clear_draft', 'host_discard_draft', 'host_windows',
+      'host_focus', 'host_closing', 'host_save', 'host_choose', 'host_write_chosen', 'host_cancel_choice', 'host_versions',
+      'host_open_version', 'host_new_window', 'host_close_window'],
+    none: [],
+  }[kind];
+  /* the disk, the apps' types (desktop/src/types.rs) and Recent Files (doc.rs, store.rs) */
+  const FILES = { 'Budget.csv': 'Item,Cost\nRent,900\nFood,250\n', 'Other.csv': 'A,B\n1,2\n', 'Notes.md': '# Notes\n\nHello', 'Report.txt': 'Hello there' };
+  const appFor = (name) => ({ csv: 'ledger', md: 'quire', txt: 'quire', docx: 'quire', pptx: 'lectern' })[name.split('.').pop()];
+  const q = new URLSearchParams(location.search);
+  const recent = () => JSON.parse(sessionStorage.stubRecent || 'null') || (q.get('recent') || '').split(',').filter(Boolean).map((n, i) => {
+    const name = n.replace(/\*$/, '');
+    return { key: 'k-' + name, app: appFor(name), name, folder: 'C:\\Users\\me\\Documents', time: 1000 - i, size: 28, saved: true, preview: true,
+      draft: n.endsWith('*') ? { name, time: 1000 - i } : null, open: false, here: false };
+  });
+  const keep = (list) => { sessionStorage.stubRecent = JSON.stringify(list); window.dispatchEvent(new Event('vo-recent')); };
+  const bytes = (text) => new TextEncoder().encode(text).buffer;
+  /* a new window for a document: this tab goes there, holding it */
+  const windowFor = (doc) => {
+    sessionStorage.stubDoc = JSON.stringify(doc);
+    sessionStorage.newWindow = `${location.origin}/${appFor(doc.info.fileName) || app}/?doc`;
+    setTimeout(() => { location.href = sessionStorage.newWindow; });
+  };
+  const fileDoc = (name, draft) => ({ key: 'k-' + name, info: { fileName: name, name, saved: true, draft: !!draft, lossState: null, bound: true, readOnly: q.has('readonly') },
+    text: draft ? FILES[name].replace(/\n$/, '') + '\nDraft,1\n' : FILES[name] });
+  if (q.has('doc') && !sessionStorage.stubDoc && q.get('file')) sessionStorage.stubDoc = JSON.stringify(fileDoc(q.get('file')));
+  /* opens a file or entry as doc.rs does: here (this window's untouched document gives way) or in a new window */
+  const open = (doc, here) => {
+    const list = recent().filter((e) => e.key !== doc.key);
+    list.unshift({ key: doc.key, app: appFor(doc.info.name), name: doc.info.name, folder: 'C:\\Users\\me\\Documents', time: Date.now(), size: 28, saved: true, preview: false, draft: null, open: true, here: false });
+    keep(list);
+    if (here && appFor(doc.info.name) === app && !sessionStorage.stubKey) { sessionStorage.stubDoc = JSON.stringify(doc); return true; }
+    windowFor(doc);
+    return false;
+  };
+  const text = (body) => new TextDecoder().decode(body);
   window.__TAURI_INTERNALS__ = {
-    async invoke(cmd, args) {
+    async invoke(cmd, args, options) {
       log('hostCalls');
-      if (cmd === 'host_launch_files') {
-        const handles = later.splice(0);
-        if (!sessionStorage.hostLaunched && !/nolaunch/.test(location.search)) {
-          sessionStorage.hostLaunched = '1';
-          handles.unshift(0);
-        }
-        return handles.map((handle) => ({ handle, name: files[handle].name }));
+      sessionStorage.hostCalls += ':' + cmd;
+      if (!grants.includes(cmd)) throw `Command ${cmd} not allowed by ACL`;
+      if (cmd === 'host_open') {
+        sessionStorage.dialogs = JSON.stringify(args.labels);
+        let here = false;
+        for (const name of (q.get('pick') || '').split(',').filter(Boolean)) here = open(fileDoc(name), args.here && !here) || here;
+        return here;
       }
-      if (cmd === 'host_read') {
-        if (!files[args.handle]) throw `no file with handle ${args.handle}`;
-        return new TextEncoder().encode(files[args.handle].text).buffer;
+      if (cmd === 'host_open_recent') {
+        const e = recent().find((x) => x.key === args.key);
+        if (!e) throw 'That file is no longer in Recent Files.';
+        return open(fileDoc(e.name, args.draft), args.here);
       }
+      if (cmd === 'host_new_document') {   // raw bytes, the name in X-Name
+        const name = decodeURIComponent(options.headers['X-Name']);
+        if (!(args instanceof Uint8Array)) throw 'no bytes';
+        windowFor({ key: '', info: { fileName: name, name, saved: !options.headers['X-Made'], draft: false, lossState: null, bound: false, readOnly: false }, text: text(args) });
+        return null;
+      }
+      if (cmd === 'host_document') {
+        const d = JSON.parse(sessionStorage.stubDoc || 'null');
+        if (d && d.key) sessionStorage.stubKey = d.key;
+        return d && d.info;
+      }
+      if (cmd === 'host_document_bytes') {
+        const d = JSON.parse(sessionStorage.stubDoc || 'null');
+        if (!d) throw 'no document';
+        delete sessionStorage.stubDoc;
+        return bytes(d.text);
+      }
+      if (cmd === 'host_recent') return recent().map((e) => ({ ...e, open: e.key === sessionStorage.stubKey, here: e.key === sessionStorage.stubKey }));
+      if (cmd === 'host_recent_preview') return bytes('\xff\xd8\xff');
+      if (cmd === 'host_recent_remove' || cmd === 'host_discard_draft') {
+        if (args.key === sessionStorage.stubKey) throw 'That document is open in a window.';
+        keep(cmd === 'host_recent_remove' ? recent().filter((e) => e.key !== args.key) : recent().map((e) => (e.key === args.key ? { ...e, draft: null } : e)));
+        return null;
+      }
+      if (cmd === 'host_recent_clear') { keep(recent().filter((e) => e.draft)); return null; }
+      if (cmd === 'host_set_preview' || cmd === 'host_clear_draft') return null;
+      if (cmd === 'host_set_draft') {   // its length (4 bytes), what it says about itself (JSON), its bytes
+        const n = new DataView(args.buffer).getUint32(0, true);
+        sessionStorage.draft = JSON.stringify({ ...JSON.parse(text(args.subarray(4, 4 + n))), size: args.length - 4 - n });
+        return null;
+      }
+      if (cmd === 'host_windows') return [{ id: app + '-1', title: document.title, current: true }, { id: app + '-2', title: 'Other - ' + app, current: false }];
+      if (cmd === 'host_focus') { sessionStorage.focused = args.id; return null; }
+      if (cmd === 'host_closing') return null;
+      /* saving (doc.rs, files.rs): ?fail=<code> fails the next write once; the Save dialog "picks" sessionStorage
+         stubSave (a name, or none: Cancel); writes are recorded in sessionStorage.saves */
+      const wrote = (what) => { const all = JSON.parse(sessionStorage.saves || '[]'); all.push(what); sessionStorage.saves = JSON.stringify(all); };
+      const failing = () => { const f = q.get('fail'); if (f && !sessionStorage.failed) { sessionStorage.failed = f; throw { code: f, message: 'stub ' + f }; } };
+      if (cmd === 'host_save') {
+        if (!sessionStorage.stubKey) throw { code: 'missing', message: 'This document has no file of its own yet.' };
+        failing();
+        wrote({ cmd, size: args.length, replace: !!(options && options.headers && options.headers['X-Replace']), head: text(args.subarray(0, 2)) });
+        return null;
+      }
+      if (cmd === 'host_choose') {
+        sessionStorage.chose = JSON.stringify(args);
+        const name = sessionStorage.stubSave;
+        if (!name) return null;
+        const type = args.types.find((t) => ({ htm: 'html', zip: 'mdzip', xml: 'xmlss', markdown: 'md' }[name.split('.').pop()] || name.split('.').pop()) === t.id);
+        sessionStorage.choice = JSON.stringify({ name, type: (type || args.types[0]).id, saveAs: args.purpose === 'saveAs' });
+        return { name, type: (type || args.types[0]).id };
+      }
+      if (cmd === 'host_write_chosen') {
+        const c = JSON.parse(sessionStorage.choice || 'null');
+        if (!c) throw { code: 'io', message: 'nothing was chosen' };
+        failing();
+        delete sessionStorage.choice;
+        const bound = c.saveAs && ['docx', 'docm', 'dotx', 'dotm', 'md', 'mdzip', 'xlsx', 'xlsm', 'xltx', 'xltm', 'xmlss', 'pptx', 'pptm', 'ppsx', 'ppsm', 'potx', 'potm'].includes(c.type);
+        if (bound) sessionStorage.stubKey = 'k-' + c.name;
+        wrote({ cmd, name: c.name, type: c.type, size: args.length, bound });
+        return { name: c.name, type: c.type, bound };
+      }
+      if (cmd === 'host_cancel_choice') { delete sessionStorage.choice; return null; }
+      if (cmd === 'host_versions') return sessionStorage.stubKey ? [{ id: sessionStorage.stubKey + '.1', time: 1792230000000, size: 2048 }] : [];
+      if (cmd === 'host_open_version') { sessionStorage.openedVersion = args.id; return null; }
       if (cmd === 'host_open_url') {
-        if (!/^https:\/\/(vibeoffice\.work\/|github\.com\/tcchen2026\/VibeOffice(\/|$))/.test(args.url)) throw `not one of VibeOffice's addresses: ${args.url}`;
+        // host::is_ours: the update page and our GitHub
+        if (!/^https:\/\/(vibeoffice\.work\/updater\/|github\.com\/tcchen2026\/VibeOffice([/?#]|$))/.test(args.url)) throw `not opened: ${args.url}`;
         sessionStorage.opened = args.url;
         return null;
       }
@@ -68,20 +174,23 @@
         sessionStorage.uiScale = String(args.scale);
         return null;
       }
-      if (cmd === 'host_new_window') {   // this tab plays the new window
-        if (new URL(args.url).origin !== location.origin) throw `not one of the app's pages: ${args.url}`;
-        sessionStorage.newWindow = args.url;
-        setTimeout(() => { location.href = args.url; });
+      if (cmd === 'host_new_window') {   // this tab plays the new window, at the address host.rs makes (page_path)
+        const { page, start = {} } = args;
+        if (!['quire', 'ledger', 'lectern', 'licenses'].includes(page)) throw `not one of the suite's pages: ${page}`;
+        if (kind !== 'start' && page !== 'licenses' && page !== app) throw `${app} doesn't open ${page}`;
+        const url = new URL(page === 'licenses' ? '/oss-licenses.html' : `/${page}/`, location.origin);
+        for (const [k, v] of Object.entries(start)) {
+          if (!['new', 'template'].includes(k)) throw `unknown field \`${k}\``;
+          url.searchParams.append(k, v === true ? '' : v);
+        }
+        sessionStorage.newWindow = url.href;
+        setTimeout(() => { location.href = url.href; });
         return null;
       }
       if (cmd === 'host_close_window') {   // app pages are app windows; the Start Center is "main"
         if (location.pathname === '/') return false;
         sessionStorage.closed = location.pathname;
         return true;
-      }
-      if (cmd === 'host_show_downloads') {   // takes nothing from the page
-        sessionStorage.browsed = JSON.stringify(args === undefined ? null : args);
-        return null;
       }
       throw `command ${cmd} not found`;
     },

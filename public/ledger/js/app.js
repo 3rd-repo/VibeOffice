@@ -68,6 +68,8 @@
   };
   let untitled = 0;
   A.newWorkbook = function () {
+    /* the desktop app: one workbook per window, a new one in a window of its own */
+    if (window.VO && VO.oneDocument && A.books.length && !pristine()) return VO.go(VO.url('ledger', { new: true })).catch((e) => A.error(e));
     untitled++;
     A.addBook(A.blankWorkbook(), 'Book' + untitled, { type: 'xlsx', untitled: true });
   };
@@ -80,7 +82,10 @@
     /* replace a pristine untitled workbook (like Excel does with Book1) */
     const cur = book();
     if (cur && cur.untitled && !cur.dirty && !o.untitled && A.books.length === 1) { A.books[A.cur] = b; }
-    else { A.books.push(b); A.cur = A.books.length - 1; }
+    else {
+      if (cur && window.VO && VO.oneDocument) console.error('one workbook per window (VO.oneDocument): A.books.length =', A.books.length + 1);
+      A.books.push(b); A.cur = A.books.length - 1;
+    }
     A.cur = A.books.indexOf(b);
     showBook();
     return b;
@@ -99,16 +104,24 @@
     updateStatus();
   }
   A.switchBook = (i) => { if (i === A.cur || !A.books[i]) return; A.cur = i; showBook(); };
+  /** is the workbook an untouched new one, which an opened file may replace (as Excel does with Book1)? */
+  const pristine = () => { const b = book(); return !!b && b.untitled && !b.dirty && A.books.length === 1; };
+  /** ask to save the current workbook's changes; false when the user cancels */
+  async function confirmClose() {
+    const b = book();
+    if (!b || !b.dirty) return true;
+    const r = await ui.msg(L.t("Do you want to save the changes you made to '{0}'?", b.name), { icon: 'warn', buttons: ['&Yes', '&No', 'Cancel'] });
+    if (r === 2 || r == null) return false;
+    if (r === 0) { const ok = await A.save(); if (!ok) return false; }
+    if (r === 1 && window.VO) VO.discard(b);   // its unsaved version goes too
+    return true;
+  }
   /** close the current workbook (asking to save); false when the user cancels */
   A.closeWorkbook = async function () {
     const b = book();
     if (!b) return true;
-    if (b.dirty) {
-      const r = await ui.msg(L.t("Do you want to save the changes you made to '{0}'?", b.name), { icon: 'warn', buttons: ['&Yes', '&No', 'Cancel'] });
-      if (r === 2 || r == null) return false;
-      if (r === 0) { const ok = await A.save(); if (!ok) return false; }
-      if (r === 1 && window.VO) VO.discard(b);   // its unsaved version goes too
-    }
+    if (!(await confirmClose())) return false;
+    if (window.VO && VO.oneDocument) { VO.exit(); return true; }   // its window closes
     A.books.splice(A.cur, 1);
     if (!A.books.length) { A.newWorkbook(); return true; }
     A.cur = Math.min(A.cur, A.books.length - 1);
@@ -122,6 +135,7 @@
 
   /* ------------------------------------------------------------ open */
   A.openDialog = async function (accept) {
+    if (window.VO && VO.oneDocument) return VO.openDialog();
     const files = await L.pickFiles(accept || '.xlsx,.xlsm,.xltx,.xltm,.csv,.txt,.tsv,.prn,.xml', true);
     if (files.length) A.openFiles(files);
   };
@@ -131,6 +145,7 @@
     }
   };
   A.openFile = async function (file, password, opts) {
+    if (!password && window.VO && await VO.elsewhere(file)) return;   // the desktop app: a window of its own
     opts = opts || {};
     const name = file.name || 'Book.xlsx';
     const ext = (name.split('.').pop() || '').toLowerCase();
@@ -235,14 +250,23 @@
   };
 
   /* ------------------------------------------------------------ save */
+  /* what Ledger saves, for the desktop app's Save dialog (L.file): the workbook types are saves, the rest exports
+     (a CSV or text file Ledger opened is saved where it is) */
+  L.file.types = [{ id: 'xlsx', label: L.N('Microsoft Office Excel Workbook (*.xlsx)'), ext: ['xlsx'] }, { id: 'xlsm', label: L.N('Excel Macro-Enabled Workbook (*.xlsm)'), ext: ['xlsm'] },
+    { id: 'xltx', label: L.N('Template (*.xltx)'), ext: ['xltx'] }, { id: 'xltm', label: L.N('Macro-Enabled Template (*.xltm)'), ext: ['xltm'] },
+    { id: 'xmlss', label: L.N('XML Spreadsheet 2003 (*.xml)'), ext: ['xml'] }, { id: 'csv', label: L.N('CSV (Comma delimited) (*.csv)'), ext: ['csv'] },
+    { id: 'txt', label: L.N('Text (Tab delimited) (*.txt)'), ext: ['txt'] }, { id: 'html', label: L.N('Web Page (*.htm)'), ext: ['htm', 'html'] }, { id: 'pdf', label: L.N('PDF (*.pdf)'), ext: ['pdf'] }];
+  /** Save: the workbook's own file (the desktop app: in place, when it has one it may change), else Save As */
   A.save = async function () {
     const b = book();
     if (!b) return false;
-    if (b.untitled || b.type === 'xls') return L.dlg.saveAs();
-    return A.saveAs(b.type, b.name);
+    if (b.untitled || b.type === 'xls' || (L.file.native() && !L.file.inPlace())) return L.dlg.saveAs();
+    return A.saveAs(b.type, b.name, L.file.native() ? 'save' : undefined);
   };
-  /** type: xlsx | xlsm | xltx | csv | txt | html | xmlss | pdf */
-  A.saveAs = async function (type, name) {
+  /** type: xlsx | xlsm | xltx | csv | txt | html | xmlss | pdf. A download (web), or in the desktop app (`how`) the
+   *  workbook's own file ('save') or what the Save dialog picked ('chosen'); without `how` there, an export that asks
+   *  where. Whether it was written */
+  A.saveAs = async function (type, name, how) {
     const b = book();
     if (L.editor.active && !L.editor.commit()) return false;
     const w = b.wb;
@@ -259,18 +283,26 @@
         blob = L.csv.write(w, sh(), type === 'csv' ? ',' : '\t');
       } else if (type === 'html') blob = L.csv.writeHTML(w);
       else if (type === 'xmlss') blob = L.xmlss.write(w);
-      else if (type === 'pdf') { ui.busy(false); await L.print.exportPDF(); return true; }
+      else if (type === 'pdf') {
+        ui.busy(false);
+        const ok = await L.print.exportPDF();
+        if (!ok && how === 'chosen') L.file.cancel();
+        return !!ok;
+      }
       else {
         blob = await L.xlsxWrite.write(w, { type, password: b.password });
       }
       ui.busy(false);
       const losses = L.opc.formats[type] ? await ui.compatibility(w, blob.dropped) : [];
-      if (losses === null) return false;
-      const res = await L.saveFile(name, blob);
-      if (res === 'saved') {
+      if (losses === null) { if (how === 'chosen') L.file.cancel(); return false; }
+      const written = how ? await L.file.write(blob, how, { type, name }) : { result: await L.saveFile(name, blob) };
+      if (written.name) name = written.name;   // as the Save dialog left it
+      if (written.result === 'saved') {
         L.opc.acknowledge(w, losses);
-        if (type !== 'csv' && type !== 'txt' && type !== 'html') { b.name = name; b.type = type; b.untitled = false; b.dirty = false; w.fileName = name; }
-        else if (b.untitled) b.dirty = false;
+        /* the workbook's own file now: on the web any save of a workbook type; the desktop app's Save, or a Save As it bound */
+        const own = !L.file.native() || how === 'save' || written.bound;
+        if (own && type !== 'csv' && type !== 'txt' && type !== 'html') { b.name = name; b.type = type; b.untitled = false; b.dirty = false; w.fileName = name; }
+        else if (b.untitled && !L.file.native()) b.dirty = false;
         if (window.VO && type !== 'html') VO.saved(name, blob, b);
         updateTitle();
         A.status('');
@@ -490,7 +522,7 @@
   function buildMenus() {
     const recent = () => (window.VO ? VO.recentMenuItems(4) : []);
     const menus = [
-      { label: '&File', items: () => ['newBook', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', '-', 'pageSetup', { label: 'Prin&t Area', sub: ['setPrintArea', 'clearPrintArea'] }, 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['exportPDF', 'exportCSV'] }, 'properties', ...((recentList) => (recentList.length ? ['-', ...recentList] : []))(recent()), '-', 'exitApp'] },
+      { label: '&File', items: () => ['newBook', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', '-', 'pageSetup', { label: 'Prin&t Area', sub: ['setPrintArea', 'clearPrintArea'] }, 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['exportPDF', 'exportCSV'] }, 'properties', ...(L.file.native() ? ['versions'] : []), ...((recentList) => (recentList.length ? ['-', ...recentList] : []))(recent()), '-', 'exitApp'] },
       {
         label: '&Edit', items: () => ['undo', 'redo', '-', 'cut', 'copy', 'officeClipboard', 'paste', 'pasteSpecial', 'pasteHyperlink', '-',
           { label: 'F&ill', sub: ['fillDown', 'fillRight', 'fillUp', 'fillLeft', 'fillAcross', 'fillSeries', 'fillJustify'] },
@@ -520,7 +552,7 @@
           { label: '&Group and Outline', sub: ['hideDetail', 'showDetail', '-', 'groupRows', 'ungroupRows', 'autoOutline', 'clearOutline', '-', 'outlineSettings'] }, '-', 'pivotTable',
           { label: 'Import External &Data', sub: ['importText'] }, '-', { label: '&List', sub: ['createList', 'totalRow', 'convertToRange'] }, '-', 'refreshData'],
       },
-      { label: '&Window', items: () => ['newWindow', 'arrangeWindows', '-', 'splitWindow', 'freezePanes', '-', ...A.books.map((b, i) => ({ label: `&${i + 1} ${b.name.replace(/&/g, '&&')}`, raw: true, radio: true, checked: () => i === A.cur, run: () => A.switchBook(i) }))] },
+      { label: '&Window', items: () => ['newWindow', 'arrangeWindows', '-', 'splitWindow', 'freezePanes', '-', ...(window.VO && VO.oneDocument ? VO.windowItems() : A.books.map((b, i) => ({ label: `&${i + 1} ${b.name.replace(/&/g, '&&')}`, raw: true, radio: true, checked: () => i === A.cur, run: () => A.switchBook(i) })))] },
       { label: '&Help|menu bar', items: ['help', 'showAssistant', '-', 'keyboardHelp', 'functionsHelp', '-', 'about'] },
     ];
     const row = L.$('#menurow');
@@ -1462,6 +1494,8 @@
         await A.openFiles([f]);
         /* an unsaved version: the changes are not saved yet, and a never-saved workbook still needs Save As */
         const b = book();
+        /* a workbook a page made (desktop app): never saved */
+        if (o && o.made && b) { b.untitled = true; b.saved = false; b.name = o.name.replace(/\.(xlsx|xlsm|xltx|xltm)$/i, ''); updateTitle(); }
         if (o?.draft && b) L.opc.recoverLosses(b.wb, o.lossState);
         if (o && o.draft && b) { b.dirty = true; b.name = o.saved ? o.name : o.name.replace(/\.(xlsx|xlsm|xltx|xltm)$/i, ''); b.untitled = !o.saved; b.saved = !!o.saved; updateTitle(); A.status(L.t('Recovered the unsaved changes. Save the workbook to keep them.')); ui.refresh(); }
       },
@@ -1474,6 +1508,8 @@
       isDirty: (b) => !!(b && b.dirty),
       current: () => book(),
       showRecovery() { A.opts.taskOpen = true; L.$('#taskpane').hidden = false; L.panes.task.show('recovery'); },
+      pristine,
+      close: confirmClose,
       thumb: gridThumb,
       message: (t) => ui.msg(t, { icon: 'warn' }),
       templates: () => Object.entries(L.panes.TEMPLATES).map(([id, t]) => ({ id, name: t.name })),

@@ -659,11 +659,18 @@
   };
 
   /* ================================================================ Save As */
-  D.saveAs = function () {
+  /** Save As: the type and name, then the workbook written (A.saveAs); whether it was (false on Cancel). The desktop
+   *  app asks with the system's Save dialog (L.file) */
+  D.saveAs = async function () {
     const b = A().books[A().cur];
     const base = b.name.replace(/\.[^.]+$/, '');
-    const types = [['xlsx', L.N('Microsoft Office Excel Workbook (*.xlsx)')], ['xlsm', L.N('Excel Macro-Enabled Workbook (*.xlsm)')], ['xltx', L.N('Template (*.xltx)')], ['xltm', L.N('Macro-Enabled Template (*.xltm)')], ['xmlss', L.N('XML Spreadsheet 2003 (*.xml)')], ['csv', L.N('CSV (Comma delimited) (*.csv)')], ['txt', L.N('Text (Tab delimited) (*.txt)')], ['html', L.N('Web Page (*.htm)')], ['pdf', L.N('PDF (*.pdf)')]];
+    const types = L.file.types.map((t) => [t.id, t.label]);
     let type = b.type === 'xlsm' || b.type === 'xltx' || b.type === 'xltm' || b.type === 'csv' || b.type === 'txt' ? b.type : 'xlsx';
+    if (L.file.native()) {
+      const c = await L.file.choose('saveAs', type, base);
+      return c ? A().saveAs(c.type, c.file, 'chosen') : false;
+    }
+    let saving = null;
     const name = h('input', { type: 'text', value: base, style: 'width:100%' });
     const pw = { open: b.password || '', backup: false };
     /* the Tools button's menu, under the button */
@@ -683,8 +690,8 @@
         const ext = { xmlss: 'xml', html: 'htm' }[type] || type;
         const n = (name.value.trim() || base).replace(/\.(xlsx|xlsm|xltx|xltm|xml|csv|txt|htm|html|pdf)$/i, '') + '.' + ext;
         b.password = pw.open || undefined;
-        A().saveAs(type, n);
-      } }, { label: 'Cancel' }] }).done;
+        saving = A().saveAs(type, n);
+      } }, { label: 'Cancel' }] }).done.then(() => saving || false);
   };
 
   /* ================================================================ Properties */

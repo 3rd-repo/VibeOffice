@@ -4,12 +4,59 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob: https://vibeoffice.work ipc: http://ipc.localhost; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title translate="no">VibeOffice.work</title>
-<meta name="description" content="A free office suite that runs in your browser: a word processor, a spreadsheet and a presentation editor. Your files never leave your computer.">
+<title>VibeOffice.work: a free office suite in your browser for .docx, .xlsx and .pptx</title>
+<meta name="description" content="A free word processor, spreadsheet and presentation editor that run in your browser and open and save .docx, .xlsx and .pptx files. No upload, no account.">
 <meta name="theme-color" content="#2a64c8">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- for search engines and link previews: the published address, and what the suite is (docs/suite.md, Search engines) -->
+<link rel="canonical" href="https://vibeoffice.work/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="VibeOffice.work">
+<meta property="og:url" content="https://vibeoffice.work/">
+<meta property="og:title" content="VibeOffice.work: a free office suite in your browser">
+<meta property="og:description" content="A word processor, a spreadsheet and a presentation editor for .docx, .xlsx and .pptx files. Everything runs on your computer: no upload, no account.">
+<meta property="og:image" content="https://vibeoffice.work/quire/preview.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="Quire, the word processor, with its welcome document">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "VibeOffice.work",
+  "alternateName": "VibeOffice",
+  "url": "https://vibeoffice.work/",
+  "description": "A free office suite that runs in your browser: a word processor, a spreadsheet and a presentation editor that open and save .docx, .xlsx and .pptx files. Files are opened and saved on your own computer, never uploaded.",
+  "applicationCategory": "BusinessApplication",
+  "applicationSubCategory": "Office suite",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript; works best in Chrome or Edge",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "inLanguage": ["en", "ja", "ko", "fr", "de", "zh-CN", "zh-Hant"],
+  "featureList": [
+    "Word processor: .docx, .docm, .dotx, .dotm, .rtf, Markdown, HTML and text; PDF export",
+    "Track changes, comments, footnotes, tables of contents and mail merge",
+    "Spreadsheet: .xlsx, .xlsm, .xltx, .xltm, .csv, XML Spreadsheet 2003 and HTML; PDF export",
+    "519 worksheet functions, charts, PivotTable reports and conditional formatting",
+    "Presentations: .pptx, .pptm, .ppsx, .ppsm, .potx, .potm; PDF, PNG and HTML export",
+    "Slide shows with transitions and animations, charts and IntelliArt diagrams",
+    "Saves what it cannot edit unchanged, so files go back intact",
+    "Private: runs on your computer, no upload and no account",
+    "Works offline and installs as an app",
+    "Menus, dialogs and new documents in English, Japanese, Korean, French, German, Simplified Chinese and Traditional Chinese"
+  ],
+  "screenshot": ["https://vibeoffice.work/quire/preview.jpg", "https://vibeoffice.work/ledger/preview.jpg", "https://vibeoffice.work/lectern/preview.jpg"],
+  "image": "https://vibeoffice.work/icons/icon-512.png",
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "sameAs": "https://github.com/tcchen2026/VibeOffice",
+  "downloadUrl": "https://github.com/tcchen2026/VibeOffice/releases/latest"
+}
+</script>
 <script src="common/look.js"></script>
 <script src="common/lang.js"></script>
 <link rel="stylesheet" href="common/looks.css">
@@ -147,9 +194,18 @@
   .gallery h2 { display: flex; align-items: center; gap: 8px; margin: 18px 0 10px; font-size: 13px; color: var(--pane-ink); }
   .gallery h2 small { font-weight: normal; color: var(--muted); }
   .gallery .grid { padding: 0; overflow: visible; }
-  .empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 24px; text-align: center; color: var(--muted); }
-  .empty img { width: 96px; height: 96px; opacity: .9; margin-bottom: 8px; }
-  .empty b { font-size: 16px; color: var(--pane-ink); }
+  /* no recent files: the welcome, what the suite is (centred; scrolls in a short window) */
+  .empty { flex: 1; min-height: 0; overflow: auto; display: flex; padding: 24px; color: var(--muted); }
+  .welcome { margin: auto; max-width: 600px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+  .welcome img { width: 72px; height: 72px; opacity: .9; margin-bottom: 4px; }
+  .welcome h2 { margin: 0; font-size: 16px; color: var(--pane-ink); }
+  .welcome p { margin: 0; }
+  .welcome ul { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+  .welcome .apps li { display: flex; align-items: center; gap: 10px; }
+  .welcome .apps a { flex: none; width: 92px; display: flex; align-items: center; gap: 6px; color: var(--pane-link); }
+  .welcome b { color: var(--pane-ink); }
+  .welcome .langs { margin-top: 2px; color: var(--pane-ink); }
+  .welcome .hint { margin-top: 12px; }
 
   .drop { position: absolute; inset: 10px; display: flex; align-items: center; justify-content: center; border: 2px dashed var(--sel); border-radius: 8px;
     background: var(--drop-bg); font-size: 16px; font-weight: bold; color: var(--pane-ink); pointer-events: none; }
@@ -214,9 +270,25 @@
     <div class="grid" id="grid" hidden></div>
     <div class="gallery" id="gallery" hidden></div>
     <div class="empty" id="empty">
-      <img src="icons/icon.svg" alt="">
-      <b>Welcome to VibeOffice.work.</b>
-      <span>Drop a document here or pick an app on the left side to create one.</span>
+      <div class="welcome">
+        <img src="icons/icon.svg" alt="">
+        <h2>Welcome to VibeOffice.work.</h2>
+        <p>A free office suite that runs in your browser: a word processor, a spreadsheet and a presentation editor for .docx, .xlsx and .pptx files.</p>
+        <ul class="apps">
+          <li><a href="quire/" data-go><span data-icon="quire"></span><b>Quire</b></a><span>Documents with track changes, comments, footnotes, tables of contents and mail merge. Opens and saves .docx, .rtf, Markdown, HTML and text; prints to PDF.</span></li>
+          <li><a href="ledger/" data-go><span data-icon="ledger"></span><b>Ledger</b></a><span>Spreadsheets with 519 functions, charts, PivotTable reports and conditional formatting. Opens and saves .xlsx, .csv, XML Spreadsheet 2003 and HTML; prints to PDF.</span></li>
+          <li><a href="lectern/" data-go><span data-icon="lectern"></span><b>Lectern</b></a><span>Presentations with transitions, animations, charts and IntelliArt diagrams. Opens and saves .pptx; exports PDF, PNG and HTML.</span></li>
+        </ul>
+        <ul>
+          <li><b>Your files stay whole.</b> What you don't change is saved as it was, even what the apps can't edit yet, so a file goes back to whoever sent it intact.</li>
+          <li><b>Private by design.</b> Everything runs on this computer: nothing is uploaded, and there is no account to make.</li>
+          <li><b>Nothing new to learn.</b> Classic menus and toolbars, or a ribbon: choose one under Themes.</li>
+          <li class="webonly"><b>Works offline.</b> After the first visit it opens without a connection, and Chrome and Edge can install it as an app.</li>
+          <li><b>In your language.</b> Menus and dialogs in the languages below (Settings), and new documents with each language's fonts and page setup.</li>
+        </ul>
+        <p class="langs" translate="no">English · 日本語 · 한국어 · Français · Deutsch · 简体中文 · 繁體中文</p>
+        <p class="hint">Drop a document here or pick an app on the left side to create one.</p>
+      </div>
     </div>
     <div class="drop" id="drop" hidden>Drop to open</div>
   </main>

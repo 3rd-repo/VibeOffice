@@ -908,7 +908,7 @@
   D.saveAs = function (cb) {
     const base = (L.app.fileName || 'Presentation1').replace(/\.[^.]+$/, '');
     const name = h('input', { type: 'text', id: 'sa-name', value: base, style: 'width:300px' });
-    const types = [['pptx', L.N('PowerPoint Presentation (*.pptx)')], ['pptm', L.N('Macro-Enabled Presentation (*.pptm)')], ['ppsx', L.N('PowerPoint Show (*.ppsx)')], ['ppsm', L.N('Macro-Enabled Show (*.ppsm)')], ['potx', L.N('Design Template (*.potx)')], ['potm', L.N('Macro-Enabled Template (*.potm)')], ['pdf', L.N('PDF, one slide per page (*.pdf)')], ['html', L.N('Single File Web Page (*.html)')], ['png', L.N('PNG Graphics Format, current slide (*.png)')], ['txt', L.N('Outline (*.txt)')]];
+    const types = L.file.types.map((t) => [t.id, t.label]);
     const cur = types.some(([k]) => k === L.app.fileType) ? L.app.fileType : 'pptx';
     const type = ui.select(types, cur);
     return ui.dialog({ title: 'Save As', body: h('div', { class: 'col' }, ui.field('File &name:', name, { cls: 'wide' }), ui.field('Save as &type:', type, { cls: 'wide' }), h('div', { class: 'tp-note', text: 'Your browser decides where downloaded files go.' })), width: 470, buttons: [{ label: '&Save', primary: true, onClick: () => cb((name.value.trim() || base).replace(/\.(pptx|pptm|ppsx|ppsm|potx|potm)$/i, ''), type.value) }, { label: 'Cancel' }] });

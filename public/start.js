@@ -32,23 +32,31 @@ VO.i18n.whenReady(function () {
   for (const el of document.querySelectorAll('[data-icon]')) el.innerHTML = picture(el.dataset.icon);
 
   const status = (text) => { $('status').textContent = VO.t(text || ''); };
+  /* the desktop app keeps Recent Files itself, not a browser */
+  if (VO.host.kind === 'desktop') document.querySelector('.note').firstChild.textContent = VO.t('Your files stay on this computer.') + ' ';
 
   /* links to apps open in a new window when installed, so this start page stays */
   document.addEventListener('click', (e) => {
     const a = e.target.closest('a[data-go]');
     if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
     e.preventDefault();
-    VO.go(a.href);
+    VO.go(a.href).catch((err) => status(String(err)));
   });
 
   /* ---------- opening files: Open File..., drop, the operating system (installed app) */
   async function openFile(file) {
     status('');
     if (!file) return;
-    if (!(await VO.handoff(file))) status(VO.t('VibeOffice.work can\'t open “{0}”. It opens documents (.docx, .rtf), spreadsheets (.xlsx, .csv) and presentations (.pptx).', file.name));
+    let opened;
+    try { opened = await VO.handoff(file); } catch (e) { status(String(e)); return; }   // the desktop app: no window
+    if (!opened) status(VO.t('VibeOffice.work can\'t open “{0}”. It opens documents (.docx, .rtf), spreadsheets (.xlsx, .csv) and presentations (.pptx).', file.name));
   }
   $('picker').accept = VO.accept();
-  $('open').addEventListener('click', () => { $('picker').value = ''; $('picker').click(); });
+  /* the desktop app: the system's Open dialog, each file in a window of its own */
+  $('open').addEventListener('click', () => {
+    if (VO.host.kind === 'desktop') { status(''); VO.host.open(false).catch((e) => status(String(e))); return; }
+    $('picker').value = ''; $('picker').click();
+  });
   $('picker').addEventListener('change', () => openFile($('picker').files[0]));
   let depth = 0;
   const hasFiles = (e) => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
@@ -76,14 +84,21 @@ VO.i18n.whenReady(function () {
     const grid = $('grid');
     grid.replaceChildren(...list.map((e) => {
       const thumb = h('div', { class: 'thumb' });
-      if (e.thumb) { const u = URL.createObjectURL(e.thumb); urls.push(u); thumb.append(h('img', { src: u, alt: '' })); }
-      else thumb.innerHTML = picture(e.app, VO.ext(e.name));
+      thumb.innerHTML = picture(e.app, VO.ext(e.name));
+      VO.recent.preview(e).then((blob) => {
+        if (!blob) return;
+        const u = URL.createObjectURL(blob);
+        urls.push(u);
+        thumb.replaceChildren(h('img', { src: u, alt: '' }));
+      }, () => {});
       /* a document with unsaved changes opens at its unsaved version; × then discards those changes */
       const rm = h('button', { class: 'rm', type: 'button', title: e.draft ? 'Discard the unsaved changes' : 'Remove from list' }, '×');
       rm.setAttribute('aria-label', e.draft ? VO.t('Discard the unsaved changes to {0}', e.name) : VO.t('Remove from the list: {0}', e.name));
       rm.addEventListener('click', async () => {
-        if (e.draft) { if (confirm(e.file ? VO.t('Discard the unsaved changes to “{0}”? The saved version stays in the list.', e.name) : VO.t('Discard the unsaved changes to “{0}”?', e.name))) await VO.recent.discardDraft(e.key); }
-        else await VO.recent.remove(e.key);
+        try {
+          if (e.draft) { if (confirm(e.saved ? VO.t('Discard the unsaved changes to “{0}”? The saved version stays in the list.', e.name) : VO.t('Discard the unsaved changes to “{0}”?', e.name))) await VO.recent.discardDraft(e.key); }
+          else await VO.recent.remove(e.key);
+        } catch (err) { status(String(err)); }
         render();
       });
       const app = VO.APPS[e.app] || { name: e.app };
@@ -92,10 +107,10 @@ VO.i18n.whenReady(function () {
         thumb,
         h('a', { class: 'name', href: VO.url(e.app, e.draft ? { recent: e.key, draft: true } : { recent: e.key }), 'data-go': '', translate: 'no' }, e.name),
         h('div', { class: 'meta', translate: 'no' }, dot, app.name + ' · ' + when(e.time)),
-        e.draft ? h('span', { class: 'unsaved' }, e.file ? 'Unsaved changes' : 'Never saved') : null,
-        e.draft && e.file ? h('a', { class: 'alt', href: VO.url(e.app, { recent: e.key }), 'data-go': '', title: 'Open the version saved before the changes' }, 'Saved version') : null,
+        e.draft ? h('span', { class: 'unsaved' }, e.saved ? 'Unsaved changes' : 'Never saved') : null,
+        e.draft && e.saved ? h('a', { class: 'alt', href: VO.url(e.app, { recent: e.key }), 'data-go': '', title: 'Open the version saved before the changes' }, 'Saved version') : null,
         rm);
-      card.title = `${e.name}\n${app.name}` + (e.file ? ' · ' + VO.t('{0} KB', (e.size / 1024).toFixed(0)) : '') + ` · ${new Date(e.time).toLocaleString(VO.i18n.dates)}` + (e.draft ? '\n' + VO.t('Unsaved changes') : '');
+      card.title = `${e.name}\n${app.name}` + (e.folder ? ' · ' + e.folder : '') + (e.saved ? ' · ' + VO.t('{0} KB', (e.size / 1024).toFixed(0)) : '') + ` · ${new Date(e.time).toLocaleString(VO.i18n.dates)}` + (e.draft ? '\n' + VO.t('Unsaved changes') : '');
       return card;
     }));
     grid.hidden = !list.length;
@@ -151,8 +166,12 @@ VO.i18n.whenReady(function () {
   show();
 
   /* ---------- install, about */
+  /* the title says what the suite is, for search results and tabs; the title bar of the installed app or the desktop
+     app shows the name alone. The welcome's offline and install line is the web's. */
+  if (VO.host.kind === 'desktop' || matchMedia('(display-mode: standalone), (display-mode: window-controls-overlay)').matches) document.title = 'VibeOffice.work';
+  if (VO.host.kind === 'desktop') document.querySelectorAll('.webonly').forEach((el) => { el.hidden = true; });
   let installEvent = null;
-  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvent = e; $('install').hidden = false; });
+  if (VO.offersInstall) window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvent = e; $('install').hidden = false; });
   window.addEventListener('appinstalled', () => { installEvent = null; $('install').hidden = true; });
   $('install').addEventListener('click', async () => { if (!installEvent) return; installEvent.prompt(); await installEvent.userChoice; installEvent = null; $('install').hidden = true; });
   document.querySelectorAll('.version').forEach((el) => { el.textContent = VO.VERSION; });
@@ -239,10 +258,10 @@ VO.i18n.whenReady(function () {
     if (!noStorage) try { list = await VO.recent.list(); } catch (e) { /* shown as none */ }
     const drafts = list.filter((e) => e.draft).length;
     let mb = '';
-    try { const est = navigator.storage && await navigator.storage.estimate(); if (est && est.usage) mb = (est.usage / 1048576).toFixed(1); } catch (e) { /* no estimate */ }
+    const desk = VO.host.kind === 'desktop';   // its Recent Files aren't the browser's storage
+    if (!desk) try { const est = navigator.storage && await navigator.storage.estimate(); if (est && est.usage) mb = (est.usage / 1048576).toFixed(1); } catch (e) { /* no estimate */ }
     /* how many files (and with unsaved changes), then how much room they take and where */
     const files = list.length === 1 ? (drafts ? VO.t('1 file, with unsaved changes') : VO.t('1 file')) : drafts ? VO.t('{0} files, {1} with unsaved changes', list.length, drafts) : VO.t('{0} files', list.length);
-    const desk = VO.host.kind === 'desktop';
     const kept = mb ? (desk ? VO.t('About {0} MB, kept by VibeOffice on this computer.', mb) : VO.t('About {0} MB, kept in this browser.', mb)) : desk ? VO.t('Kept by VibeOffice on this computer.') : VO.t('Kept in this browser.');
     $('recentinfo').textContent = noStorage ? VO.t('Recent Files are not available here.')
       : !list.length ? VO.t('The list is empty.') : VO.t('{0}. {1}', files, kept);

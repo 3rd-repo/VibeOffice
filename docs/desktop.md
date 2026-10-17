@@ -7,8 +7,13 @@
 | `desktop/Cargo.toml` | the crate (on macOS also `objc2-foundation` and `objc2-app-kit`, which Tauri builds anyway, with only the classes used); size-tuned release profile (`opt-level = "z"`, LTO, one codegen unit, `panic = "abort"`, stripped); Tauri without `dynamic-acl` |
 | `desktop/.cargo/config.toml` | builds for `x86_64-pc-windows-gnu` with mingw-w64 by default |
 | `desktop/tauri.conf.json` | app name and identifier, `frontendDist: ../public`, `devUrl` (tools/serve.py), `removeUnusedCommands`; Tauri's bundler is off (the installer is `setup/`) |
-| `desktop/src/main.rs` | one instance on Windows (`second_start`); files handed over later (`files_arrived`: another start on Windows, Finder on macOS); the main window: system title bar follows `document.title`, file drops go to the page, links out of the app go to the default browser, the UI size on each page load, `__VO_HOST__` before each page; on macOS the menu bar (`mac_menu`), Finder's files (`RunEvent::Opened`), the Dock (`Reopen`) and staying open with no window (macOS, below) |
-| `desktop/src/host.rs` | the native side of `VO.host`: the `host_*` commands, file handles, `settings.json` |
+| `desktop/src/main.rs` | the files the app is started with, each in a window of its own, else the Start Center; one instance on Windows (`second_start`); every window (`open_window`): system title bar follows `document.title`, file drops go to the page, links out of the app go to the default browser, the UI size on each page load, `__VO_HOST__` before each page; an app window's close button goes to its page (`window_event`); on macOS the menu bar (`mac_menu`), Finder's files (`RunEvent::Opened`), the Dock (`Reopen`) and staying open with no window (macOS, below) |
+| `desktop/src/host.rs` | the native side of `VO.host`: the window and link commands, the navigation and link rules, `settings.json` |
+| `desktop/src/files.rs` | writing a user's file (Saving, below): the checks, the replace on each system, the error codes |
+| `desktop/src/doc.rs` | the document in each window (Documents and windows, below): opening files and Recent Files into windows, the window's starting document, drafts and previews, the Window menu, the close question; on macOS Recent Files' bookmarks |
+| `desktop/src/store.rs` | `~/.vibeoffice`: Recent Files, their previews and drafts, each file written whole (`write_atomic`) |
+| `desktop/src/types.rs` | which app opens which file: the table `VO.APPS` is (a test compares them) |
+| `desktop/src/dialog.rs` | the system's Open dialog and a yes-or-no question: rfd on Windows and macOS, GTK's native chooser on Linux |
 | `desktop/src/net.rs` | the network rules: each window's web view reaches `https://vibeoffice.work/` alone, or the window never loads its page; `VO_NET_PROBE` (Network, below) |
 | `desktop/src/installation.rs` | what the installer writes and `-uninstall` removes, in one list: files, shortcuts, HKCU registrations (shared with `setup/`) |
 | `desktop/src/installed.rs` | Windows: `vibeoffice.exe -uninstall`, and the first start after installing (taskbar pin request, Default apps) |
@@ -16,7 +21,7 @@
 | `desktop/macos/` | `Info.plist` (the bundle's, filled in by `build.sh`), `direct.entitlements` and `appstore.entitlements`, `build.sh` (the macOS release, on a Mac: macOS, below) |
 | `desktop/release-notes.md` | the GitHub release's notes, both downloads (either workflow may create the release) |
 | `desktop/setup/` | the installer, `VibeOfficeSetup.exe`: carries the app; its dialog, manifest and version in `setup.rc` |
-| `desktop/capabilities/default.json` | `core:default` for the main window |
+| `desktop/permissions/host.toml`, `desktop/capabilities/` | which `host_*` commands each kind of window may call (Host interface, below); no Tauri core commands |
 | `desktop/icons/` | `icon.icns` (macOS: the app icon on Apple's grid, 16–1024 px, from `public/icons/icon.svg` by `tools/desktop-icons.py`), `icon.ico` (16–256 px; the exe and the installer), `quire.ico`, `ledger.ico`, `lectern.ico` (document icons, resources 40101–40103 in the exe, numbered after the app icon's 32512 so that stays the exe's first, generated from each app's SVG by `tools/desktop-icons.py`), and `icon.png` (128 px, Linux window icon; Tauri embeds it as raw RGBA, so keep it small) |
 | `desktop/licenses/` | license texts of what ships with the app but is not a crate (`WebView2Loader.txt`, from the WebView2 SDK package), and in `crates/` those of the crates whose package has none (taken from their repositories), for `public/oss-licenses.html` |
 | `desktop/patches/option-ext/` | our own stand-in for the `option-ext` crate (MPL-2.0), which `dirs-sys` uses through Tauri: the one method it needs, Apache-2.0, put in its place by `[patch.crates-io]` in `Cargo.toml` (AGENTS.md, Code from other projects) |
@@ -27,53 +32,124 @@
 
 ## Host interface
 
-One interface between the pages and what runs them, so a page never asks which: `VO.host` in `public/common/suite.js`. In a browser (tab or installed PWA) it is built on the browser's APIs; in the desktop app on the commands in `desktop/src/host.rs`, called over Tauri's IPC (`window.__TAURI_INTERNALS__.invoke`). The desktop app announces itself before each page's scripts with `window.__VO_HOST__ = { platform, version, appVersion, edition }` (`edition`: `'appstore'` for the Mac App Store's, else `'direct'`); the same script makes Paper the desktop app's look until the user picks one (`vibeoffice.look`).
+One interface between the pages and what runs them, so a page never asks which: `VO.host` in `public/common/suite.js`. In a browser (tab or installed PWA) it is built on the browser's APIs; in the desktop app on the commands in `desktop/src/host.rs`, called over Tauri's IPC (`window.__TAURI_INTERNALS__.invoke`). The desktop app announces itself before each page's scripts with `window.__VO_HOST__ = { platform, version, appVersion, edition }` (`edition`: `'appstore'` for the Mac App Store's, else `'direct'`; written as JSON, frozen, on a property the page can't replace); the same script makes Paper the desktop app's look until the user picks one (`vibeoffice.look`).
 
 | `VO.host` | Web | Desktop |
 |---|---|---|
 | `kind` | `'web'` | `'desktop'` |
 | `platform` | `'web'` | `'windows'`, `'macos'`, `'linux'` (Rust's `std::env::consts::OS`) |
 | `updates` | `true` (the page never checks) | `true`; `false` in the Mac App Store edition, which the store updates (the Start Center never checks) |
-| `version` | `0` | `host::VERSION`, raised when a command changes shape |
-| `onFiles(fn)` | `launchQueue` (the PWA's file handlers) | `host_launch_files`, then `host_read` for each; again on `vo-files`, when another start of the app hands over its files (Windows) or Finder does (macOS) |
-| `openUrl(url)` | a new tab | `host_open_url`: VibeOffice's own addresses only (`host::is_ours`: https://vibeoffice.work/, the GitHub repository), to the system (`ShellExecuteW`, `NSWorkspace openURL:`, `xdg-open`) |
-| `newWindow(url)` | `window.open` (false if blocked) | `host_new_window`: one of the app's own pages (same scheme, host and port) in a full window (`doc-N`) with the host script and handlers |
-| `closeWindow()` | `false` | `host_close_window`: closes an app window (true); the Start Center's (`main`) stays (false) |
+| `version` | `0` | `host::VERSION`, raised when a command changes shape (4 since windows save their files) |
+| `onFiles(fn)` | `launchQueue` (the PWA's file handlers) | nothing: the native side opens the files the app is started with, or that another start (Windows) or Finder (macOS) hands over, each in a window of its own |
+| `openUrl(url)` | a new tab | `host_open_url`, from the Start Center: the update page and our GitHub only (Links, below), to the system (`ShellExecuteW`, `NSWorkspace openURL:`, `xdg-open`) |
+| `newWindow(url)` | `window.open` (false if blocked) | `host_new_window`: told the page (`quire`, `ledger`, `lectern`, `licenses`) and how it starts (`VO.launch`: `new`, `template`), never an address; Rust makes the address (`host::page_path`) and a full window with the host script and handlers, labelled `<page>-<n>`. An app window opens a blank document or a template of its own app, and the licences page; at most 64 windows. A Recent Files card's address (`recent`, `draft`) goes to `openRecent` |
+| `open(here)` | — | `host_open`: the system's Open dialog (the window's app's types; the Start Center's, all), each file in a window of its own; `here`: this window's untouched document gives way to the first (Documents and windows, below) |
+| `openRecent(key, draft, here)` | — | `host_open_recent`: a Recent Files entry, by its key, as `open` does |
+| `newDocument(blob, name, made)` | — | `host_new_document`: bytes in a new window (raw, the name in a header): a file dropped on a window that holds a document, or one a page made (`made`: never saved) |
+| `document()` | — | `host_document`, `host_document_bytes`: this window's starting document, once (`{ info, file }`, or null) |
+| `windows()`, `focus(id)` | `[]` | `host_windows`, `host_focus`: the app's other windows, for its Window menu |
+| `closeWindow()` | `false` | `host_close_window`: closes an app window (true), once its page has its document saved or given up; the Start Center's (`main`) stays (false) |
+| `file`, `save(bytes, replace)`, `choose(args)`, `writeChosen(bytes)`, `cancelChoice()`, `versions()`, `openVersion(id)` | — | saving (Saving, below; used through `L.file`): the window's file (`{ bound, readOnly, name }`), `host_save`, `host_choose`, `host_write_chosen`, `host_cancel_choice`, `host_versions`, `host_open_version` |
 | `uiScale()`, `setUiScale(n)` | `null` (the browser's own zoom does it) | `host_ui_scale`, `host_set_ui_scale`: the web view's zoom, 0.5–4, every window, kept in `settings.json` |
 
 `VO.VERSION` is `appVersion` in the desktop app (the build's version, below).
 
 `fn(files)` gets `File` objects; the Start Center calls `onFiles` and opens the first file in its app (`VO.handoff`). The service worker is registered only on the web.
 
+Each kind of window calls only its own commands (`desktop/permissions/host.toml`, granted in `desktop/capabilities/`; Tauri refuses the rest, and every Tauri core command, which nothing grants): the Start Center (`main`) Open File, Recent Files (`host_recent`, `host_recent_preview`, `host_recent_remove`, `host_recent_clear`, `host_open_recent`), a dropped file (`host_new_document`), app windows, the update page and the UI size; the apps (`quire-*`, `ledger-*`, `lectern-*`) their document (`host_document`, `host_document_bytes`, `host_set_draft`, `host_clear_draft`, `host_set_preview`), saving it (`host_save`, `host_choose`, `host_write_chosen`, `host_cancel_choice`, `host_versions`, `host_open_version`), File ▸ Open, Recent Files and Document Recovery (no removing entries but a draft), the Window menu, closing and the licences page; the licences page (`licenses-*`) none. A new command goes into a permission there, and into `tests/desktop/host-stub.js`, which refuses the same (a test compares them).
+
 Deadlocks: a command without `async` runs on the main thread, which runs every window, so one that makes a window is `async` (`host_new_window`: from a sync command that deadlocks on Windows). Tauri holds a web view's lock while it runs a `with_webview` closure, at once when called on the main thread, so the closure calls no method of that window or web view (`navigate`, `eval`, `set_zoom`): `net::guard` did, and the app hung at start (2026-10-17).
 
-Links: besides `openUrl`, a navigation or new window that leaves the app (http(s) to another host, mailto; `on_navigation`, `on_new_window` in `main.rs`) goes to the default browser only if `host::may_open` lets it: VibeOffice's own addresses from any page (the Start Center's GitHub button), and any web address from the licences page, whose links credit other projects; anything else opens nothing (a line on stderr). A document's hyperlinks never navigate: the apps show them to copy (docs/suite.md, Hyperlinks). The app's own pages (`tauri://localhost`, `http://tauri.localhost`; devUrl in a dev build), `blob:`, `data:` and `about:` stay in the app, and a page can't open a bare window of its own: the suite's windows come from `VO.host.newWindow`, with the network rules.
+Links: the app sends an address to the default browser only from the Start Center and only from its list, `host::is_ours`: the update page (`https://vibeoffice.work/updater/`) and our GitHub (`https://github.com/tcchen2026/VibeOffice`); https, no port, no user name (`host::may_open`, for `host_open_url` and for a navigation or new window that leaves the app: `on_navigation`, `on_new_window` → `host::leave`). Anything else opens nothing (a line on stderr); the pages show such an address with Copy instead, for the user to paste into their browser: a document's hyperlinks (`ui.linkDialog`; docs/suite.md, Hyperlinks) and the licences page's links (`oss-licenses.js`, in the desktop app only).
+
+A window loads one page, the one Rust opened it with (`host::Page`, from `on_navigation`): before it about:blank (where Windows and macOS windows start, `net::guard`) and, in the Start Center's window with `VO_NET_PROBE`, the probe's `data:` page; then the page itself, again when it reloads (the Start Center does when its language changes), with any fragment (its `#create`), and its own `blob:` addresses (on Linux a save starts as one). Other pages, the page with another query and every other scheme are refused, with a line on stderr (`not loaded: …`), and a page can't open a bare window of its own: the suite's windows come from `VO.host.newWindow`, with the network rules, and `VO.go` reports a window it couldn't open rather than changing the page.
 
 UI size (Settings on the Start Center): the web view's zoom, as Ctrl + in a browser, so canvases stay sharp and clicks land where they should. CSS `zoom` on the page was measured and does not work: at 200 % every click on Ledger's grid landed on B4 and menus opened at twice their place. `settings.json` (the app's config folder: `%APPDATA%\work.vibeoffice.desktop\`, `~/.config/work.vibeoffice.desktop/`) keeps it, and it is applied as each page starts loading (WebKitGTK resets the zoom on the first load).
 
 Rules for growing it:
 
 - Pages call `VO.host`, never Tauri, `launchQueue` or the File System Access API directly; both sides get each new method, the web side doing what the browser can (or reporting that it cannot).
-- Files cross as handles: numbers the native side gives out for paths the user or the system chose (command line now; Open and Save dialogs next), never paths from the page, so a page reads and writes only what it was given.
-- Commands are named `host_<verb>`, take named arguments and return JSON or raw bytes (`tauri::ipc::Response`, an `ArrayBuffer` in the page) for file contents.
+- A page never names a file: the native side gives each window its document (the command line, Finder, the Open dialog, Recent Files by key), and the window's commands act on that document only; paths come out only for display (a Recent Files entry's folder).
+- Commands are named `host_<verb>`, take named arguments and return JSON or raw bytes (`tauri::ipc::Response`, an `ArrayBuffer` in the page) for file contents; bytes go in as a raw body (`Uint8Array`), what they are in headers or a JSON head (`host_set_draft`), never as JSON arrays.
 - App commands are allowed only for the app's own pages: Tauri refuses them from any other origin while the app has no ACL manifest.
 
-Windows: as when the PWA is installed, the Start Center stays in its window and each app opens in one of its own (`VO.go` → `newWindow`); a file the app was started with opens beside the Start Center. One VibeOffice runs per user session (`tauri-plugin-single-instance`, Tauri's own, registered first in `main.rs`): a second start (the Start menu, a double-click on a file, Open with) hands its arguments to the running one and exits. Its files open there, as launch files do (`second_start` queues them and sends the Start Center `vo-files`); with none, the Start Center comes to the front, or opens again if it was closed. What the installer asked for (`-pin-taskbar`, `-choose-defaults`) is done by the running one too. File ▸ Exit in an app window closes it (`VO.exit` → `closeWindow`). A page cannot simply `window.open`: WebView2 would make a bare popup without the host script or IPC, so the app's own new windows are made natively (`open_window` in `main.rs`, from an async command: a sync one deadlocks on Windows).
+Windows: as when the PWA is installed, the Start Center stays in its window and each app opens in one of its own (`VO.go` → `newWindow`). Started with files (a double-click, Open with), the app opens each in its app's window, without the Start Center. One VibeOffice runs per user session (`tauri-plugin-single-instance`, Tauri's own, registered first in `main.rs`): a second start (the Start menu, a double-click on a file, Open with) hands its arguments to the running one and exits. Its files open there, each in a window of its own (or the window that has it comes forward); with none, the Start Center comes to the front, or opens again if it was closed. What the installer asked for (`-pin-taskbar`, `-choose-defaults`) is done by the running one too. A page cannot simply `window.open`: WebView2 would make a bare popup without the host script or IPC, so the app's own new windows are made natively (`open_window` in `main.rs`, from an async command: a sync one deadlocks on Windows).
 
-Planned: `open({ accept })` (the system's Open dialog), `save(handle, blob)` and `saveAs(name, blob)` (in place, as File ▸ Save does in Office) and one instance on Linux (today each start there is a process of its own).
+Planned (todos/DESKTOP_REAL_SAVE.md): settings in `~/.vibeoffice` and no browser storage at all; one instance on Linux (today each start there is a process of its own).
 
-`node --test tests/desktop/host.test.mjs` checks the page side in Chromium: `tests/desktop/host-stub.js` plays the desktop host (run before each page with `tools/shot.mjs --pre`; `?nolaunch` and `?update=button|dialog` set the scene): a launch file opens in its app once, with no service worker and the build's version; `openUrl` refuses anything but VibeOffice's own addresses; Settings sets the UI size (the web points to the browser's zoom); the update policies; versions compare by date.
+`node --test tests/desktop/host.test.mjs` checks the page side in Chromium: `tests/desktop/host-stub.js` plays the desktop host (run before each page with `tools/shot.mjs --pre`; this tab plays each new window; `?file=`, `?pick=`, `?recent=` and `?update=button|dialog` set the scene): a window made for a file opens it, with no service worker and the build's version; Open File and File ▸ Open (here, or a new window); a dropped file; Recent Files from the native side; the close button's question; `openUrl` refuses anything but VibeOffice's own addresses; Settings sets the UI size (the web points to the browser's zoom); the update policies; versions compare by date.
 
-## Saving (for now)
+## Documents and windows
 
-Until the app writes real files (todos/DESKTOP_REAL_SAVE.md), a save is a download into the system's Downloads
-folder, decided natively (`on_download` in `main.rs`, `host::download_destination`): only the pages' own `blob:` and
-`data:` files, only the types the apps save (`SAVE_TYPES`: documents, workbooks, presentations, PDF, PNG, CSV, text,
-web pages), always straight in Downloads under the bare file name, never over an existing file (`Budget (1).csv`).
-When it is written, the native side tells that window the name the file got (`vo-download`; never a path), and the
-app shows *Saved to Downloads folder: <name>* with **Browse** (`ui.toast` with an action). Browse is
-`host_show_downloads()`: no arguments; it opens the Downloads folder and, on Windows and macOS, selects the file
-this window last saved (`explorer /select`; Finder, `activateFileViewerSelectingURLs:`), the one the native side wrote.
+A window holds one document, and only the native side gives a window its file (`desktop/src/doc.rs`; the design in
+todos/DESKTOP_REAL_SAVE.md, Phase 1):
+
+- **Opening.** The files the app is started with, those another start hands over (Windows) and Finder's (macOS), the
+  Open dialog's (`VO.host.open`: the Start Center's Open File, the apps' File ▸ Open) and Recent Files
+  (`VO.host.openRecent`) each open in their app's window, made for them (`<app>/?doc`; the page asks
+  `host_document`), or bring forward the window that already has the file (one Recent Files key per file:
+  `store::key_of`, the sha256 of its real path, lower case on Windows). In a window whose document is an untouched
+  blank (each app's `hooks.pristine`), File ▸ Open and Recent Files open there instead (`here`), as Word does.
+- **One document per window.** On the desktop (`VO.oneDocument`) the apps' New, templates and Open make windows
+  (`VO.go`, `VO.openDialog`), a file dropped on a window with a document goes to a new window as bytes
+  (`VO.elsewhere`), as does a document a page makes (Quire's New with content and mail merge's letters:
+  `A.toWindow`, `VO.made`); File ▸ Close and Exit close the window; the Window menu lists the app's windows
+  (`VO.windowItems`). Ledger logs a console error if a second workbook reaches a window anyway.
+- **Recent Files** live in `~/.vibeoffice/recent_files/<yyyy-mm>/<key>.recent` (JSON: app, path, name, size, when,
+  the draft's name and loss state; on macOS a security-scoped bookmark), with `.recent.preview` (JPEG, 512 KB at most)
+  and `.recent.draft` (the unsaved version in the app's own format, 50 MB at most) beside it. No user's file name is
+  in a path the app makes; only names of that form are read; each file is written to a temp file, synced and renamed
+  over the old one. `VIBEOFFICE_HOME` puts the folder elsewhere (tests). The 30 newest entries without a draft are
+  kept, every entry with one, and those open in a window. A window changes only its own entry: its draft
+  (`host_set_draft`, a never-saved document getting an entry of its own), its preview, clearing its draft; Document
+  Recovery's Discard and the Start Center's × refuse a document open in a window. Every window hears `vo-recent` when
+  the list changes. On macOS the sandbox forgets a file's grant when the app quits: the bookmark, made while the grant
+  holds, opens it again (entitlement `files.bookmarks.app-scope`).
+- **Closing.** An app window's close button asks its page (`vo-close`); the page answers at once (`host_closing`),
+  asks "Save changes?" for its document (`hooks.close`) and closes the window (`host_close_window`), or stays on
+  Cancel. A page that doesn't answer in 10 s gets the native side's own question (close anyway? its unsaved changes
+  stay in Recent Files). The Start Center and the licences page close at once.
+
+Saving writes the window's file (Saving, below).
+
+## Saving
+
+The desktop app saves to real files (todos/DESKTOP_REAL_SAVE.md, Phase 2; `desktop/src/files.rs`, `doc.rs`; the pages'
+side is `L.file` in `public/common/core.js`):
+
+- **Save** (Ctrl+S) writes the window's own file in place, without asking, as Office does (`host_save`). A window
+  without one (a new document, a dropped file, a page-made one), a read-only file, or a type the app can't write
+  (.doc, .xls) goes to Save As.
+- **Save As and every export** (PDF, web page, PNG, CSV, text, Send To) ask with the system's Save dialog
+  (`host_choose`: in the folder of the window's file, else the last one this window used, else Documents; the app's
+  types as filters, from Rust's own table, `types::KINDS`; the system asks before replacing a file), then write only
+  what was picked there (`host_write_chosen`). A typed extension of another offered type switches to it; a name
+  without one gets the chosen type's (on Linux, where the dialog doesn't add it, a replace is asked again for the
+  final name). A Save As to a document type (Office formats, Quire's Markdown, Ledger's XML Spreadsheet) makes that
+  file the window's own and its Recent Files entry; an export changes nothing about the document.
+- **The write**: the type must be the window's app's and match the extension and the bytes' start (a ZIP or an
+  encrypted Office file, `%PDF-`, `{\rtf`, the PNG signature, text); at most 512 MB; a link, folder or device in the
+  file's place is refused; for Save, the file must be the version the window read or last wrote (`changed`
+  otherwise). The version on disk is kept first (below); the bytes go to a temp file beside it
+  (`.~vibeoffice-<hex>.tmp`), synced, then replace it: `ReplaceFileW` on Windows (keeping the file's permissions,
+  attributes and streams, its Mark of the Web among them; a sharing violation is tried again a few times), a rename on
+  Linux (the file's mode kept, the folder synced; in a folder the user can't write, or a file with another owner or
+  other hard links, written in place, the old bytes put back if that fails), and on macOS, whose sandbox grants the
+  file but not its folder, `replaceItemAtURL:` from the item replacement folder (NSDocument's safe save). A failed save
+  leaves the file as it was. A copy saved from a file that came from the internet keeps its Mark of the Web (Windows,
+  `files::carry_mark`). After the write the Recent Files entry is brought up to date and its draft goes.
+- **When it fails** the page says why, with the next step and that the file hasn't changed (`L.file.write`):
+  `changed` (Replace It, Save As…), `missing` (moved, renamed or deleted: Save As…, never made again silently),
+  `denied` (read-only or no permission: Save As…), `busy` (another program holds it: Try Again, Save As…), `full`,
+  `open-elsewhere` (the Save dialog picked a file another window has open: back to the dialog), and the rest with the
+  system's words.
+- **Previous versions**: the version a window's first save replaces, and a file an export replaces, are kept in
+  `~/.vibeoffice/previous_versions/<yyyy-mm>/<file's key>.<ms>.previous` (no user file name), 30 days, five a file,
+  1 GB in all, none over 200 MB. File ▸ Versions… (desktop only; the ribbon's File tab too) lists them; Open shows one
+  in a new window as a document never saved.
+- Web view downloads are refused (`on_download`), and the File System Access pickers are removed from every frame
+  (`host::NO_FILE_PICKERS`), so nothing else writes a file.
+- One write at a time per window (`L.file.write` queues them), and two writes to one file never overlap (`Docs::writing`).
 
 ## Versions and updates
 
@@ -123,6 +199,14 @@ same limit from the other side: `connect-src` names the site and the IPC sources
 (`network.client`) for the update check, which is why the rules live in the web view; the App Store edition has none.
 What the system and WebView2 do on their own (Edge's updates, certificate checks) is theirs.
 
+WebRTC isn't a request the web view shows us, so neither the rules nor the policy cover it: `net::NO_WEBRTC`, run in
+every frame before its scripts, removes `RTCPeerConnection`, `webkitRTCPeerConnection` and `RTCDataChannel`
+(WebKitGTK has WebRTC off already). Permission requests (camera, microphone, location, notifications, …) are refused
+natively (`on_permission_request` in `main.rs`), except Local Font Access (Settings ▸ Fonts on this computer) and
+reading the clipboard (Paste), which go on as the engine handles them; on macOS the sandbox grants no device anyway.
+On Windows, WebView2's own browser keys are off (`net::win::browser_keys_off`, before the page: F5 and Ctrl+R reload,
+Ctrl+P, Ctrl+F, Ctrl+S, the zoom keys); editing keys and the apps' own shortcuts stay.
+
 ## Building
 
 Windows (below); macOS: `desktop/macos/build.sh`, on a Mac (macOS, below).
@@ -170,14 +254,15 @@ One universal binary (Apple silicon and Intel, macOS 13 or later), bundled twice
   (App Review guideline 2.4.5), so it has no network entitlement either.
 
 Both run in the App Sandbox, so trying the DMG tries the store's edition too (`desktop/macos/*.entitlements`): the
-files the user picks in an Open dialog or opens from Finder, the Downloads folder (where saves go for now: Saving,
-above), printing, and in the DMG the network for the update check. Links go to the browser and Browse to Finder through
+files the user picks in the Open and Save dialogs or opens from Finder, their bookmarks (Recent Files after a restart),
+printing, and in the DMG the network for the update check. Links go to the browser through
 NSWorkspace, which the sandbox allows; no program is started.
 
 The Mac's ways (`main.rs`):
 
 - Files from Finder (a double-click, Open With, a drop on the Dock icon) arrive as `RunEvent::Opened`, at start or
-  while the app runs, and open as launch files do; the sandbox lets the app read them. `Info.plist` lists .docx, .xlsx
+  while the app runs, and each opens in a window of its own (Documents and windows, above); the sandbox lets the app
+  read them, and their Recent Files entries keep a bookmark for after it quits. `Info.plist` lists .docx, .xlsx
   and .pptx (Quire Document, Ledger Worksheet, Lectern Presentation), as the Windows installer does: in Open With, never
   taking the default (`LSHandlerRank` Alternate); the system draws their icons from the app's.
 - The app stays open, with its menu bar, after its last window closes; a click on the Dock icon brings the Start
@@ -231,7 +316,7 @@ runs from other branches and from forks never see them):
 Before the first upload: the app's record in App Store Connect (bundle ID `work.vibeoffice.desktop`) and the answers to
 its export compliance questions (`crypto.js` encrypts and opens password-protected Office files with standard AES and
 SHA), after which `ITSAppUsesNonExemptEncryption` goes into `Info.plist`. Submitting for review waits for real saving
-(todos/DESKTOP_REAL_SAVE.md, Phase 2): until then every save lands in Downloads.
+to be tried on a Mac (todos/DESKTOP_REAL_SAVE.md, Phase 2: built, run on Linux only).
 
 ## Linux
 
@@ -270,7 +355,8 @@ No exe packers (UPX): antivirus flags packed exes. The largest pages are the the
 ## Known limits / to do
 
 - GNU builds import `WebView2Loader.dll`, installed beside the exe (Microsoft's static loader is MSVC-only).
-- Saving goes to the Downloads folder (Saving, above); writing the real file is planned in todos/DESKTOP_REAL_SAVE.md.
+- Saving (Saving, above) has run on Linux only: Windows' `ReplaceFileW` and macOS's `replaceItemAtURL:` are type-checked, not yet run.
+- Ledger's Save As ▸ Tools ▸ General Options (a password to open) is the web dialog's; the desktop app's Save dialog has no Tools, so a workbook there can't be given a password yet (Excel also has File ▸ Info ▸ Protect Workbook ▸ Encrypt with Password).
 - macOS: the menu bar is in English whatever the UI's language; the system draws the document icons (the app's icon on a page) rather than Quire's, Ledger's and Lectern's.
 - Linux: opening a file while the app runs starts a second process with its own Start Center, and closing the Start Center's window leaves no way back to it but starting the app again (Windows has one instance, which brings it back).
 - The Start Center's wording is the web's ("Office suite in your browser", "Recent files are kept in this browser only").

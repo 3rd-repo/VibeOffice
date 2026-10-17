@@ -257,9 +257,126 @@
     push(`trailer\n<< /Size ${total} /Root 1 0 R /Info ${infoId} 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
     return new Blob(chunks, { type: 'application/pdf' });
   };
+  /* ---------- saving to real files (the desktop app) ----------
+     On the web a save is a download (L.saveFile). In the desktop app it is a real file (docs/desktop.md, Saving):
+     Save writes the window's own file in place ('save'), Save As and exports what the user picks in the system's
+     Save dialog (choose, then 'chosen'); the native side checks and writes (desktop/src/files.rs) and says what went
+     wrong as a code, which is told here in plain words with the next step. One write at a time per window. */
+  const native = () => (root.VO && root.VO.host.kind === 'desktop' ? root.VO.host : null);
+  let pending = null;   // the Save dialog's pick, until written or given up
+  let queue = Promise.resolve();
+  const extOf = (name) => (/\.([^.]+)$/.exec(name || '') || ['', ''])[1].toLowerCase();
+  const without = (name) => String(name || '').replace(/\.[^.]+$/, '');
+  /* "{0}" is the file's name; every failure before the file is replaced says it hasn't changed */
+  const SAYS = {
+    changed: ['“{0}” was changed by another program after you opened it. Replace it with this version, or save this version under another name?', ['&Replace It', '&Save As...', 'Cancel'], ['replace', 'saveas']],
+    missing: ['“{0}” is no longer where it was: it was moved, renamed or deleted.', ['&Save As...', 'Cancel'], ['saveas']],
+    denied: ['{1} can\'t save “{0}”: it is read-only, or you don\'t have permission to change it. Your file hasn\'t changed.', ['&Save As...', 'Cancel'], ['saveas']],
+    busy: ['“{0}” is open in another program, which is keeping it from being changed. Your file hasn\'t changed.', ['&Try Again', '&Save As...', 'Cancel'], ['retry', 'saveas']],
+    full: ['There isn\'t enough space on the disk to save “{0}”. Your file hasn\'t changed.', ['&Save As...', 'Cancel'], ['saveas']],
+  };
+  L.file = {
+    /** whether saves are real files (the desktop app), not downloads */
+    native: () => !!native(),
+    /** the app's types for the Save dialog, in its order: [{ id, label, ext }] (each app sets them) */
+    types: [],
+    /** the type of a file name, by its extension */
+    typeOf: (name) => (L.file.types.find((t) => t.ext.includes(extOf(name))) || {}).id || null,
+    /** the desktop app: whether the window has a file of its own */
+    bound: () => { const h = native(); return !!(h && h.file.bound); },
+    /** the desktop app: whether Save writes the window's own file in place (it has one, and may change it) */
+    inPlace: () => { const h = native(); return !!(h && h.file.bound && !h.file.readOnly); },
+    /** the desktop app's Save dialog for a Save As ('saveAs') or an export ('export'): the app's types (or `ids`),
+     *  `type` first, `name` (no extension) filled in. { name (no extension), file (with it), type }, or null */
+    async choose(purpose, type, name, ids) {
+      const types = L.file.types.filter((t) => !ids || ids.includes(t.id)).map((t) => ({ id: t.id, label: L.t(t.label) }));
+      for (;;) {
+        try {
+          const c = await native().choose({ purpose, types, type, name: without(name) || 'Document', title: L.t('Save As') });
+          pending = c;
+          return c && { name: without(c.name), file: c.name, type: c.type };
+        } catch (e) {
+          if (e && e.code === 'open-elsewhere') { await L.ui.msg(L.t('“{0}” is open in another {1} window. Close it there, or choose another name.', e.file || name, L.APP), { icon: 'warn' }); continue; }
+          await L.ui.msg(String(e && e.message || e), { icon: 'error' });
+          return null;
+        }
+      }
+    },
+    /** the Save dialog's pick is not written after all (the compatibility check's Cancel) */
+    cancel() { if (pending) { pending = null; native().cancelChoice().catch(() => {}); } },
+    /** File ▸ Versions... (the desktop app): the versions of the document's file its saves replaced (kept 30 days),
+     *  one of them opened in a window of its own, to be saved where the user likes */
+    async showVersions(fileName) {
+      const ui = L.ui;
+      let list = [];
+      try { list = await native().versions(); } catch (e) { ui.msg(String(e && e.message || e), { icon: 'error' }); return; }
+      if (!list.length) { ui.msg(L.t('{0} hasn\'t kept any earlier versions of “{1}”. It keeps the version a save replaces, for 30 days.', L.APP, fileName), { icon: 'info' }); return; }
+      const box = L.h('select', { size: 8, style: 'width:100%' }, ...list.map((v, i) => L.h('option', { value: v.id, selected: i === 0 ? '' : null, translate: 'no' },
+        new Date(v.time).toLocaleString(root.VO && root.VO.i18n ? root.VO.i18n.dates : []) + ' · ' + L.t('{0} KB', Math.max(1, Math.round(v.size / 1024))))));
+      const open = () => native().openVersion(box.value).catch((e) => ui.msg(String(e && e.message || e), { icon: 'error' }));
+      box.addEventListener('dblclick', open);
+      ui.dialog({ title: L.t('Versions'), width: 420, focus: box, body: L.h('div', { class: 'col' }, L.h('div', { text: L.t('Earlier versions of “{0}”, kept as saves replaced them:', fileName) }), box),
+        buttons: [{ label: '&Open', primary: true, onClick: () => { open(); } }, { label: 'Close', cancel: true }] });
+    },
+    /** writes `blob` as `type`: how 'save' (the window's own file) or 'chosen' (what choose picked). A failure is
+     *  told with its next step (Replace It, Try Again, Save As...). { result: 'saved' or 'cancelled', name (the
+     *  file's, with its extension), bound (it is now the window's file) } */
+    write(blob, how, { type, name }) {
+      const run = queue.then(() => writeNow(blob, how, type, name));
+      queue = run.catch(() => {});
+      return run;
+    },
+  };
+  async function writeNow(blob, how, type, name) {
+    const host = native();
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let replace = false;
+    for (;;) {
+      const shown = how === 'save' ? host.file.name : (pending && pending.name) || name;
+      try {
+        if (how === 'save') {
+          await host.save(bytes, replace);
+          return { result: 'saved', name: host.file.name, bound: true };
+        }
+        const w = await host.writeChosen(bytes);
+        pending = null;
+        if (w.bound) host.file = { bound: true, readOnly: false, name: w.name };
+        return { result: 'saved', name: w.name, bound: w.bound };
+      } catch (e) {
+        const code = e && e.code, say = SAYS[code];
+        if (!say) {
+          await L.ui.msg(L.t('“{0}” couldn\'t be saved: {1} Your file hasn\'t changed.', shown, String(e && e.message || e)), { icon: 'error' });
+          if (how === 'chosen') L.file.cancel();
+          return { result: 'cancelled' };
+        }
+        const r = await L.ui.msg(L.t(say[0], shown, L.APP), { icon: 'warn', buttons: say[1] });
+        const act = say[2][r];
+        if (act === 'replace') { replace = true; continue; }
+        if (act === 'retry') continue;
+        if (act === 'saveas') {
+          const c = await L.file.choose('saveAs', type, without(shown), [type]);
+          if (!c) return { result: 'cancelled' };
+          how = 'chosen';
+          continue;
+        }
+        if (how === 'chosen') L.file.cancel();
+        return { result: 'cancelled' };
+      }
+    }
+  }
   /** Offer a generated file to the user as a download. Returns 'saved', and tells vo-saved { name } on window once
-   *  the file is handed over (the assistant acts out Save and Save As then, common/scout/assistant.js). */
+   *  the file is handed over (the assistant acts out Save and Save As then, common/scout/assistant.js). In the
+   *  desktop app it is an export: the Save dialog asks where (unless the app's own Save As just did), then the file
+   *  is written there; 'cancelled' if the user gave up. */
   L.saveFile = async function (name, blob) {
+    if (native()) {
+      const type = L.file.typeOf(name);
+      if (!type) throw new Error(L.t('{0} doesn\'t save “{1}”.', L.APP, name));
+      if (!pending || pending.type !== type) { const c = await L.file.choose('export', type, name, [type]); if (!c) return 'cancelled'; }
+      const w = await L.file.write(blob, 'chosen', { type, name });
+      if (w.result === 'saved') window.dispatchEvent(new CustomEvent('vo-saved', { detail: { name: w.name } }));
+      return w.result;
+    }
     const url = URL.createObjectURL(blob);
     const a = L.h('a', { href: url, download: name, style: 'display:none' });
     document.body.appendChild(a);

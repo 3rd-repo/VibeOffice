@@ -9,8 +9,9 @@
 //! one. `VO_NET_PROBE=1` checks that they work: before the Start Center's page, its window tries to reach
 //! another site and prints `network probe: blocked` (or what it reached) on stderr (the macOS smoke run).
 
+use tauri::{AppHandle, Url, WebviewUrl};
 #[cfg(any(windows, target_os = "macos"))]
-use tauri::{AppHandle, Manager, Url, WebviewUrl, WebviewWindow};
+use tauri::{Manager, WebviewWindow};
 
 /// The one site the pages may reach.
 const SITE_HOST: &str = "vibeoffice.work";
@@ -64,8 +65,7 @@ fn rules() -> String {
 pub const BLANK: &str = "about:blank";
 
 /// The address Tauri gives `url` (as its manager/webview.rs does): the app's own pages at tauri://localhost
-/// (macOS) or http://tauri.localhost (Windows), the dev server in a dev build.
-#[cfg(any(windows, target_os = "macos"))]
+/// (macOS, Linux) or http://tauri.localhost (Windows), the dev server in a dev build.
 pub fn page_url(app: &AppHandle, url: WebviewUrl) -> Option<Url> {
     let base = if cfg!(feature = "custom-protocol") {
         Url::parse(if cfg!(windows) {
@@ -124,14 +124,25 @@ pub fn guard(window: &WebviewWindow, page: Option<Url>) -> tauri::Result<()> {
     Ok(())
 }
 
-/// The rules on a window's web view: WebKit's compiled list (macOS), WebView2's request filter (Windows).
+/// The rules on a window's web view: WebKit's compiled list (macOS), WebView2's request filter (Windows). On
+/// Windows WebView2's browser keys go off here too, before the page (`win::browser_keys_off`).
 #[cfg(any(windows, target_os = "macos"))]
 fn apply(webview: tauri::webview::PlatformWebview) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     return mac::apply(webview.controller());
     #[cfg(windows)]
-    return win::apply(&webview.controller(), webview.environment()).map_err(|e| e.to_string());
+    {
+        let controller = webview.controller();
+        if let Err(e) = win::browser_keys_off(&controller) {
+            eprintln!("browser keys: {e}");
+        }
+        win::apply(&controller, webview.environment()).map_err(|e| e.to_string())
+    }
 }
+
+/// WebRTC, which neither the pages' policy nor the rules above cover (its connections aren't requests the web
+/// view shows us): gone from every frame before its scripts (open_window). Linux's WebKitGTK has it off already.
+pub const NO_WEBRTC: &str = "for (const k of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel']) delete window[k];";
 
 /// A window whose rules couldn't be set: it closes without loading its page, and says why; with no other
 /// window open, the app quits.
@@ -329,13 +340,26 @@ mod win {
     use webview2_com::{
         take_pwstr,
         Microsoft::Web::WebView2::Win32::{
-            ICoreWebView2Controller, ICoreWebView2Environment, ICoreWebView2_22,
-            COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL,
+            ICoreWebView2Controller, ICoreWebView2Environment, ICoreWebView2Settings3,
+            ICoreWebView2_22, COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL,
             COREWEBVIEW2_WEB_RESOURCE_REQUEST_SOURCE_KINDS_ALL,
         },
         WebResourceRequestedEventHandler,
     };
     use windows::core::{Interface, HSTRING, PWSTR};
+
+    /// WebView2's own keys off: F5 and Ctrl+R (reload), Ctrl+P (its print preview), Ctrl+F (its find bar),
+    /// Ctrl+S (save the page), Ctrl + and − (zoom; Settings has the UI size). Editing keys stay, and the apps'
+    /// own shortcuts reach the page.
+    pub fn browser_keys_off(controller: &ICoreWebView2Controller) -> windows::core::Result<()> {
+        unsafe {
+            controller
+                .CoreWebView2()?
+                .Settings()?
+                .cast::<ICoreWebView2Settings3>()?
+                .SetAreBrowserAcceleratorKeysEnabled(false)
+        }
+    }
 
     /// Every request of the web view comes here first (also from workers, where WebView2 is new enough:
     /// ICoreWebView2_22); one `allowed` refuses gets a 403 without reaching the network. wry's own handler

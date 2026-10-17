@@ -1,15 +1,20 @@
 // No console window in release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod dialog;
+mod doc;
+mod files;
 mod host;
 #[cfg(any(windows, test))]
 mod installation;
 #[cfg(windows)]
 mod installed;
 mod net;
+mod store;
+mod types;
 
 use tauri::{
-    webview::{DownloadEvent, NewWindowResponse, PageLoadEvent},
+    webview::{NewWindowResponse, PageLoadEvent, PermissionKind, PermissionResponse},
     AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 
@@ -17,66 +22,61 @@ use tauri::{
 /// host script, title, link, drop and UI size handling, and the network rules (net.rs): on Windows and macOS
 /// it starts on about:blank and goes to its page once they are on (`net::guard`).
 pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Result<WebviewWindow> {
+    let page = net::page_url(app, url.clone());
+    // the one page this window loads (host::Page); the Start Center's first, when probing, the probe's
     #[cfg(any(windows, target_os = "macos"))]
-    let (url, page) = (
-        WebviewUrl::External(net::BLANK.parse().expect("about:blank")),
-        net::page_url(app, url),
-    );
+    let probe = label == "main" && net::probe::wanted();
+    #[cfg(not(any(windows, target_os = "macos")))]
+    let probe = false;
+    if let Some(page) = &page {
+        app.state::<host::Host>()
+            .expect(label, host::Page::new(page.clone(), probe));
+    }
+    #[cfg(any(windows, target_os = "macos"))]
+    let url = WebviewUrl::External(net::BLANK.parse().expect("about:blank"));
     let window = WebviewWindowBuilder::new(app, label, url)
         .title("VibeOffice")
         .inner_size(1280.0, 820.0)
         .min_inner_size(640.0, 480.0)
         .initialization_script(host::init_script())
+        .initialization_script_for_all_frames(net::NO_WEBRTC)
+        .initialization_script_for_all_frames(host::NO_FILE_PICKERS)
+        // No camera, microphone, location, notifications, …: only Local Font Access (Settings ▸ Fonts on
+        // this computer) and reading the clipboard (Paste) go on as the engine handles them.
+        .on_permission_request(|_, kind| match kind {
+            PermissionKind::LocalFonts | PermissionKind::ClipboardRead => {
+                PermissionResponse::Default
+            }
+            _ => PermissionResponse::Deny,
+        })
         // The pages take dropped files themselves (Start Center, each app).
         .disable_drag_drop_handler()
-        // Links out of the app (the Start Center's GitHub button, the licences page's) open in the default
-        // browser if they are ones it may open (host::leave), never in this window or a bare popup. The
-        // suite's own windows come from VO.host.newWindow (host_new_window), with the network rules.
+        // The window loads its one page (host::Page). Links out of the app open in the default browser if
+        // they may (host::leave: the Start Center's Update and GitHub), never in this window or a bare popup.
+        // The suite's own windows come from VO.host.newWindow (host_new_window), with the network rules.
         .on_navigation({
             let (app, label) = (app.clone(), label.to_string());
             move |url| {
                 if !host::is_external(url) {
-                    return true;
+                    return app.state::<host::Host>().may_load(&label, url);
                 }
-                host::leave(&app, &label, url);
+                host::leave(&label, url);
                 false
             }
         })
         .on_new_window({
-            let (app, label) = (app.clone(), label.to_string());
+            let label = label.to_string();
             move |url, _| {
                 if host::is_external(&url) {
-                    host::leave(&app, &label, &url);
+                    host::leave(&label, &url);
                 } else {
                     eprintln!("not opened: a bare window for {url}");
                 }
                 NewWindowResponse::Deny
             }
         })
-        // Saving, for now: every save is a download into the Downloads folder (host::download_destination
-        // decides what may be written where); the window is then told the name the file got.
-        .on_download(|webview, event| match event {
-            DownloadEvent::Requested { url, destination } => {
-                let Ok(dir) = webview.path().download_dir() else {
-                    return false;
-                };
-                match host::download_destination(&url, destination, &dir) {
-                    Some(path) => {
-                        *destination = path;
-                        true
-                    }
-                    None => false,
-                }
-            }
-            DownloadEvent::Finished { path, success, .. } => {
-                let js = webview
-                    .state::<host::Host>()
-                    .downloaded(webview.label(), path, success);
-                let _ = webview.eval(js);
-                true
-            }
-            _ => true,
-        })
+        // Pages save through the host (doc.rs): a web view download would write where no one asked
+        .on_download(|_, _| false)
         // The system title bar shows the page's title, as in the installed PWA (not about:blank's, nor
         // the network probe's).
         .on_document_title_changed(|window, title| {
@@ -89,9 +89,6 @@ pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Resu
         // The UI size (Settings), as each page starts: WebKitGTK resets the zoom on the first load.
         .on_page_load(|window, payload| {
             if payload.event() == PageLoadEvent::Started {
-                window
-                    .state::<host::Host>()
-                    .page_started(window.label(), payload.url());
                 let scale = window.state::<host::Host>().ui_scale();
                 let _ = window.set_zoom(scale);
             }
@@ -110,48 +107,76 @@ pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Resu
     Ok(window)
 }
 
-/// The Start Center's window has been made once (setup): until then, files that arrive wait for it.
+/// Windows can be made (setup has run; on macOS WebKit has compiled the network rules). Until then, files that
+/// arrive (Finder, at start) wait in PENDING.
 static STARTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+#[cfg(target_os = "macos")]
+static PENDING: std::sync::Mutex<Vec<std::path::PathBuf>> = std::sync::Mutex::new(Vec::new());
 
-/// Files the system handed over while the app runs (another start on Windows; Finder or the Dock on macOS),
-/// already among the launch files: the Start Center opens them (`vo-files`, then `host_launch_files`).
-/// Without files it comes to the front, opened again if it was closed.
+/// Opens files the system handed over, each in a window of its own (doc::open_path); how many opened.
+fn open_files(app: &AppHandle, files: &[std::path::PathBuf]) -> usize {
+    files
+        .iter()
+        .filter(|f| match doc::open_path(app, f, None) {
+            Ok(_) => true,
+            Err(e) => {
+                eprintln!("{e}");
+                false
+            }
+        })
+        .count()
+}
+
+/// The Start Center, brought forward, or opened again if it was closed.
 #[cfg(any(windows, target_os = "macos"))]
-fn files_arrived(app: &AppHandle, files: bool) {
-    // Windows' other process waits for its handler: windows are made in a task, after it has returned
+fn show_start_center(app: &AppHandle) {
+    match app.get_webview_window("main") {
+        Some(main) => {
+            let _ = main.unminimize();
+            let _ = main.set_focus();
+            #[cfg(windows)]
+            installed::after_install(&main);
+        }
+        // (on Windows it does what the installer asked as it loads)
+        None => {
+            if let Err(e) = open_window(app, "main", WebviewUrl::default()) {
+                eprintln!("the Start Center: {e}");
+            }
+        }
+    }
+}
+
+/// Another start of VibeOffice while this one runs: its files open here, each in a window of its own; without
+/// any, the Start Center comes forward. What the installer asked for (pin, Default apps) is done here.
+#[cfg(windows)]
+fn second_start(app: &AppHandle, args: Vec<String>, cwd: String) {
+    let args = args.get(1..).unwrap_or_default().to_vec();
+    installed::take_args(&args);
+    // the other process waits for this handler: windows are made in a task, after it has returned
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-        match app.get_webview_window("main") {
-            Some(main) => {
-                if files {
-                    let _ = main.eval("window.dispatchEvent(new Event('vo-files'));");
-                } else {
-                    let _ = main.unminimize();
-                    let _ = main.set_focus();
-                }
-                #[cfg(windows)]
-                installed::after_install(&main);
-            }
-            // takes the files (and on Windows does what the installer asked) as it loads
-            None if STARTED.load(std::sync::atomic::Ordering::SeqCst) => {
-                let _ = open_window(&app, "main", WebviewUrl::default());
-            }
-            // a file opened from Finder starts the app: setup is about to make the Start Center
-            None => {}
+        let files = doc::files_among(&args, std::path::Path::new(&cwd));
+        if open_files(&app, &files) == 0 {
+            show_start_center(&app);
         }
     });
 }
 
-/// Another start of VibeOffice while this one runs: its files open here; what the installer asked for
-/// (pin, Default apps) is done here.
-#[cfg(windows)]
-fn second_start(app: &AppHandle, args: Vec<String>, cwd: String) {
-    let args = args.get(1..).unwrap_or_default();
-    let files = app
-        .state::<host::Host>()
-        .add_launch_files(args, std::path::Path::new(&cwd));
-    installed::take_args(args);
-    files_arrived(app, files);
+/// An app window's close button: its page answers (doc::close_requested), not the window. The Start Center and
+/// the licences page close at once. A window gone takes its document with it.
+fn window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
+    let page = window.label().rsplit_once('-').map(|(p, _)| p);
+    match event {
+        tauri::WindowEvent::CloseRequested { api, .. }
+            if page.is_some_and(types::is_app)
+                && !window.state::<doc::Docs>().may_close(window.label()) =>
+        {
+            api.prevent_close();
+            doc::close_requested(window);
+        }
+        tauri::WindowEvent::Destroyed => window.state::<doc::Docs>().forget(window.label()),
+        _ => {}
+    }
 }
 
 /// The menu bar on macOS: Tauri's default one, without Edit ▸ Undo and Redo, which would run WebKit's own
@@ -231,27 +256,57 @@ fn main() {
     #[cfg(target_os = "macos")]
     let builder = builder.menu(mac_menu);
     let app = builder
-        .manage(host::Host::from_args())
+        .manage(host::Host::default())
         .invoke_handler(tauri::generate_handler![
-            host::host_launch_files,
-            host::host_read,
             host::host_open_url,
             host::host_ui_scale,
             host::host_set_ui_scale,
             host::host_new_window,
             host::host_close_window,
-            host::host_show_downloads
+            doc::host_document,
+            doc::host_document_bytes,
+            doc::host_open,
+            doc::host_open_recent,
+            doc::host_new_document,
+            doc::host_recent,
+            doc::host_recent_preview,
+            doc::host_recent_remove,
+            doc::host_recent_clear,
+            doc::host_discard_draft,
+            doc::host_set_preview,
+            doc::host_set_draft,
+            doc::host_clear_draft,
+            doc::host_windows,
+            doc::host_focus,
+            doc::host_closing,
+            doc::host_save,
+            doc::host_choose,
+            doc::host_write_chosen,
+            doc::host_cancel_choice,
+            doc::host_versions,
+            doc::host_open_version
         ])
+        .on_window_event(window_event)
         .setup(|app| {
             app.state::<host::Host>().load_settings(app.handle());
+            app.manage(doc::Docs::new(store::Store::at(app.path().home_dir().ok())));
+            // the files on the command line (Open with, a double-click on a file: "%1") open in their own windows;
+            // without any, the Start Center
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let files = doc::files_among(std::env::args_os().skip(1), &cwd);
             let start = {
                 let app = app.handle().clone();
                 move || {
+                    STARTED.store(true, std::sync::atomic::Ordering::SeqCst);
+                    #[cfg(target_os = "macos")]
+                    let files = [files, std::mem::take(&mut *PENDING.lock().unwrap())].concat();
+                    if open_files(&app, &files) > 0 && !cfg!(target_os = "macos") {
+                        return;
+                    }
                     if let Err(e) = open_window(&app, "main", WebviewUrl::default()) {
                         eprintln!("the Start Center: {e}");
                         app.exit(1);
                     }
-                    STARTED.store(true, std::sync::atomic::Ordering::SeqCst);
                 }
             };
             // macOS: once WebKit has compiled the network rules (without them, no window opens)
@@ -270,17 +325,22 @@ fn main() {
         // Files from Finder (a double-click, Open With, a drop on the Dock icon), at start or later. The
         // sandbox lets the app read what the user opened this way.
         tauri::RunEvent::Opened { urls } => {
-            let paths = urls.iter().filter_map(|u| u.to_file_path().ok());
-            let files = app
-                .state::<host::Host>()
-                .add_launch_files(paths, std::path::Path::new("/"));
-            files_arrived(app, files);
+            let files: Vec<_> = urls.iter().filter_map(|u| u.to_file_path().ok()).collect();
+            if STARTED.load(std::sync::atomic::Ordering::SeqCst) {
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move { open_files(&app, &files) });
+            } else {
+                PENDING.lock().unwrap().extend(files);
+            }
         }
         // A click on the Dock icon with no window open brings the Start Center back
         tauri::RunEvent::Reopen {
             has_visible_windows: false,
             ..
-        } if app.webview_windows().is_empty() => files_arrived(app, false),
+        } if app.webview_windows().is_empty() => {
+            let app = app.clone();
+            tauri::async_runtime::spawn(async move { show_start_center(&app) });
+        }
         // The app keeps running, with its menu bar, after its last window closes; Quit (⌘Q) ends it
         tauri::RunEvent::ExitRequested {
             code: None, api, ..

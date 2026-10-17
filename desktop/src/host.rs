@@ -1,8 +1,8 @@
 //! The native side of `VO.host` (public/common/suite.js; contract in docs/desktop.md, Host interface).
 //!
 //! Pages reach the system only through VO.host. Here it is a set of `host_*` commands over Tauri's IPC and
-//! `window.__VO_HOST__`, set before every page's scripts. Files cross as handles: numbers this process gives
-//! out for paths the user or the system chose (so far the command line), so a page reads only what it was given.
+//! `window.__VO_HOST__`, set before every page's scripts. A page never names a file: the documents in the windows
+//! and Recent Files are doc.rs's.
 
 use std::{
     collections::HashMap,
@@ -14,22 +14,16 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use tauri::{ipc::Response, AppHandle, Manager, State, Url, WebviewUrl, WebviewWindow};
+use tauri::{AppHandle, Manager, State, Url, WebviewUrl, WebviewWindow};
 
 /// Version of the interface; raise it when a command changes shape (VO.host.version in the pages).
-pub const VERSION: u32 = 1;
+pub const VERSION: u32 = 4;
 
 #[derive(Default)]
 pub struct Host {
-    /// handle -> path
-    files: Mutex<Vec<PathBuf>>,
-    /// handles of the files this process was started with, until a page takes them
-    launch: Mutex<Vec<usize>>,
     settings: Mutex<Settings>,
-    /// window label -> the file its last save went to (downloads, until real saving: todos/DESKTOP_REAL_SAVE.md)
-    downloads: Mutex<HashMap<String, PathBuf>>,
-    /// window label -> the page it shows (as each page starts loading), for `leave`
-    pages: Mutex<HashMap<String, Url>>,
+    /// window label -> the page it may load (`may_load`)
+    pages: Mutex<HashMap<String, Page>>,
 }
 
 /// What the native side keeps for itself, in settings.json in the app's config folder: what has to apply
@@ -56,41 +50,7 @@ fn settings_path(app: &AppHandle) -> Option<PathBuf> {
         .map(|d| d.join("settings.json"))
 }
 
-#[derive(Serialize)]
-pub struct FileRef {
-    handle: usize,
-    name: String,
-}
-
 impl Host {
-    /// The files on the command line: Open with, a double-click on an associated file ("%1").
-    pub fn from_args() -> Self {
-        let host = Host::default();
-        let cwd = std::env::current_dir().unwrap_or_default();
-        host.add_launch_files(std::env::args_os().skip(1), &cwd);
-        host
-    }
-
-    /// The files among a command line's arguments (this process's, or those another start of the app
-    /// handed over: one instance on Windows), relative ones from `cwd`, for the page that takes them
-    /// (`host_launch_files`). Whether there were any.
-    pub fn add_launch_files<I: IntoIterator<Item = impl Into<PathBuf>>>(
-        &self,
-        args: I,
-        cwd: &Path,
-    ) -> bool {
-        let mut any = false;
-        for arg in args {
-            let path = cwd.join(arg.into());
-            if path.is_file() {
-                let handle = self.grant(std::path::absolute(&path).unwrap_or(path));
-                self.launch.lock().unwrap().push(handle);
-                any = true;
-            }
-        }
-        any
-    }
-
     /// Reads settings.json (missing or unreadable: the defaults).
     pub fn load_settings(&self, app: &AppHandle) {
         let read = settings_path(app)
@@ -107,42 +67,27 @@ impl Host {
     pub fn ui_scale(&self) -> f64 {
         self.settings.lock().unwrap().ui_scale
     }
-
-    fn grant(&self, path: PathBuf) -> usize {
-        let mut files = self.files.lock().unwrap();
-        files.push(path);
-        files.len() - 1
-    }
-
-    fn file_ref(&self, handle: usize) -> FileRef {
-        let files = self.files.lock().unwrap();
-        let name = files[handle]
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        FileRef { handle, name }
-    }
-
-    fn path(&self, handle: usize) -> Result<PathBuf, String> {
-        self.files
-            .lock()
-            .unwrap()
-            .get(handle)
-            .cloned()
-            .ok_or_else(|| format!("no file with handle {handle}"))
-    }
 }
+
+/// Every frame of every window, before its scripts: no File System Access pickers (WebView2 has them), so a page
+/// writes files only through the host (doc.rs), never one a page picker chose.
+pub const NO_FILE_PICKERS: &str =
+    "for (const k of ['showOpenFilePicker', 'showSaveFilePicker', 'showDirectoryPicker']) delete window[k];";
 
 /// The script that runs before each page's own: what the pages see as the host, and the desktop app's
 /// default look (Paper) until the user picks one (the pages' head scripts read it). `edition`: 'appstore' for the
-/// Mac App Store's, which the store updates (the pages never check), else 'direct'.
+/// Mac App Store's, which the store updates (the pages never check), else 'direct'. The values go in as JSON, and
+/// `__VO_HOST__` can't be replaced or changed by the page.
 pub fn init_script() -> String {
+    let host = serde_json::json!({
+        "platform": std::env::consts::OS, // windows, linux, macos
+        "version": VERSION,
+        "appVersion": option_env!("VO_VERSION").unwrap_or("dev"), // tools/current-tree-version.sh, from build.sh
+        "edition": if app_store() { "appstore" } else { "direct" },
+    });
     format!(
-        "window.__VO_HOST__ = Object.freeze({{ platform: '{}', version: {VERSION}, appVersion: '{}', edition: '{}' }});\n\
-         try {{ if (!localStorage.getItem('vibeoffice.look')) localStorage.setItem('vibeoffice.look', 'paper'); }} catch (e) {{}}",
-        std::env::consts::OS, // windows, linux, macos
-        option_env!("VO_VERSION").unwrap_or("dev"), // tools/current-tree-version.sh, from build.sh
-        if app_store() { "appstore" } else { "direct" }
+        "Object.defineProperty(window, '__VO_HOST__', {{ value: Object.freeze({host}), writable: false, configurable: false }});\n\
+         try {{ if (!localStorage.getItem('vibeoffice.look')) localStorage.setItem('vibeoffice.look', 'paper'); }} catch (e) {{}}"
     )
 }
 
@@ -160,13 +105,6 @@ fn app_store() -> bool {
 #[cfg(not(target_os = "macos"))]
 fn app_store() -> bool {
     false
-}
-
-/// The files the system asked us to open, once: the page that takes them opens them.
-#[tauri::command]
-pub fn host_launch_files(host: State<Host>) -> Vec<FileRef> {
-    let handles: Vec<usize> = host.launch.lock().unwrap().drain(..).collect();
-    handles.into_iter().map(|h| host.file_ref(h)).collect()
 }
 
 /// The UI scale (1 = 100 %).
@@ -201,104 +139,213 @@ pub fn host_set_ui_scale(app: AppHandle, host: State<Host>, scale: f64) -> Resul
     std::fs::write(&path, json).map_err(|e| describe(&path, e))
 }
 
-/// Opens one of the app's own pages in a new window (an app from the Start Center, as when the PWA is
-/// installed). Async: creating a window from a sync command deadlocks on Windows.
+/// At most this many windows are open at once (host_new_window).
+const MAX_WINDOWS: usize = 64;
+
+/// How an app's window starts: its address's query, which the page reads as `VO.launch` (public/common/suite.js).
+/// Nothing: the app's sample; `new`: blank; `template`: a template's id. A window with a document is made by
+/// doc.rs (`<app>/?doc`).
+#[derive(Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+pub struct Start {
+    #[serde(default)]
+    new: bool,
+    template: Option<String>,
+}
+
+/// A label for a new window of `page`: the page and a number never used before (`quire-3`), which the capabilities
+/// go by; refused when MAX_WINDOWS are open.
+pub fn new_label(app: &AppHandle, page: &str) -> Result<String, String> {
+    static NEXT: AtomicUsize = AtomicUsize::new(1);
+    if app.webview_windows().len() >= MAX_WINDOWS {
+        return Err(format!("{MAX_WINDOWS} windows are open: close one first"));
+    }
+    Ok(format!("{page}-{}", NEXT.fetch_add(1, Ordering::Relaxed)))
+}
+
+/// Opens one of the suite's pages in a window of its own: an app from the Start Center (as when the PWA is
+/// installed), the licences page from About. The page names it (`quire`, `ledger`, `lectern`, `licenses`) and how
+/// it starts; the address is made here, so a page picks no other file and no query of its own. The Start Center opens
+/// the apps, an app window a blank document or a template of its own app, and any window the licences page
+/// (`new_label`). Async: creating a window from a sync command deadlocks on Windows.
 #[tauri::command]
 pub async fn host_new_window(
     app: AppHandle,
     window: WebviewWindow,
-    url: String,
+    page: String,
+    start: Option<Start>,
 ) -> Result<(), String> {
-    static NEXT: AtomicUsize = AtomicUsize::new(1);
-    let url = Url::parse(&url).map_err(|e| format!("{url}: {e}"))?;
-    let here = window.url().map_err(|e| e.to_string())?;
-    // scheme, host and port: Url::origin() is opaque for tauri://localhost, and opaque origins never match
-    let site = |u: &Url| {
-        (
-            u.scheme().to_string(),
-            u.host_str().map(str::to_string),
-            u.port_or_known_default(),
-        )
-    };
-    if site(&url) != site(&here) {
-        return Err(format!("not one of the app's pages: {url}"));
+    let path = page_path(&page, &start.unwrap_or_default())?;
+    let caller = window.label().rsplit_once('-').map_or("main", |(p, _)| p);
+    if !(caller == "main" || caller == page || page == "licenses") {
+        return Err(format!("{caller} doesn't open {page}"));
     }
-    let mut path = url.path().trim_start_matches('/').to_string();
-    if let Some(q) = url.query() {
-        path = format!("{path}?{q}");
-    }
-    let label = format!("doc-{}", NEXT.fetch_add(1, Ordering::Relaxed));
+    let label = new_label(&app, &page)?;
     crate::open_window(&app, &label, WebviewUrl::App(PathBuf::from(path)))
         .map_err(|e| e.to_string())?;
     Ok(())
 }
 
-/// File ▸ Exit in an app window: closes it (true). The Start Center's window ("main") stays (false).
+/// The address of `page` (from the app's root) started as `start`, or why there is none.
+fn page_path(page: &str, start: &Start) -> Result<String, String> {
+    let ways = usize::from(start.new) + usize::from(start.template.is_some());
+    if ways > 1 {
+        return Err(format!("{page}: more than one way to start"));
+    }
+    match page {
+        "quire" | "ledger" | "lectern" => {}
+        "licenses" if ways == 0 => return Ok("oss-licenses.html".into()),
+        _ => return Err(format!("not one of the suite's pages: {page}")),
+    }
+    // a template's id (templates.json)
+    let id = |v: &str| {
+        (1..=40).contains(&v.len())
+            && v.bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+    };
+    let mut url = Url::parse("tauri://localhost/").expect("a URL");
+    url.set_path(&format!("{page}/"));
+    let mut query = url.query_pairs_mut();
+    if start.new {
+        query.append_key_only("new");
+    }
+    if let Some(t) = &start.template {
+        if !id(t) {
+            return Err(format!("not a template: {t}"));
+        }
+        query.append_pair("template", t);
+    }
+    drop(query);
+    Ok(match url.query() {
+        Some(q) if !q.is_empty() => format!("{page}/?{q}"),
+        _ => format!("{page}/"),
+    })
+}
+
+/// File ▸ Exit in an app window, or its page's answer to the close button (`vo-close`), once its document is
+/// saved or given up: closes it (true). The Start Center's window ("main") stays (false).
 #[tauri::command]
 pub fn host_close_window(window: WebviewWindow) -> Result<bool, String> {
     if window.label() == "main" {
         return Ok(false);
     }
-    window.close().map_err(|e| e.to_string())?;
+    crate::doc::allow_close(&window);
     Ok(true)
 }
 
-/// Opens one of VibeOffice's own web addresses in the system's browser (the update page: VO.host.openUrl).
+/// Opens the update page in the system's browser (the Start Center's Update: VO.host.openUrl).
 #[tauri::command]
-pub fn host_open_url(url: String) -> Result<(), String> {
+pub fn host_open_url(window: WebviewWindow, url: String) -> Result<(), String> {
     let parsed = Url::parse(&url).map_err(|e| format!("{url}: {e}"))?;
-    if !is_ours(&parsed) {
-        return Err(format!("not one of VibeOffice's addresses: {url}"));
+    if !may_open(window.label(), &parsed) {
+        return Err(format!("not opened: {url}"));
     }
     open_external(&parsed)
 }
 
-/// The addresses the app itself sends to the browser: its site and its source.
+/// The addresses the app sends to the browser, the whole list: the update page and our GitHub. Https on the
+/// default port, no user name or password; a path ends at a `/` (so `/updaterx/` isn't the update page).
 pub fn is_ours(url: &Url) -> bool {
+    let under = |path: &str| url.path() == path || url.path().starts_with(&format!("{path}/"));
     url.scheme() == "https"
         && url.port().is_none()
+        && url.username().is_empty()
+        && url.password().is_none()
         && match url.host_str() {
-            Some("vibeoffice.work") => true,
-            Some("github.com") => {
-                url.path() == "/tcchen2026/VibeOffice"
-                    || url.path().starts_with("/tcchen2026/VibeOffice/")
-            }
+            Some("vibeoffice.work") => url.path().starts_with("/updater/"),
+            Some("github.com") => under("/tcchen2026/VibeOffice"),
             _ => false,
         }
 }
 
-/// Whether a page may send `url` to the browser: our own addresses from any page, and any web address from
-/// the licences page, whose links go to the works it credits. Nothing else: a document's hyperlinks never
-/// navigate (the pages show them in a dialog), so anything else leaving the app is unexpected.
-pub fn may_open(page: Option<&Url>, url: &Url) -> bool {
-    let licences = page.is_some_and(|p| !is_external(p) && p.path() == "/oss-licenses.html");
-    is_ours(url) || (licences && matches!(url.scheme(), "http" | "https"))
-}
-
-impl Host {
-    /// A window's page starts loading: the page `leave` judges its links by.
-    pub fn page_started(&self, label: &str, url: &Url) {
-        self.pages.lock().unwrap().insert(label.into(), url.clone());
-    }
+/// Whether a window may send `url` to the browser: the Start Center, an address on the list (`is_ours`). The
+/// other pages show an address instead, to copy: a document's hyperlinks (ui.linkDialog), the licences page's
+/// links (oss-licenses.js).
+pub fn may_open(label: &str, url: &Url) -> bool {
+    label == "main" && is_ours(url)
 }
 
 /// A window wants to leave the app for `url` (a link, a new window): it goes to the browser if `may_open`
 /// lets it, otherwise nowhere.
-pub fn leave(app: &AppHandle, label: &str, url: &Url) {
-    let page = app
-        .state::<Host>()
-        .pages
-        .lock()
-        .unwrap()
-        .get(label)
-        .cloned();
-    if may_open(page.as_ref(), url) {
+pub fn leave(label: &str, url: &Url) {
+    if may_open(label, url) {
         let _ = open_external(url);
     } else {
-        eprintln!(
-            "not opened: {url} (from {})",
-            page.map_or_else(String::new, |p| p.to_string())
-        );
+        eprintln!("not opened: {url} (from {label})");
+    }
+}
+
+/// What a window may load (on_navigation, `Host::may_load`): one page, the one Rust opened it with. Before it,
+/// about:blank (where Windows and macOS windows start: `net::guard`) and, with `probe`, the network probe's
+/// `data:` page; then the page itself, again when it reloads (the Start Center's language), with any fragment (its
+/// `#create`), and its own `blob:` addresses (on Linux a save starts as one). Other pages, the page with another
+/// query and every other scheme are refused.
+pub struct Page {
+    url: Url,
+    probe: bool,
+    arrived: bool,
+}
+
+impl Page {
+    pub fn new(url: Url, probe: bool) -> Self {
+        Page {
+            url,
+            probe,
+            arrived: false,
+        }
+    }
+
+    /// Whether the window may go to `url` now; the page's first load marks it arrived.
+    fn admits(&mut self, url: &Url) -> bool {
+        // scheme, host and port (Url::origin() is opaque for tauri://, and opaque origins never match), and
+        // the path, an empty one being "/" (tauri://localhost)
+        let site = |u: &Url| {
+            (
+                u.scheme().to_string(),
+                u.host_str().map(str::to_string),
+                u.port(),
+            )
+        };
+        let path = |u: &Url| {
+            if u.path().is_empty() {
+                "/".to_string()
+            } else {
+                u.path().to_string()
+            }
+        };
+        match url.scheme() {
+            "about" => !self.arrived && url.as_str() == "about:blank",
+            "data" => !self.arrived && self.probe,
+            "blob" => Url::parse(url.path()).is_ok_and(|inner| site(&inner) == site(&self.url)),
+            _ => {
+                let here = site(url) == site(&self.url)
+                    && path(url) == path(&self.url)
+                    && url.query() == self.url.query();
+                self.arrived |= here;
+                here
+            }
+        }
+    }
+}
+
+impl Host {
+    /// A window is made for `page` (open_window): from now on it loads only that (`Page`).
+    pub fn expect(&self, label: &str, page: Page) {
+        self.pages.lock().unwrap().insert(label.into(), page);
+    }
+
+    /// Whether the window `label` may go to `url` (an address inside the app; on_navigation).
+    pub fn may_load(&self, label: &str, url: &Url) -> bool {
+        let ok = self
+            .pages
+            .lock()
+            .unwrap()
+            .get_mut(label)
+            .is_some_and(|page| page.admits(url));
+        if !ok {
+            eprintln!("not loaded: {url} (in {label})");
+        }
+        ok
     }
 }
 
@@ -372,130 +419,6 @@ pub(crate) fn system_open(url: &str) -> Result<(), String> {
     Ok(())
 }
 
-/* ------------------------------------------------------------ saving, for now: the Downloads folder */
-
-/// The file types the apps save and export: the only ones a download may write.
-const SAVE_TYPES: &[&str] = &[
-    "docx", "docm", "dotx", "dotm", "rtf", "htm", "html", "txt", "md", "zip", "xlsx", "xlsm",
-    "xltx", "xltm", "csv", "tsv", "prn", "xml", "pptx", "pptm", "ppsx", "ppsm", "potx", "potm",
-    "pdf", "png",
-];
-
-/// Where a download goes, or None to refuse it: only the pages' own files (blob: and data: URLs, made by
-/// L.saveFile), only SAVE_TYPES, always straight in `dir` (the Downloads folder) under the bare file name the web
-/// view suggests (it already numbers a taken name: "name (1).ext"), never over an existing file (then " (n)").
-pub fn download_destination(url: &Url, suggested: &Path, dir: &Path) -> Option<PathBuf> {
-    if !matches!(url.scheme(), "blob" | "data") {
-        return None;
-    }
-    let name = suggested.file_name()?.to_str()?.trim();
-    let (stem, ext) = name.rsplit_once('.')?;
-    let ext = ext.to_ascii_lowercase();
-    if stem.trim().is_empty()
-        || !SAVE_TYPES.contains(&ext.as_str())
-        || name.contains(['/', '\\', ':'])
-    {
-        return None;
-    }
-    let mut path = dir.join(format!("{stem}.{ext}"));
-    let mut n = 2;
-    while path.symlink_metadata().is_ok() {
-        path = dir.join(format!("{stem} ({n}).{ext}"));
-        n += 1;
-    }
-    Some(path)
-}
-
-impl Host {
-    /// A window's save finished: remember the file (for Browse) and tell that window, with the name the file
-    /// really got. Nothing about the file comes from the page.
-    pub fn downloaded(&self, label: &str, path: Option<PathBuf>, ok: bool) -> String {
-        let name = path
-            .as_deref()
-            .and_then(Path::file_name)
-            .map(|n| n.to_string_lossy().into_owned());
-        match (&path, ok) {
-            (Some(p), true) => {
-                self.downloads
-                    .lock()
-                    .unwrap()
-                    .insert(label.to_string(), p.clone());
-            }
-            _ => {
-                self.downloads.lock().unwrap().remove(label);
-            }
-        }
-        let detail = serde_json::json!({ "ok": ok && name.is_some(), "name": name });
-        format!("window.dispatchEvent(new CustomEvent('vo-download', {{ detail: {detail} }}));")
-    }
-}
-
-/// Browse: the Downloads folder, with this window's last saved file selected where the system can (Windows).
-/// Takes nothing from the page: the folder is the system's, the file is the one this app wrote.
-#[tauri::command]
-pub fn host_show_downloads(
-    app: AppHandle,
-    window: WebviewWindow,
-    host: State<Host>,
-) -> Result<(), String> {
-    let dir = app.path().download_dir().map_err(|e| e.to_string())?;
-    let last = host
-        .downloads
-        .lock()
-        .unwrap()
-        .get(window.label())
-        .cloned()
-        .filter(|p| p.parent() == Some(dir.as_path()) && p.is_file());
-    reveal(&dir, last.as_deref())
-}
-
-#[cfg(windows)]
-fn reveal(dir: &Path, file: Option<&Path>) -> Result<(), String> {
-    if let Some(file) = file {
-        use std::os::windows::process::CommandExt;
-        // a file name cannot hold a quote on Windows, so this cannot break out of the argument
-        let mut child = std::process::Command::new("explorer.exe")
-            .raw_arg(format!("/select,\"{}\"", file.display()))
-            .spawn()
-            .map_err(|e| format!("explorer: {e}"))?;
-        std::thread::spawn(move || child.wait());
-        return Ok(());
-    }
-    system_open(&dir.to_string_lossy())
-}
-
-/// macOS: Finder, with the file selected, or the folder opened
-#[cfg(target_os = "macos")]
-fn reveal(dir: &Path, file: Option<&Path>) -> Result<(), String> {
-    use objc2_app_kit::NSWorkspace;
-    use objc2_foundation::{NSArray, NSString, NSURL};
-    let url = |p: &Path| NSURL::fileURLWithPath(&NSString::from_str(&p.to_string_lossy()));
-    let workspace = NSWorkspace::sharedWorkspace();
-    if let Some(file) = file {
-        workspace.activateFileViewerSelectingURLs(&NSArray::from_retained_slice(&[url(file)]));
-        return Ok(());
-    }
-    if workspace.openURL(&url(dir)) {
-        Ok(())
-    } else {
-        Err(format!("could not open {}", dir.display()))
-    }
-}
-
-#[cfg(all(unix, not(target_os = "macos")))]
-fn reveal(dir: &Path, _file: Option<&Path>) -> Result<(), String> {
-    system_open(&dir.to_string_lossy())
-}
-
-/// A file's bytes (an ArrayBuffer in the page).
-#[tauri::command]
-pub fn host_read(host: State<Host>, handle: usize) -> Result<Response, String> {
-    let path = host.path(handle)?;
-    std::fs::read(&path)
-        .map(Response::new)
-        .map_err(|e| describe(&path, e))
-}
-
 fn describe(path: &Path, e: std::io::Error) -> String {
     format!("{}: {e}", path.display())
 }
@@ -505,130 +428,146 @@ mod tests {
     use super::*;
 
     #[test]
-    fn only_our_own_addresses_leave_for_the_browser_but_the_licences_page_credits_others() {
+    fn only_the_start_center_sends_the_update_page_and_our_github_to_the_browser() {
         let u = |s: &str| Url::parse(s).unwrap();
         for ours in [
             "https://vibeoffice.work/updater/?from_version=v2026.10.16-abc123&current_platform=windows",
+            "https://vibeoffice.work/updater/",
             "https://github.com/tcchen2026/VibeOffice",
             "https://github.com/tcchen2026/VibeOffice/issues",
         ] {
-            assert!(is_ours(&u(ours)), "{ours}");
+            assert!(may_open("main", &u(ours)), "{ours}");
+            for other_window in ["quire-1", "ledger-2", "lectern-3", "licenses-4", "doc-1"] {
+                assert!(!may_open(other_window, &u(ours)), "{ours} from {other_window}");
+            }
         }
         for other in [
+            "https://vibeoffice.work/",
+            "https://vibeoffice.work/quire/",
+            "https://vibeoffice.work/updater",
+            "https://vibeoffice.work/updaterx/",
+            "https://user:pass@vibeoffice.work/updater/",
+            "https://user@github.com/tcchen2026/VibeOffice",
             "https://example.com/",
-            "http://vibeoffice.work/",
-            "https://vibeoffice.work:8443/",
-            "https://www.vibeoffice.work/",
+            "http://vibeoffice.work/updater/",
+            "https://vibeoffice.work:8443/updater/",
+            "https://www.vibeoffice.work/updater/",
+            "https://vibeoffice.work.example.com/updater/",
             "https://github.com/tcchen2026/VibeOfficeEvil",
             "https://github.com/someone/else",
+            "https://github.com/tauri-apps/tauri",
             "mailto:someone@example.com",
             "file:///etc/passwd",
         ] {
-            assert!(!is_ours(&u(other)), "{other}");
+            assert!(!may_open("main", &u(other)), "{other}");
         }
-        let app = u("http://tauri.localhost/quire/");
-        let licences = u("http://tauri.localhost/oss-licenses.html");
-        let crate_home = u("https://github.com/tauri-apps/tauri");
-        assert!(!may_open(Some(&app), &crate_home), "not from an app's page");
-        assert!(!may_open(None, &crate_home), "nor from a page not known");
-        assert!(
-            may_open(Some(&licences), &crate_home),
-            "from the licences page"
-        );
-        assert!(may_open(Some(&licences), &u("http://wordlist.aspell.net/")));
-        assert!(!may_open(Some(&licences), &u("mailto:someone@example.com")));
-        assert!(
-            !may_open(
-                Some(&u("https://example.com/oss-licenses.html")),
-                &crate_home
+    }
+
+    #[test]
+    fn a_window_loads_its_own_page_once_and_nothing_else() {
+        let u = |s: &str| Url::parse(s).unwrap();
+        let quire = || Page::new(u("http://tauri.localhost/quire/?new"), false);
+        // Windows and macOS: about:blank, then the page, then a fragment of it or a save's blob
+        let mut p = quire();
+        for (url, ok) in [
+            ("about:blank", true),
+            ("http://tauri.localhost/ledger/", false),
+            ("http://tauri.localhost/quire/", false),
+            ("http://tauri.localhost/quire/?new", true),
+            ("about:blank", false),
+            ("http://tauri.localhost/quire/?new", true),
+            ("http://tauri.localhost/quire/?new#top", true),
+            ("http://tauri.localhost/quire/#top", false),
+            ("http://tauri.localhost/quire/?recent=x#top", false),
+            (
+                "blob:http://tauri.localhost/0c5d0d1e-1f0e-4a2b-9c33-5d8f0a6e7b21",
+                true,
             ),
-            "another site's page of that name"
-        );
-        assert!(may_open(
-            Some(&app),
-            &u("https://github.com/tcchen2026/VibeOffice")
-        ));
+            (
+                "blob:https://example.com/0c5d0d1e-1f0e-4a2b-9c33-5d8f0a6e7b21",
+                false,
+            ),
+            ("data:text/html,<script>1</script>", false),
+            ("http://tauri.localhost/oss-licenses.html", false),
+            ("http://tauri.localhost/oss-licenses.html#x", false),
+            ("file:///etc/passwd", false),
+            ("tauri://localhost/quire/?new", false),
+        ] {
+            assert_eq!(p.admits(&u(url)), ok, "{url}");
+        }
+        // the probe's data: page comes before the page, only when probing
+        let mut probing = Page::new(u("http://tauri.localhost/"), true);
+        assert!(probing.admits(&u("data:text/html,probe")));
+        assert!(probing.admits(&u("http://tauri.localhost/")));
+        assert!(!probing.admits(&u("data:text/html,probe")));
+        assert!(!quire().admits(&u("data:text/html,probe")));
+        // Linux: the Start Center at tauri://localhost, with or without its "/"
+        assert!(Page::new(u("tauri://localhost/"), false).admits(&u("tauri://localhost")));
+        assert!(Page::new(u("tauri://localhost/"), false).admits(&u("tauri://localhost/")));
+        // the Start Center reloads when its language changes, with or without its #create
+        let mut start = Page::new(u("tauri://localhost/"), false);
+        for url in [
+            "tauri://localhost",
+            "tauri://localhost#create",
+            "tauri://localhost/#create",
+            "tauri://localhost",
+        ] {
+            assert!(start.admits(&u(url)), "{url}");
+        }
     }
 
     #[test]
-    fn launch_files_are_the_files_among_the_arguments_relative_to_the_starts_folder() {
-        let dir = std::env::temp_dir().join(format!("vo-launch-{}", std::process::id()));
-        std::fs::create_dir_all(dir.join("sub")).unwrap();
-        std::fs::write(dir.join("sub").join("Budget.csv"), "a,b").unwrap();
-        let host = Host::default();
-        let other = std::env::temp_dir();
-        assert!(host.add_launch_files(
-            ["-choose-defaults", "sub/Budget.csv", "missing.docx", "sub"],
-            &dir
-        ));
-        assert!(!host.add_launch_files(["-pin-taskbar"], &other));
-        let absolute = dir.join("sub").join("Budget.csv");
-        assert!(
-            host.add_launch_files([absolute.clone()], &other),
-            "an absolute path stays as it is"
-        );
-        let launched: Vec<PathBuf> = host
-            .launch
-            .lock()
-            .unwrap()
-            .iter()
-            .map(|&h| host.path(h).unwrap())
-            .collect();
-        assert_eq!(launched, [absolute.clone(), absolute]);
-        std::fs::remove_dir_all(&dir).unwrap();
-    }
-
-    fn dest(url: &str, name: &str, dir: &Path) -> Option<PathBuf> {
-        download_destination(&Url::parse(url).unwrap(), Path::new(name), dir)
-    }
-
-    #[test]
-    fn downloads_only_the_pages_own_files_of_the_types_we_save() {
-        let dir = std::env::temp_dir().join(format!("vo-dl-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
-        let blob = "blob:http://tauri.localhost/0b6c";
-        assert_eq!(
-            dest(blob, "/x/y/Report.docx", &dir),
-            Some(dir.join("Report.docx"))
-        );
-        assert_eq!(
-            dest("data:application/pdf;base64,AA", "Deck.PDF", &dir),
-            Some(dir.join("Deck.pdf"))
-        );
-        assert_eq!(
-            dest("https://example.com/a.docx", "a.docx", &dir),
-            None,
-            "not a page's own file"
-        );
-        assert_eq!(dest(blob, "run.exe", &dir), None, "not a type we save");
-        assert_eq!(dest(blob, "noext", &dir), None);
-        assert_eq!(dest(blob, ".docx", &dir), None);
-        std::fs::write(dir.join("Book.xlsx"), b"x").unwrap();
-        std::fs::write(dir.join("Book (2).xlsx"), b"x").unwrap();
-        assert_eq!(
-            dest(blob, "Book.xlsx", &dir),
-            Some(dir.join("Book (3).xlsx")),
-            "never over an existing file"
-        );
-        std::fs::remove_dir_all(&dir).unwrap();
+    fn a_new_window_gets_the_address_made_here_from_its_page_and_how_it_starts() {
+        let start = |json: &str| serde_json::from_str::<Start>(json);
+        let path = |page: &str, json: &str| page_path(page, &start(json).unwrap());
+        // what the pages ask for (VO.url): the address VO.launch reads
+        for (page, json, want) in [
+            ("quire", "{}", "quire/"),
+            ("quire", r#"{"new":true}"#, "quire/?new"),
+            (
+                "ledger",
+                r#"{"template":"invoice-2"}"#,
+                "ledger/?template=invoice-2",
+            ),
+            ("licenses", "{}", "oss-licenses.html"),
+        ] {
+            assert_eq!(path(page, json).as_deref(), Ok(want), "{page} {json}");
+        }
+        for (page, json) in [
+            ("", "{}"),
+            ("start", "{}"),
+            ("index.html", "{}"),
+            ("quire/../ledger", "{}"),
+            ("licenses", r#"{"new":true}"#),
+            ("quire", r#"{"new":true,"template":"letter"}"#),
+            ("quire", r#"{"template":"../x"}"#),
+            ("quire", r#"{"template":"Letter"}"#),
+            ("quire", r#"{"template":""}"#),
+            ("quire", r#"{"template":"a&recent=x"}"#),
+        ] {
+            assert!(path(page, json).is_err(), "{page} {json}");
+        }
+        for other in [
+            r#"{"lang":"qps"}"#,
+            r#"{"recent":"quire:a.docx"}"#,
+            r#"{"open":"x"}"#,
+            r#"{"doc":true}"#,
+        ] {
+            assert!(start(other).is_err(), "no other field: {other}");
+        }
     }
 
     #[test]
-    fn the_notice_names_only_the_file_written() {
-        let host = Host::default();
-        let js = host.downloaded(
-            "doc-1",
-            Some(PathBuf::from("/home/u/Downloads/a\"b.docx")),
-            true,
-        );
-        assert!(js.contains(r#""name":"a\"b.docx""#), "{js}");
-        assert!(!js.contains("/home/u"), "no path to the page");
-        assert_eq!(
-            host.downloads.lock().unwrap().get("doc-1"),
-            Some(&PathBuf::from("/home/u/Downloads/a\"b.docx"))
-        );
-        let js = host.downloaded("doc-1", None, false);
-        assert!(js.contains(r#""ok":false"#));
-        assert!(host.downloads.lock().unwrap().get("doc-1").is_none());
+    fn the_init_script_holds_the_host_as_json() {
+        let script = init_script();
+        let json = script
+            .split_once("value: Object.freeze(")
+            .and_then(|(_, rest)| rest.split_once("), writable"))
+            .map(|(json, _)| json)
+            .unwrap();
+        let host: serde_json::Value = serde_json::from_str(json).unwrap();
+        assert_eq!(host["version"], VERSION);
+        assert_eq!(host["edition"], "direct");
+        assert!(script.contains("writable: false, configurable: false"));
     }
 }

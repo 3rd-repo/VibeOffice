@@ -67,7 +67,9 @@
    *  window.__VO_HOST__ and answers the host_* commands (desktop/src/host.rs). Pages use VO.host, never
    *  Tauri's or the system's file APIs directly. */
   const native = window.__VO_HOST__ && window.__TAURI_INTERNALS__ ? window.__VO_HOST__ : null;
-  const call = (cmd, args) => window.__TAURI_INTERNALS__.invoke(cmd, args);
+  const call = (cmd, args, options) => window.__TAURI_INTERNALS__.invoke(cmd, args, options);
+  /** bytes for a command's body (raw, never JSON) */
+  const raw = async (blob) => new Uint8Array(await blob.arrayBuffer());
   VO.host = {
     kind: native ? 'desktop' : 'web',
     platform: native ? native.platform : 'web',
@@ -85,27 +87,67 @@
     async uiScale() { return native ? call('host_ui_scale') : null; },
     async setUiScale(scale) { if (native) return call('host_set_ui_scale', { scale: +scale }); },
     /** open one of the suite's pages in a window of its own: the desktop app makes a full window (host and
-     *  all); the web opens a window or tab, false if the browser blocked it */
+     *  all), told only the page (quire, ledger, lectern, licenses) and how it starts (VO.launch), never an
+     *  address; the web opens a window or tab, false if the browser blocked it */
     async newWindow(url) {
-      if (native) { await call('host_new_window', { url: new URL(url, location.href).href }); return true; }
+      if (native) {
+        const u = new URL(url, location.href), path = u.pathname.slice(new URL(BASE).pathname.length);
+        const page = path === 'oss-licenses.html' ? 'licenses' : path.replace(/\/(index\.html)?$/, '');
+        const start = {};
+        for (const [k, v] of u.searchParams) start[k] = k === 'new' || k === 'draft' ? true : v;
+        if (start.recent) await VO.host.openRecent(start.recent, start.draft);   // a Recent Files card
+        else await call('host_new_window', { page, start });
+        return true;
+      }
       return !!window.open(url, '_blank');
     },
+    /* The desktop app: a window holds one document, and only the native side gives a window its file
+       (desktop/src/doc.rs). A page names no file: it asks for the system's Open dialog, a Recent Files entry
+       by its key, or a new window for bytes it has. */
+    /** the system's Open dialog: each file chosen opens in a window of its own (or comes forward in the one that
+     *  has it); here: this window's untouched document gives way to the first. Whether one opened here */
+    async open(here) {
+      const labels = { title: VO.t('Open'), all: VO.t('All files VibeOffice opens'), quire: VO.t('Documents'), ledger: VO.t('Spreadsheets'), lectern: VO.t('Presentations') };
+      return call('host_open', { here: !!here, labels });
+    },
+    /** a Recent Files entry (draft: its unsaved version), as open() does */
+    async openRecent(key, draft, here) { return call('host_open_recent', { key, draft: !!draft, here: !!here }); },
+    /** a document as bytes in a new window: a file dropped on a page, or one a page made (made: never saved) */
+    async newDocument(blob, name, made) {
+      const headers = { 'X-Name': encodeURIComponent(name) };
+      if (made) headers['X-Made'] = '1';
+      return call('host_new_document', await raw(blob), { headers });
+    },
+    /** this window's document: { info: { fileName, name, saved, draft, lossState, bound }, file: File }, or null
+     *  (blank, a template, the sample) */
+    async document() {
+      const info = native && await call('host_document');
+      if (!info) return null;
+      return { info, file: new File([await call('host_document_bytes')], info.fileName) };
+    },
+    /** the Window menu: this app's windows [{ id, title, current }], and one brought forward */
+    async windows() { return native ? call('host_windows') : []; },
+    async focus(id) { return call('host_focus', { id }); },
+    /* Saving (common/core.js, L.file): the window's own file, its name, whether it may be changed */
+    file: { bound: false, readOnly: false, name: '' },
+    /** Save: bytes into the window's own file (replace: even though another program changed it) */
+    async save(bytes, replace) { return call('host_save', bytes, replace ? { headers: { 'X-Replace': '1' } } : undefined); },
+    /** the Save dialog ({ purpose, types: [{ id, label }], type, name, title }): { name, type } or null */
+    async choose(args) { return call('host_choose', args); },
+    /** bytes into what the Save dialog picked: { name, type, bound } */
+    async writeChosen(bytes) { return call('host_write_chosen', bytes); },
+    async cancelChoice() { return call('host_cancel_choice'); },
+    /** File ▸ Versions...: the versions of this window's file its saves replaced [{ id, time, size }], and one
+     *  opened in a new window */
+    async versions() { return native ? call('host_versions') : []; },
+    async openVersion(id) { return call('host_open_version', { id }); },
     /** close this window if it is an app window the suite opened; false for the Start Center's (and on the web) */
     async closeWindow() { return native ? call('host_close_window') : false; },
-    /** Browse after a save: the Downloads folder, with this window's last saved file selected (desktop) */
-    async showDownloads() { if (native) return call('host_show_downloads'); },
-    /** fn(files) for the files the system asks us to open (Open with, a double-click on an associated
-     *  file, the installed PWA's file handlers); the page that calls this takes them */
+    /** fn(files) for the files the system asks us to open: the installed PWA's file handlers (Open with, a
+     *  double-click on an associated file); the page that calls this takes them. The desktop app opens those
+     *  itself, each in a window of its own */
     onFiles(fn) {
-      if (native) {
-        // at start, and again when another start of the app hands this one its files (vo-files: Windows)
-        const take = () => call('host_launch_files').then(async (list) => {
-          if (!list.length) return;
-          fn(await Promise.all(list.map(async (f) => new File([await call('host_read', { handle: f.handle })], f.name))));
-        }).catch((e) => console.error('host:', e));
-        take();
-        window.addEventListener('vo-files', take);
-      } else if ('launchQueue' in window) {
+      if (!native && 'launchQueue' in window) {
         window.launchQueue.setConsumer(async (params) => {
           if (params.files && params.files.length) fn(await Promise.all(params.files.map((h) => h.getFile())));
         });
@@ -177,15 +219,6 @@
     forget() { localFonts = []; try { localStorage.removeItem(LOCAL_FONTS); } catch (e) { /* storage off */ } },
   };
 
-  /* Saving, for now: in the desktop app a save is a download into the Downloads folder; the native side says
-     which file it wrote (the name only), and the app shows it with Browse (docs/desktop.md, Saving) */
-  if (native) window.addEventListener('vo-download', (e) => {
-    const ui = window.L && window.L.ui, d = e.detail || {};
-    if (!ui) return;
-    if (d.ok) ui.toast(VO.t('Saved to Downloads folder: {0}', d.name), 8000, { label: 'Browse', run: () => VO.host.showDownloads().catch((err) => console.error('browse:', err)) });
-    else ui.toast('The file could not be saved to the Downloads folder.', 8000);
-  });
-
   /* ------------------------------------------------------------ service worker */
   /* The published site, https://vibeoffice.work/, is cached for offline use, one version per page (sw.js); the
      worker is registered there and on 127.0.0.1 (any port: a published copy tried locally; the dev server's own
@@ -205,6 +238,12 @@
       navigator.serviceWorker.getRegistrations().then((all) => all.forEach((r) => r.unregister())).catch(() => {});
     }
   }
+
+  /* Installing is offered only on the published site and on 127.0.0.1 (trying it locally): anywhere else (preview
+     deployments, a copy) the browser's own install prompt is cancelled, and the Start Center shows no Install button
+     (start.js) */
+  VO.offersInstall = location.origin === 'https://vibeoffice.work' || location.hostname === '127.0.0.1';
+  if (!VO.offersInstall) window.addEventListener('beforeinstallprompt', (e) => e.preventDefault());
 
   /* ------------------------------------------------------------ IndexedDB */
   let dbp = null;
@@ -293,13 +332,22 @@
     navigator.storage.persisted().then((yes) => yes || navigator.storage.persist()).catch(() => {});
   };
   VO.recent = {
-    /** newest first: { key, app, name, size, time, file: Blob|null (opened or saved), thumb: Blob|null,
-     *  draft: { file: Blob, name, time } | null (unsaved changes) }; a never-saved document has only a draft */
+    /** newest first: { key, app, name, size, time, saved (it has a file), file: Blob|null (opened or saved),
+     *  thumb: Blob|null, draft: { file: Blob, name, time } | null (unsaved changes) }; a never-saved document has
+     *  only a draft. The desktop app's entries have no file or thumb, and say open (in a window now) and here (in
+     *  this one) */
     async list() {
+      if (native) return call('host_recent');
       const all = (await tx('recent', 'readonly', (s) => s.getAll())) || [];
+      for (const e of all) e.saved = !!e.file;
       return all.sort((a, b) => b.time - a.time);
     },
     get: (key) => tx('recent', 'readonly', (s) => s.get(key)),
+    /** an entry's picture (a Blob), or null */
+    async preview(e) {
+      if (!native) return e.thumb || null;
+      return e.preview ? new Blob([await call('host_recent_preview', { key: e.key })], { type: 'image/jpeg' }) : null;
+    },
     /** the list as last read (for menus, which are built synchronously) */
     cache: [],
     refresh: (() => { let t = 0; return () => { clearTimeout(t); t = setTimeout(() => VO.recent.list().then((l) => { VO.recent.cache = l; for (const fn of listeners) if (fn.cacheOnly) fn(); }, () => {}), 30); }; })(),
@@ -328,6 +376,7 @@
     },
     /** throw the unsaved version away; a document that was never saved leaves the list */
     async discardDraft(key) {
+      if (native) return call('host_discard_draft', { key });
       const e = await VO.recent.get(key);
       if (!e) return;
       if (!e.file) await tx('recent', 'readwrite', (s) => s.delete(key));
@@ -341,16 +390,23 @@
       await tx('recent', 'readwrite', (s) => s.put(e));
       changed();
     },
-    async remove(key) { await tx('recent', 'readwrite', (s) => s.delete(key)); changed(); },
-    async clear() { await tx('recent', 'readwrite', (s) => s.clear()); changed(); },
+    async remove(key) { if (native) return call('host_recent_remove', { key }); await tx('recent', 'readwrite', (s) => s.delete(key)); changed(); },
+    async clear() { if (native) return call('host_recent_clear'); await tx('recent', 'readwrite', (s) => s.clear()); changed(); },
   };
+  /* the desktop app keeps Recent Files itself (~/.vibeoffice, desktop/src/store.rs) and says when they change; a
+     window's own entry changes only through its document (the draft, the preview), never by a key */
+  if (native) window.addEventListener('vo-recent', notify);
+  /** whether an entry's document is open (in the desktop app: in any window; on the web: in this page) */
+  const isOpen = (e) => (native ? e.open : openKeys.has(e.key));
 
   /* ------------------------------------------------------------ handing files to apps */
   /** where an app page opens: a new window in the desktop app or when installed (the start page stays, as in
-   *  LibreOffice), else this tab */
+   *  LibreOffice), else this tab. The desktop app's windows each keep their one page, so there a window that
+   *  can't be opened is an error for the caller to show, not a page change */
   VO.go = async (url) => {
+    if (VO.host.kind === 'desktop') return VO.host.newWindow(url);
     const standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches;
-    try { if ((VO.host.kind === 'desktop' || standalone) && await VO.host.newWindow(url)) return; } catch (e) { console.error('new window:', e); }
+    try { if (standalone && await VO.host.newWindow(url)) return; } catch (e) { console.error('new window:', e); }
     location.href = url;
   };
   /** File ▸ Exit, after the app has closed its documents: an app window the Start Center opened
@@ -360,25 +416,38 @@
     if (window.opener && !window.opener.closed) { window.close(); if (window.closed) return; }
     location.href = BASE;
   };
+  /* the desktop app: an app window's close button asks its page (vo-close), which runs its "Save changes?" question
+     (hooks.close) and closes the window itself; Cancel keeps it open. A page that never takes it in hand gets the
+     native side's own question after 10 s (desktop/src/doc.rs) */
+  let closing = false;
+  if (native) window.addEventListener('vo-close', async () => {
+    if (!current) { call('host_close_window').catch(() => {}); return; }   // no document here
+    call('host_closing').catch(() => {});
+    if (closing) return;
+    closing = true;
+    try { if (!current.hooks.close || await current.hooks.close()) await call('host_close_window'); } catch (e) { console.error('close:', e); } finally { closing = false; }
+  });
   /** open a file in the app made for it; false if no app opens this kind of file */
   VO.handoff = async (file) => {
     const app = VO.appFor(file.name);
     if (!app) return false;
+    if (native) { await VO.host.newDocument(file, file.name); return true; }   // a window for its bytes
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     const day = Date.now() - 86400000;
     await tx('handoff', 'readwrite', (s) => {
       s.put({ id, name: file.name, file, time: Date.now() });
       s.openCursor().onsuccess = (e) => { const c = e.target.result; if (!c) return; if (c.value.time < day) c.delete(); c.continue(); };
     });
-    VO.go(VO.url(app, { open: id }));
+    await VO.go(VO.url(app, { open: id }));
     return true;
   };
 
   /* ------------------------------------------------------------ the app side */
   const q = new URLSearchParams(location.search);
-  /** how this app page was opened: null (plain: show the sample), { new }, { template: id }, { open: id } or { recent: key } */
+  /** how this app page was opened: null (plain: show the sample), { new }, { template: id }, { open: id } or { recent: key };
+   *  the desktop app's { doc }: the window has a document (VO.host.document) */
   VO.launch = q.has('open') ? { open: q.get('open') } : q.has('recent') ? { recent: q.get('recent'), draft: q.has('draft') }
-    : q.has('template') ? { template: q.get('template') } : q.has('new') ? { new: true } : null;
+    : q.has('doc') && native ? { doc: true } : q.has('template') ? { template: q.get('template') } : q.has('new') ? { new: true } : null;
 
   let current = null;   // { app, hooks }
   /** an app is ready: open the file it was launched with, if any, then show the Document Recovery pane when
@@ -386,14 +455,18 @@
    *  hooks: open(file, { draft, name, saved }), thumb() -> a canvas (or image) of the first page, message(text),
    *  templates() -> [{ id, name }] (read by tools/templates.mjs); for autosave: snapshot(doc) -> Blob in the
    *  app's format, docInfo(doc) -> { name, draftName }, isDirty(doc), current() -> doc, autosave() -> false
-   *  when turned off; showRecovery() opens the Document Recovery pane */
+   *  when turned off; showRecovery() opens the Document Recovery pane. The desktop app's one document per window:
+   *  pristine() -> whether the document is an untouched blank (a file opened goes into this window, else into a
+   *  new one), close() -> false when the user cancels closing (the "Save changes?" question) */
   VO.attach = async (app, hooks) => {
     current = { app, hooks: hooks || {} };
     VO.recent.refresh();
+    readWindows();
     const l = VO.launch;
     if (l && !l.new) {
       if (history.replaceState) history.replaceState(null, '', location.pathname);   // a reload starts clean
-      if (l.open) {
+      if (l.doc) await takeDocument();
+      else if (l.open) {
         let rec = null;
         try {
           rec = await tx('handoff', 'readonly', (s) => s.get(l.open));
@@ -404,13 +477,60 @@
       } else if (l.recent) await VO.openRecent(l.recent, { draft: l.draft });
     }
     setTimeout(async () => {
-      const others = (await VO.recent.list()).filter((e) => e.app === app && e.draft && !openKeys.has(e.key));
+      const others = (await VO.recent.list()).filter((e) => e.app === app && e.draft && !isOpen(e));
       if (others.length && current.hooks.showRecovery) current.hooks.showRecovery();
     }, 700);
   };
   const asFile = (blob, name) => (blob instanceof File && blob.name === name ? blob : new File([blob], name, { type: blob.type }));
-  /** open a Recent Files entry in this app: its unsaved version when draft is true, else the saved file */
+  const say = (e) => (current && current.hooks.message || alert)(String(e && e.message || e));
+  /** the desktop app: open the document the native side gave this window (as it starts, or after open(here)) */
+  async function takeDocument() {
+    let d = null;
+    try { d = await VO.host.document(); } catch (e) { say(e); return; }
+    if (!d) return;
+    const i = d.info;
+    VO.host.file = { bound: i.bound, readOnly: i.readOnly, name: i.name };
+    await current.hooks.open(d.file, { draft: i.draft, name: i.name, saved: i.saved, lossState: i.lossState || undefined, made: !i.saved && !i.draft });
+  }
+  const pristine = () => !!(current && current.hooks.pristine && current.hooks.pristine());
+  /** File ▸ Open in the desktop app: the system's Open dialog; the first file takes this window when its document
+   *  is an untouched blank, the others open in windows of their own */
+  VO.openDialog = async () => {
+    try { if (await VO.host.open(pristine())) await takeDocument(); } catch (e) { say(e); }
+  };
+  /** whether a window holds one document (the desktop app, docs/desktop.md): the apps' New, Open and Close then
+   *  make or close windows, and their Window menus list windows (VO.windowItems) */
+  VO.oneDocument = !!native;
+  /** the desktop app keeps one document per window: a file dropped on (or handed to) a window whose document isn't
+   *  an untouched blank opens in a new window instead; true when it went there */
+  VO.elsewhere = async (file) => {
+    if (!native || !current || pristine()) return false;
+    await VO.host.newDocument(file, file.name);
+    return true;
+  };
+  /** the Window menu in the desktop app: this app's windows ({ label, run } items for L.ui menus), as last read;
+   *  the list is read again whenever this window comes forward */
+  let wins = [];
+  const readWindows = () => { if (current) VO.host.windows().then((l) => { wins = l; }, () => {}); };
+  if (native) window.addEventListener('focus', readWindows);
+  VO.windowItems = () => wins.map((w, i) => {
+    const title = (w.current ? document.title : w.title).replace(' - ' + VO.APPS[current.app].name, '');   // the document's name
+    return { label: '&' + (i + 1) + ' ' + title.replace(/&/g, '&&'), raw: true, checked: () => w.current, run: () => VO.host.focus(w.id).catch(say) };
+  });
+  /** a document a page made (mail merge's letters) in a window of its own in the desktop app, as bytes in the
+   *  app's format; false on the web, where the page keeps it */
+  VO.made = async (blob, name) => {
+    if (!native) return false;
+    await VO.host.newDocument(blob, name, true);
+    return true;
+  };
+  /** open a Recent Files entry in this app: its unsaved version when draft is true, else the saved file (the
+   *  desktop app: in a window of its own, or in this one when its document is an untouched blank) */
   VO.openRecent = async (key, o) => {
+    if (native) {
+      try { if (await VO.host.openRecent(key, o && o.draft, pristine())) await takeDocument(); } catch (e) { say(e); }
+      return;
+    }
     let e = null;
     try { e = await VO.recent.get(key); } catch (err) { console.error(err); }
     const draft = !!(o && o.draft && e && e.draft);
@@ -424,7 +544,9 @@
    *  Create File gallery, common/templates.json), in the app's own dialog. create(id): id '' is Blank. */
   VO.newDialog = async (app, create) => {
     const ui = window.L && window.L.ui;
-    if (!ui || !ui.dialog) return create('');
+    /* the desktop app: a new document in a window of its own */
+    const pick = (id) => (native ? VO.go(VO.url(app, id ? { template: id } : { new: true })).catch(say) : create(id));
+    if (!ui || !ui.dialog) return pick('');
     let list = null;
     try { list = (await (await fetch(BASE + 'common/templates.json')).json())[app]; } catch (e) { console.warn('templates:', e); }
     if (!list || !list.length) list = [{ id: '', name: 'Blank', img: null }];
@@ -451,7 +573,7 @@
       const name = document.createElement('b');
       name.textContent = VO.t(t.name);
       b.append(pic, name);
-      b.addEventListener('click', () => { if (d) d.close(-1); create(t.id); });
+      b.addEventListener('click', () => { if (d) d.close(-1); pick(t.id); });
       gal.append(b);
     }
     const body = document.createElement('div');
@@ -476,12 +598,16 @@
     g.drawImage(src, 0, 0, c.width, c.height);
     return new Promise((r) => c.toBlob(r, 'image/jpeg', 0.88));
   };
-  /** the thumbnail for a Recent Files entry, a little after the document has been drawn */
+  /** the thumbnail for a Recent Files entry, a little after the document has been drawn (the desktop app: this
+   *  window's entry, if it has one) */
   function thumbLater(key) {
-    if (!key) return;
+    if (!key && !native) return;
     setTimeout(async () => {
-      try { const blob = await VO.thumbnail(); if (blob) await VO.recent.setThumb(key, blob); }
-      catch (e) { console.warn('thumbnail:', e); }
+      try {
+        const blob = await VO.thumbnail();
+        if (blob && native) await call('host_set_preview', await raw(blob));
+        else if (blob) await VO.recent.setThumb(key, blob);
+      } catch (e) { console.warn('thumbnail:', e); }
     }, 600);
   }
   /* ------------------------------------------------------------ documents, autosave */
@@ -493,6 +619,7 @@
   /** the app opened a file (from any source) as doc */
   VO.opened = (file, doc) => {
     if (!current) return;
+    if (native) { thumbLater(); return; }   // the native side made its entry as it gave the window the file
     if (file.voDraft) { bind(doc, file.voDraft); return; }   // an unsaved version: keep its entry as it is
     VO.recent.put(current.app, file.name, file, true).then((key) => { if (key) bind(doc, key); thumbLater(key); }, (e) => console.warn('recent files:', e));
   };
@@ -501,6 +628,7 @@
     if (!current) return;
     const old = doc && docKeys.get(doc);
     if (doc) clearTimeout(timers.get(doc));
+    if (native) { thumbLater(); return; }   // the native side cleared the draft as it wrote the file
     VO.recent.put(current.app, name, blob, false).then(async (key) => {
       if (!key) return;
       if (old && old !== key) { await VO.recent.discardDraft(old); openKeys.delete(old); }
@@ -523,15 +651,31 @@
     slow.set(doc, (performance.now() - t0) * 30);   // a document that takes 1 s to write is saved every 30 s at most
     if (!blob || blob.size > MAX_BYTES || (H.isDirty && !H.isDirty(doc))) return;
     const info = H.docInfo(doc);
+    if (native) {
+      try { await setDraft(info, blob); } catch (e) { console.warn('autosave:', e); return; }
+      thumbLater();
+      return;
+    }
     let key = docKeys.get(doc);
     if (!key) { key = current.app + ':~' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); bind(doc, key); }
     try { await VO.recent.setDraft(key, current.app, info.name, info.draftName, blob, info.lossState); } catch (e) { console.warn('autosave:', e); return; }
     if (!H.current || H.current() === doc) thumbLater(key);
   }
+  /** the desktop app: this window's unsaved version, into its Recent Files entry; the body is what it says about
+   *  itself (JSON, after its length in 4 bytes) and then its bytes (desktop/src/doc.rs, host_set_draft) */
+  async function setDraft(info, blob) {
+    const meta = new TextEncoder().encode(JSON.stringify({ name: info.name, draftName: info.draftName || undefined, lossState: info.lossState }));
+    const body = new Uint8Array(4 + meta.length + blob.size);
+    new DataView(body.buffer).setUint32(0, meta.length, true);
+    body.set(meta, 4);
+    body.set(await raw(blob), 4 + meta.length);
+    return call('host_set_draft', body);
+  }
   /** the user chose not to keep doc's changes (No in "Do you want to save the changes…?") */
   VO.discard = (doc) => {
     if (!doc) return;
     clearTimeout(timers.get(doc));
+    if (native) { call('host_clear_draft').catch(() => {}); return; }
     const key = docKeys.get(doc);
     if (!key) return;
     docKeys.delete(doc);
@@ -587,8 +731,9 @@
       list.replaceChildren(...(drafts.length ? drafts.map((e) => {
         const item = el('div', 'tp-sec');
         const head = el('div', 'tp-h', e.name);
-        const from = e.file ? VO.t('Unsaved changes from {0}', when(e.draft.time)) : VO.t('Unsaved changes from {0} (never saved)', when(e.draft.time));
-        const note = el('div', 'tp-note', openKeys.has(e.key) ? VO.t('{0} — open in this window', from) : from);
+        const from = e.saved ? VO.t('Unsaved changes from {0}', when(e.draft.time)) : VO.t('Unsaved changes from {0} (never saved)', when(e.draft.time));
+        const here = native ? e.here : openKeys.has(e.key);
+        const note = el('div', 'tp-note', here ? VO.t('{0} — open in this window', from) : isOpen(e) ? VO.t('{0} — open in another window', from) : from);
         const open = el('button', 'tp-link'); open.type = 'button';
         const oi = el('span'); oi.innerHTML = icon('open'); open.append(oi, el('span', null, 'Open the unsaved version'));
         open.addEventListener('click', () => VO.openRecent(e.key, { draft: true }));

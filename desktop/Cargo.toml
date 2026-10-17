@@ -9,12 +9,22 @@ publish = false
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-# Default features minus dynamic-acl: the pages make no IPC calls yet.
+# Default features minus dynamic-acl: the capabilities are fixed when the app is built (capabilities/, permissions/).
 tauri = { version = "2", default-features = false, features = ["wry", "compression", "common-controls-v6"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# The system's Open, Save and folder dialogs (GTK on Linux, which uses the portals inside Flatpak)
-rfd = { version = "0.17", default-features = false, features = ["gtk3", "common-controls-v6"] }
+# ~/.vibeoffice (src/store.rs): Recent Files are named by the sha256 of a file's path, or of random bytes for a
+# document never saved. Both are in Tauri's crate tree already.
+sha2 = "0.10"
+getrandom = "0.3"
+
+# The system's Open and Save dialogs and questions (src/dialog.rs); Linux uses GTK's own chooser
+[target.'cfg(any(windows, target_os = "macos"))'.dependencies]
+rfd = { version = "0.17", default-features = false, features = ["common-controls-v6"] }
+
+# The Open and Save dialogs on Linux (src/dialog.rs): GTK's native chooser, the version Tauri uses
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+gtk = "0.18"
 
 # ShellExecuteW for links; the installation (src/installation.rs, src/installed.rs, setup/): registry,
 # shortcuts, the uninstall dialog, taskbar pinning. Already built for Tauri, so this adds little.
@@ -45,12 +55,12 @@ tauri-plugin-single-instance = "2.5.3"
 webview2-com = "0.39"
 
 # macOS: links and Finder through NSWorkspace (the sandbox starts no programs), the edition from Info.plist,
-# NSAlert when the network rules can't be set (src/net.rs).
+# NSAlert when the network rules can't be set (src/net.rs), Recent Files' bookmarks (src/doc.rs).
 # Tauri's wry and tao already build these; only the classes used are switched on.
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 block2 = "0.6"
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSBundle", "NSError", "NSString", "NSURL"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSBundle", "NSData", "NSError", "NSFileManager", "NSPathUtilities", "NSString", "NSURL"] }
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSAlert", "NSApplication", "NSWorkspace"] }
 # The network rules (src/net.rs): WebKit's content rule list
 objc2-web-kit = { version = "0.3", default-features = false, features = ["std", "block2", "WKContentRuleList", "WKContentRuleListStore", "WKUserContentController"] }

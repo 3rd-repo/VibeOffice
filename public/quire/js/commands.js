@@ -234,6 +234,7 @@
   C('sendMail', { label: '&Mail Recipient (as Attachment)...', icon: 'mail', tip: 'E-mail', run: async () => { await A.exportAs('docx'); A.status('Saved a copy to attach to your e-mail message.', 6000); } });
   C('permission', { label: '&Permission', icon: 'permission', tip: 'Permission (Unrestricted Access)', run: pane('protect') });
   C('properties', { label: 'Propert&ies', icon: 'properties', run: dlg('properties') });
+  C('versions', { label: 'Versio&ns...', icon: 'open', enabled: () => L.file.bound(), run: () => L.file.showVersions(A.fileName) });   // the desktop app
   /* close every document (asking to save each), then return to the Start Center */
   C('exitApp', { label: 'E&xit', run: async () => { for (;;) { const last = A.docs.length <= 1; if (!(await A.closeDocument())) return; if (last) break; } if (window.VO) VO.exit(); } });
 

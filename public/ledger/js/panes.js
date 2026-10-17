@@ -365,6 +365,7 @@
   P.newFromTemplate = function (k) {
     const t = TPL[k];
     if (!t) return;
+    if (window.VO && VO.oneDocument) return VO.go(VO.url('ledger', { template: k })).catch((e) => A().error(e));   // a window of its own
     const wb = build(t.spec());
     if (L.cf && L.cf.reset) L.cf.reset();
     A().prepare(wb);

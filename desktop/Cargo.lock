@@ -2719,9 +2719,6 @@ checksum = "20dafead71c16a34e1ff357ddefc8afc11e7d51d6d2b9fbd07eaa48e3e540220"
 dependencies = [
  "block2",
  "dispatch2",
- "glib-sys",
- "gobject-sys",
- "gtk-sys",
  "js-sys",
  "libc",
  "log",
@@ -3959,6 +3956,8 @@ name = "vibeoffice"
 version = "0.1.0"
 dependencies = [
  "block2",
+ "getrandom 0.3.4",
+ "gtk",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
@@ -3966,6 +3965,7 @@ dependencies = [
  "rfd",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-single-instance",

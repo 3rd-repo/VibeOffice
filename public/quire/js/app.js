@@ -56,7 +56,7 @@
   function buildMenus() {
     const recentItems = () => (window.VO ? VO.recentMenuItems(4) : []);
     const menus = [
-      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', 'fileSearch', '-', 'webPreview', '-', 'pageSetup', 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['sendMail', 'exportPDF'] }, 'properties', ...((recentItemsList) => (recentItemsList.length ? ['-', ...recentItemsList] : []))(recentItems()), '-', 'exitApp'] },
+      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', 'fileSearch', '-', 'webPreview', '-', 'pageSetup', 'printPreview', 'print', '-', { label: 'Sen&d To', sub: ['sendMail', 'exportPDF'] }, 'properties', ...(L.file.native() ? ['versions'] : []), ...((recentItemsList) => (recentItemsList.length ? ['-', ...recentItemsList] : []))(recentItems()), '-', 'exitApp'] },
       {
         label: '&Edit', items: () => ['undo', 'redo', '-', 'cut', 'copy', 'officeClipboard', 'paste', 'pasteSpecial', 'pasteHyperlink', '-',
           { label: 'Cle&ar', sub: ['clearFormats', 'clearContents'] }, 'selectAll', '-', 'find', 'replace', 'goTo', '-', 'links', 'editObject'],
@@ -668,9 +668,11 @@
     ui.refresh();
     E.refocus();
   };
-  A.windowItems = () => A.docs.map((w, i) => ({ label: `&${i + 1} ${(i === A.cur ? A.fileName : w.fileName).replace(/&/g, '&&')}`, raw: true, checked: () => i === A.cur, run: () => A.switchTo(i) }));
+  A.windowItems = () => (window.VO && VO.oneDocument ? VO.windowItems() : A.docs.map((w, i) => ({ label: `&${i + 1} ${(i === A.cur ? A.fileName : w.fileName).replace(/&/g, '&&')}`, raw: true, checked: () => i === A.cur, run: () => A.switchTo(i) })));
   A.loadDoc = function (d, name, opts) {
     opts = opts || {};
+    /* the desktop app: one document per window, so a new one goes to a window of its own */
+    if (opts.newWindow && A.cur >= 0 && window.VO && VO.oneDocument) { A.toWindow(d, name); return; }
     ui.dragCancel();
     if (opts.newWindow || A.cur < 0) { stash(); A.docs.push(null); A.cur = A.docs.length - 1; }
     if (LY.hfEdit) { LY.hfEdit = null; LY.root.classList.remove('hfmode'); }
@@ -704,9 +706,29 @@
     return r === 1;
   }
   A.confirmDiscard = confirmDiscard;
+  /** a document made here (New with content, mail merge's letters) in a window of its own, as a .docx (the desktop
+   *  app's one document per window) */
+  A.toWindow = async function (d, name) {
+    const keep = D.doc;
+    ui.busy(true, 'Saving...');
+    try {
+      D.doc = d;   // the writer looks up list numbering in D.doc
+      const blob = await L.docx.write(d, { format: 'docx' });
+      D.doc = keep;
+      ui.busy(false);
+      await VO.made(blob, name + '.docx');
+    } catch (e) {
+      D.doc = keep;
+      ui.busy(false);
+      console.error(e);
+      ui.msg(String(e && e.message || e), { icon: 'error' });
+    }
+  };
   /** a blank document as the Office of the UI's language makes it (common/locales.js) */
   const blank = () => D.applyLocale(D.newDoc(), L.locale && L.locale.get());
   A.newDocument = async function (opts) {
+    /* the desktop app: a blank document in a window of its own (one with content goes through loadDoc) */
+    if (!opts && !pristine() && window.VO && VO.oneDocument) return VO.go(VO.url('quire', { new: true })).catch((e) => ui.msg(String(e), { icon: 'error' }));
     A.untitled++;
     const d = opts && opts.modern ? D.newDoc({ modern: true }) : blank();
     if (opts && opts.build) opts.build(d);
@@ -716,6 +738,7 @@
   /** close the current document (asking to save); false when the user cancels */
   A.closeDocument = async function () {
     if (!(await confirmDiscard())) return false;
+    if (window.VO && VO.oneDocument) { VO.exit(); return true; }   // its window closes
     if (A.docs.length <= 1) { A.docs = []; A.cur = -1; A.untitled++; A.loadDoc(blank(), 'Document' + A.untitled); return true; }
     const i = A.cur;
     A.docs.splice(i, 1);
@@ -724,11 +747,13 @@
     return true;
   };
   A.openDialog = async function () {
+    if (window.VO && VO.oneDocument) return VO.openDialog();
     const files = await L.pickFiles('.docx,.docm,.dotx,.dotm,.doc,.txt,.htm,.html,.rtf,.xml,.md,.markdown,.zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     if (files[0]) A.openFile(files[0]);
   };
   A.openFiles = (files) => { const f = files.find((x) => /\.(docx|docm|dotx|dotm|doc|txt|html?|rtf|md|markdown|zip)$/i.test(x.name)); if (f) A.openFile(f); };
   A.openFile = async function (file) {
+    if (window.VO && await VO.elsewhere(file)) return;   // the desktop app: a window of its own
     const reuse = pristine();
     const name = file.name.replace(/\.(docx|docm|dotx|dotm|doc|txt|html?|rtf|xml|md|markdown|mdown|mkd|zip)$/i, '');
     ui.busy(true, L.t('Opening {0}...', file.name));
@@ -801,11 +826,24 @@
     if (!d.main.blocks.length) d.main.blocks.push(D.para());
     return d;
   };
+  /* what Quire saves, for the desktop app's Save dialog (L.file); the document types are saves, the rest exports */
+  L.file.types = [{ id: 'docx', label: L.N('Word Document (*.docx)'), ext: ['docx'] }, { id: 'docm', label: L.N('Word Macro-Enabled Document (*.docm)'), ext: ['docm'] },
+    { id: 'dotx', label: L.N('Word Template (*.dotx)'), ext: ['dotx'] }, { id: 'dotm', label: L.N('Word Macro-Enabled Template (*.dotm)'), ext: ['dotm'] },
+    { id: 'html', label: L.N('Single File Web Page (*.htm)'), ext: ['htm', 'html'] }, { id: 'rtf', label: L.N('Rich Text Format (*.rtf)'), ext: ['rtf'] },
+    { id: 'txt', label: L.N('Plain Text (*.txt)'), ext: ['txt'] }, { id: 'md', label: L.N('Markdown (*.md)'), ext: ['md', 'markdown'] },
+    { id: 'mdzip', label: L.N('Markdown with pictures (*.zip)'), ext: ['zip'] }, { id: 'pdf', label: L.N('PDF (*.pdf)'), ext: ['pdf'] }];
+  const DOC_TYPES = ['docx', 'docm', 'dotx', 'dotm', 'md', 'mdzip'];
+  /** Save: the document's own file (the desktop app: in place, when it has one it may change), else Save As */
   A.save = async function () {
-    if (!A.saved) return A.saveAs();
-    return A.exportAs(A.fileType || 'docx', A.fileName);
+    if (!A.saved || (L.file.native() && !L.file.inPlace())) return A.saveAs();
+    return A.exportAs(A.fileType || 'docx', A.fileName, L.file.native() ? 'save' : undefined);
   };
   A.saveAs = function () {
+    /* the desktop app: the system's Save dialog picks the name and type, then the document is written there */
+    if (L.file.native()) return (async () => {
+      const c = await L.file.choose('saveAs', DOC_TYPES.includes(A.fileType) ? A.fileType : 'docx', A.fileName);
+      return c ? A.exportAs(c.type, c.name, 'chosen') : 'declined';
+    })();
     if (!L.dlg?.saveAs) return A.exportAs('docx', A.fileName);
     return new Promise(resolve => {
       let writing = false;
@@ -818,7 +856,10 @@
     const st = D.stats(D.allParas(d));
     return { pages: LY.pages.length || 1, words: st.words, chars: st.chars, charsNoSp: st.charsNoSp, paras: st.paras, lines: Math.max(st.paras, Math.round(st.chars / 70)) };
   };
-  A.exportAs = async function (type, name) {
+  /** writes the document as `type`: a download (web), or in the desktop app (`how`) its own file ('save') or what the
+   *  Save dialog picked ('chosen'); without `how` there, an export that asks where. A document type saved where it
+   *  becomes the document's file renames the document and clears its changes */
+  A.exportAs = async function (type, name, how) {
     name = name || A.fileName;
     const d = doc();
     ui.busy(true, 'Saving...');
@@ -842,8 +883,13 @@
         if (L.mdio.newPictures(d)) {
           ui.busy(false);
           const r = await ui.msg('This document has pictures that a .md file cannot hold. Save it as Markdown with pictures (.zip), which holds the .md file and its pictures?', { icon: 'warn', buttons: ['Save as .&zip', 'Save .md &without them', 'Cancel'] });
-          if (r !== 0 && r !== 1) return;
-          if (r === 0) { type = ext = 'mdzip'; if (A.fileType === 'md') A.fileType = 'mdzip'; }
+          if (r !== 0 && r !== 1) { if (how === 'chosen') L.file.cancel(); return 'declined'; }
+          if (r === 0) {
+            type = ext = 'mdzip';
+            /* the desktop app: a .zip is another file, so the Save dialog asks again */
+            if (how) { const c = await L.file.choose('saveAs', 'mdzip', name, ['mdzip']); if (!c) return 'declined'; name = c.name; how = 'chosen'; }
+            else if (A.fileType === 'md') A.fileType = 'mdzip';
+          }
           ui.busy(true, 'Saving...');
         }
         if (type === 'md') blob = new Blob([L.mdio.write(d).text], { type: 'text/markdown;charset=utf-8' });
@@ -856,10 +902,14 @@
       ui.busy(false);
       if (!blob) return;
       const losses = L.opc.formats[type] ? await ui.compatibility(d, blob.dropped) : [];
-      if (losses === null) return 'declined';
-      const r = await L.saveFile(`${name}.${ext}`, blob);
+      if (losses === null) { if (how === 'chosen') L.file.cancel(); return 'declined'; }
+      const w = how ? await L.file.write(blob, how, { type, name: `${name}.${ext}` }) : { result: await L.saveFile(`${name}.${ext}`, blob) };
+      const r = w.result;
+      if (w.name) name = w.name.replace(/\.[^.]+$/, '');   // as the Save dialog left it
       if (r === 'saved') L.opc.acknowledge(d, losses);
-      if (r === 'saved' && ['docx', 'docm', 'dotx', 'dotm', 'md', 'mdzip'].includes(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); d.dirty = false; A.status(L.t('Saved {0}', `${name}.${ext}`)); ui.refresh(); if (window.VO) VO.saved(`${name}.${ext}`, blob, d); }
+      /* the document's own file now: on the web any save of a document type; the desktop app's Save, or a Save As it bound */
+      const own = !L.file.native() || how === 'save' || w.bound;
+      if (r === 'saved' && own && DOC_TYPES.includes(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); d.dirty = false; A.status(L.t('Saved {0}', `${name}.${ext}`)); ui.refresh(); if (window.VO) VO.saved(`${name}.${ext}`, blob, d); }
       return r;
     } catch (e) {
       ui.busy(false);
@@ -1339,6 +1389,8 @@
     if (window.VO) VO.attach('quire', {
       async open(f, o) {
         await A.openFile(f);
+        /* a document a page made (desktop app): never saved */
+        if (o && o.made && doc()) { A.saved = false; A.fileName = o.name.replace(/\.(docx|docm|dotx|dotm)$/i, ''); A.updateTitle(); }
         if (o?.draft && doc()) L.opc.recoverLosses(doc(), o.lossState);
         /* an unsaved version: the changes are not saved yet, and a never-saved document still needs Save As */
         if (o && o.draft && doc()) { doc().dirty = true; A.saved = !!o.saved; A.fileName = o.name.replace(/\.(docx|docm|dotx|dotm|md|markdown|zip)$/i, ''); A.updateTitle(); A.status('Recovered the unsaved changes. Save the document to keep them.'); ui.refresh(); }
@@ -1357,6 +1409,8 @@
       current: () => doc(),
       autosave: () => A.opts.autoRecover !== false,
       showRecovery() { if (!L.panes) return; A.opts.taskOpen = true; L.$('#taskpane').hidden = false; L.panes.task.show('recovery'); },
+      pristine,
+      close: confirmDiscard,
       thumb: pageThumb,
       message: (t) => ui.msg(t, { icon: 'warn' }),
       templates: () => (L.templates ? L.templates.list().map(({ id, name }) => ({ id, name })) : []),

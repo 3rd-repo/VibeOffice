@@ -39,6 +39,7 @@
   cmd('print', { label: '&Print...', icon: 'print', key: 'Ctrl+P', run: run(() => D().print()) });
   cmd('printQuick', { label: 'Print', tip: 'Print', icon: 'print', run: run(() => L.print.exportPDF({ quick: true })) });
   cmd('properties', { label: 'Propert&ies', icon: 'properties', run: run(() => D().properties()) });
+  cmd('versions', { label: 'Versio&ns...', icon: 'open', enabled: () => L.file.bound(), run: run(() => L.file.showVersions(A().books[A().cur].name)) });   // the desktop app
   /* close every workbook (asking to save each), then return to the Start Center */
   cmd('exitApp', { label: 'E&xit', run: async () => { for (;;) { const last = A().books.length <= 1; if (!(await A().closeWorkbook())) return; if (last) break; } if (window.VO) VO.exit(); } });
 

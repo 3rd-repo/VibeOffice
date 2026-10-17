@@ -1,62 +1,111 @@
 # Desktop app: hardening, native storage, one document per window, real saving
 
-Status: planned 2026-10-11, not started. Read docs/desktop.md (Host interface) first. Four phases, in order:
-0 harden the host as it is (from the audit below), 1 native storage and one document per window (saves still go to
-Downloads), 2 saving to real files, 3 folder access in sandboxed builds. Mark each task when it is done and verified.
+Status: planned 2026-10-11; refreshed 2026-10-17 at 97c1e06; Phase 0 built 2026-10-17 (not committed; Linux run);
+2026-10-17, the user: focus on getting Phase 2 done, so Phase 1's parts real saving needs came first, then Phase 2
+(both built 2026-10-17, not committed; Linux run), and the rest of Phase 1 waits (marked below). Read
+docs/desktop.md (Host interface, Network, the deadlock rules) first. Four phases, in order: 0 harden the host as it is
+(from the audit below), 1 native storage and one document per window (saves still go to Downloads), 2 saving to real
+files, 3 folder access in sandboxed builds. Mark each task when it is done and verified.
 
-The macOS port came first (2026-10-15; docs/desktop.md, macOS): both Mac editions already run in the App Sandbox, so
-Phase 3's Allow Access… applies to them, and on a Mac `~/.vibeoffice` (Phase 1) is inside the app's container. The Mac
-App Store submission waits for Phase 2.
+Since the plan was written:
+- **The macOS port** (2026-10-15; docs/desktop.md, macOS). Both Mac editions run in the App Sandbox, so the sandbox is
+  part of Phases 1 and 2 from the start, not only Phase 3: Recent Files need security-scoped bookmarks, and a save
+  can't put a temp file beside the user's file (see each phase). `~/.vibeoffice` is inside the app's container there.
+  The Mac App Store submission waits for Phase 2.
+- **The hardening plan** (todos/HARDENING.md) did part of Phase 0 its own way: the network rules (net.rs: WebKit
+  content rules on macOS, WebView2's request filter on Windows; each window starts on about:blank and goes to its page
+  only once they are on), a Content-Security-Policy meta tag in every page (`tools/csp.mjs`, web and desktop alike;
+  `csp` in tauri.conf.json stays null), the link allow-list (`host::may_open`), `ui.linkDialog` for document links,
+  and `on_new_window` always Deny. Marked below; what is left of each item says so.
+- **The deadlock rules** (docs/desktop.md, Host interface; 97c1e06): a command that makes a window is `async`, and a
+  `with_webview` closure calls no Tauri method of its window. Phase 0's WebView2 settings go inside net::guard's
+  closure, which already obeys it.
+- **Before Phase 2 can be verified**, Windows needs its first real run (nobody has run the app there yet; Wine has no
+  WebView2), and the macOS run of 97c1e06 should pass (the network probe).
 
 ## Tasks
 
 Phase 0: harden the host as it is
-- [ ] Capabilities: drop `core:default`; declare the `host_*` commands in an app manifest and grant them per window kind;
-      window labels `<page>-<n>`
-- [ ] Links: one `links::open` for `host_open_url`, `on_navigation` and `on_new_window`: the Start Center only, https,
-      the allow-list; no mailto
-- [ ] Links in documents (Quire, Ledger, Lectern) and on the licenses page: show the address with Copy on the desktop;
-      on the web, only http(s) and mailto
-- [ ] `on_new_window`: always Deny
-- [ ] Navigation: a window loads only its own page, once
-- [ ] CSP (tauri.conf.json) and no WebRTC
-- [ ] `host_new_window`: page ids instead of URLs; at most 64 windows
-- [ ] Launch files: `host_launch_files` and `host_read` for the Start Center only; reads capped at 512 MiB
-- [ ] Downloads (interim): refuse Windows reserved names and trailing dots or spaces; at most one per window per second
-- [ ] Web permission requests denied natively, except Local Font Access and the clipboard
-- [ ] WebView2 browser shortcuts off
-- [ ] Init script built with serde_json; `__VO_HOST__` read-only
-- [x] Portable zip and DLL planting (audit item 15): the zip is released as `VibeOffice-<version>-x64-Portable.zip`,
-      the exe inside its own `VibeOffice` folder; the release notes say to run it from there (2026-10-11)
-- [ ] Tests (cargo, host stub, live link checks) and docs/desktop.md
+- [x] Capabilities: no `core:default`; the `host_*` commands in permissions/host.toml, granted per window kind in
+      capabilities/ (start, apps; the licences page none); window labels `<page>-<n>` (2026-10-17: Linux run; Windows
+      and macOS type-checked, not yet run)
+- [x] Links: only the Start Center sends an address to the browser, and only the update page or our GitHub
+      (`host::is_ours`, `may_open`; no user name); the licences page shows its addresses with Copy in the desktop app
+      (oss-licenses.js) (2026-10-17: Linux run)
+- [x] Links in documents (Quire, Ledger, Lectern): `ui.linkDialog` shows the address with Copy, on the desktop and the
+      web alike (7189436, HARDENING 3.1)
+- [x] `on_new_window`: always Deny (d7a32ef)
+- [x] Navigation: a window loads only its own page, once (`host::Page`: after about:blank, and the probe's data:
+      page when `VO_NET_PROBE` is set; then reloads, fragments and its own blob:, which a save on Linux starts as); `VO.go`
+      reports a window it couldn't open (2026-10-17: Linux run)
+- [x] CSP: a meta tag in every page (d7a32ef, `tools/csp.mjs`) and the network rules (7189436, ee82eb7, 97c1e06)
+- [x] No WebRTC: `net::NO_WEBRTC` in every frame (`initialization_script_for_all_frames`) (2026-10-17; check on
+      Windows and macOS that it also reaches an `about:blank` iframe the page makes)
+- [x] `host_new_window`: page ids instead of URLs (`{ page, start }`, `host::page_path`); app windows open only the
+      licences page; at most 64 windows (2026-10-17, with the capabilities)
+- [x] Launch files: `host_launch_files` and `host_read` for the Start Center only; reads capped at 512 MiB
+      (`read_capped`) (2026-10-17)
+- [x] Downloads (interim): refuse Windows reserved names and characters Windows can't hold (a trailing dot or space
+      can't happen: the name ends with its type's extension); at most one per window per second (2026-10-17)
+- [x] Web permission requests denied natively, except Local Font Access and the clipboard (Tauri's
+      `on_permission_request`, all three systems) (2026-10-17; to check on Windows: Settings ▸ Fonts on this
+      computer, Paste)
+- [x] WebView2 browser shortcuts off (`net::win::browser_keys_off`, in guard's closure) (2026-10-17; type-checked,
+      to check on Windows)
+- [x] Init script built with serde_json; `__VO_HOST__` read-only (2026-10-17)
+- [x] DLL planting (audit item 15): the installer (`VibeOfficeSetup.exe`) loads only Known DLLs; no loose app zip
+- [x] Tests (cargo, host stub, live link checks) and docs/desktop.md (2026-10-17: 15 cargo tests; the stub refuses
+      what the capabilities refuse, and a test compares them; on Linux a build without one grant showed the page
+      refused, so the capabilities hold without `dynamic-acl`)
 
 Phase 1: native storage and one document per window
-- [ ] Single instance (Unix socket, Windows named pipe)
-- [ ] `~/.vibeoffice` store: config.json, recent_files, drafts, the atomic write, `VIBEOFFICE_HOME`
+The parts real saving needs (2026-10-17: Linux run; Windows and macOS type-checked, not yet run):
+- [x] `~/.vibeoffice` store (store.rs): recent_files with previews and drafts, the atomic write, `VIBEOFFICE_HOME`
+- [x] Files bound to windows (doc.rs): `host_document`, `host_open` with the Open dialog (dialog.rs: rfd on Windows and
+      macOS, GTK's native chooser on Linux), files from the command line, another start and Finder opened by Rust in
+      their own windows (no more `host_launch_files`, `host_read`)
+- [x] macOS: security-scoped bookmarks for Recent Files (type-checked; entitlement `files.bookmarks.app-scope`). Not
+      done: an entry whose file moved keeps its old key (the plan: move it to the new path's key)
+- [x] One document per window in Quire, Ledger and Lectern (`VO.oneDocument`, `hooks.pristine`); page-made documents as
+      bytes (`VO.made`, Quire's `A.toWindow`); the Window menu (`VO.windowItems`)
+- [x] Recent Files, previews and drafts native (`VO.recent`'s desktop side, Document Recovery, `vo-recent`)
+- [x] Close flow (`vo-close`, `host_closing`, the native question after 10 s)
+- [x] Tests and docs (cargo: store, doc, types; the stub plays the new commands; docs/desktop.md, Documents and windows)
+After Phase 2:
+- [ ] Single instance on Linux (a Unix socket); Windows has it (tauri-plugin-single-instance, `second_start`), macOS
+      by LaunchServices (`RunEvent::Opened`)
+- [ ] config.json in `~/.vibeoffice`
 - [ ] Settings: `__VO_HOST__.settings`, `host_set_setting`, `vo-settings`; `VO.settings`, `L.store`, looks, the head
       scripts, UI size
 - [ ] No browser storage: the init script removes the APIs, incognito web views, the static test; https scheme on Windows
-- [ ] Files bound to windows: `host_document`, `host_open` with the Open dialog (rfd on Windows, the GTK adapter), files
-      from the command line opened by Rust
-- [ ] One document per window in Quire and Ledger; page-made documents as bytes; the Window menu
-- [ ] Recent Files, previews and drafts native (`VO.recent` backend, Document Recovery)
-- [ ] Close flow (`vo-close`)
 - [ ] Scout to `VO.settings`
-- [ ] Tests and docs
+- [ ] New windows' untitled numbers: each new window is Document1 / Book1 / Presentation1 (Word counts across windows)
 
-Phase 2: saving to real files
-- [ ] File type table (types.rs)
-- [ ] `files::write`: checks, temp file and replace, the in-place path, error codes
-- [ ] `host_save`, `host_choose`, `host_write_chosen`, `host_cancel_choice`; the Save dialog
-- [ ] Mark of the Web carried to Save As and exports (Windows)
-- [ ] Previous versions and File ▸ Versions…
-- [ ] `L.file` in common/core.js
-- [ ] Quire, Ledger and Lectern on `L.file` (and Ledger's Cancel-while-closing fix)
-- [ ] Remove the Downloads interim; File System Access API off
-- [ ] Tests and docs
+Phase 2: saving to real files (2026-10-17: built; Linux run; Windows and macOS type-checked, not yet run)
+- [x] File type table (types.rs `KINDS`: id, extensions, document type or export, how the bytes start)
+- [x] `files::write`: checks, temp file and replace (`ReplaceFileW`; rename, the in-place path), error codes
+- [x] `host_save`, `host_choose`, `host_write_chosen`, `host_cancel_choice`; the Save dialog (rfd; GTK's chooser with
+      the extension rules)
+- [x] macOS: the write through `replaceItemAtURL` (type-checked; verify on a Mac, both editions, another volume,
+      iCloud Drive)
+- [x] Mark of the Web carried to Save As and exports (Windows, `files::carry_mark`; to check there); macOS's
+      quarantine attribute not checked yet
+- [x] Previous versions and File ▸ Versions… (menus and ribbons, desktop only)
+- [x] `L.file` in common/core.js (choose, write with the error table, `L.saveFile` as an export)
+- [x] Quire, Ledger and Lectern on `L.file` (and Ledger's Cancel-while-closing fix, on the web too). Done more simply
+      than the `L.file.setup` design: each app's own save code takes `how` ('save', 'chosen') and its type list
+      (`L.file.types`) is shared with its web Save As dialog
+- [x] Remove the Downloads interim; File System Access API off (`host::NO_FILE_PICKERS`, every frame); the Mac's
+      Downloads entitlement dropped
+- [x] Tests and docs (cargo: files, types, store versions; the stub's save commands; docs/desktop.md, Saving)
+Left from the design: the title's "(Read-Only)"; clearing the dirty state only if nothing changed during the save;
+`vo-saved` only for document saves (exports tell it too, as on the web); Ledger's password to open has no way in on
+the desktop (Save As ▸ Tools is the web dialog's; Excel's File ▸ Info ▸ Protect Workbook ▸ Encrypt with Password);
+an opened version's window has the file's name (no "previous version" in its title); an export's toast (Ledger's
+PDF) names the workbook, not the file picked.
 
 Phase 3: sandboxed builds
-- [ ] Allow Access… for `denied` in Flatpak, Snap and the macOS App Store
+- [ ] Allow Access… for `denied` in Flatpak, Snap and both Mac editions
 
 ## Decisions (the user, 2026-10-11)
 
@@ -72,6 +121,11 @@ Phase 3: sandboxed builds
 - When a write is refused for lack of permission in a sandbox (macOS App Store, Flatpak, Snap), offer to grant access
   to the folder.
 - Harden first, then native storage; real saving builds on both.
+- (2026-10-17) The browser gets only what is on the allow-list, which has two entries for now: the update page
+  (`https://vibeoffice.work/updater/`) and our GitHub (`https://github.com/tcchen2026/VibeOffice`). The rest of
+  vibeoffice.work leaves the list. Every other address shows with Copy, for the user to paste into their own
+  browser, as document links do; the licences page's links included, so `may_open`'s licences exception (d7a32ef)
+  goes. Only the Start Center sends addresses to the browser.
 
 ## Threat model
 
@@ -86,105 +140,141 @@ acts on only two of them, validated); open Recent Files entries and page-made do
 Files entries and discard drafts of documents not open in any window.
 
 It can't: write, read or name any other file; reach another window's document; take its file to another page; open
-any address in the browser; send anything to a server other than vibeoffice.work (CSP); fill the disk (every stored
+any address in the browser; send anything to a server other than vibeoffice.work (the pages' policy, and on Windows
+and macOS the network rules beneath it, which hold even on a page without the policy); fill the disk (every stored
 item has a size cap, and their number is bounded).
 
-Accepted: the CSP is one policy for every page, so an app page may also reach vibeoffice.work, our own static site;
+Accepted: the policy is one for every page, so an app page may also reach vibeoffice.work, our own static site;
 until Phase 1 moves the pages to https on Windows, Chromium may look up the names of links on the page (DNS prefetch),
-a few bytes out; the page sets its window's title.
+a few bytes out; the page sets its window's title; Linux has no network rules yet, only the policy
+(WebKitGTK's `WebKitUserContentFilterStore` takes the same list as macOS's), and WebKitGTK's WebRTC is off by default.
 
-## Audit of the host as it is (545b9f7)
+## Audit of the host as it is (545b9f7; status 2026-10-17, 97c1e06)
 
 | # | Finding | Risk | Fix |
 |---|---|---|---|
-| 1 | `on_new_window` returns `Allow` for every address that isn't http(s): `file:`, UNC paths, `ftp:`, other apps' protocol handlers, our own pages. The engine then opens its own popup, outside all our handlers (navigation, downloads, the IPC rules), and what it does with those schemes is up to it. Document hyperlinks get there: Quire's Ctrl+click and Open Hyperlink and Lectern's slide show pass the document's address as it is; Ledger lets `ftp:` through | High | Phase 0: always Deny |
-| 2 | `on_navigation` allows every address that isn't http(s), and any of our pages, in any window, any number of times | High | Phase 0: one page per window |
-| 3 | The capability grants `core:default`: about 70 Tauri commands no page uses, among them `image.fromPath` (reads a file at a path the page gives), `path.resolveDirectory` and friends (the home folder, so the user's name), menus and tray icons, events to other windows, window, monitor and cursor queries | High (surface) | Phase 0: no core commands; ours per window kind |
-| 4 | No CSP (`csp: null`): any page can fetch, post to or load from any server, so limiting links alone wouldn't stop a document's script from sending its text out | High | Phase 0: CSP |
-| 5 | `host_open_url` and the external-link handlers: any window, any http(s) host, and `mailto:` (some mail programs honour `attach=` and attach local files) | Medium | Phase 0: Start Center, allow-list, no mailto |
-| 6 | `host_read(handle)`: handles are process-wide, sequential and never revoked, so any window can read every file launched so far; no size cap | Medium | Phase 0: Start Center only, cap; Phase 1 replaces it |
-| 7 | `host_launch_files`: any window can take the launch files | Low | Phase 0 |
-| 8 | `host_new_window(url)`: any of our files, any query string, any number of windows | Medium | Phase 0: page ids, at most 64 |
-| 9 | Downloads (interim): any page writes files into Downloads without asking, `.html` and macro-enabled `.docm`, `.xlsm`, `.pptm` included; Windows reserved names (`CON.docx`) and names ending in a dot or space aren't refused | Medium | Phase 0 for the names; Phase 2 ends downloads |
-| 10 | A saved copy loses the Mark of the Web: a file from the internet saved under a new name no longer opens in Office's Protected View | Medium | Phase 2: carried over |
-| 11 | WebRTC can reach any server; CSP doesn't cover it | Medium | Phase 0: removed by the init script |
-| 12 | Web permission requests (camera, microphone, location, notifications) get the engine's default handling | Low, to verify | Phase 0: denied natively |
-| 13 | WebView2's browser shortcuts are on: F5 and Ctrl+R reload, Ctrl+P, Ctrl+F, Ctrl+S (save the page) | Low | Phase 0: off |
-| 14 | The init script is assembled with `format!`; a page can replace `__VO_HOST__` | Low (hygiene) | Phase 0 |
-| 15 | The exe imports `dwmapi.dll`, which isn't a KnownDLL: the portable zip's exe run from Downloads, with a planted `dwmapi.dll` beside it, loads that DLL. The MSI installs into Program Files, which users can't write, so it is unaffected. GNU ld can't set `DependentLoadFlags` | Medium (zip) | Decided: released as the Portable zip, its exe inside a `VibeOffice` folder, so extracting it never puts the exe loose in Downloads; the release notes say to run it from that folder. The remaining risk (someone writing a DLL into that folder) is accepted |
-| 16 | settings.json is written in place, not atomically | Low | Phase 1 store |
+| 1 | `on_new_window` returns `Allow` for every address that isn't http(s): `file:`, UNC paths, `ftp:`, other apps' protocol handlers, our own pages. The engine then opens its own popup, outside all our handlers (navigation, downloads, the IPC rules), and what it does with those schemes is up to it. Document hyperlinks get there: Quire's Ctrl+click and Open Hyperlink and Lectern's slide show pass the document's address as it is; Ledger lets `ftp:` through | High | **Done** (d7a32ef): always Deny |
+| 2 | `on_navigation` allows every address that isn't http(s), and any of our pages, in any window, any number of times | High | Phase 0: one page per window. Still open: any of our pages, `about:`, `blob:` and `data:` load in any window |
+| 3 | The capability grants `core:default`: about 70 Tauri commands no page uses, among them `image.fromPath` (reads a file at a path the page gives), `path.resolveDirectory` and friends (the home folder, so the user's name), menus and tray icons, events to other windows, window, monitor and cursor queries | High (surface) | Phase 0: no core commands; ours per window kind. Still open |
+| 4 | No CSP (`csp: null`): any page can fetch, post to or load from any server, so limiting links alone wouldn't stop a document's script from sending its text out | High | **Done** another way: the pages' policy (d7a32ef) and the network rules on Windows and macOS (7189436, ee82eb7, 97c1e06), not tauri.conf.json |
+| 5 | `host_open_url` and the external-link handlers: any window, any http(s) host, and `mailto:` (some mail programs honour `attach=` and attach local files) | Medium | Allow-list and no mailto **done** (d7a32ef); the Start Center only: still open (any window may send our own addresses) |
+| 6 | `host_read(handle)`: handles are process-wide, sequential and never revoked, so any window can read every file launched so far; no size cap | Medium | Phase 0: Start Center only, cap; Phase 1 replaces it. Still open; Finder's files (macOS) take the same path |
+| 7 | `host_launch_files`: any window can take the launch files | Low | Phase 0. Still open |
+| 8 | `host_new_window(url)`: any of our files, any query string, any number of windows | Medium | Phase 0: page ids, at most 64. Still open (it checks the scheme, host and port only) |
+| 9 | Downloads (interim): any page writes files into Downloads without asking, `.html` and macro-enabled `.docm`, `.xlsm`, `.pptm` included; Windows reserved names (`CON.docx`) and names ending in a dot or space aren't refused | Medium | Phase 0 for the names; Phase 2 ends downloads. Still open |
+| 10 | A saved copy loses the Mark of the Web: a file from the internet saved under a new name no longer opens in Office's Protected View | Medium | Phase 2: carried over (macOS: check what the sandbox's quarantine attribute already does) |
+| 11 | WebRTC can reach any server; CSP doesn't cover it | Medium | Phase 0: removed by the init script (Windows, macOS's direct edition; the App Store edition has no network entitlement, Linux has WebRTC off). Still open |
+| 12 | Web permission requests (camera, microphone, location, notifications) get the engine's default handling | Low, to verify | Phase 0: denied natively with Tauri's `on_permission_request` (now in Tauri 2.12; on macOS the sandbox already refuses camera, microphone and location, which no entitlement grants). Still open |
+| 13 | WebView2's browser shortcuts are on: F5 and Ctrl+R reload, Ctrl+P, Ctrl+F, Ctrl+S (save the page) | Low | Phase 0: off. Still open |
+| 14 | The init script is assembled with `format!`; a page can replace `__VO_HOST__` | Low (hygiene) | Phase 0. Still open (`Object.freeze` keeps the object, not the property) |
+| 15 | The exe imports `dwmapi.dll`, which isn't a KnownDLL: the portable zip's exe run from Downloads, with a planted `dwmapi.dll` beside it, loads that DLL. The MSI installs into Program Files, which users can't write, so it is unaffected. GNU ld can't set `DependentLoadFlags` | Medium (zip) | **Done** another way: no zip of the app any more. The release is `VibeOffice-Windows-x64.zip` holding `VibeOfficeSetup.exe`, which imports only Known DLLs and API sets (`build.sh` fails otherwise) and calls `SetDefaultDllDirectories` first; it installs per user into `%LOCALAPPDATA%`, writable by the user as Chrome's per-user install is (docs/desktop.md, Installer) |
+| 16 | settings.json is written in place, not atomically | Low | Phase 1 store. Still open |
 | 17 | The pages are served as http://tauri.localhost on Windows: not a secure context, and Chromium prefetches DNS for links on http pages | Low | Phase 1: https scheme (the origin change costs nothing once storage has left the web view) |
+| 18 | (2026-10-17) Linux reports a page as started at WebKitGTK's load start, before the old page's script stops, and `leave` judges links by the page last started: an app window that goes to the licences page could, for that moment, send any http(s) address to the browser | Low | Phase 0: the licences page sends no address (Decisions, 2026-10-17); the navigation rule as well |
+| 19 | (2026-10-17) Linux has no network rules, only the pages' policy: a window moved to a page without it (`data:`, `blob:`) reaches any server | Low (Linux isn't released) | The navigation rule closes the way there; later, the same list through `WebKitUserContentFilterStore` |
 
 Checked and fine: devtools are off in release builds (no `devtools` feature); `withGlobalTauri` is off; IPC is
 accepted only from our own origin (no remote URLs in any capability); opening an address hands only http(s) to the
 system (`ShellExecuteW` "open", `xdg-open` with the address as one argument), never a path or a program; Browse takes
 no arguments and shows only a file this app wrote into Downloads (explorer `/select` with a quoted path; Windows names
 can't hold a quote); a download is a bare name of a type the apps save, never over an existing file; the save notice
-carries the name only; the exe has NX, ASLR and high-entropy ASLR; the MSI installs per machine and its ProgIDs quote
-`"%1"`; the updater's notes are shown as text, not HTML.
+carries the name only; the exe has NX, ASLR and high-entropy ASLR; the installer's ProgIDs quote `"%1"` (it replaced the MSI);
+the updater's notes are shown as text, not HTML.
 
 # Phase 0: harden the host as it is
 
-None of this waits for native storage; it closes the audit's holes in today's build.
+None of this waits for native storage; it closes the audit's holes in today's build. Items marked done came from the
+hardening plan (todos/HARDENING.md); the rest is as planned, brought up to 97c1e06. Each window is still made by
+`open_window` (main.rs): on about:blank, then `net::guard` puts the network rules on its web view and sends it to its
+page. Per-web-view settings (the WebView2 ones below) go into guard's `with_webview` closure beside the rules, so no
+page ever runs without them, and that closure calls only the platform web view, never a Tauri method of its window
+(the deadlock rule).
 
-- **Capabilities.** Drop `core:default`: pages call only our `host_*` commands, through `__TAURI_INTERNALS__.invoke`.
-  Declare those in an app manifest (build.rs: `tauri_build::try_build(Attributes::new().app_manifest(
-  AppManifest::new().commands(&[…])))`), so each is refused unless a capability grants it, and grant them per window
-  kind, which the label carries (`<page>-<n>`): `start` (`main`) its commands, `host_open_url` included; `apps`
+Commits, each with its tests (a regression test seen failing on the code before), type-checked for Windows and macOS
+and run on Linux; the macOS CI run and a Windows run after the last:
+1. capabilities (permissions/host.toml rather than an app manifest's `commands`: the same refusal, no generated files),
+   the labels and `host_new_window` by page id, since the label comes from the page (done 2026-10-17);
+2. navigation, the link gate (the Start Center only, the two-entry list, Copy on the licences page), `VO.go`'s
+   fallback (done 2026-10-17; Linux: the Start Center arrives as `tauri://localhost`, with no `/`, and `#create`
+   comes as a navigation; a save starts as a `blob:` navigation, so the window's own blob: stays allowed);
+3. launch files, downloads, permissions, WebView2's keys, WebRTC, the init script; docs/desktop.md (done
+   2026-10-17). Found on Linux (not released): WebKitGTK's downloads belong to the web context all windows share, and
+   wry connects every window's download handler to it, so each save reaches every window's handler (the label is
+   the first window's) and, after one refused download, wry's `failed` flag stays set and every later save reports
+   failure though written. Windows and macOS have a handler per web view. Phase 2 ends downloads; until then a Linux
+   release would need wry fixed.
+
+Phase 0 is built (2026-10-17, not committed): run the macOS workflow (the probe, the pages) and Windows (the run in
+docs/desktop.md, F5 and Ctrl+P doing nothing, a camera request refused, Settings ▸ Fonts on this computer, Paste).
+
+- **Capabilities.** Drop `core:default` (capabilities/default.json grants it to `main` and `doc-*` today): pages call
+  only our `host_*` commands, through `__TAURI_INTERNALS__.invoke`. Declare those in an app manifest (build.rs:
+  `tauri_build::try_build(Attributes::new().app_manifest(AppManifest::new().commands(&[…])))`, beside build.rs's
+  icon resources), so each is refused unless a capability grants it, and grant them per window kind, which the label
+  carries (`<page>-<n>`, replacing `doc-N`): `start` (`main`) its commands, `host_open_url` included; `apps`
   (`quire-*`, `ledger-*`, `lectern-*`) theirs, without `host_open_url`; `licenses-*` none. Each command still checks
-  its window itself; the ACL is a second wall.
-- **Links.** One function, `links::open(window, url)`, reached from `host_open_url` and from `on_navigation` and
-  `on_new_window` when they meet an address outside the app. It opens the address only when:
-  - the caller is the Start Center (label `main`, its page the Start Center's);
-  - the address is https, on the default port, without a user name or password, and its host and path are on the
-    allow-list, an exact host match and a path prefix that ends at a `/`:
+  its window itself; the ACL is a second wall. Check that `net::probe`'s title messages and the init script need no
+  core command.
+- **Links.** Done in d7a32ef: one gate, `host::leave(app, label, url)` → `may_open(page, url)`, for `on_navigation` and
+  `on_new_window`; `host_open_url` checks `is_ours`. https only, no port, an exact host and a path prefix that ends at
+  a `/`, the list in Rust; no mailto; the parsed address goes to the system (`ShellExecuteW` "open", NSWorkspace,
+  `xdg-open`). Still to do:
+  - only the Start Center sends addresses (today any window may; the only caller of `host_open_url` is
+    public/start.js, for Update; the GitHub button is a link that `leave` judges);
+  - the list narrows to two entries (Decisions, 2026-10-17; the table below): vibeoffice.work only under `/updater/`
+    (today any path);
+  - the licences page sends none (Decisions, 2026-10-17): `may_open` loses its licences branch, and on the desktop
+    public/oss-licenses.js cancels a click on a link and shows the address with Copy Address (a small box of its own:
+    the page loads no common/ui.js), as `ui.linkDialog` does for documents; on the web its links stay links;
+  - refuse an address with a user name or password (`is_ours` doesn't look today).
 
     | Host | Path | For |
     |---|---|---|
-    | `vibeoffice.work` | any | Update (`/updater/?from_version=…`), the site |
+    | `vibeoffice.work` | `/updater/` and below (any query) | Update (`VO.updateUrl()`: `/updater/?from_version=…`) |
     | `github.com` | `/tcchen2026/VibeOffice` and below | the Start Center's GitHub button |
-
-  It hands the system the address as the parser re-wrote it (`ShellExecuteW` "open", `xdg-open`). Everything else is
-  refused, and `host_open_url` says so. No `mailto:`. The list is a constant in Rust: changing it is a release.
-- **Links in documents.** On the desktop, Quire (editor.js Ctrl+click, app.js Open Hyperlink), Ledger (app.js
-  HYPERLINK) and Lectern (slideshow.js `follow`) call one `VO.followLink(url)`, which shows the address instead of
-  opening it: "VibeOffice doesn't open links from documents. The address is: …", with Copy Address and OK. Links
-  inside the document (bookmarks, cells, slides) work as before. On the web `VO.followLink` opens a new tab, as today,
-  but only for http(s) and mailto (Quire and Lectern pass any scheme today). The licenses page shows its addresses as
-  text on the desktop.
-- **New windows.** `on_new_window` always returns Deny: pages open windows only through `host_new_window`, and a
-  `target=_blank` link that leaves the app goes to `links::open` first.
-- **Navigation.** A window loads exactly one page, the one Rust opened it with: its first load passes, and so do
-  fragment changes (the Start Center's `#create`); reloads, other pages and every other scheme (`file:`, `data:`,
-  `blob:`, …) are refused; an address outside the app goes to `links::open`. Check on both platforms which
-  same-document navigations reach `on_navigation`. This also keeps Phase 1's settings snapshot current.
-- **CSP** (tauri.conf.json, now `null`): `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
-  img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc:
-  http://ipc.localhost blob: data: https://vibeoffice.work; frame-src 'none'; object-src 'none'; base-uri 'self';
-  form-action 'none'`, with `dangerousDisableAssetCspModification: ["style-src"]` (Tauri adds hashes for inline
-  styles, and a browser ignores `'unsafe-inline'` once a hash is there). `blob:` in connect-src because the pages
-  `fetch` blob URLs; vibeoffice.work for the Start Center's update check. Tauri hashes the inline scripts (the head
-  look script). The init script removes `RTCPeerConnection`, `webkitRTCPeerConnection` and `RTCDataChannel`, which the
-  CSP doesn't cover. Check every page in the native build (the Chromium stub doesn't apply Tauri's CSP), and that eval,
-  an injected inline script and a fetch to another host are blocked.
+- **Links in documents.** Done in 7189436 (HARDENING 3.1), differently from the plan: Quire, Ledger and Lectern call
+  `L.ui.linkDialog(url)`, the address with a warning and Copy Address, on the web as well as the desktop; links inside
+  the document (bookmarks, references, slide jumps) still go there. No `VO.followLink`.
+- **New windows.** Done in d7a32ef: `on_new_window` always returns Deny, after handing an address outside the app to
+  `leave`. Pages open windows only through `host_new_window`.
+- **Navigation.** A window loads exactly one page, the one Rust opened it with: about:blank first, then (Start Center,
+  `VO_NET_PROBE` set) the probe's `data:` page, then its page; fragment changes pass (the Start Center's
+  `#create`), and reloads (the Start Center's language setting reloads it); other pages, another query and every other
+  scheme (`file:`, `data:`, `blob:`, …) are refused; an address
+  outside the app goes to `leave`. Rust keeps the expected page per label (`Host::pages` holds what started; this
+  holds what may). Check on all three systems which same-document navigations reach `on_navigation`. This closes
+  audit items 2, 18 and 19, and keeps Phase 1's settings snapshot current.
+- **CSP.** Done another way (d7a32ef): the policy is a meta tag in every page (`tools/csp.mjs`, `POLICY`), web and
+  desktop alike, so tauri.conf.json's `csp` stays null and Tauri adds no hashes; beneath it, the network rules on
+  Windows and macOS. Left: WebRTC, which neither covers. The init script removes `RTCPeerConnection`,
+  `webkitRTCPeerConnection` and `RTCDataChannel` on Windows and macOS (Linux: WebKitGTK's `enable-webrtc` is off by
+  default; check it stays off). Check that the init script also runs in a `data:` page (the probe's page can report it).
 - **`host_new_window({ page, new, template })`**: `page` is one of `quire`, `ledger`, `lectern`, `licenses`; `template`
   matches `^[a-z0-9-]{1,40}$`; Rust builds the address. At most 64 windows are open; beyond that it refuses, and the
-  page says so. Pages never open the Start Center.
+  page says so. Pages never open the Start Center. Today it takes a URL and checks only the scheme, host and port
+  (`VO.host.newWindow(url)`, suite.js: `VO.go`, `VO.showLicenses`). It stays `async` (window creation). `VO.go`
+  falls back to `location.href` when it fails, which the navigation rule refuses on the desktop: show the error there
+  instead.
 - **Launch files**, until Phase 1 replaces them: `host_launch_files` and `host_read` only for the Start Center, which
-  is the page that takes them today; `host_read` refuses files over 512 MiB and stops reading there.
+  is the page that takes them today (`VO.host.onFiles`); `host_read` refuses files over 512 MiB and stops reading
+  there. The same handles now also carry Finder's files on macOS (`RunEvent::Opened`).
 - **Downloads (interim)**: refuse Windows reserved device names (CON, PRN, AUX, NUL, COM0–9 and LPT0–9, superscript
-  digits too, with any extension) and names ending in a dot or a space; at most one download per window per second.
-  The larger hole, that any page can drop files into Downloads unasked, closes with Phase 2.
+  digits too, with any extension) and names ending in a dot or a space; at most one download per window per second
+  (`host::download_destination`). The larger hole, that any page can drop files into Downloads unasked, closes with
+  Phase 2.
 - **Web permissions**: every permission request is denied natively except Local Font Access (Settings ▸ Fonts on
-  this computer) and the clipboard (the apps' Paste). Windows: `PermissionRequested` on the web view (through
-  `with_webview`; `webview2-com`, already built for Tauri, becomes a direct Windows dependency); Linux: WebKitGTK's
-  `permission-request`. Check first what wry does by default on each.
-- **WebView2 browser shortcuts** off (`AreBrowserAcceleratorKeysEnabled = false`, same route): no F5 or Ctrl+R reload,
-  Ctrl+P print preview, Ctrl+F find bar, Ctrl+S page save. Check that editing keys (Ctrl+C, Ctrl+V, Ctrl+Z) and the
-  apps' own shortcuts still work.
-- **Init script**: built with `serde_json` (no string pasting); `__VO_HOST__` defined read-only and not configurable.
-- **The Portable zip** (audit item 15), done: released as `VibeOffice-<version>-x64-Portable.zip` with its exe inside a
-  `VibeOffice` folder; the release notes say to run it from there.
+  this computer) and the clipboard (the apps' Paste): `WebviewWindowBuilder::on_permission_request` (Tauri 2.12; wry
+  maps it to WebView2's `PermissionRequested`, WKUIDelegate's media capture and WebKitGTK's `permission-request`), in
+  `open_window`. On macOS the sandbox refuses camera, microphone and location anyway (no entitlement grants them).
+  Check what each engine asks for Local Font Access and clipboard reads, so those still work.
+- **WebView2 browser shortcuts** off: `ICoreWebView2Settings3::SetAreBrowserAcceleratorKeysEnabled(false)` in guard's
+  closure on Windows (Tauri doesn't expose wry's `with_browser_accelerator_keys`): no F5 or Ctrl+R reload, Ctrl+P
+  print preview, Ctrl+F find bar, Ctrl+S page save. Check that editing keys (Ctrl+C, Ctrl+V, Ctrl+Z) and the apps'
+  own shortcuts still work. WKWebView and WebKitGTK have no such keys; the Mac menu has no Reload.
+- **Init script**: built with `serde_json` (no string pasting; today `format!` with `platform`, `version`,
+  `appVersion`, `edition`); `__VO_HOST__` defined with `Object.defineProperty`, read-only and not configurable (today
+  a frozen object on a writable property). The localStorage look seed stays until Phase 1.
+- **DLL planting** (audit item 15): done another way, by the installer (above).
 
 # Phase 1: native storage and one document per window
 
@@ -215,21 +305,29 @@ the desktop:
   10 s, ask natively whether to close anyway (its draft is kept). This fixes today's gap: Tauri's close doesn't run
   `beforeunload`.
 - **Single instance.** One process owns the windows, settings and Recent Files. A second launch passes its command
-  line files to the first and exits; without files it brings up the Start Center (reopened if it was closed). Own small
-  code rather than tauri-plugin-single-instance (which brings D-Bus on Linux): a Unix socket in `$XDG_RUNTIME_DIR`
-  (else in `~/.vibeoffice`), on Windows a per-user named pipe that rejects remote clients. Only the same user reaches
-  it, who could start the exe with those files anyway; it accepts paths of existing files only, treated exactly as the
-  command line.
-- The process ends with its last window; the Start Center ("main") may close while documents stay open.
+  line files to the first and exits; without files it brings up the Start Center (reopened if it was closed).
+  - Windows: done with tauri-plugin-single-instance (main.rs `second_start`: a named mutex and a message to the first
+    process; no D-Bus there). It hands the files to the Start Center today (`files_arrived`); Phase 1 has Rust open
+    each in its own window instead. Keep it.
+  - macOS: LaunchServices keeps one instance; files come as `RunEvent::Opened`, a Dock click as `Reopen`. Phase 1
+    opens Opened files in their own windows, as on Windows.
+  - Linux: own small code, since the plugin brings D-Bus there: a Unix socket in `$XDG_RUNTIME_DIR` (else in
+    `~/.vibeoffice`). Only the same user reaches it, who could start the exe with those files anyway; it accepts
+    paths of existing files only, treated exactly as the command line.
+- The process ends with its last window on Windows and Linux; the Start Center ("main") may close while documents stay
+  open. On macOS it keeps running with its menu bar (main.rs, `ExitRequested`), as Mac apps do.
 - **https on Windows** (`use_https_scheme`): https://tauri.localhost, a secure context, no DNS prefetch for links.
-  The origin changes, which costs nothing once no storage lives in the web view; update `links` and the CSP.
+  The origin changes, which costs nothing once no storage lives in the web view. Update `host::is_external` (it
+  matches the host, so it already holds), `net::allowed` (already lets https://tauri.localhost and ipc.localhost
+  through) and the pages' policy: IPC moves to `https://ipc.localhost`, which `connect-src` in tools/csp.mjs must
+  name.
 
 The app for a file comes from its extension: a Rust table equal to `VO.APPS` in public/common/suite.js (a unit test
 reads suite.js and compares). An app's File ▸ Open offers that app's types; the Start Center offers all.
 
 Dropped files: HTML5 drop gives bytes without a path, so a dropped document opens unbound (its first Save asks).
 Later, perhaps: WebView2 can tell the path of a `File` the user dropped (`postMessageWithAdditionalObjects`); WebKitGTK
-can't.
+can't. A file dropped on the Dock icon comes as `Opened`, with a path and the sandbox's grant: it opens bound.
 
 ## Storage: ~/.vibeoffice
 
@@ -266,10 +364,20 @@ can't.
   missing or broken file (defaults; a broken entry is skipped).
 - `VIBEOFFICE_HOME` overrides the folder, for tests.
 - Nothing is migrated from the web view storage of the builds so far.
+- **macOS (sandboxed, both editions).** `~/.vibeoffice` is `~/Library/Containers/work.vibeoffice.desktop/Data/
+  .vibeoffice` (the sandbox points the home folder there). The sandbox's grant for a user's file (the Open dialog,
+  Finder, the Dock) ends when the app quits, so a Recent Files entry of a file also keeps a security-scoped bookmark
+  (`bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope`, in the entry as base64): opening it resolves the
+  bookmark and calls `startAccessingSecurityScopedResource` for as long as a window has the file; a stale bookmark is
+  made again; one that resolves elsewhere (the file moved) opens it there and moves the entry to the new path's key.
+  Needs `com.apple.security.files.bookmarks.app-scope` in both entitlements files (desktop/macos/). The default Mac
+  volume ignores case, as Windows does, and `canonicalize` keeps the case it was given: key by the case on disk
+  (`NSURLCanonicalPathKey`) or lower-case as on Windows.
 
-## Host interface (host::VERSION 2)
+## Host interface (host::VERSION 3)
 
-`window.__VO_HOST__`, set by the init script before the page's own: `{ platform, version, appVersion, settings }`,
+`window.__VO_HOST__`, set by the init script before the page's own: `{ platform, version, appVersion, edition,
+settings }` (VERSION is 2 since Phase 0's `host_new_window`, without `settings`; `edition` is `appstore` or `direct`, from the Mac bundle),
 `settings` being the config as it was when the window was made. Rust keeps every window's copy current
 (`vo-settings`), and a window loads one page only, so the copy stays right.
 
@@ -282,7 +390,7 @@ kinds' capabilities (Phase 0).
 | `host_set_setting(key, value)` | stores it (null removes it); the other windows get `vo-settings` `{ key, value }` |
 | `host_document()` | this window's starting document `{ name, saved, draft, lossState }` and `host_document_bytes()`, or null (blank, template) |
 | `host_open({ here })` | system Open dialog; each file opens in a window of its own, or its window comes forward. `here` (the page is an untouched blank): the first file binds to this window and the page calls `host_document()` |
-| `host_new_window({ page, new, template }, bytes?, name?)` | Phase 0's command; with bytes, a page-made document, unbound |
+| `host_new_window({ page, start }, bytes?, name?)` | Phase 0's command; with bytes, a page-made document, unbound |
 | `host_recent()` | `[{ key, app, name, folder, time, size, preview, draft: { name, time } \| null, open }]`, newest first |
 | `host_recent_preview(key)` | the preview's bytes |
 | `host_open_recent(key, draft)` | the entry (its unsaved version when `draft`) in a window of its own, or that window forward; a file's draft opens bound to the file |
@@ -298,10 +406,14 @@ Events into the pages, as `vo-download` today (Rust evaluates a `CustomEvent` on
 `vo-recent` (the list changed), `vo-close`. Gone: `host_launch_files` and `host_read` with their process-wide
 handles, `host_ui_scale` and `host_set_ui_scale` (now a setting).
 
-**The Open dialog** (and Phase 2's Save dialog): Windows `rfd` (`IFileDialog`, `common-controls-v6`); Linux a small
+**The Open dialog** (and Phase 2's Save dialog): Windows `rfd` (`IFileDialog`, `common-controls-v6`); macOS `rfd`
+(NSOpenPanel and NSSavePanel as a sheet on the window, `set_parent`; in the sandbox the panel is what grants the file).
+On both, rfd's `AsyncFileDialog` from an `async` command: it shows the dialog on the main thread without blocking it,
+so no command holds the main thread while the user picks. Linux a small
 `GtkFileChooserNative` adapter on Tauri's GTK thread, parented to `window.gtk_window()`, completing on its response
 signal. rfd 0.17's GTK backend can't be used: it makes an unparented chooser on its own GTK thread and returns only a
-path (its `set_parent` works for the XDG backend, not GTK). So `rfd` becomes a Windows-only dependency. GTK's native
+path (its `set_parent` works for the XDG backend, not GTK). So `rfd` becomes a Windows and macOS dependency (today
+it is on every target with `gtk3`, and nothing uses it). GTK's native
 chooser uses the portals inside Flatpak by itself. No tauri-plugin-dialog or -fs: they would hand page script generic
 file APIs.
 
@@ -311,7 +423,8 @@ file APIs.
   1. the init script removes `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `BroadcastChannel`,
      `navigator.storage` and `navigator.serviceWorker` (getters that throw), so a use fails at once instead of quietly
      working;
-  2. web views are made with `incognito(true)` (WebView2 InPrivate, WebKitGTK ephemeral; in wry 0.57), so whatever
+  2. web views are made with `incognito(true)` (WebView2 InPrivate, WebKitGTK ephemeral, WKWebView's non-persistent
+     data store; in wry 0.57), so whatever
      slips through is gone at exit;
   3. tests: the host stub removes the same APIs and every page loads and works without console errors; a static test
      allows those names only in the web branches of common/suite.js and common/core.js.
@@ -320,9 +433,8 @@ file APIs.
   `L.store` (core.js, keys `<APP_ID>.<name>`; its ~100 call sites stay as they are), looks, local fonts,
   `updateAsked` (index.html), the UI size (Settings).
 - The head script that sets `data-look` before the first paint reads `__VO_HOST__.settings['vibeoffice.look']` when
-  there is one: public/index.html, quire/ and lectern/index.html, tools/ledger/build/template.html (Ledger's page is
-  generated: run make.py), the template in tools/oss-licenses.py (run it). Remove the localStorage seed in
-  `host::init_script`.
+  there is one: one file now, public/common/look.js (d7a32ef moved the inline copies out; every page loads it). Remove
+  the localStorage seed in `host::init_script`.
 - `VO.recent` keeps its shape for the Start Center, File menus, task panes and Document Recovery, with a desktop
   backend: the list from `host_recent`, previews through a new `VO.recent.preview(entry)` → Blob (web: `entry.thumb`),
   changes from `vo-recent` instead of BroadcastChannel. `setDraft`, `setThumb` and `discardDraft` map to the
@@ -331,7 +443,8 @@ file APIs.
 - `VO.attach` on the desktop opens what `host_document()` gives instead of `VO.launch` `open`/`recent`. `VO.handoff`
   (the Start Center's drop) → `host_new_window` with the bytes; the Start Center's Open File → `host_open`;
   `VO.host.onFiles` goes (Rust opens launched files itself).
-- Until Phase 2, saves go to the Downloads folder as now; Rust also adds each file written there to Recent Files.
+- Until Phase 2, saves go to the Downloads folder as now; a save clears the window's draft (`VO.saved` →
+  `host_clear_draft`). Not done, as Phase 2 follows at once: Rust adding each file written there to Recent Files.
 - Scout (common/scout/assistant.js) uses localStorage directly: move it to `VO.settings` or `L.store`.
 
 # Phase 2: saving to real files
@@ -391,7 +504,7 @@ It replaces `SAVE_TYPES` in host.rs. The byte check guards against a writer mix-
 the security boundary. Reading has its own list (`VO.APPS`, Phase 1), so a readable format never becomes writable by
 accident. A node test keeps each app's type descriptors (below) and this table in step.
 
-### Commands (host::VERSION 3)
+### Commands (host::VERSION 4)
 
 Bytes cross as raw IPC bodies, options in headers; the commands go to the `apps` capability only.
 
@@ -434,9 +547,16 @@ Errors are codes the page acts on, each with a message that names the file but h
    (`\\?\`) paths on Windows, so long paths work.
 5. When a replace would lose something (Unix: a folder we can't write in, a file with other hard links or another
    owner), write in place instead: truncate, write, sync, and on failure put the kept previous version back.
+   **macOS** (both editions are sandboxed): the sandbox grants the file, not its folder, so steps 3 and 4 can't put a
+   temp file beside it. Write the temp in the item replacement folder for that file (`NSFileManager
+   URLForDirectory:NSItemReplacementDirectory inDomain:appropriateForURL:create:`, on the same volume) and swap it in
+   with `replaceItemAtURL:withItemAtURL:backupItemName:options:resultingItemURL:error:`, which is NSDocument's safe
+   save and keeps the file's attributes; a new file the Save panel granted is written at its path (`create_new`).
+   Verify on a Mac, both editions, including a file on another volume and in iCloud Drive.
 6. **Mark of the Web** (Windows): when the window's file came from the internet (it has a `Zone.Identifier` stream),
    a Save As or an export writes the same stream onto the new file, so Office still opens the copy in Protected View.
-   A never-saved document made from such a file carries it too.
+   A never-saved document made from such a file carries it too. macOS: check what the sandbox already does (it marks
+   files a sandboxed app writes with `com.apple.quarantine`) and whether Office for Mac's Protected View reads it.
 7. On any failure before the replace: remove the temp; the original is untouched. Once replaced, the save counts as
    done, even if the bookkeeping after it fails.
 8. After success: `base` from the file as written; the Recent Files entry's time and size; the window's draft deleted
@@ -527,21 +647,24 @@ Rust refuses every web view download (`on_download` → false); `download_destin
 Flatpak, Snap and the macOS App Store: `denied` offers Allow Access…: a folder chooser at the file's folder, then the
 save again, only if the chosen folder holds the bound file (verify it is the same file; portal paths may differ).
 `__VO_HOST__.sandboxed` (`FLATPAK_ID`, `SNAP`, `APP_SANDBOX_CONTAINER_ID`). Unsupported → say so and offer Save As.
-Unverified until tried in those sandboxes; macOS builds are out of scope for now.
+Unverified until tried in those sandboxes. On a Mac, with Phase 1's bookmarks and Phase 2's replace, `denied` should be
+rare (a bookmark that no longer resolves, a folder the user can't write); there the folder chooser is NSOpenPanel with
+`canChooseDirectories`, and its grant is kept as a bookmark too.
 
 # Files
 
-- Phase 0. desktop/src: main.rs (navigation, new windows, permissions, browser keys, downloads), host.rs (commands,
-  init script), links.rs (new); build.rs (app manifest), capabilities/ (per window kind), tauri.conf.json (CSP);
-  Cargo.toml (webview2-com on Windows), then tools/oss-licenses.py. public/common/suite.js (`VO.followLink`,
-  `newWindow` by page id), the apps' hyperlink code, tools/oss-licenses.py's page (links as text on the desktop).
+- Phase 0. desktop/src: main.rs (navigation, labels, permissions, downloads), host.rs (commands, init script, the link
+  gate's caller check), net.rs (WebView2's browser keys in guard's closure); build.rs (app manifest), capabilities/
+  (per window kind). webview2-com is already a direct Windows dependency (net.rs). public/common/suite.js
+  (`newWindow` by page id, `VO.go`'s fallback), public/oss-licenses.js (links with Copy on the desktop).
 - Phase 1. desktop/src: main.rs (windows, close flow), host.rs (commands), store.rs (new: ~/.vibeoffice, config,
-  Recent Files, drafts, the atomic write), instance.rs (new: single instance), the Open dialog (the GTK adapter);
-  Cargo.toml and Cargo.lock (sha2, now a direct dependency; rfd Windows-only), then tools/oss-licenses.py.
-  public/common/suite.js, core.js, public/index.html, the apps' head scripts and app.js (new document paths, Window
-  menu), tools/ledger/build/ (then make.py), common/scout/assistant.js.
-- Phase 2. desktop/src: types.rs and files.rs (new), host.rs (commands; the interim goes; File System Access API off),
-  main.rs (`on_download`), store.rs (previous versions), the Save dialog. public/common/core.js (`L.file`),
+  Recent Files, drafts, the atomic write; macOS bookmarks), instance.rs (new: single instance on Linux), the Open
+  dialog (rfd; the GTK adapter); Cargo.toml and Cargo.lock (sha2, now a direct dependency; rfd Windows and macOS only;
+  objc2-foundation's NSURL bookmark calls), desktop/macos/*.entitlements (bookmarks), then tools/oss-licenses.py.
+  public/common/suite.js, core.js, look.js, public/start.js (the Start Center's code), the apps' app.js (new document
+  paths, Window menu), common/scout/assistant.js; tools/csp.mjs (`https://ipc.localhost` once Windows is on https).
+- Phase 2. desktop/src: types.rs and files.rs (new; the macOS replace), host.rs (commands; the interim goes; File
+  System Access API off), main.rs (`on_download`), store.rs (previous versions), the Save dialog. public/common/core.js (`L.file`),
   suite.js (the interim notice goes); the three apps' save code and Save As dialogs; menus and ribbons for
   Versions… (`node --test tests/ribbon.test.mjs`).
 - Phase 3. The folder access in files.rs.
@@ -552,12 +675,12 @@ Unverified until tried in those sandboxes; macOS builds are out of scope for now
 # Verification
 
 1. `cargo test` (Linux target), each regression test failing on the code before its fix:
-   - Phase 0: `links::open` refuses every window but the Start Center, http, other ports, a user name, lookalike
-     hosts (`vibeoffice.work.example.com`, `xn--` forms, `github.com/tcchen2026/VibeOfficeX`) and every scheme but
-     https, and hands over the re-written address; the navigation rule (first load, fragment, reload, another page,
-     `file:`, `data:`, `blob:`, other schemes); `on_new_window` denies everything; `host_new_window` page ids,
-     template ids and the 64-window cap; reserved and trailing-dot download names; the init script is valid JS for any
-     version string.
+   - Phase 0: the link gate refuses every window but the Start Center (the licences page included), an address with
+     a user name or password, and vibeoffice.work outside `/updater/` (`/`, `/updaterx/`, `/updater` itself), and
+     still lets `VO.updateUrl()` and our GitHub through (d7a32ef's tests already cover http, other ports, lookalike
+     hosts and other schemes); the navigation rule (about:blank, the probe's page, first load, fragment, reload, another page,
+     `file:`, `data:`, `blob:`, other schemes); `host_new_window` page ids, template ids and the 64-window cap;
+     reserved and trailing-dot download names; the init script is valid JS for any version string.
    - Phase 1: keys (the same file by another name, a link or, on Windows, other case → one entry); a user's name never
      in a path (names with `..`, separators, Unicode: only hex under `recent_files/`); size caps; pruning keeps
      drafts; foreign and broken files ignored; the atomic write leaves the old file when it fails; setting keys and
@@ -571,8 +694,8 @@ Unverified until tried in those sandboxes; macOS builds are out of scope for now
      versions kept once per window, pruned by count, age and size, names only hex and digits; the Mark of the Web
      copied (Windows).
 2. `node --test tests/desktop/host.test.mjs`, the stub speaking the new commands:
-   - Phase 0: `VO.followLink` shows the address with Copy in the apps, opens nothing; the Start Center's GitHub and
-     Update buttons call `host_open_url`; on the web, `javascript:` and `file:` links don't open.
+   - Phase 0: `VO.newWindow` sends a page id; when it fails, `VO.go` shows the error and doesn't navigate; the Start
+     Center's Update button still calls `host_open_url`. (Document links: done, `tests/ui/hyperlinks.test.mjs`.)
    - Phase 1, with the storage APIs removed: every page loads without console errors; looks and settings change and
      reach the other windows; Recent Files, previews, drafts and Document Recovery work from the stub; the static
      storage test; the web path unchanged (tests/looks, ribbon, search).
@@ -580,10 +703,11 @@ Unverified until tried in those sandboxes; macOS builds are out of scope for now
      before `prepare`; Cancel at the dialog, at the compatibility check and in the Markdown question; every error
      code's message and buttons; Ledger's Cancel while closing keeps the book open; exports keep the dirty state; the
      web path still downloads the same bytes.
-3. Linux live, offline (`unshare -rn`), on display :0, with `VIBEOFFICE_HOME` and scratch documents under ./tmp so the
-   real ~/.vibeoffice is never touched:
+3. Linux live, offline (`unshare -rn`), on display :0 or under `xvfb-run -a` (with `WEBKIT_DISABLE_COMPOSITING_MODE=1`),
+   with `VIBEOFFICE_HOME` and scratch documents under ./tmp so the real ~/.vibeoffice is never touched:
    - Phase 0: a test document in each app with links to https, `file:///`, a UNC path, `ftp:`, `mailto:` and another
-     protocol handler: Ctrl+click and the slide show open nothing, the address dialog appears; the GitHub button and
+     protocol handler: Ctrl+click and the slide show open nothing, the address dialog appears; a link on the licences
+     page shows its address with Copy and opens nothing; the GitHub button and
      Update open the browser (`xdg-open` logged, the network being off); a page calling `host_open_url` from an app
      window, a Tauri core command (`plugin:path|resolve_directory`) and `window.open` are refused; F5 does nothing;
      every page loads without CSP violations; a fetch to another host and WebRTC fail.
@@ -594,40 +718,53 @@ Unverified until tried in those sandboxes; macOS builds are out of scope for now
      dialog, with type changes, no extension and an existing file; `chmod a-w` the file → denied; edit it from a
      shell → changed; remove it → missing; Versions… opens the version before the save. Each app's saved files open in
      LibreOffice.
-4. Windows exe and MSI build. On Windows (the user): Phase 0: the link document as on Linux, F5, Ctrl+P and Ctrl+S
-   do nothing the page didn't ask for, editing keys work, camera or location requests are denied; Phase 1:
+4. Windows exe and installer build (`desktop/build.sh`; clippy for the default target). On Windows (the user), first
+   the run docs/desktop.md lists (install, the network probe with `VO_NET_PROBE=1`, all three apps); then Phase 0: the
+   link document as on Linux, F5, Ctrl+P and Ctrl+S do nothing the page didn't ask for, editing keys work, camera or
+   location requests are denied; Phase 1:
    double-click the same .docx twice (one window), Recent Files, settings, closing with unsaved changes; Phase 2:
    Ctrl+S, Save As, PDF export, a file open in Word (busy), a read-only file, a downloaded file saved as a copy still
    opens in Protected View; the saved files open in Word, Excel and PowerPoint without a repair prompt.
-5. Time a 30 MB workbook through `host_save` (IPC and write) and note peak memory.
+5. macOS: clippy for `aarch64-apple-darwin` here; the CI smoke run (the network probe, screenshots of every page)
+   for each phase. On a Mac (the user), both editions: Phase 0: the link document, a camera request; Phase 1: a file
+   from Finder, then from Recent Files after quitting and starting again (the bookmark), the same file twice (one
+   window), a file moved while the app was closed; Phase 2: Ctrl+S on a file in Documents, on another volume and in
+   iCloud Drive, Save As, PDF export, a read-only file, a file open in another app; the saved files open in Office
+   for Mac without a repair prompt.
+6. Time a 30 MB workbook through `host_save` (IPC and write) and note peak memory.
 
 # Working notes
 
-- The code today (545b9f7): desktop/src/host.rs has `host_launch_files`/`host_read` with process-wide numeric handles
-  (any window can take the launch files), `host_new_window` (async: creating a window from a sync command deadlocks on
-  Windows; label `doc-N`; same scheme, host and port, because `Url::origin()` is opaque for tauri://),
-  `host_close_window` (refuses "main"), `host_open_url` with `is_external`/`open_external`, UI scale in settings.json,
-  the Downloads interim (`download_destination`, `downloaded`, `host_show_downloads`; docs/desktop.md, Saving (for
-  now)). desktop/src/main.rs `open_window` builds every window with the same hooks (`on_navigation`, `on_new_window`,
-  `on_download`, title, zoom set on each page load because WebKitGTK resets it). capabilities/default.json grants
-  `core:default` to `main` and `doc-*`. Page side: `VO.host`, the IndexedDB section, `VO.recent`, `VO.handoff`,
-  `VO.attach`, `VO.opened`, `VO.saved` in public/common/suite.js; `L.store`, `L.saveFile`, `L.pickFiles` in
-  public/common/core.js; hyperlinks in quire/js/editor.js (~910) and app.js (~1010), ledger/js/app.js (~812),
-  lectern/js/slideshow.js (`follow`).
+- The code today (97c1e06): desktop/src/host.rs has `host_launch_files`/`host_read` with process-wide numeric handles
+  (any window can take the launch files; on macOS Finder's files too), `host_new_window` (async: creating a window
+  from a sync command deadlocks on Windows; label `doc-N`; same scheme, host and port, because `Url::origin()` is
+  opaque for tauri://), `host_close_window` (refuses "main"), `host_open_url` (`is_ours`), the link gate (`leave`,
+  `may_open`, `Host::pages`), UI scale in settings.json, the Downloads interim (`download_destination`, `downloaded`,
+  `host_show_downloads`; docs/desktop.md, Saving (for now)), the edition (Info.plist `VODistribution`).
+  desktop/src/main.rs `open_window` builds every window with the same hooks (`on_navigation`, `on_new_window`,
+  `on_download`, title, zoom set on each page load because WebKitGTK resets it) on about:blank, then `net::guard`;
+  `files_arrived` (Windows' second start, macOS's Opened and Reopen); the Mac menu. desktop/src/net.rs: the network
+  rules and the probe. capabilities/default.json grants `core:default` to `main` and `doc-*`. Page side: `VO.host`,
+  the IndexedDB section, `VO.recent`, `VO.handoff`, `VO.attach`, `VO.opened`, `VO.saved`, `VO.go` in
+  public/common/suite.js; `L.store`, `L.saveFile`, `L.pickFiles` in public/common/core.js; public/start.js (the Start
+  Center); public/common/look.js; document links through `L.ui.linkDialog`.
 - Commands that need the calling window take `window: WebviewWindow`; Tauri fills it in, the page can't.
 - `NewWindowResponse::Allow` means the engine's own popup ("the default implementation"), not one of our windows.
 - The exe's DLL imports (`x86_64-w64-mingw32-objdump -p`): advapi32, comctl32 (side by side, v6), dwmapi, gdi32, imm32,
   kernel32, msvcrt, ntdll, ole32, oleaut32, shell32, shlwapi, user32, bcryptprimitives, combase, two api-ms-win sets,
   WebView2Loader. DllCharacteristics 0x160 (NX, ASLR, high-entropy); no load configuration directory.
-- desktop/Cargo.toml already has `rfd` 0.17 (gtk3 feature) from an earlier session, uncommitted at planning time: make it
-  Windows-only (Phase 1, Open dialog).
-- Build: `desktop/build.sh` (Windows exe, zip, MSI; needs mingw-w64, `wixl`, `zip`). Linux: `cd desktop && cargo build
+- desktop/Cargo.toml has `rfd` 0.17 (`gtk3`, `common-controls-v6`) on every target, unused: make it Windows and macOS
+  only (Phase 1, Open dialog), or drop it until then.
+- Build: `desktop/build.sh` (Windows: vibeoffice.exe and VibeOfficeSetup.exe, zipped; needs mingw-w64 and `zip`).
+  macOS type-check from here: `CC_aarch64_apple_darwin=clang CFLAGS_aarch64_apple_darwin=--target=arm64-apple-macos11
+  cargo clippy --locked --target aarch64-apple-darwin`; the bundle, signing and the smoke run are CI's
+  (desktop/macos/build.sh, .github/workflows/macos.yml). Linux: `cd desktop && cargo build
   --release --target x86_64-unknown-linux-gnu` (needs `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libsoup-3.0-dev`; on
   this machine without root they are unpacked in ./tmp/linuxdev/root, used with
   `PKG_CONFIG_SYSROOT_DIR=$PWD/tmp/linuxdev/root` and
   `PKG_CONFIG_PATH=$PWD/tmp/linuxdev/root/usr/lib/x86_64-linux-gnu/pkgconfig:$PWD/tmp/linuxdev/root/usr/share/pkgconfig`
-  from the repository root). `cargo test` builds the same way. `wixl` 0.106: `tmp/msitools/root/usr/bin/wixl` with
-  `LD_LIBRARY_PATH=$PWD/tmp/msitools/root/usr/lib/x86_64-linux-gnu`.
+  from the repository root). `cargo test` builds the same way (9 tests at 97c1e06). The installer's own tests run
+  under Wine (`tests/desktop/setup-wine.py`); Wine can't show the app (no WebView2).
 - Run the Linux build offline on display :0 with a scratch profile: `unshare -rn`, `XDG_DATA_HOME`/`XDG_CONFIG_HOME`/
   `XDG_CACHE_HOME` (and `VIBEOFFICE_HOME`) under ./tmp. `xdotool` and `import` drive and screenshot it; the window
   position `xdotool getwindowgeometry` reports is off, take a root screenshot to find coordinates. Kill test instances

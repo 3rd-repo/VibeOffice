@@ -343,7 +343,8 @@
       const name = (A.books[A.cur] ? A.books[A.cur].name : 'Book1').replace(/\.[^.]+$/, '') + '.pdf';
       const res = await L.saveFile(name, pdf);
       if (res === 'saved' && !opts.quiet) ui.toast(pages.length === 1 ? L.t('{0} page saved as {1}. Open it to print.', pages.length, name) : L.t('{0} pages saved as {1}. Open it to print.', pages.length, name));
-    } catch (e) { ui.busy(false); A.error(e); }
+      return res === 'saved';
+    } catch (e) { ui.busy(false); A.error(e); return false; }
     finally { ui.busy(false); }
   };
 

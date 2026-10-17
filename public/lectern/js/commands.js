@@ -30,6 +30,7 @@
   C('printPreview', { label: 'Print Pre&view', icon: 'preview', tip: 'Print Preview', run: () => A().setView('preview') });
   C('print', { label: '&Print...', icon: 'print', key: 'Ctrl+P', tip: 'Print', run: () => L.dlg.print() });
   C('properties', { label: 'Propert&ies', icon: 'properties', run: () => L.dlg.properties() });
+  C('versions', { label: 'Versio&ns...', icon: 'open', enabled: () => L.file.bound(), run: () => L.file.showVersions(A().fileName) });   // the desktop app
   C('exitApp', { label: 'E&xit', icon: 'exit', run: () => A().exit() });
 
   /* ---------- Edit ---------- */

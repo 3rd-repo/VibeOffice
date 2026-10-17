@@ -45,8 +45,9 @@ export function problems(text) {
   else if (metas[0] !== META) out.push('another policy');
   const at = text.indexOf(metas[0]), script = text.search(/<script\b/);
   if (metas.length && script >= 0 && script < at) out.push('a script before the policy');
+  /* data blocks (JSON, the Start Center's JSON-LD for search engines) never run */
   for (const m of text.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
-    if (/\bsrc=/.test(m[1]) ? m[2].trim() : !/type="application\/json"/.test(m[1])) out.push(`an inline script: ${m[0].slice(0, 60)}`);
+    if (/\bsrc=/.test(m[1]) ? m[2].trim() : !/type="application\/(?:ld\+)?json"/.test(m[1])) out.push(`an inline script: ${m[0].slice(0, 60)}`);
   }
   for (const m of text.matchAll(/<[a-z][^>]*\son[a-z]+\s*=/gi)) out.push(`a handler: ${m[0].slice(0, 60)}`);
   for (const m of text.matchAll(/\b(?:href|src|action)\s*=\s*["']?\s*javascript:/gi)) out.push(`a javascript: URL: ${m[0]}`);

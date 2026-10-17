@@ -62,7 +62,7 @@
   function buildMenus() {
     const autoShapeSub = (group) => ({ custom: (close) => shapeGrid(L.geom.MENU[group], close) });
     const menus = [
-      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', '-', 'pageSetup', 'printPreview', 'print', '-', 'properties', ...((r) => (r.length ? ['-', ...r] : []))(window.VO ? VO.recentMenuItems(4) : []), '-', 'exitApp'] },
+      { label: '&File', items: () => ['new', 'open', 'close', '-', 'save', 'saveAs', 'saveWeb', '-', 'pageSetup', 'printPreview', 'print', '-', 'properties', ...(L.file.native() ? ['versions'] : []), ...((r) => (r.length ? ['-', ...r] : []))(window.VO ? VO.recentMenuItems(4) : []), '-', 'exitApp'] },
       { label: '&Edit', items: ['undo', 'redo', '-', 'cut', 'copy', 'officeClipboard', 'paste', 'pasteSpecial', '-', 'clear', 'selectAll', 'duplicate', 'deleteSlide', '-', 'find', 'replace'] },
       {
         label: '&View', items: () => ['viewNormal', 'viewSorter', 'showFromStart', 'viewNotes', '-',
@@ -365,14 +365,23 @@
     if (r === 1 && window.VO) VO.discard(L.pres);   // its unsaved version goes too
     return r === 1;
   }
+  /** is the presentation an untouched new one, which an opened file may replace? */
+  const pristine = () => !L.hist.dirty && !A.saved && /^Presentation\d+$/.test(A.fileName);
+  /** the desktop app keeps one presentation per window: a new one there opens in a window of its own; true then */
+  const elsewhere = (start) => {
+    if (!(window.VO && VO.oneDocument) || pristine()) return false;
+    VO.go(VO.url('lectern', start)).catch((e) => ui.msg(String(e), { icon: 'error' }));
+    return true;
+  };
   A.newPresentation = async function () {
-    if (!(await confirmDiscard())) return;
+    if (elsewhere({ new: true }) || !(await confirmDiscard())) return;
     A.untitled = (A.untitled || 1) + 1;
     A.loadPres(M.newPresentation(Object.assign({ design: 'default' }, A.newSize())), 'Presentation' + A.untitled);
     if (A.opts.startupPane) L.panes.task.show('layout');
   };
   /** a new presentation from one of the content templates (templates.js) */
   A.newFromTemplate = async function (id) {
+    if (elsewhere({ template: id })) return;
     const pres = L.templates && L.templates.build(id, A.newSize());
     if (!pres || !(await confirmDiscard())) return;
     A.untitled = (A.untitled || 1) + 1;
@@ -384,13 +393,16 @@
   A.exit = async function () { if (await confirmDiscard() && window.VO) VO.exit(); };
   A.closePresentation = async function () {
     if (!(await confirmDiscard())) return;
+    if (window.VO && VO.oneDocument) { VO.exit(); return; }   // its window closes
     A.loadPres(M.newPresentation(Object.assign({ design: 'default' }, A.newSize())), 'Presentation1');
   };
   A.openDialog = async function () {
+    if (window.VO && VO.oneDocument) return VO.openDialog();
     const files = await L.pickFiles('.pptx,.ppsx,.potx,.pptm,.potm,.ppsm,.txt,application/vnd.openxmlformats-officedocument.presentationml.presentation');
     if (files[0]) A.openFile(files[0]);
   };
   A.openFile = async function (file) {
+    if (window.VO && await VO.elsewhere(file)) return;   // the desktop app: a window of its own
     if (/\.txt$/i.test(file.name)) { if (!(await confirmDiscard())) return; const text = await L.readAsText(file); const pres = M.newPresentation(Object.assign({ design: 'default', empty: true }, A.newSize())); A.loadPres(pres, file.name.replace(/\.txt$/i, '')); A.outlineToSlides(text, 0); return; }
     if (/\.ppt$/i.test(file.name)) { ui.msg(L.t('{0} is in the older binary PowerPoint 97–2003 format. Open it in PowerPoint, Keynote, Google Slides or LibreOffice and save it as .pptx, then open the .pptx here.', file.name), { icon: 'warn' }); return; }
     if (!(await confirmDiscard())) return;
@@ -426,18 +438,33 @@
       else ui.msg(L.t('{0} can\'t read {1}. {2}\nMake sure the file is a PowerPoint 2007 or later presentation (.pptx).', L.APP, file.name, e && e.message ? L.t(e.message) : ''), { icon: 'error' });
     }
   };
+  /* what Lectern saves, for the desktop app's Save dialog (L.file): the presentation types are saves, the rest exports */
+  L.file.types = [{ id: 'pptx', label: L.N('PowerPoint Presentation (*.pptx)'), ext: ['pptx'] }, { id: 'pptm', label: L.N('Macro-Enabled Presentation (*.pptm)'), ext: ['pptm'] },
+    { id: 'ppsx', label: L.N('PowerPoint Show (*.ppsx)'), ext: ['ppsx'] }, { id: 'ppsm', label: L.N('Macro-Enabled Show (*.ppsm)'), ext: ['ppsm'] },
+    { id: 'potx', label: L.N('Design Template (*.potx)'), ext: ['potx'] }, { id: 'potm', label: L.N('Macro-Enabled Template (*.potm)'), ext: ['potm'] },
+    { id: 'pdf', label: L.N('PDF, one slide per page (*.pdf)'), ext: ['pdf'] }, { id: 'html', label: L.N('Single File Web Page (*.html)'), ext: ['html', 'htm'] },
+    { id: 'png', label: L.N('PNG Graphics Format, current slide (*.png)'), ext: ['png'] }, { id: 'txt', label: L.N('Outline (*.txt)'), ext: ['txt'] }];
+  const PRES_TYPE = /^(pptx|pptm|ppsx|ppsm|potx|potm)$/;
+  /** Save: the presentation's own file (the desktop app: in place, when it has one it may change), else Save As */
   A.save = async function () {
-    if (!A.saved) return A.saveAs();
-    return A.exportAs(A.fileType || 'pptx', A.fileName);
+    if (!A.saved || (L.file.native() && !L.file.inPlace())) return A.saveAs();
+    return A.exportAs(A.fileType || 'pptx', A.fileName, L.file.native() ? 'save' : undefined);
   };
   A.saveAs = function () {
+    /* the desktop app: the system's Save dialog picks the name and type, then the presentation is written there */
+    if (L.file.native()) return (async () => {
+      const c = await L.file.choose('saveAs', PRES_TYPE.test(A.fileType) ? A.fileType : 'pptx', A.fileName);
+      return c ? A.exportAs(c.type, c.name, 'chosen') : 'declined';
+    })();
     return new Promise(resolve => {
       let writing = false;
       const dialog = L.dlg.saveAs(async (name, type) => { writing = true; resolve(await A.exportAs(type, name)); });
       dialog.done.then(() => { if (!writing) resolve('declined'); });
     });
   };
-  A.exportAs = async function (type, name) {
+  /** writes the presentation as `type`: a download (web), or in the desktop app (`how`) its own file ('save') or what
+   *  the Save dialog picked ('chosen'); without `how` there, an export that asks where */
+  A.exportAs = async function (type, name, how) {
     name = name || A.fileName;
     if (TE.active()) TE.sync();
     if (L.panes.left.tab === 'outline') L.panes.left.commitOutline();
@@ -452,10 +479,14 @@
       ui.busy(false);
       if (!blob) return;
       const losses = L.opc.formats[type] ? await ui.compatibility(L.pres, blob.dropped) : [];
-      if (losses === null) return 'declined';
-      const r = await L.saveFile(`${name}.${ext}`, blob);
+      if (losses === null) { if (how === 'chosen') L.file.cancel(); return 'declined'; }
+      const w = how ? await L.file.write(blob, how, { type, name: `${name}.${ext}` }) : { result: await L.saveFile(`${name}.${ext}`, blob) };
+      const r = w.result;
+      if (w.name) name = w.name.replace(/\.[^.]+$/, '');   // as the Save dialog left it
       if (r === 'saved') L.opc.acknowledge(L.pres, losses);
-      if (r === 'saved' && /^(pptx|pptm|ppsx|ppsm|potx|potm)$/.test(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); L.hist.dirty = false; A.status(L.t('Saved {0}', `${name}.${ext}`)); if (window.VO) VO.saved(`${name}.${ext}`, blob, L.pres); }
+      /* the presentation's own file now: on the web any save of a presentation type; the desktop app's Save, or a Save As it bound */
+      const own = !L.file.native() || how === 'save' || w.bound;
+      if (r === 'saved' && own && PRES_TYPE.test(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); L.hist.dirty = false; A.status(L.t('Saved {0}', `${name}.${ext}`)); if (window.VO) VO.saved(`${name}.${ext}`, blob, L.pres); }
       return r;
     } catch (e) {
       ui.busy(false);
@@ -2188,6 +2219,8 @@ addEventListener('resize',fit);fit();show(0);`;
     if (window.VO) VO.attach('lectern', {
       async open(f, o) {
         await A.openFile(f);
+        /* a presentation a page made (desktop app): never saved */
+        if (o && o.made) { A.saved = false; A.fileName = o.name.replace(/\.(pptx|ppsx|potx|pptm|ppsm|potm)$/i, ''); A.updateTitle(); }
         if (o?.draft) L.opc.recoverLosses(L.pres, o.lossState);
         /* an unsaved version: the changes are not saved yet, and a never-saved presentation still needs Save As */
         if (o && o.draft) { L.hist.dirty = true; A.saved = !!o.saved; A.fileName = o.name.replace(/\.(pptx|ppsx|potx|pptm|ppsm|potm)$/i, ''); A.updateTitle(); A.status('Recovered the unsaved changes. Save the presentation to keep them.'); ui.refresh(); }
@@ -2197,6 +2230,8 @@ addEventListener('resize',fit);fit();show(0);`;
       isDirty: (p) => p === L.pres && !!L.hist.dirty,
       current: () => L.pres,
       showRecovery() { A.opts.taskOpen = true; L.$('#taskpane').hidden = false; L.panes.task.show('recovery'); },
+      pristine,
+      close: confirmDiscard,
       thumb: () => L.pres.slides[0] && A.slideCanvas(L.pres.slides[0], 480),
       message: (t) => ui.msg(t, { icon: 'warn' }),
       templates: () => L.templates.list().map(({ id, name }) => ({ id, name })),
