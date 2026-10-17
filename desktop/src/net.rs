@@ -17,7 +17,7 @@ use tauri::{Manager, WebviewWindow};
 const SITE_HOST: &str = "vibeoffice.work";
 
 /// Whether a web view may load `url`: the site over https, the app's own pages and IPC (Tauri's
-/// http://tauri.localhost and http://ipc.localhost on Windows; the dev server in a dev build), and
+/// https://tauri.localhost and https://ipc.localhost on Windows; the dev server in a dev build), and
 /// anything that isn't the network (data:, blob:, about:, tauri:, ipc:). Windows asks this for every
 /// request; macOS says the same in `rules`.
 #[cfg_attr(not(windows), allow(dead_code))]
@@ -27,9 +27,9 @@ pub fn allowed(url: &str) -> bool {
     };
     match url.scheme() {
         "https" if url.host_str() == Some(SITE_HOST) && url.port().is_none() => true,
+        "https" if matches!(url.host_str(), Some("tauri.localhost" | "ipc.localhost")) => true,
         "http" | "https" => {
-            matches!(url.host_str(), Some("tauri.localhost" | "ipc.localhost"))
-                || (!cfg!(feature = "custom-protocol") && url.host_str() == Some("127.0.0.1"))
+            !cfg!(feature = "custom-protocol") && url.host_str() == Some("127.0.0.1")
         }
         "ws" | "wss" => false,
         _ => true,
@@ -65,11 +65,11 @@ fn rules() -> String {
 pub const BLANK: &str = "about:blank";
 
 /// The address Tauri gives `url` (as its manager/webview.rs does): the app's own pages at tauri://localhost
-/// (macOS, Linux) or http://tauri.localhost (Windows), the dev server in a dev build.
+/// (macOS, Linux) or https://tauri.localhost (Windows, `use_https_scheme`), the dev server in a dev build.
 pub fn page_url(app: &AppHandle, url: WebviewUrl) -> Option<Url> {
     let base = if cfg!(feature = "custom-protocol") {
         Url::parse(if cfg!(windows) {
-            "http://tauri.localhost/"
+            "https://tauri.localhost/"
         } else {
             "tauri://localhost/"
         })
@@ -413,17 +413,19 @@ mod tests {
         for url in [
             "https://vibeoffice.work/updater/current.json",
             "https://vibeoffice.work/updater/whatsnew.json",
-            "http://tauri.localhost/quire/index.html",
-            "http://ipc.localhost/host_read",
+            "https://tauri.localhost/quire/index.html",
+            "https://ipc.localhost/host_read",
             "tauri://localhost/index.html",
             "ipc://localhost/host_read",
-            "blob:http://tauri.localhost/0b6c",
+            "blob:https://tauri.localhost/0b6c",
             "data:image/png;base64,AAAA",
             "about:blank",
         ] {
             assert!(allowed(url), "{url}");
         }
         for url in [
+            "http://tauri.localhost/quire/index.html",
+            "http://ipc.localhost/host_read",
             "http://vibeoffice.work/updater/current.json",
             "https://vibeoffice.work:8443/",
             "https://www.vibeoffice.work/",

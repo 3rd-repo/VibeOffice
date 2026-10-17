@@ -4,7 +4,7 @@
 
 [[permission]]
 identifier = "start-center"
-description = "The Start Center: Open File, Recent Files, a dropped file, app windows, the UI size, the update page"
+description = "The Start Center: Open File, Recent Files, a dropped file, app windows, the settings (the UI size, the look, the language), the update page"
 commands.allow = [
   "host_open",
   "host_open_recent",
@@ -15,13 +15,12 @@ commands.allow = [
   "host_recent_clear",
   "host_new_window",
   "host_open_url",
-  "host_ui_scale",
-  "host_set_ui_scale",
+  "host_set_setting",
 ]
 
 [[permission]]
 identifier = "app-window"
-description = "Quire, Ledger and Lectern: the window's document, its draft and preview, saving it (Save, Save As, exports, previous versions), File > Open, Recent Files, Document Recovery, the Window menu, closing, the licences page (About)"
+description = "Quire, Ledger and Lectern: the window's document, its draft and preview, saving it (Save, Save As, exports, previous versions), File > Open, Recent Files, Document Recovery, the Window menu, closing, the licences page (About), the settings"
 commands.allow = [
   "host_document",
   "host_document_bytes",
@@ -29,7 +28,6 @@ commands.allow = [
   "host_open_recent",
   "host_new_document",
   "host_recent",
-  "host_recent_preview",
   "host_set_preview",
   "host_set_draft",
   "host_clear_draft",
@@ -38,6 +36,7 @@ commands.allow = [
   "host_focus",
   "host_closing",
   "host_save",
+  "host_allow_access",
   "host_choose",
   "host_write_chosen",
   "host_cancel_choice",
@@ -45,4 +44,5 @@ commands.allow = [
   "host_open_version",
   "host_new_window",
   "host_close_window",
+  "host_set_setting",
 ]

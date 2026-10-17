@@ -84,8 +84,14 @@
     },
     /** the whole UI's scale (1 = 100 %), or null where the page cannot set it (the web: the browser's own
      *  zoom, Ctrl + and Ctrl −, does it); the desktop app keeps it for the next start */
-    async uiScale() { return native ? call('host_ui_scale') : null; },
-    async setUiScale(scale) { if (native) return call('host_set_ui_scale', { scale: +scale }); },
+    /* the size of the whole UI in the desktop app (1 = 100 %): the setting the app zooms every window by */
+    async uiScale() { return native ? +VO.settings.get('vibeoffice.uiScale') || 1 : null; },
+    async setUiScale(scale) {
+      if (!native) return;
+      if (!(+scale >= 0.5 && +scale <= 4)) throw new RangeError('the UI size is from 0.5 to 4');
+      VO.settings.set('vibeoffice.uiScale', String(+scale));
+      await VO.settings.kept();
+    },
     /** open one of the suite's pages in a window of its own: the desktop app makes a full window (host and
      *  all), told only the page (quire, ledger, lectern, licenses) and how it starts (VO.launch), never an
      *  address; the web opens a window or tab, false if the browser blocked it */
@@ -105,13 +111,13 @@
        (desktop/src/doc.rs). A page names no file: it asks for the system's Open dialog, a Recent Files entry
        by its key, or a new window for bytes it has. */
     /** the system's Open dialog: each file chosen opens in a window of its own (or comes forward in the one that
-     *  has it); here: this window's untouched document gives way to the first. Whether one opened here */
-    async open(here) {
+     *  has it), never in this page, which gets only the document its window was made with. How many opened */
+    async open() {
       const labels = { title: VO.t('Open'), all: VO.t('All files VibeOffice opens'), quire: VO.t('Documents'), ledger: VO.t('Spreadsheets'), lectern: VO.t('Presentations') };
-      return call('host_open', { here: !!here, labels });
+      return call('host_open', { labels });
     },
     /** a Recent Files entry (draft: its unsaved version), as open() does */
-    async openRecent(key, draft, here) { return call('host_open_recent', { key, draft: !!draft, here: !!here }); },
+    async openRecent(key, draft) { return call('host_open_recent', { key, draft: !!draft }); },
     /** a document as bytes in a new window: a file dropped on a page, or one a page made (made: never saved) */
     async newDocument(blob, name, made) {
       const headers = { 'X-Name': encodeURIComponent(name) };
@@ -137,6 +143,10 @@
     /** bytes into what the Save dialog picked: { name, type, bound } */
     async writeChosen(bytes) { return call('host_write_chosen', bytes); },
     async cancelChoice() { return call('host_cancel_choice'); },
+    /** in the Mac App Sandbox (both editions), a save it refused may ask for the file's folder: allowAccess (how:
+     *  'save' or 'chosen', text: the folder chooser's message) is true once the user let the app in */
+    sandboxed: !!(native && native.sandboxed),
+    async allowAccess(how, text) { return call('host_allow_access', { how, text }); },
     /** File ▸ Versions...: the versions of this window's file its saves replaced [{ id, time, size }], and one
      *  opened in a new window */
     async versions() { return native ? call('host_versions') : []; },
@@ -198,25 +208,25 @@
   VO.showLicenses = () => VO.host.newWindow(VO.LICENSES).catch((e) => console.error('licenses:', e));
 
   /* ------------------------------------------------------------ fonts on this computer */
-  /** the font families Local Font Access listed (Chrome and Edge, after the user allows it), kept in this
-   *  browser for every app of the suite; the Font boxes show them (L.localFonts in core.js) */
+  /** the font families Local Font Access listed (Chrome and Edge, after the user allows it), kept in the
+   *  settings for every app of the suite; the Font boxes show them (L.localFonts in core.js) */
   const LOCAL_FONTS = 'vibeoffice.localFonts';
   let localFonts = null;
-  window.addEventListener('storage', (e) => { if (e.key === LOCAL_FONTS || e.key === null) localFonts = null; });
+  VO.settings.on((key) => { if (key === LOCAL_FONTS || key === null) localFonts = null; });
   VO.localFonts = {
     supported: () => typeof window.queryLocalFonts === 'function',
     list() {
-      if (!localFonts) { try { localFonts = JSON.parse(localStorage.getItem(LOCAL_FONTS)) || []; } catch (e) { localFonts = []; } }
+      if (!localFonts) { try { localFonts = JSON.parse(VO.settings.get(LOCAL_FONTS)) || []; } catch (e) { localFonts = []; } }
       return localFonts;
     },
     /** ask the browser for the list (it asks the user the first time) and keep it; the number of families */
     async load() {
       const families = Array.from(new Set((await window.queryLocalFonts()).map((f) => f.family))).sort((x, y) => x.localeCompare(y));
       localFonts = families;
-      try { localStorage.setItem(LOCAL_FONTS, JSON.stringify(families)); } catch (e) { /* storage off: kept for this page only */ }
+      VO.settings.set(LOCAL_FONTS, JSON.stringify(families));   // not kept: for this page only
       return families.length;
     },
-    forget() { localFonts = []; try { localStorage.removeItem(LOCAL_FONTS); } catch (e) { /* storage off */ } },
+    forget() { localFonts = []; VO.settings.remove(LOCAL_FONTS); },
   };
 
   /* ------------------------------------------------------------ service worker */
@@ -269,25 +279,26 @@
       t.onerror = t.onabort = () => reject(t.error);
     });
   }
-  const chan = 'BroadcastChannel' in window ? new BroadcastChannel('vibeoffice') : null;
+  const chan = !native && 'BroadcastChannel' in window ? new BroadcastChannel('vibeoffice') : null;   // the desktop app: vo-recent
   const listeners = new Set();
   const notify = () => { VO.recent.refresh(); for (const fn of listeners) if (!fn.cacheOnly) fn(); };   // cache users redraw after the refresh
   const changed = () => { if (chan) chan.postMessage('recent'); notify(); };
-  if (chan) chan.addEventListener('message', (e) => { if (e.data === 'recent') notify(); else if (e.data === 'look') applyLook(storedLook()); });
+  if (chan) chan.addEventListener('message', (e) => { if (e.data === 'recent') notify(); });
   /** call fn when the Recent Files list changes (here or in another page); returns the function that stops it */
   VO.onRecentChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 
   /* ------------------------------------------------------------ Looks */
   /* the chrome's colours (common/looks.css) and, for a look with layout 'ribbon', the ribbon instead of menus and
      toolbars (common/ribbon.js); one choice for the whole suite: <html data-look data-layout> is set before
-     the first paint by each page's head script from localStorage 'vibeoffice.look'; changing it here
-     repaints every open window of the suite. Canvas-drawn chrome (rulers, sheet headers) redraws on 'vo-look'. */
+     the first paint by each page's head script (common/look.js) from the setting 'vibeoffice.look'; changing it
+     here repaints every open window of the suite. Canvas-drawn chrome (rulers, sheet headers) redraws on 'vo-look'. */
   const N = (s) => s;   // UI text, translated where it is shown (VO.N, common/i18n.js)
   N('Blank Document'); N('Blank Workbook'); N('Blank Presentation');   // templates.json's Blank entries (tools/templates.mjs)
   const LOOKS = [{ id: 'classic', name: N('Classic'), note: 'The classic blue toolbars and menus.' },
     { id: 'paper', name: N('Paper'), note: 'Light and calm: warm paper tones, one teal accent, rounded shapes.' },
     { id: 'paper2016', name: N('Paper 2016'), layout: 'ribbon', note: 'Paper with tabs of commands, grouped by task, instead of menus and toolbars.' }];
-  const storedLook = () => { try { return localStorage.getItem('vibeoffice.look') || 'classic'; } catch (e) { return 'classic'; } };
+  const LOOK = 'vibeoffice.look';
+  const storedLook = () => VO.settings.get(LOOK) || 'classic';
   const applyLook = (id) => {
     const root = document.documentElement;
     if (!LOOKS.some((l) => l.id === id)) return;
@@ -307,12 +318,12 @@
     layout: () => document.documentElement.dataset.layout || 'bars',
     set(id) {
       if (!LOOKS.some((l) => l.id === id)) return;
-      try { localStorage.setItem('vibeoffice.look', id); } catch (e) { /* this window still changes */ }
+      VO.settings.set(LOOK, id);   // not kept: this window still changes
       applyLook(id);
-      if (chan) chan.postMessage('look');
     },
   };
   applyLook(storedLook());   // a page without the head script, or a stored look that changed meanwhile
+  VO.settings.on((key) => { if (key === LOOK || key === null) applyLook(storedLook()); });
 
   /* ------------------------------------------------------------ Recent Files */
   const MAX_RECENT = 30;
@@ -445,9 +456,11 @@
   /* ------------------------------------------------------------ the app side */
   const q = new URLSearchParams(location.search);
   /** how this app page was opened: null (plain: show the sample), { new }, { template: id }, { open: id } or { recent: key };
-   *  the desktop app's { doc }: the window has a document (VO.host.document) */
+   *  the desktop app's { doc }: the window has a document (VO.host.document); n: the new document's number */
   VO.launch = q.has('open') ? { open: q.get('open') } : q.has('recent') ? { recent: q.get('recent'), draft: q.has('draft') }
     : q.has('doc') && native ? { doc: true } : q.has('template') ? { template: q.get('template') } : q.has('new') ? { new: true } : null;
+  /* the desktop app numbers new documents across windows (Document2 in the second window that makes one): n */
+  if (VO.launch && (VO.launch.new || VO.launch.template) && +q.get('n') > 0) VO.launch.n = +q.get('n');
 
   let current = null;   // { app, hooks }
   /** an app is ready: open the file it was launched with, if any, then show the Document Recovery pane when
@@ -483,7 +496,7 @@
   };
   const asFile = (blob, name) => (blob instanceof File && blob.name === name ? blob : new File([blob], name, { type: blob.type }));
   const say = (e) => (current && current.hooks.message || alert)(String(e && e.message || e));
-  /** the desktop app: open the document the native side gave this window (as it starts, or after open(here)) */
+  /** the desktop app: open the document the native side gave this window as it was made */
   async function takeDocument() {
     let d = null;
     try { d = await VO.host.document(); } catch (e) { say(e); return; }
@@ -493,10 +506,12 @@
     await current.hooks.open(d.file, { draft: i.draft, name: i.name, saved: i.saved, lossState: i.lossState || undefined, made: !i.saved && !i.draft });
   }
   const pristine = () => !!(current && current.hooks.pristine && current.hooks.pristine());
-  /** File ▸ Open in the desktop app: the system's Open dialog; the first file takes this window when its document
-   *  is an untouched blank, the others open in windows of their own */
+  /** the desktop app: a window whose document is an untouched blank closes once the file asked for has opened in
+   *  a window of its own, as Word's blank Document1 gives way (the page only closes itself: its claim gets it nothing) */
+  const giveWay = () => { if (pristine()) VO.host.closeWindow().catch(() => {}); };
+  /** File ▸ Open in the desktop app: the system's Open dialog; each file opens in a window of its own */
   VO.openDialog = async () => {
-    try { if (await VO.host.open(pristine())) await takeDocument(); } catch (e) { say(e); }
+    try { if (await VO.host.open()) giveWay(); } catch (e) { say(e); }
   };
   /** whether a window holds one document (the desktop app, docs/desktop.md): the apps' New, Open and Close then
    *  make or close windows, and their Window menus list windows (VO.windowItems) */
@@ -525,10 +540,10 @@
     return true;
   };
   /** open a Recent Files entry in this app: its unsaved version when draft is true, else the saved file (the
-   *  desktop app: in a window of its own, or in this one when its document is an untouched blank) */
+   *  desktop app: in a window of its own, an untouched blank here giving way) */
   VO.openRecent = async (key, o) => {
     if (native) {
-      try { if (await VO.host.openRecent(key, o && o.draft, pristine())) await takeDocument(); } catch (e) { say(e); }
+      try { await VO.host.openRecent(key, o && o.draft); giveWay(); } catch (e) { say(e); }
       return;
     }
     let e = null;
@@ -628,6 +643,7 @@
     if (!current) return;
     const old = doc && docKeys.get(doc);
     if (doc) clearTimeout(timers.get(doc));
+    if (doc && current.hooks.isDirty && current.hooks.isDirty(doc)) VO.changed(doc);   // changed while it was saved
     if (native) { thumbLater(); return; }   // the native side cleared the draft as it wrote the file
     VO.recent.put(current.app, name, blob, false).then(async (key) => {
       if (!key) return;
@@ -636,8 +652,12 @@
       thumbLater(key);
     }, (e) => console.warn('recent files:', e));
   };
+  const changes = new WeakMap();
+  /** how many changes doc has had: a save leaves the document unchanged only if none came while it was written */
+  VO.changeCount = (doc) => (doc && changes.get(doc)) || 0;
   /** doc has new unsaved changes: its unsaved version is written a little later */
   VO.changed = (doc) => {
+    if (doc) changes.set(doc, (changes.get(doc) || 0) + 1);
     if (!current || !doc || !current.hooks.snapshot) return;
     clearTimeout(timers.get(doc));
     timers.set(doc, setTimeout(() => saveDraft(doc), Math.max(DRAFT_DELAY, slow.get(doc) || 0)));

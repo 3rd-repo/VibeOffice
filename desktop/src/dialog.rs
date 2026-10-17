@@ -1,7 +1,7 @@
 //! The system's dialogs, on the window that asks: Open, Save and a yes-or-no question. Windows and macOS through
 //! rfd (`IFileDialog`, NSOpenPanel as a sheet), whose async dialogs leave the main thread free while the user picks;
-//! Linux through GTK's own native chooser on Tauri's GTK thread, parented to the window (inside Flatpak it uses the
-//! portals by itself). rfd's GTK backend makes an unparented chooser on a thread of its own, so it isn't used there.
+//! Linux through GTK's own native chooser on Tauri's GTK thread, parented to the window. rfd's GTK backend makes an
+//! unparented chooser on a thread of its own, so it isn't used there.
 
 use std::path::PathBuf;
 
@@ -60,6 +60,23 @@ pub async fn save(
         d = d.add_filter(&f.name, &f.exts);
     }
     d.save_file().await.map(|h| (h.path().to_path_buf(), None))
+}
+
+/// The folder chooser, opening in `folder`, `text` its message: the folder picked, none when cancelled. The Mac
+/// sandbox lets the app into the folder picked (doc::host_allow_access).
+#[cfg(target_os = "macos")]
+pub async fn folder(
+    window: &WebviewWindow,
+    text: &str,
+    folder: &std::path::Path,
+) -> Option<PathBuf> {
+    rfd::AsyncFileDialog::new()
+        .set_title(text)
+        .set_directory(folder)
+        .set_parent(window)
+        .pick_folder()
+        .await
+        .map(|h| h.path().to_path_buf())
 }
 
 /// A question with Yes and No; whether the answer was Yes.

@@ -3,7 +3,7 @@
 | File | What it does |
 |---|---|
 | `public/index.html`, `public/start.js` | The Start Center: its page and its code |
-| `public/common/look.js` | The look before the first paint, first in every page's `<head>` (Looks) |
+| `public/common/look.js` | The settings (`VO.settings`) and the look before the first paint, first in every page's `<head>` (Looks, Settings) |
 | `public/common/suite.js` | `window.VO`, loaded by the Start Center and before every app's own scripts |
 | `public/manifest.webmanifest` | Install metadata: icons, shortcuts, file handlers, screenshots |
 | `public/sw.js` | Service worker: the published site cached for offline use, one version per page (on vibeoffice.work, and 127.0.0.1 for a published copy) |
@@ -102,7 +102,7 @@ One copy of everything the three apps share; a change here is a change in every 
 
 What each app provides:
 
-- its name on its page's `<html>`: `data-app="quire" data-app-name="Quire"`, which `core.js` reads as `L.APP_ID` and `L.APP_NAME` (no inline script: Security). `APP_ID` prefixes the app's settings in localStorage (`quire.…`), so it must never change.
+- its name on its page's `<html>`: `data-app="quire" data-app-name="Quire"`, which `core.js` reads as `L.APP_ID` and `L.APP_NAME` (no inline script: Security). `APP_ID` prefixes the app's settings (`quire.…`, `L.store`; Settings), so it must never change.
 - in its `app.js`, at load: `L.icons.app` (its icon), `ui.hooks = { beforeExec, refocus, commitEdit }` (its editor around commands, toolbar boxes and dialogs); Lectern also `ui.schemeColors` / `ui.currentDesign` (theme colours in colour menus) and PowerPoint's `L.SIZE_LIST`.
 - a spelling UI sets `L.spell.refreshSoon` if it draws underlines (Quire).
 
@@ -156,7 +156,7 @@ and the sources other tools build pages from (Ledger's template, `tools/oss-lice
 `tests/csp.test.mjs`, fails on a page without it or with an inline script, an `on…=` handler or a `javascript:` URL.
 
     default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
-    font-src 'self' data:; connect-src 'self' data: blob: https://vibeoffice.work ipc: http://ipc.localhost;
+    font-src 'self' data:; connect-src 'self' data: blob: https://vibeoffice.work ipc: https://ipc.localhost;
     worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'
 
 - **Scripts:** our own files only. The browser refuses inline scripts and handlers, `eval` and `new Function`, and
@@ -166,7 +166,7 @@ and the sources other tools build pages from (Ledger's template, `tools/oss-lice
 - **Styles** may be inline (`style` attributes are everywhere, and CSS can run no script). Pictures, fonts and data
   come from the site or from inside the page (`data:`, `blob:`).
 - **Connections:** the site, the update check (`https://vibeoffice.work`), and the desktop app's IPC (`ipc:` on macOS
-  and Linux, `http://ipc.localhost` on Windows). On Windows this also closes WebSockets, which WebView2's request
+  and Linux, `https://ipc.localhost` on Windows). On Windows this also closes WebSockets, which WebView2's request
   filter may not see (docs/desktop.md, Network).
 - **`form-action 'none'`:** the Start Center's `<form method="dialog">` only closes its dialog, which isn't a
   submission the policy governs.
@@ -183,14 +183,18 @@ Tests see a refusal: `tools/shot.mjs` fails on one, and the UI tests' `t.clean()
 opens or a page of another site in the tab (`tests/hostile/helpers.test.mjs`). Chromium itself reports a refusal
 only to its Log domain, so both listen for `securitypolicyviolation` in the page.
 
+## Settings
+
+`VO.settings` (`common/look.js`, the first script of every page) holds the suite's settings, strings by key as `localStorage` keeps them: `get(key, default)`, `set(key, value)` (null removes it; false if it can't be kept), `remove(key)`, `on(fn)` (`fn(key, value)` when another window changes one; key null: all may have) and `kept()` (resolves once this page's changes have reached the desktop app: before a reload). Keys are `<app>.<name>`: `vibeoffice.…` for the suite (`look`, `lang`, `localFonts`, `updateAsked`, `assistant`; `uiScale` in the desktop app), `scout.…`, and each app's `L.store` values, JSON under `<APP_ID>.<name>`. On the web they are the browser's `localStorage`, whose `storage` event tells the other windows; in the desktop app `~/.vibeoffice/config.json`, which the app serves with `look.js` and keeps current in every window, and the pages have no browser storage at all (docs/desktop.md, Settings and storage). Only the web branches of `look.js`, `suite.js` (Recent Files, the service worker) and `start.js` name browser storage (`tests/desktop/host.test.mjs` checks).
+
 ## Looks
 
 The chrome (menus, toolbars, task panes, dialogs, status bar, rulers, sheet headers) can be drawn in more than one look: **Classic** (Office 2003 blue, the default), **Paper** (warm light chrome with one teal accent and rounded shapes) and **Paper 2016** (Paper's colours with a ribbon of tabs instead of the menu bar and toolbars, see The ribbon). The user picks one on the Start Center (Themes, beside About: a card per look, its preview drawn from that look's settings via `data-look` on the card) or in Tools ▸ Options ▸ General ▸ Theme of any app; it applies to the whole suite and every open window at once.
 
 - `common/looks.css` holds every chrome colour, font and shadow as a named setting (`--chrome-line`, `--pane-ink`, `--btn-a`, `--hdr-sel-a`, …), one block per look keyed by `data-look="…"` (on `<html>`, or on any element to preview a look inside another); Classic's block is also `:root`, the default. Paper adds a few shape rules a colour cannot express (rounded trays, pill tabs), scoped `:is([data-look="paper"], [data-look="paper2016"])`; Paper 2016 shares Paper's block and adds nothing of its own but the layout. `ui.css`, each app's CSS and the Start Center use only these settings for chrome.
 - Only chrome is themed. Document content (pages, cells, slides, comments, revisions, objects and their handles, Excel's in-cell buttons), icons and colour swatches keep their colours in every look.
-- Each page's head loads `common/look.js`, which sets `data-look` from `localStorage['vibeoffice.look']` (default `classic`) and `data-layout` (`ribbon` for Paper 2016, otherwise `bars`) on `<html>` before the stylesheets load, so a page never flashes the wrong look. The key is suite-wide (not `L.store`, which is per app).
-- `VO.look` (`suite.js`): `list()` (`[{ id, name, note, layout }]`), `get()`, `layout()` (`'bars'` or `'ribbon'`), `set(id)`. `set` saves the choice, switches this page, updates `<meta name="theme-color">` from `--theme-color`, posts `'look'` on the `vibeoffice` BroadcastChannel (other windows switch too) and fires `vo-look` on `window`. `ui.lookField()` is the Options dialogs' Theme drop-down.
+- Each page's head loads `common/look.js`, which sets `data-look` from the setting `vibeoffice.look` (Settings; default `classic`, the desktop app's Paper) and `data-layout` (`ribbon` for Paper 2016, otherwise `bars`) on `<html>` before the stylesheets load, so a page never flashes the wrong look. The key is suite-wide (not `L.store`, which is per app).
+- `VO.look` (`suite.js`): `list()` (`[{ id, name, note, layout }]`), `get()`, `layout()` (`'bars'` or `'ribbon'`), `set(id)`. `set` saves the choice, switches this page, updates `<meta name="theme-color">` from `--theme-color` and fires `vo-look` on `window`; other windows switch when they hear of the setting (`VO.settings.on`). `ui.lookField()` is the Options dialogs' Theme drop-down.
 - Chrome drawn on canvases reads settings with `L.lookColor(name, fallback)` (cached, cleared on `vo-look`) and redraws through `L.onLook(fn)`: Quire's and Lectern's rulers, Ledger's row and column headers and cell selection (`RD.lookColors`). Ledger's gridlines, frozen-pane lines and page breaks are the sheet's own.
 - To add a look: copy Classic's block, give it a new `data-look` name and values, add it to `LOOKS` in `suite.js` (with `layout: 'ribbon'` for a ribbon look; `common/look.js` names the ribbon looks too). `node --test tests/looks.test.mjs` checks that every look sets every setting, that every setting the chrome uses exists and that `ui.css` has no colours of its own.
 
@@ -228,7 +232,7 @@ Scout, a beagle on his mat, is the suite's assistant, and the place where an AI 
 
 - **Help ▸ Show the Assistant** (`showAssistant`, defined by `assistant.js`; it reads *Hide the Assistant* while he is shown) brings him in at the bottom right with a wave (Greeting), nothing said, except the first time he is shown each day (from the menu, or when an app starts with him): then he waves, says good morning, afternoon or evening by the clock, introduces himself and asks what the user would like to do: *Good morning! I'm Scout, your soon-to-be-AI assistant. For now, I mostly fetch. What would you like to do?*, with choices: Find a command by name (points at Search commands and puts the cursor in it), Look something up in Help, Get started, See the keyboard shortcuts (each only where the app has that command), Show me a trick, Nothing for now. Coming in by himself once he has greeted today (another app, the next start), he just pops in (Show), with nothing to say. A click on him asks *What would you like to do?* with the same choices (or closes the balloon); he can be dragged anywhere. A click leaves the keyboard focus in the document.
 - **Right-click** (or Shift+F10 on him) opens the app's own menu: Animate! (a random action), Search commands (as the first choice), the app's Help and, last after a separator, Hide. Hide, like Hide the Assistant, plays GoodBye: he waves and drops through his mat (turned off in another window, he goes at once).
-- Kept for the whole suite in `localStorage`, as the look is: `vibeoffice.assistant` (`{ on, r, b }`: whether the user last showed or hid him, and his distance from the window's right and bottom), `scout.lastGreetedDay` (the last day he said good morning) and `scout.lastHiddenDay` (the last day the user hid him; showing him clears it). Days are local dates (`2026-10-11`) and are only compared for equality, so a clock set back never keeps him away or skips a greeting. An app starts with him when it isn't the day he was hidden and either the user last showed him or the platform has him by default. Showing or hiding him in one window does so in the others (the `storage` event).
+- Kept for the whole suite in the settings (`VO.settings`), as the look is: `vibeoffice.assistant` (`{ on, r, b }`: whether the user last showed or hid him, and his distance from the window's right and bottom), `scout.lastGreetedDay` (the last day he said good morning) and `scout.lastHiddenDay` (the last day the user hid him; showing him clears it). Days are local dates (`2026-10-11`) and are only compared for equality, so a clock set back never keeps him away or skips a greeting. An app starts with him when it isn't the day he was hidden and either the user last showed him or the platform has him by default. Showing or hiding him in one window does so in the others (`VO.settings.on`).
 - **While the user works** he acts out what they ask for, as they ask (the command, or the dialog it opens), from signals the shared code sends anyway (events on `window`): `vo-command { id, result }` after `ui.exec` runs a command, `vo-message { icon }` when a message box opens (`ui.js`), plus the browser's `beforeprint`; `vo-busy { on, text }` (the busy box coming or going, `ui.js`) keeps him at it. Saving is the exception: he saves once the file is written, on `vo-saved { name }` (`L.saveFile` in `core.js`, once the file is handed over) after a save command (Save, Save As, Save as Web Page, PDF or CSV export); a PDF written after Print is no save. The apps don't call him. The pairings are Office's (`msoAnimationSaving`, …), in `ON_COMMAND` in `assistant.js`:
 
   | What the user asks for | He plays |

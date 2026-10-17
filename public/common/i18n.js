@@ -1,4 +1,4 @@
-/* The UI's language (docs/i18n.md): one choice for the whole suite, localStorage 'vibeoffice.lang' (auto, en, ja,
+/* The UI's language (docs/i18n.md): one choice for the whole suite, the setting 'vibeoffice.lang' (auto, en, ja,
  * ko, fr, de, zh-CN, zh-Hant; qps, the pseudo-locale, for developers), with ?lang= overriding it for one page. common/lang.js
  * resolves it before the first paint into <html lang> (auto: the first of the browser's languages we have, else
  * English), which this reads. The dictionary, public/common/i18n/<lang>.json, maps the English text to its

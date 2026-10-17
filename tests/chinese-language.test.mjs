@@ -18,6 +18,7 @@ async function boot(page, { query = '', stored = 'auto', languages = ['en-US'], 
     localStorage: { getItem: (k) => { if (unavailable) throw Error('unavailable'); return state.get(k); }, setItem: (k, v) => state.set(k, v) },
     document: { documentElement: attrs, readyState: 'loading', addEventListener() {}, currentScript: { src: 'http://127.0.0.1/common/i18n.js' } },
     fetch: async (url) => { fetched.push(String(url)); return { ok: true, json: async () => ({ Close: 'TEST' }) }; },
+    addEventListener() {},
   };
   c.window = c;
   vm.createContext(c);

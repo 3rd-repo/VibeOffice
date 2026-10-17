@@ -153,8 +153,22 @@ impl Docs {
         self.windows.lock().unwrap().get(label)?.key.clone()
     }
 
-    fn set(&self, label: &str, doc: Doc) {
-        self.windows.lock().unwrap().insert(label.into(), doc);
+    /// A window being made gets its document, the only one its page will be given (`host_document`): a window
+    /// that has one keeps it, so no document goes to a page already running, which may have parsed something
+    /// hostile and holds the keys of every Recent Files entry (Threat model). One document, one window: checked
+    /// under the same lock, so two opens of a file at once make one window. Else the window that has it.
+    fn adopt(&self, label: &str, doc: Doc) -> Result<(), String> {
+        let mut windows = self.windows.lock().unwrap();
+        if let Some(key) = &doc.key {
+            if let Some((holder, _)) = windows.iter().find(|(_, d)| d.key.as_ref() == Some(key)) {
+                return Err(holder.clone());
+            }
+        }
+        if windows.contains_key(label) {
+            return Err(label.into());
+        }
+        windows.insert(label.into(), doc);
+        Ok(())
     }
 
     /// A window is gone: its document with it.
@@ -238,9 +252,14 @@ fn raise(app: &AppHandle, label: &str) {
 
 /// Opens `doc` in a new window of `app` (`<app>/?doc`).
 fn open_in_window(app_handle: &AppHandle, app: &str, doc: Doc) -> Result<(), String> {
+    // a label no window had (host::new_label counts up)
     let label = crate::host::new_label(app_handle, app)?;
     let docs = app_handle.state::<Docs>();
-    docs.set(&label, doc);
+    if let Err(holder) = docs.adopt(&label, doc) {
+        // the same file, opened at the same moment from elsewhere
+        raise(app_handle, &holder);
+        return Ok(());
+    }
     if let Err(e) = crate::open_window(
         app_handle,
         &label,
@@ -252,14 +271,11 @@ fn open_in_window(app_handle: &AppHandle, app: &str, doc: Doc) -> Result<(), Str
     Ok(())
 }
 
-/// Opens a file the system or the user named (the command line, Finder, the Open dialog): in the window that
-/// already has it, else in `here` (an app window of the same app with no file of its own, whose page asked for it),
-/// else in a new window. Whether it went `here`.
-pub fn open_path(
-    app_handle: &AppHandle,
-    path: &Path,
-    here: Option<&WebviewWindow>,
-) -> Result<bool, String> {
+/// Opens a file the system or the user named (the command line, Finder, the Open dialog): the window that already
+/// has it comes forward, else a new window opens with it. Never into a page already running: a page gets only the
+/// document its window was made with (`host_document`), so one that parsed something hostile can't take in another
+/// file (Threat model).
+pub fn open_path(app_handle: &AppHandle, path: &Path) -> Result<(), String> {
     let app = types::app_for(path)
         .ok_or_else(|| format!("VibeOffice can't open “{}”", file_name(path)))?;
     let docs = app_handle.state::<Docs>();
@@ -267,7 +283,7 @@ pub fn open_path(
     recent_changed(app_handle);
     if let Some(label) = docs.window_of(&key) {
         raise(app_handle, &label);
-        return Ok(false);
+        return Ok(());
     }
     let doc = Doc {
         key: Some(key),
@@ -275,19 +291,7 @@ pub fn open_path(
         start: Some(Start::File),
         ..Doc::default()
     };
-    if let Some(w) = here.filter(|w| {
-        app_of(w) == Some(app)
-            && docs
-                .windows
-                .lock()
-                .unwrap()
-                .get(w.label())
-                .is_none_or(|d| d.file.is_none())
-    }) {
-        docs.set(w.label(), doc);
-        return Ok(true);
-    }
-    open_in_window(app_handle, app, doc).map(|()| false)
+    open_in_window(app_handle, app, doc)
 }
 
 /// The arguments that are files, relative ones from `cwd` (the switches the installer passes aren't).
@@ -346,15 +350,13 @@ fn open_filters(app: Option<&str>, l: &Labels) -> Vec<dialog::Filter> {
 }
 
 /// File ▸ Open and the Start Center's Open File: the system's Open dialog; each file chosen opens in a window
-/// of its own, or comes forward in the one that has it. `here`: the page's document is an untouched blank, so the
-/// first file of its app opens in this window (the page then asks `host_document`). Whether one did.
+/// of its own, or comes forward in the one that has it (an untouched blank page then closes itself). How many did.
 #[tauri::command]
 pub async fn host_open(
     app: AppHandle,
     window: WebviewWindow,
-    here: bool,
     labels: Option<Labels>,
-) -> Result<bool, String> {
+) -> Result<usize, String> {
     let labels = labels.unwrap_or_default();
     let own = app_of(&window);
     let files = dialog::open(
@@ -363,32 +365,25 @@ pub async fn host_open(
         open_filters(own, &labels),
     )
     .await;
-    let mut went_here = false;
+    let mut opened = 0;
     let mut errors = Vec::new();
     for f in files {
-        let here = (here && !went_here && own.is_some()).then_some(&window);
-        match open_path(&app, &f, here) {
-            Ok(h) => went_here |= h,
+        match open_path(&app, &f) {
+            Ok(()) => opened += 1,
             Err(e) => errors.push(e),
         }
     }
     if errors.is_empty() {
-        Ok(went_here)
+        Ok(opened)
     } else {
         Err(errors.join("\n"))
     }
 }
 
-/// A Recent Files entry (`draft`: its unsaved version) in the window that has it, else `here` (as host_open),
-/// else a new window. Whether it went `here`.
+/// A Recent Files entry (`draft`: its unsaved version): the window that has it comes forward, else a new window
+/// opens with it, never the page asking (as open_path), which knows the keys of every entry (`host_recent`).
 #[tauri::command]
-pub async fn host_open_recent(
-    app: AppHandle,
-    window: WebviewWindow,
-    key: String,
-    draft: bool,
-    here: bool,
-) -> Result<bool, String> {
+pub async fn host_open_recent(app: AppHandle, key: String, draft: bool) -> Result<(), String> {
     let docs = app.state::<Docs>();
     let mut entry = docs
         .store
@@ -396,7 +391,7 @@ pub async fn host_open_recent(
         .ok_or("That file is no longer in Recent Files.")?;
     if let Some(label) = docs.window_of(&key) {
         raise(&app, &label);
-        return Ok(false);
+        return Ok(());
     }
     if draft && entry.draft.is_none() {
         return Err(format!("“{}” has no unsaved changes", entry.name));
@@ -436,19 +431,8 @@ pub async fn host_open_recent(
         access,
         ..Doc::default()
     };
-    let unbound = || {
-        docs.windows
-            .lock()
-            .unwrap()
-            .get(window.label())
-            .is_none_or(|d| d.file.is_none())
-    };
-    if here && app_of(&window) == Some(entry.app.as_str()) && unbound() {
-        docs.set(window.label(), doc);
-        return Ok(true);
-    }
     let app_name = entry.app.clone();
-    open_in_window(&app, &app_name, doc).map(|()| false)
+    open_in_window(&app, &app_name, doc)
 }
 
 /// A document as bytes in a new window: a file dropped on a page (its name in `X-Name`), or one a page made
@@ -705,6 +689,63 @@ pub fn host_save(
     }
     saved(&app, &docs, &key, &path, new);
     Ok(())
+}
+
+/// The Mac App Sandbox refused a save (`denied`): the system's folder chooser asks the user for the folder of the
+/// file (the window's own for `save`, the Save dialog's pick for `chosen`), opening there, `text` its message in the
+/// UI's language. A folder that holds the file lets the app in until it quits (nothing is kept for after); the page
+/// then saves again. False when the user cancelled; an error for a folder that doesn't hold the file. Only the
+/// sandbox asks (`__VO_HOST__.sandboxed`).
+#[tauri::command]
+pub async fn host_allow_access(
+    app: AppHandle,
+    window: WebviewWindow,
+    how: String,
+    text: Option<String>,
+) -> Result<bool, SaveError> {
+    let docs = app.state::<Docs>();
+    let path = {
+        let windows = docs.windows.lock().unwrap();
+        let d = windows.get(window.label());
+        match how.as_str() {
+            "save" => d.and_then(|d| d.file.clone()),
+            "chosen" => d.and_then(|d| Some(d.choice.as_ref()?.path.clone())),
+            other => return Err(files::fail("io", format!("not a save: {other}"))),
+        }
+    };
+    let path = path.ok_or_else(|| files::fail("missing", "There is no file to save to."))?;
+    let folder = path
+        .parent()
+        .map(Path::to_path_buf)
+        .ok_or_else(|| files::fail("io", "The file has no folder."))?;
+    #[cfg(target_os = "macos")]
+    {
+        let text = label(&text, "Allow access to the folder to save the file there");
+        let Some(picked) = dialog::folder(&window, &text, &folder).await else {
+            return Ok(false);
+        };
+        let real = |p: &Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+        if !real(&path).starts_with(real(&picked)) {
+            return Err(files::fail(
+                "elsewhere",
+                format!(
+                    "“{}” isn't in that folder. Choose the folder it is in: {}",
+                    file_name(&path),
+                    folder.display()
+                ),
+            ));
+        }
+        // the chooser's grant lasts until the app quits
+        Ok(true)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (text, folder);
+        Err(files::fail(
+            "io",
+            "Only the Mac's sandbox asks for folders.",
+        ))
+    }
 }
 
 /// One of the window's app's types for the Save dialog, its label in the UI's language.
@@ -1337,6 +1378,45 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_window_keeps_the_document_it_was_made_with() {
+        let root = std::env::temp_dir().join(format!("vo-adopt-{}", std::process::id()));
+        let docs = Docs::new(Store::new(root));
+        let bytes = |name: &str| Doc {
+            start: Some(Start::Bytes {
+                bytes: b"dropped".to_vec(),
+                name: name.into(),
+                made: false,
+            }),
+            ..Doc::default()
+        };
+        docs.adopt("quire-1", bytes("Dropped.docx")).unwrap();
+        let file = |key: &str| Doc {
+            key: Some(key.into()),
+            file: Some(PathBuf::from(format!("/d/{key}.docx"))),
+            start: Some(Start::File),
+            ..Doc::default()
+        };
+        assert!(
+            docs.adopt("quire-1", file("Secret")).is_err(),
+            "a window with dropped bytes and no file takes no other file"
+        );
+        {
+            let w = docs.windows.lock().unwrap();
+            assert!(
+                w["quire-1"].file.is_none()
+                    && matches!(w["quire-1"].start, Some(Start::Bytes { .. }))
+            );
+        }
+        docs.adopt("quire-2", file("Report")).unwrap();
+        assert_eq!(
+            docs.adopt("quire-3", file("Report")),
+            Err("quire-2".into()),
+            "two opens at once: one window, the other brought forward"
+        );
+        assert!(!docs.windows.lock().unwrap().contains_key("quire-3"));
+    }
+
+    #[test]
     fn a_window_tells_its_page_what_it_holds() {
         let file = |start| Doc {
             key: Some("k".into()),
@@ -1440,7 +1520,7 @@ mod tests {
                 ["-choose-defaults", "sub/Budget.csv", "missing.docx", "sub"],
                 &dir
             ),
-            [absolute.clone()]
+            std::slice::from_ref(&absolute)
         );
         assert!(files_among(["-pin-taskbar"], &std::env::temp_dir()).is_empty());
         assert_eq!(

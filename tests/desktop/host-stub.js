@@ -3,12 +3,15 @@
 // This tab plays every new window the native side would make (it goes to that window's address). The disk holds
 // FILES; the Open dialog "chooses" ?pick=<names> (comma-separated; none: Cancel). Recent Files start empty, or as
 // ?recent=<names> (each a file's entry; a name ending in * has unsaved changes); ?doc pages hold ?file=<name> (or
-// what the last window made was given). Records in sessionStorage: hostCalls (each command, with the page),
-// opened (host_open_url), uiScale, newWindow, closed (host_close_window), focused (host_focus), dialogs (the Open
-// dialog's labels), chose (the Save dialog's arguments), saves (each write), swRegister (service worker registrations).
+// what the last window made was given). The pages have no browser storage, as in the app (host.rs, NO_STORAGE): the
+// tab's sessionStorage is window.stubSession, for the stub and the tests' steps. Records there: hostCalls (each
+// command, with the page), opened (host_open_url), uiScale, newWindow, closed (host_close_window), focused
+// (host_focus), dialogs (the Open dialog's labels), chose (the Save dialog's arguments), saves (each write), touched
+// (each use of a storage API the app removes); stubSettings, the settings (settings.rs, config.json).
 // The clock says 2026-10-16 (?today=yyyy-mm-dd another day), so the versions here don't grow old (VO.isOutdated).
 // ?web: no host, only the version a published copy of the site is stamped with.
 (() => {
+  const sessionStorage = window.stubSession = window.sessionStorage;
   const RealDate = Date;
   const shift = RealDate.parse(((/today=(\d{4}-\d{2}-\d{2})/.exec(location.search) || [])[1] || '2026-10-16') + 'T12:00') - RealDate.now();
   window.Date = class extends RealDate {
@@ -36,7 +39,9 @@
   const appVersion = (/version=(v[0-9.]+-[0-9a-f]{6})/.exec(location.search) || [])[1] || 'v2026.10.11-abc123';
   // ?appstore: the Mac App Store edition, which the store updates (host.rs, init_script)
   const appStore = /appstore/.test(location.search);
+  // ?sandboxed: the Mac App Sandbox, where a refused save may ask for the file's folder (host_allow_access)
   window.__VO_HOST__ = Object.freeze({ platform: appStore ? 'macos' : 'windows', version: 1, appVersion, edition: appStore ? 'appstore' : 'direct',
+    sandboxed: /[?&]sandboxed\b/.test(location.search),
     updates: updates || '/updater/current.json', whatsnew: ask ? json(news) : '/updater/whatsnew.json' });
   // the commands each kind of window may call (desktop/permissions/host.toml, desktop/capabilities/); the licences
   // page none
@@ -44,11 +49,11 @@
   const app = kind === 'app' ? location.pathname.split('/')[1] : null;
   const grants = {
     start: ['host_open', 'host_open_recent', 'host_new_document', 'host_recent', 'host_recent_preview', 'host_recent_remove',
-      'host_recent_clear', 'host_new_window', 'host_open_url', 'host_ui_scale', 'host_set_ui_scale'],
+      'host_recent_clear', 'host_new_window', 'host_open_url', 'host_set_setting'],
     app: ['host_document', 'host_document_bytes', 'host_open', 'host_open_recent', 'host_new_document', 'host_recent',
-      'host_recent_preview', 'host_set_preview', 'host_set_draft', 'host_clear_draft', 'host_discard_draft', 'host_windows',
-      'host_focus', 'host_closing', 'host_save', 'host_choose', 'host_write_chosen', 'host_cancel_choice', 'host_versions',
-      'host_open_version', 'host_new_window', 'host_close_window'],
+      'host_set_preview', 'host_set_draft', 'host_clear_draft', 'host_discard_draft', 'host_windows',
+      'host_focus', 'host_closing', 'host_save', 'host_allow_access', 'host_choose', 'host_write_chosen', 'host_cancel_choice', 'host_versions',
+      'host_open_version', 'host_new_window', 'host_close_window', 'host_set_setting'],
     none: [],
   }[kind];
   /* the disk, the apps' types (desktop/src/types.rs) and Recent Files (doc.rs, store.rs) */
@@ -71,14 +76,12 @@
   const fileDoc = (name, draft) => ({ key: 'k-' + name, info: { fileName: name, name, saved: true, draft: !!draft, lossState: null, bound: true, readOnly: q.has('readonly') },
     text: draft ? FILES[name].replace(/\n$/, '') + '\nDraft,1\n' : FILES[name] });
   if (q.has('doc') && !sessionStorage.stubDoc && q.get('file')) sessionStorage.stubDoc = JSON.stringify(fileDoc(q.get('file')));
-  /* opens a file or entry as doc.rs does: here (this window's untouched document gives way) or in a new window */
-  const open = (doc, here) => {
+  /* opens a file or entry as doc.rs does: always in a new window, never into the page asking (Docs::adopt) */
+  const open = (doc) => {
     const list = recent().filter((e) => e.key !== doc.key);
     list.unshift({ key: doc.key, app: appFor(doc.info.name), name: doc.info.name, folder: 'C:\\Users\\me\\Documents', time: Date.now(), size: 28, saved: true, preview: false, draft: null, open: true, here: false });
     keep(list);
-    if (here && appFor(doc.info.name) === app && !sessionStorage.stubKey) { sessionStorage.stubDoc = JSON.stringify(doc); return true; }
     windowFor(doc);
-    return false;
   };
   const text = (body) => new TextDecoder().decode(body);
   window.__TAURI_INTERNALS__ = {
@@ -88,14 +91,15 @@
       if (!grants.includes(cmd)) throw `Command ${cmd} not allowed by ACL`;
       if (cmd === 'host_open') {
         sessionStorage.dialogs = JSON.stringify(args.labels);
-        let here = false;
-        for (const name of (q.get('pick') || '').split(',').filter(Boolean)) here = open(fileDoc(name), args.here && !here) || here;
-        return here;
+        const picked = (q.get('pick') || '').split(',').filter(Boolean);
+        for (const name of picked) open(fileDoc(name));
+        return picked.length;
       }
       if (cmd === 'host_open_recent') {
         const e = recent().find((x) => x.key === args.key);
         if (!e) throw 'That file is no longer in Recent Files.';
-        return open(fileDoc(e.name, args.draft), args.here);
+        open(fileDoc(e.name, args.draft));
+        return null;
       }
       if (cmd === 'host_new_document') {   // raw bytes, the name in X-Name
         const name = decodeURIComponent(options.headers['X-Name']);
@@ -112,7 +116,8 @@
         const d = JSON.parse(sessionStorage.stubDoc || 'null');
         if (!d) throw 'no document';
         delete sessionStorage.stubDoc;
-        return bytes(d.text);
+        // b64: bytes that aren't text (a workbook's draft, as Ledger's snapshot makes it)
+        return d.b64 ? Uint8Array.from(atob(d.b64), (c) => c.charCodeAt(0)).buffer : bytes(d.text);
       }
       if (cmd === 'host_recent') return recent().map((e) => ({ ...e, open: e.key === sessionStorage.stubKey, here: e.key === sessionStorage.stubKey }));
       if (cmd === 'host_recent_preview') return bytes('\xff\xd8\xff');
@@ -160,6 +165,11 @@
         return { name: c.name, type: c.type, bound };
       }
       if (cmd === 'host_cancel_choice') { delete sessionStorage.choice; return null; }
+      if (cmd === 'host_allow_access') {   // the folder chooser "picks" the file's folder (recorded: allowed)
+        if (!__VO_HOST__.sandboxed) throw { code: 'io', message: 'Only the Mac\'s sandbox asks for folders.' };
+        sessionStorage.allowed = JSON.stringify(args);
+        return true;
+      }
       if (cmd === 'host_versions') return sessionStorage.stubKey ? [{ id: sessionStorage.stubKey + '.1', time: 1792230000000, size: 2048 }] : [];
       if (cmd === 'host_open_version') { sessionStorage.openedVersion = args.id; return null; }
       if (cmd === 'host_open_url') {
@@ -168,10 +178,14 @@
         sessionStorage.opened = args.url;
         return null;
       }
-      if (cmd === 'host_ui_scale') return +(sessionStorage.uiScale || 1);
-      if (cmd === 'host_set_ui_scale') {
-        if (!(args.scale >= 0.5 && args.scale <= 4)) throw `UI scale ${args.scale} is outside 0.5..4`;
-        sessionStorage.uiScale = String(args.scale);
+      if (cmd === 'host_set_setting') {   // settings.rs: the key's form, the UI size's range
+        const { key, value } = args;
+        if (!/^[a-z][a-z0-9]*\.[A-Za-z0-9_.-]{1,64}$/.test(key)) throw `not a setting: ${key}`;
+        if (key === 'vibeoffice.uiScale' && value != null && !(+value >= 0.5 && +value <= 4)) throw 'the UI size is from 0.5 to 4';
+        const all = JSON.parse(sessionStorage.stubSettings || '{}');
+        if (value == null) delete all[key]; else all[key] = value;
+        sessionStorage.stubSettings = JSON.stringify(all);
+        if (key === 'vibeoffice.uiScale') sessionStorage.uiScale = value;
         return null;
       }
       if (cmd === 'host_new_window') {   // this tab plays the new window, at the address host.rs makes (page_path)
@@ -195,5 +209,10 @@
       throw `command ${cmd} not found`;
     },
   };
-  if (navigator.serviceWorker) navigator.serviceWorker.register = async () => { log('swRegister'); throw new Error('stub'); };
+  // the settings as they are now, at the top of common/look.js (settings.rs, Served)
+  window.__VO_SETTINGS__ = Object.assign({ 'vibeoffice.look': 'paper' }, JSON.parse(sessionStorage.stubSettings || '{}'));
+  // no browser storage (host.rs, NO_STORAGE): a use is recorded, and throws
+  for (const [o, k] of [[window, 'localStorage'], [window, 'sessionStorage'], [window, 'indexedDB'], [window, 'caches'], [window, 'BroadcastChannel'], [navigator, 'storage'], [navigator, 'serviceWorker']]) {
+    Object.defineProperty(o, k, { get() { log('touched'); sessionStorage.touched += ':' + k; throw new Error(k + ' is not used in the desktop app'); }, configurable: false });
+  }
 })();

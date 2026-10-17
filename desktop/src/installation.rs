@@ -220,7 +220,7 @@ pub mod win {
     pub fn shortcuts() -> Vec<PathBuf> {
         [FOLDERID_Desktop, FOLDERID_Programs]
             .iter()
-            .filter_map(|id| known_folder(id))
+            .filter_map(known_folder)
             .map(|d| d.join(SHORTCUT))
             .collect()
     }

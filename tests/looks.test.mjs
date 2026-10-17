@@ -64,9 +64,10 @@ test('the shared chrome has no colours of its own', () => {
 });
 
 test('the pages pick the look before the first paint and load looks.css first', () => {
+  assert.match(read('common/look.js'), /d\.dataset\.look = l;/);
   for (const page of ['index.html', 'quire/index.html', 'ledger/index.html', 'lectern/index.html']) {
     const html = read(page);
-    const script = html.indexOf("localStorage.getItem('vibeoffice.look')");
+    const script = html.indexOf('common/look.js"');
     const sheet = html.indexOf('common/looks.css');
     assert.ok(script > 0 && script < sheet, `${page}: the look is picked before looks.css loads`);
     assert.ok(sheet > 0 && (html.indexOf('common/ui.css') < 0 || sheet < html.indexOf('common/ui.css')), `${page}: looks.css before ui.css`);

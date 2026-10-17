@@ -71,15 +71,17 @@ The parts real saving needs (2026-10-17: Linux run; Windows and macOS type-check
 - [x] Recent Files, previews and drafts native (`VO.recent`'s desktop side, Document Recovery, `vo-recent`)
 - [x] Close flow (`vo-close`, `host_closing`, the native question after 10 s)
 - [x] Tests and docs (cargo: store, doc, types; the stub plays the new commands; docs/desktop.md, Documents and windows)
-After Phase 2:
-- [ ] Single instance on Linux (a Unix socket); Windows has it (tauri-plugin-single-instance, `second_start`), macOS
-      by LaunchServices (`RunEvent::Opened`)
-- [ ] config.json in `~/.vibeoffice`
-- [ ] Settings: `__VO_HOST__.settings`, `host_set_setting`, `vo-settings`; `VO.settings`, `L.store`, looks, the head
-      scripts, UI size
-- [ ] No browser storage: the init script removes the APIs, incognito web views, the static test; https scheme on Windows
-- [ ] Scout to `VO.settings`
-- [ ] New windows' untitled numbers: each new window is Document1 / Book1 / Presentation1 (Word counts across windows)
+After Phase 2 (2026-10-17: Linux run; Windows and macOS type-checked, not yet run):
+- [x] Single instance on Linux (instance.rs: a lock and a Unix socket per user and display, in $XDG_RUNTIME_DIR);
+      Windows has it (tauri-plugin-single-instance, `second_start`), macOS by LaunchServices (`RunEvent::Opened`)
+- [x] config.json in `~/.vibeoffice` (settings.rs; strings, as localStorage keeps them; settings.json read once)
+- [x] Settings: `host_set_setting`, `vo-settings`; `VO.settings` (common/look.js), `L.store`, looks, the head scripts,
+      UI size. Not in `__VO_HOST__`: a window's init script stays as it was made, and the Start Center reloads when
+      its language changes, so the settings are served at the top of common/look.js (`settings::Served`)
+- [x] No browser storage: the init script removes the APIs (`host::NO_STORAGE`), incognito web views on Windows and
+      macOS (not on Linux: Tauri 2.12 registers tauri:// once per shared context, and an incognito WebKitGTK view
+      gets its own), the stub and the static test; https scheme on Windows (`use_https_scheme`, tools/csp.mjs)
+- [x] Scout to `VO.settings`
 
 Phase 2: saving to real files (2026-10-17: built; Linux run; Windows and macOS type-checked, not yet run)
 - [x] File type table (types.rs `KINDS`: id, extensions, document type or export, how the bytes start)
@@ -98,14 +100,17 @@ Phase 2: saving to real files (2026-10-17: built; Linux run; Windows and macOS t
 - [x] Remove the Downloads interim; File System Access API off (`host::NO_FILE_PICKERS`, every frame); the Mac's
       Downloads entitlement dropped
 - [x] Tests and docs (cargo: files, types, store versions; the stub's save commands; docs/desktop.md, Saving)
-Left from the design: the title's "(Read-Only)"; clearing the dirty state only if nothing changed during the save;
-`vo-saved` only for document saves (exports tell it too, as on the web); Ledger's password to open has no way in on
-the desktop (Save As ▸ Tools is the web dialog's; Excel's File ▸ Info ▸ Protect Workbook ▸ Encrypt with Password);
-an opened version's window has the file's name (no "previous version" in its title); an export's toast (Ledger's
-PDF) names the workbook, not the file picked.
+Done since (2026-10-17): the title's "(Read-Only)"; changes made during a save stay unsaved (`VO.changeCount`); new
+documents numbered across windows (Rust's `n` in the address). Ledger's password to open was never missing: Tools ▸
+Options ▸ Security. Left: `vo-saved` only for document saves (exports tell it too, as on the web); an opened version's
+window has the file's name (no "previous version" in its title); an export's toast (Ledger's PDF) names the workbook,
+not the file picked.
 
-Phase 3: sandboxed builds
-- [ ] Allow Access… for `denied` in Flatpak, Snap and both Mac editions
+Phase 3: the Mac sandbox (2026-10-17: built; type-checked, not yet run on a Mac)
+- [x] Allow Access… for `denied` in both Mac editions: the folder chooser at the file's folder (`host_allow_access`,
+      `__VO_HOST__.sandboxed`), the grant for this run only (no bookmark: the user, 2026-10-17), then the save again. To try on a
+      Mac: a file whose folder the sandbox refuses (a file-only grant where the save needs the folder), both editions,
+      another volume
 
 ## Decisions (the user, 2026-10-11)
 
@@ -118,8 +123,8 @@ Phase 3: sandboxed builds
   the user chose; Save As and every export always ask with the system Save dialog and write only what was picked
   there; no write ever goes to a path that came from a page.
 - Only the Start Center opens web addresses, and only those on an allow-list kept in Rust.
-- When a write is refused for lack of permission in a sandbox (macOS App Store, Flatpak, Snap), offer to grant access
-  to the folder.
+- When a write is refused for lack of permission in the Mac sandbox (both editions), offer to grant access to the
+  folder. Linux ships only as an AppImage, which isn't sandboxed: no Flatpak or Snap (the user, 2026-10-17).
 - Harden first, then native storage; real saving builds on both.
 - (2026-10-17) The browser gets only what is on the allow-list, which has two entries for now: the update page
   (`https://vibeoffice.work/updater/`) and our GitHub (`https://github.com/tcchen2026/VibeOffice`). The rest of
@@ -353,7 +358,8 @@ can't. A file dropped on the Dock icon comes as `Opened`, with a path and the sa
   saving a recovered draft over a file changed since says so. The file name and path live only inside.
 - **Pruning**, as the web's (`MAX_RECENT` 30): the 30 newest entries without a draft stay, entries with a draft are
   never pruned, an emptied month folder is removed. Settings ▸ Clear removes the entries without drafts.
-- **config.json**: `{ "<key>": <JSON value> }` with the keys localStorage has today (`vibeoffice.look`,
+- **config.json**: `{ "<key>": "<string>" }` (strings, as localStorage keeps them, so the web's stored values read the
+  same) with the keys localStorage has today (`vibeoffice.look`,
   `vibeoffice.localFonts`, `vibeoffice.updateAsked`, `quire.autoText`, …), plus `vibeoffice.uiScale`, which replaces
   settings.json in the app config folder (read that once if config.json is missing). Keys match
   `^[a-z][a-z0-9]*\.[A-Za-z0-9_.-]{1,64}$`; a value is at most 1 MB, the file 8 MB. Rust acts only on
@@ -379,7 +385,9 @@ can't. A file dropped on the Dock icon comes as `Opened`, with a path and the sa
 `window.__VO_HOST__`, set by the init script before the page's own: `{ platform, version, appVersion, edition,
 settings }` (VERSION is 2 since Phase 0's `host_new_window`, without `settings`; `edition` is `appstore` or `direct`, from the Mac bundle),
 `settings` being the config as it was when the window was made. Rust keeps every window's copy current
-(`vo-settings`), and a window loads one page only, so the copy stays right.
+(`vo-settings`), and a window loads one page only, so the copy stays right. Built otherwise (VERSION 5): a page may
+reload (the Start Center, for its language), and the init script stays as the window was made, so the settings come
+at the top of common/look.js, served as each page loads (`window.__VO_SETTINGS__`, settings.rs).
 
 Bytes cross as raw IPC bodies (Tauri's raw request and `ipc::Response`), small metadata as JSON or headers; never as
 JSON arrays or base64. File IO runs off the UI thread. Every new command goes into the app manifest and the window
@@ -413,9 +421,8 @@ so no command holds the main thread while the user picks. Linux a small
 `GtkFileChooserNative` adapter on Tauri's GTK thread, parented to `window.gtk_window()`, completing on its response
 signal. rfd 0.17's GTK backend can't be used: it makes an unparented chooser on its own GTK thread and returns only a
 path (its `set_parent` works for the XDG backend, not GTK). So `rfd` becomes a Windows and macOS dependency (today
-it is on every target with `gtk3`, and nothing uses it). GTK's native
-chooser uses the portals inside Flatpak by itself. No tauri-plugin-dialog or -fs: they would hand page script generic
-file APIs.
+it is on every target with `gtk3`, and nothing uses it). No tauri-plugin-dialog or -fs: they would hand page script
+generic file APIs.
 
 ## Pages
 
@@ -642,12 +649,13 @@ L.file.export(type)    // PDF, PNG, CSV, web page, …
 Rust refuses every web view download (`on_download` → false); `download_destination`, `Host::downloaded`,
 `host_show_downloads`, the `vo-download` notice, Browse, and Phase 1's "add a Downloads save to Recent Files" go.
 
-# Phase 3: sandboxed builds
+# Phase 3: the Mac sandbox
 
-Flatpak, Snap and the macOS App Store: `denied` offers Allow Access…: a folder chooser at the file's folder, then the
-save again, only if the chosen folder holds the bound file (verify it is the same file; portal paths may differ).
-`__VO_HOST__.sandboxed` (`FLATPAK_ID`, `SNAP`, `APP_SANDBOX_CONTAINER_ID`). Unsupported → say so and offer Save As.
-Unverified until tried in those sandboxes. On a Mac, with Phase 1's bookmarks and Phase 2's replace, `denied` should be
+Both Mac editions (the DMG and the App Store's) run in the App Sandbox; Linux ships only as an AppImage, which isn't
+sandboxed (no Flatpak or Snap). On a Mac `denied` offers Allow Access…: a folder chooser at the file's folder, then
+the save again, only if the chosen folder holds the bound file (verify it is the same file).
+`__VO_HOST__.sandboxed` (`APP_SANDBOX_CONTAINER_ID`). Unsupported → say so and offer Save As. Unverified until tried
+on a Mac. On a Mac, with Phase 1's bookmarks and Phase 2's replace, `denied` should be
 rare (a bookmark that no longer resolves, a folder the user can't write); there the folder chooser is NSOpenPanel with
 `canChooseDirectories`, and its grant is kept as a bookmark too.
 

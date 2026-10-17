@@ -6,7 +6,7 @@ VO.i18n.whenReady(function () {
   const $ = (id) => document.getElementById(id);
   /* Safari's Lockdown Mode takes IndexedDB away (the name is undefined), which Recent Files, unsaved
      versions and opening files from here need */
-  const noStorage = typeof indexedDB === 'undefined';
+  const noStorage = VO.host.kind === 'web' && typeof indexedDB === 'undefined';   // (the desktop app keeps them itself)
   if (noStorage) alert(VO.t('VibeOffice.work keeps Recent Files and unsaved changes in this browser, and Safari\'s Lockdown Mode turns that off.\n\nTo allow it for this site only: tap aA in the address bar, tap Website Settings, and turn off Lockdown Mode. Safari reloads the page.'));
   /* text and the attributes the user reads are shown in the UI's language (common/i18n.js), as L.h does in the apps */
   const T = (s) => (typeof s === 'string' ? VO.t(s) : s);
@@ -54,7 +54,7 @@ VO.i18n.whenReady(function () {
   $('picker').accept = VO.accept();
   /* the desktop app: the system's Open dialog, each file in a window of its own */
   $('open').addEventListener('click', () => {
-    if (VO.host.kind === 'desktop') { status(''); VO.host.open(false).catch((e) => status(String(e))); return; }
+    if (VO.host.kind === 'desktop') { status(''); VO.host.open().catch((e) => status(String(e))); return; }
     $('picker').value = ''; $('picker').click();
   });
   $('picker').addEventListener('change', () => openFile($('picker').files[0]));
@@ -234,8 +234,8 @@ VO.i18n.whenReady(function () {
     $('update').hidden = false;
     $('updatecheck').hidden = true;
     const today = new Date().toDateString();
-    if (ask === 'dialog' && localStorage.getItem('vibeoffice.updateAsked') !== today) {
-      try { localStorage.setItem('vibeoffice.updateAsked', today); } catch (e) { /* asks again next time */ }
+    if (ask === 'dialog' && VO.settings.get('vibeoffice.updateAsked') !== today) {
+      VO.settings.set('vibeoffice.updateAsked', today);   // not kept: asks again next time
       $('updatedlg').showModal();
     }
   }).catch((e) => console.info('update check:', e.message)) : null;   // offline: nothing to show
@@ -279,7 +279,7 @@ VO.i18n.whenReady(function () {
     $('settingsdlg').showModal();
   });
   /* the Start Center shows the new language at once; the apps' windows when they next open */
-  $('uilang').addEventListener('change', () => { VO.lang.set($('uilang').value); location.reload(); });
+  $('uilang').addEventListener('change', () => { VO.lang.set($('uilang').value); VO.settings.kept().then(() => location.reload()); });
   $('uiscale').addEventListener('change', () => VO.host.setUiScale(+$('uiscale').value).catch((e) => status(String(e))));
   $('fontload').addEventListener('click', async () => {
     try { await VO.localFonts.load(); } catch (e) { $('fontinfo').textContent = e.name === 'NotAllowedError' || e.name === 'SecurityError' ? VO.t('The fonts on this computer could not be listed: permission was not given.') : VO.t('The fonts on this computer could not be listed: {0}', e.message || e); return; }

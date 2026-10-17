@@ -294,7 +294,7 @@
     else A.sbSlide.textContent = n ? L.t('Slide {0} of {1}', E.idx + 1, n) : L.t('No slides');
     A.sbDesign.textContent = M.designName(E.design());
   };
-  A.updateTitle = () => { document.title = `${A.fileName} - Lectern`; };
+  A.updateTitle = () => { document.title = `${L.file.titled(A.fileName)} - Lectern`; };
 
   /* ================= views ================= */
   A.setView = function (v) {
@@ -467,6 +467,7 @@
   A.exportAs = async function (type, name, how) {
     name = name || A.fileName;
     if (TE.active()) TE.sync();
+    const pres = L.pres, before = window.VO ? VO.changeCount(pres) : 0;
     if (L.panes.left.tab === 'outline') L.panes.left.commitOutline();
     ui.busy(true, 'Saving...');
     try {
@@ -486,7 +487,7 @@
       if (r === 'saved') L.opc.acknowledge(L.pres, losses);
       /* the presentation's own file now: on the web any save of a presentation type; the desktop app's Save, or a Save As it bound */
       const own = !L.file.native() || how === 'save' || w.bound;
-      if (r === 'saved' && own && PRES_TYPE.test(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); L.hist.dirty = false; A.status(L.t('Saved {0}', `${name}.${ext}`)); if (window.VO) VO.saved(`${name}.${ext}`, blob, L.pres); }
+      if (r === 'saved' && own && PRES_TYPE.test(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); L.hist.dirty = !!window.VO && VO.changeCount(pres) !== before; A.status(L.t('Saved {0}', `${name}.${ext}`)); if (window.VO) VO.saved(`${name}.${ext}`, blob, L.pres); }
       return r;
     } catch (e) {
       ui.busy(false);
@@ -2207,7 +2208,8 @@ addEventListener('resize',fit);fit();show(0);`;
     setupSplitters();
     setupDrop();
     wire();
-    A.loadPres(L.pres, blank ? 'Presentation1' : 'Harbor & Pine — 2027 Expansion (sample)');
+    if (launch && launch.n) A.untitled = launch.n;   // the desktop app's number for it
+    A.loadPres(L.pres, blank ? 'Presentation' + (A.untitled || 1) : 'Harbor & Pine — 2027 Expansion (sample)');
     const wantTask = A.opts.taskOpen;
     L.panes.task.show('getting-started');
     if (!wantTask) { L.$('#taskpane').hidden = true; A.opts.taskOpen = false; }

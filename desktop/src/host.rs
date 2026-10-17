@@ -6,67 +6,25 @@
 
 use std::{
     collections::HashMap,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Mutex,
     },
 };
 
-use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, State, Url, WebviewUrl, WebviewWindow};
+use serde::Deserialize;
+use tauri::{AppHandle, Manager, Url, WebviewUrl, WebviewWindow};
 
 /// Version of the interface; raise it when a command changes shape (VO.host.version in the pages).
-pub const VERSION: u32 = 4;
+pub const VERSION: u32 = 5;
 
 #[derive(Default)]
 pub struct Host {
-    settings: Mutex<Settings>,
+    /// app -> how many new documents its windows were given: they are numbered across windows, as Word's
+    untitled: Mutex<HashMap<String, usize>>,
     /// window label -> the page it may load (`may_load`)
     pages: Mutex<HashMap<String, Page>>,
-}
-
-/// What the native side keeps for itself, in settings.json in the app's config folder: what has to apply
-/// before a page loads. The pages' own settings stay in their localStorage.
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase", default)]
-pub struct Settings {
-    /// the web view's zoom: the whole UI, as the browser's Ctrl + does (1 = 100 %)
-    ui_scale: f64,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Settings { ui_scale: 1.0 }
-    }
-}
-
-const UI_SCALE: std::ops::RangeInclusive<f64> = 0.5..=4.0;
-
-fn settings_path(app: &AppHandle) -> Option<PathBuf> {
-    app.path()
-        .app_config_dir()
-        .ok()
-        .map(|d| d.join("settings.json"))
-}
-
-impl Host {
-    /// Reads settings.json (missing or unreadable: the defaults).
-    pub fn load_settings(&self, app: &AppHandle) {
-        let read = settings_path(app)
-            .and_then(|p| std::fs::read(p).ok())
-            .and_then(|b| serde_json::from_slice::<Settings>(&b).ok());
-        let mut settings = self.settings.lock().unwrap();
-        if let Some(s) = read {
-            if UI_SCALE.contains(&s.ui_scale) {
-                *settings = s;
-            }
-        }
-    }
-
-    pub fn ui_scale(&self) -> f64 {
-        self.settings.lock().unwrap().ui_scale
-    }
 }
 
 /// Every frame of every window, before its scripts: no File System Access pickers (WebView2 has them), so a page
@@ -74,8 +32,14 @@ impl Host {
 pub const NO_FILE_PICKERS: &str =
     "for (const k of ['showOpenFilePicker', 'showSaveFilePicker', 'showDirectoryPicker']) delete window[k];";
 
-/// The script that runs before each page's own: what the pages see as the host, and the desktop app's
-/// default look (Paper) until the user picks one (the pages' head scripts read it). `edition`: 'appstore' for the
+/// Every frame of every window, before its scripts: the pages keep nothing in the web view, whose storage is
+/// gone (and each web view is incognito: main.rs). Their settings are settings.rs's, Recent Files and drafts
+/// doc.rs's. A use throws, so it shows at once instead of quietly working until the app quits.
+pub const NO_STORAGE: &str = "for (const [o, k] of [[window, 'localStorage'], [window, 'sessionStorage'], [window, 'indexedDB'], \
+     [window, 'caches'], [window, 'BroadcastChannel'], [navigator, 'storage'], [navigator, 'serviceWorker']]) \
+     try { Object.defineProperty(o, k, { get() { throw new Error(k + ' is not used in the desktop app'); }, configurable: false }); } catch (e) {}";
+
+/// The script that runs before each page's own: what the pages see as the host. `edition`: 'appstore' for the
 /// Mac App Store's, which the store updates (the pages never check), else 'direct'. The values go in as JSON, and
 /// `__VO_HOST__` can't be replaced or changed by the page.
 pub fn init_script() -> String {
@@ -84,10 +48,11 @@ pub fn init_script() -> String {
         "version": VERSION,
         "appVersion": option_env!("VO_VERSION").unwrap_or("dev"), // tools/current-tree-version.sh, from build.sh
         "edition": if app_store() { "appstore" } else { "direct" },
+        // in the Mac App Sandbox (both editions): a save it refuses may ask for the file's folder (doc.rs)
+        "sandboxed": cfg!(target_os = "macos") && std::env::var_os("APP_SANDBOX_CONTAINER_ID").is_some(),
     });
     format!(
-        "Object.defineProperty(window, '__VO_HOST__', {{ value: Object.freeze({host}), writable: false, configurable: false }});\n\
-         try {{ if (!localStorage.getItem('vibeoffice.look')) localStorage.setItem('vibeoffice.look', 'paper'); }} catch (e) {{}}"
+        "Object.defineProperty(window, '__VO_HOST__', {{ value: Object.freeze({host}), writable: false, configurable: false }});"
     )
 }
 
@@ -105,38 +70,6 @@ fn app_store() -> bool {
 #[cfg(not(target_os = "macos"))]
 fn app_store() -> bool {
     false
-}
-
-/// The UI scale (1 = 100 %).
-#[tauri::command]
-pub fn host_ui_scale(host: State<Host>) -> f64 {
-    host.ui_scale()
-}
-
-/// Scales the whole UI of every window (the web view's zoom) and keeps it for the next start.
-#[tauri::command]
-pub fn host_set_ui_scale(app: AppHandle, host: State<Host>, scale: f64) -> Result<(), String> {
-    if !UI_SCALE.contains(&scale) {
-        return Err(format!(
-            "UI scale {scale} is outside {}..{}",
-            UI_SCALE.start(),
-            UI_SCALE.end()
-        ));
-    }
-    for window in app.webview_windows().values() {
-        window.set_zoom(scale).map_err(|e| e.to_string())?;
-    }
-    let settings = {
-        let mut s = host.settings.lock().unwrap();
-        s.ui_scale = scale;
-        s.clone()
-    };
-    let path = settings_path(&app).ok_or("no settings folder")?;
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir).map_err(|e| describe(dir, e))?;
-    }
-    let json = serde_json::to_vec_pretty(&settings).map_err(|e| e.to_string())?;
-    std::fs::write(&path, json).map_err(|e| describe(&path, e))
 }
 
 /// At most this many windows are open at once (host_new_window).
@@ -175,19 +108,29 @@ pub async fn host_new_window(
     page: String,
     start: Option<Start>,
 ) -> Result<(), String> {
-    let path = page_path(&page, &start.unwrap_or_default())?;
+    let start = start.unwrap_or_default();
+    page_path(&page, &start, None)?;
     let caller = window.label().rsplit_once('-').map_or("main", |(p, _)| p);
     if !(caller == "main" || caller == page || page == "licenses") {
         return Err(format!("{caller} doesn't open {page}"));
     }
+    // a new document's number: Document2 in the second window that makes one
+    let n = (start.new || start.template.is_some()).then(|| {
+        let host = app.state::<Host>();
+        let mut untitled = host.untitled.lock().unwrap();
+        let n = untitled.entry(page.clone()).or_default();
+        *n += 1;
+        *n
+    });
+    let path = page_path(&page, &start, n)?;
     let label = new_label(&app, &page)?;
     crate::open_window(&app, &label, WebviewUrl::App(PathBuf::from(path)))
         .map_err(|e| e.to_string())?;
     Ok(())
 }
 
-/// The address of `page` (from the app's root) started as `start`, or why there is none.
-fn page_path(page: &str, start: &Start) -> Result<String, String> {
+/// The address of `page` (from the app's root) started as `start`, its new document numbered `n`, or why there is none.
+fn page_path(page: &str, start: &Start, n: Option<usize>) -> Result<String, String> {
     let ways = usize::from(start.new) + usize::from(start.template.is_some());
     if ways > 1 {
         return Err(format!("{page}: more than one way to start"));
@@ -214,6 +157,9 @@ fn page_path(page: &str, start: &Start) -> Result<String, String> {
             return Err(format!("not a template: {t}"));
         }
         query.append_pair("template", t);
+    }
+    if let Some(n) = n {
+        query.append_pair("n", &n.to_string());
     }
     drop(query);
     Ok(match url.query() {
@@ -350,7 +296,7 @@ impl Host {
 }
 
 /// Whether a page wants to leave the app: http(s) to another host, or mailto. The app's own pages
-/// (tauri://localhost, http://tauri.localhost; devUrl in a dev build), blob:, data: and about: stay.
+/// (tauri://localhost, https://tauri.localhost; devUrl in a dev build), blob:, data: and about: stay.
 pub fn is_external(url: &Url) -> bool {
     match url.scheme() {
         "mailto" => true,
@@ -419,10 +365,6 @@ pub(crate) fn system_open(url: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn describe(path: &Path, e: std::io::Error) -> String {
-    format!("{}: {e}", path.display())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -466,21 +408,21 @@ mod tests {
     #[test]
     fn a_window_loads_its_own_page_once_and_nothing_else() {
         let u = |s: &str| Url::parse(s).unwrap();
-        let quire = || Page::new(u("http://tauri.localhost/quire/?new"), false);
+        let quire = || Page::new(u("https://tauri.localhost/quire/?new"), false);
         // Windows and macOS: about:blank, then the page, then a fragment of it or a save's blob
         let mut p = quire();
         for (url, ok) in [
             ("about:blank", true),
-            ("http://tauri.localhost/ledger/", false),
-            ("http://tauri.localhost/quire/", false),
-            ("http://tauri.localhost/quire/?new", true),
+            ("https://tauri.localhost/ledger/", false),
+            ("https://tauri.localhost/quire/", false),
+            ("https://tauri.localhost/quire/?new", true),
             ("about:blank", false),
-            ("http://tauri.localhost/quire/?new", true),
-            ("http://tauri.localhost/quire/?new#top", true),
-            ("http://tauri.localhost/quire/#top", false),
-            ("http://tauri.localhost/quire/?recent=x#top", false),
+            ("https://tauri.localhost/quire/?new", true),
+            ("https://tauri.localhost/quire/?new#top", true),
+            ("https://tauri.localhost/quire/#top", false),
+            ("https://tauri.localhost/quire/?recent=x#top", false),
             (
-                "blob:http://tauri.localhost/0c5d0d1e-1f0e-4a2b-9c33-5d8f0a6e7b21",
+                "blob:https://tauri.localhost/0c5d0d1e-1f0e-4a2b-9c33-5d8f0a6e7b21",
                 true,
             ),
             (
@@ -488,17 +430,17 @@ mod tests {
                 false,
             ),
             ("data:text/html,<script>1</script>", false),
-            ("http://tauri.localhost/oss-licenses.html", false),
-            ("http://tauri.localhost/oss-licenses.html#x", false),
+            ("https://tauri.localhost/oss-licenses.html", false),
+            ("https://tauri.localhost/oss-licenses.html#x", false),
             ("file:///etc/passwd", false),
             ("tauri://localhost/quire/?new", false),
         ] {
             assert_eq!(p.admits(&u(url)), ok, "{url}");
         }
         // the probe's data: page comes before the page, only when probing
-        let mut probing = Page::new(u("http://tauri.localhost/"), true);
+        let mut probing = Page::new(u("https://tauri.localhost/"), true);
         assert!(probing.admits(&u("data:text/html,probe")));
-        assert!(probing.admits(&u("http://tauri.localhost/")));
+        assert!(probing.admits(&u("https://tauri.localhost/")));
         assert!(!probing.admits(&u("data:text/html,probe")));
         assert!(!quire().admits(&u("data:text/html,probe")));
         // Linux: the Start Center at tauri://localhost, with or without its "/"
@@ -519,7 +461,7 @@ mod tests {
     #[test]
     fn a_new_window_gets_the_address_made_here_from_its_page_and_how_it_starts() {
         let start = |json: &str| serde_json::from_str::<Start>(json);
-        let path = |page: &str, json: &str| page_path(page, &start(json).unwrap());
+        let path = |page: &str, json: &str| page_path(page, &start(json).unwrap(), None);
         // what the pages ask for (VO.url): the address VO.launch reads
         for (page, json, want) in [
             ("quire", "{}", "quire/"),
@@ -533,6 +475,11 @@ mod tests {
         ] {
             assert_eq!(path(page, json).as_deref(), Ok(want), "{page} {json}");
         }
+        assert_eq!(
+            page_path("quire", &start(r#"{"new":true}"#).unwrap(), Some(2)).as_deref(),
+            Ok("quire/?new&n=2"),
+            "the second new document: Document2"
+        );
         for (page, json) in [
             ("", "{}"),
             ("start", "{}"),

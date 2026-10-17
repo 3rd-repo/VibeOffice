@@ -528,7 +528,7 @@
     }
     return { ln, col };
   };
-  A.updateTitle = () => { document.title = `${A.fileName} - Quire`; };
+  A.updateTitle = () => { document.title = `${L.file.titled(A.fileName)} - Quire`; };
 
   /* ================= rulers ================= */
   A.updateRulers = function () {
@@ -862,6 +862,7 @@
   A.exportAs = async function (type, name, how) {
     name = name || A.fileName;
     const d = doc();
+    const before = window.VO ? VO.changeCount(d) : 0;
     ui.busy(true, 'Saving...');
     try {
       if (L.fields && L.fields.beforeSave) L.fields.beforeSave();
@@ -909,7 +910,7 @@
       if (r === 'saved') L.opc.acknowledge(d, losses);
       /* the document's own file now: on the web any save of a document type; the desktop app's Save, or a Save As it bound */
       const own = !L.file.native() || how === 'save' || w.bound;
-      if (r === 'saved' && own && DOC_TYPES.includes(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); d.dirty = false; A.status(L.t('Saved {0}', `${name}.${ext}`)); ui.refresh(); if (window.VO) VO.saved(`${name}.${ext}`, blob, d); }
+      if (r === 'saved' && own && DOC_TYPES.includes(type)) { A.fileName = name; A.fileType = type; A.saved = true; A.updateTitle(); d.dirty = !!window.VO && VO.changeCount(d) !== before; A.status(L.t('Saved {0}', `${name}.${ext}`)); ui.refresh(); if (window.VO) VO.saved(`${name}.${ext}`, blob, d); }
       return r;
     } catch (e) {
       ui.busy(false);
@@ -1379,7 +1380,8 @@
     LY.zoom = narrow ? Math.max(0.4, (window.innerWidth - 40) / 816) : A.opts.zoom || 1;
     /* opened from the Start Center: a template, or blank (a new document, or to open a file into); else the sample */
     const launch = window.VO && VO.launch;
-    A.loadDoc(launch && launch.template && L.templates ? L.templates.build(launch.template) : launch ? blank() : A.buildSample(), 'Document1');
+    if (launch && launch.n) A.untitled = launch.n;   // the desktop app's number for it
+    A.loadDoc(launch && launch.template && L.templates ? L.templates.build(launch.template) : launch ? blank() : A.buildSample(), 'Document' + A.untitled);
     A.view = 'x';
     A.setView(A.opts.view && ['print', 'normal', 'web', 'outline'].includes(A.opts.view) ? A.opts.view : 'print');
     if (L.panes && A.opts.taskOpen) L.panes.task.show('getting-started');

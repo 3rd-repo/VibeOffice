@@ -521,7 +521,10 @@
     String(L.t ? L.t(text) : text).split('\n').forEach((line, i) => { if (i) t.appendChild(h('br')); t.appendChild(document.createTextNode(line)); });
     const labels = o.buttons || ['OK'];
     tell('vo-message', { icon: o.icon || 'info' });
-    const d = ui.dialog({ title: o.title || L.APP, body, width: o.width || 380, buttons: labels.map((l, i) => ({ label: l, primary: i === (o.def || 0), cancel: /cancel|^no$/i.test(plainAmp(l)) })) });
+    /* Esc answers Cancel; No only where there is no Cancel (Yes/No), never in Yes/No/Cancel, where No discards */
+    const plain = labels.map(plainAmp);
+    const esc = plain.some((l) => /cancel/i.test(l)) ? plain.findIndex((l) => /cancel/i.test(l)) : plain.findIndex((l) => /^no$/i.test(l));
+    const d = ui.dialog({ title: o.title || L.APP, body, width: o.width || 380, buttons: labels.map((l, i) => ({ label: l, primary: i === (o.def || 0), cancel: i === esc })) });
     return d.done;
   };
   /** Help ▸ About, the same in every app: icon, name and version, the app's own paragraphs, the link to the open

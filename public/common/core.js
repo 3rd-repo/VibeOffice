@@ -3,7 +3,7 @@
  * Every other script attaches itself to window.L. Each page names its app on its <html> (no inline script:
  * the pages' Content-Security-Policy):
  *   <html lang="en" data-app="quire" data-app-name="Quire">
- * APP_ID keeps each app's saved settings apart (localStorage 'quire.…'); APP_NAME and APP appear in messages.
+ * APP_ID keeps each app's saved settings apart ('quire.…', L.store); APP_NAME and APP appear in messages.
  */
 (function (root) {
   'use strict';
@@ -202,11 +202,12 @@
     '#FF99CC', '#FFCC99', '#FFFF99', '#CCFFCC', '#CCFFFF', '#99CCFF', '#CC99FF', '#FFFFFF',
   ];
 
-  /* ---------- storage (never relied on) ---------- */
+  /* ---------- the app's settings (never relied on): VO.settings (common/look.js), as JSON under '<APP_ID>.<k>' ---------- */
+  const settings = () => root.VO?.settings;
   L.store = {
-    get(k, d) { try { const v = localStorage.getItem(L.APP_ID + '.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem(L.APP_ID + '.' + k, JSON.stringify(v)); return true; } catch (e) { return false; } },
-    del(k) { try { localStorage.removeItem(L.APP_ID + '.' + k); } catch (e) { /* ignore */ } },
+    get(k, d) { const v = settings()?.get(L.APP_ID + '.' + k); if (v == null) return d; try { return JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { return !!settings()?.set(L.APP_ID + '.' + k, JSON.stringify(v)); },
+    del(k) { settings()?.remove(L.APP_ID + '.' + k); },
   };
 
   /* ---------- the look (common/looks.css) for chrome drawn on canvases ---------- */
@@ -268,12 +269,15 @@
   const extOf = (name) => (/\.([^.]+)$/.exec(name || '') || ['', ''])[1].toLowerCase();
   const without = (name) => String(name || '').replace(/\.[^.]+$/, '');
   /* "{0}" is the file's name; every failure before the file is replaced says it hasn't changed */
+  const N = (s) => s;   // UI text, translated where it is shown
   const SAYS = {
-    changed: ['“{0}” was changed by another program after you opened it. Replace it with this version, or save this version under another name?', ['&Replace It', '&Save As...', 'Cancel'], ['replace', 'saveas']],
-    missing: ['“{0}” is no longer where it was: it was moved, renamed or deleted.', ['&Save As...', 'Cancel'], ['saveas']],
-    denied: ['{1} can\'t save “{0}”: it is read-only, or you don\'t have permission to change it. Your file hasn\'t changed.', ['&Save As...', 'Cancel'], ['saveas']],
-    busy: ['“{0}” is open in another program, which is keeping it from being changed. Your file hasn\'t changed.', ['&Try Again', '&Save As...', 'Cancel'], ['retry', 'saveas']],
-    full: ['There isn\'t enough space on the disk to save “{0}”. Your file hasn\'t changed.', ['&Save As...', 'Cancel'], ['saveas']],
+    changed: [N('“{0}” was changed by another program after you opened it. Replace it with this version, or save this version under another name?'), ['&Replace It', '&Save As...', 'Cancel'], ['replace', 'saveas']],
+    missing: [N('“{0}” is no longer where it was: it was moved, renamed or deleted.'), ['&Save As...', 'Cancel'], ['saveas']],
+    denied: [N('{1} can\'t save “{0}”: it is read-only, or you don\'t have permission to change it. Your file hasn\'t changed.'), ['&Save As...', 'Cancel'], ['saveas']],
+    /* the Mac's sandbox: the app may need the user's leave to save in the file's folder */
+    sandboxed: [N('{1} doesn\'t have permission to save “{0}” in its folder. Allow {1} into the folder, or save this version under another name? Your file hasn\'t changed.'), ['&Allow Access...', '&Save As...', 'Cancel'], ['allow', 'saveas']],
+    busy: [N('“{0}” is open in another program, which is keeping it from being changed. Your file hasn\'t changed.'), ['&Try Again', '&Save As...', 'Cancel'], ['retry', 'saveas']],
+    full: [N('There isn\'t enough space on the disk to save “{0}”. Your file hasn\'t changed.'), ['&Save As...', 'Cancel'], ['saveas']],
   };
   L.file = {
     /** whether saves are real files (the desktop app), not downloads */
@@ -284,6 +288,8 @@
     typeOf: (name) => (L.file.types.find((t) => t.ext.includes(extOf(name))) || {}).id || null,
     /** the desktop app: whether the window has a file of its own */
     bound: () => { const h = native(); return !!(h && h.file.bound); },
+    /** the document's name for the title bar: "(Read-Only)" after it when the window's file may not be changed */
+    titled: (name) => { const h = native(); return h && h.file.bound && h.file.readOnly ? L.t('{0} (Read-Only)', name) : name; },
     /** the desktop app: whether Save writes the window's own file in place (it has one, and may change it) */
     inPlace: () => { const h = native(); return !!(h && h.file.bound && !h.file.readOnly); },
     /** the desktop app's Save dialog for a Save As ('saveAs') or an export ('export'): the app's types (or `ids`),
@@ -343,7 +349,7 @@
         if (w.bound) host.file = { bound: true, readOnly: false, name: w.name };
         return { result: 'saved', name: w.name, bound: w.bound };
       } catch (e) {
-        const code = e && e.code, say = SAYS[code];
+        const code = e && e.code, say = SAYS[code === 'denied' && host.sandboxed ? 'sandboxed' : code];
         if (!say) {
           await L.ui.msg(L.t('“{0}” couldn\'t be saved: {1} Your file hasn\'t changed.', shown, String(e && e.message || e)), { icon: 'error' });
           if (how === 'chosen') L.file.cancel();
@@ -353,6 +359,12 @@
         const act = say[2][r];
         if (act === 'replace') { replace = true; continue; }
         if (act === 'retry') continue;
+        if (act === 'allow') {
+          /* the folder chooser, at the file's folder; then the same save again (asked again if still refused) */
+          try { await host.allowAccess(how, L.t('Choose the folder of “{0}” and click Open to let {1} save there.', shown, L.APP)); }
+          catch (err) { await L.ui.msg(String(err && err.message || err), { icon: 'warn' }); }
+          continue;
+        }
         if (act === 'saveas') {
           const c = await L.file.choose('saveAs', type, without(shown), [type]);
           if (!c) return { result: 'cancelled' };

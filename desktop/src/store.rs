@@ -1,7 +1,8 @@
-//! ~/.vibeoffice: what the desktop app keeps for itself (todos/DESKTOP_REAL_SAVE.md, Storage). So far Recent
-//! Files: each entry with its preview and its unsaved version (the draft).
+//! ~/.vibeoffice: what the desktop app keeps for itself (todos/DESKTOP_REAL_SAVE.md, Storage): the settings, and
+//! Recent Files, each entry with its preview and its unsaved version (the draft).
 //!
 //! ```text
+//! config.json                                   the settings (settings.rs)
 //! recent_files/<yyyy-mm>/<key>.recent           the entry (JSON); the month (UTC) it was made, it never moves
 //!                        <key>.recent.preview   its preview: a JPEG, at most MAX_PREVIEW
 //!                        <key>.recent.draft     its unsaved changes in the app's own format, at most MAX_DRAFT
@@ -95,6 +96,16 @@ impl Store {
 
     fn recent(&self) -> PathBuf {
         self.root.join("recent_files")
+    }
+
+    /// config.json: the settings (settings.rs).
+    pub fn read_config(&self, max: u64) -> io::Result<Vec<u8>> {
+        read_file(&self.root.join("config.json"), max)
+    }
+
+    pub fn write_config(&self, bytes: &[u8]) -> io::Result<()> {
+        make_dir(&self.root)?;
+        write_atomic(&self.root.join("config.json"), bytes)
     }
 
     /// The month folders, as they are named.

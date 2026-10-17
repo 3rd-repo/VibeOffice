@@ -51,7 +51,7 @@
   const cache = new Map();
   /** after the custom dictionary changed elsewhere (Tools ▸ Options): forget the cached answers */
   SP.reloadCustom = () => { SP._custom = null; cache.clear(); SP.refreshSoon(); };
-  /** Add to Dictionary: the word is spelled correctly from now on, in every app (localStorage per app) */
+  /** Add to Dictionary: the word is spelled correctly from now on, in every app (a setting per app, L.store) */
   SP.addWord = function (w) {
     const list = L.store.get('customDict', []) || [];
     if (!list.some((x) => String(x).toLowerCase() === String(w).toLowerCase())) list.push(String(w));

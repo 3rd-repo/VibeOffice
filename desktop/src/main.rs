@@ -9,7 +9,10 @@ mod host;
 mod installation;
 #[cfg(windows)]
 mod installed;
+#[cfg(target_os = "linux")]
+mod instance;
 mod net;
+mod settings;
 mod store;
 mod types;
 
@@ -34,13 +37,26 @@ pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Resu
     }
     #[cfg(any(windows, target_os = "macos"))]
     let url = WebviewUrl::External(net::BLANK.parse().expect("about:blank"));
-    let window = WebviewWindowBuilder::new(app, label, url)
+    let builder = WebviewWindowBuilder::new(app, label, url);
+    // the pages from the dev server: the settings as they are now (otherwise served with common/look.js)
+    #[cfg(not(feature = "custom-protocol"))]
+    let builder =
+        builder.initialization_script(settings::script(&app.state::<settings::Settings>()));
+    let window = builder
         .title("VibeOffice")
         .inner_size(1280.0, 820.0)
         .min_inner_size(640.0, 480.0)
         .initialization_script(host::init_script())
         .initialization_script_for_all_frames(net::NO_WEBRTC)
         .initialization_script_for_all_frames(host::NO_FILE_PICKERS)
+        .initialization_script_for_all_frames(host::NO_STORAGE)
+        // nothing the web view would keep outlives the app (WebView2 InPrivate, WKWebView's non-persistent data
+        // store). Not on Linux: Tauri 2.12 registers tauri:// once per shared web context, while an incognito
+        // WebKitGTK view gets a context of its own, so from the second window on no page would load there.
+        .incognito(cfg!(any(windows, target_os = "macos")))
+        // Windows: https://tauri.localhost, a secure context, where WebView2 doesn't look up the names of links
+        // on the page ahead (DNS prefetch); macOS and Linux serve tauri://localhost either way
+        .use_https_scheme(true)
         // No camera, microphone, location, notifications, …: only Local Font Access (Settings ▸ Fonts on
         // this computer) and reading the clipboard (Paste) go on as the engine handles them.
         .on_permission_request(|_, kind| match kind {
@@ -89,7 +105,7 @@ pub fn open_window(app: &AppHandle, label: &str, url: WebviewUrl) -> tauri::Resu
         // The UI size (Settings), as each page starts: WebKitGTK resets the zoom on the first load.
         .on_page_load(|window, payload| {
             if payload.event() == PageLoadEvent::Started {
-                let scale = window.state::<host::Host>().ui_scale();
+                let scale = window.state::<settings::Settings>().ui_scale();
                 let _ = window.set_zoom(scale);
             }
             // The first start after installing: what the user chose in the installer
@@ -117,7 +133,7 @@ static PENDING: std::sync::Mutex<Vec<std::path::PathBuf>> = std::sync::Mutex::ne
 fn open_files(app: &AppHandle, files: &[std::path::PathBuf]) -> usize {
     files
         .iter()
-        .filter(|f| match doc::open_path(app, f, None) {
+        .filter(|f| match doc::open_path(app, f) {
             Ok(_) => true,
             Err(e) => {
                 eprintln!("{e}");
@@ -128,7 +144,6 @@ fn open_files(app: &AppHandle, files: &[std::path::PathBuf]) -> usize {
 }
 
 /// The Start Center, brought forward, or opened again if it was closed.
-#[cfg(any(windows, target_os = "macos"))]
 fn show_start_center(app: &AppHandle) {
     match app.get_webview_window("main") {
         Some(main) => {
@@ -146,20 +161,27 @@ fn show_start_center(app: &AppHandle) {
     }
 }
 
-/// Another start of VibeOffice while this one runs: its files open here, each in a window of its own; without
-/// any, the Start Center comes forward. What the installer asked for (pin, Default apps) is done here.
-#[cfg(windows)]
-fn second_start(app: &AppHandle, args: Vec<String>, cwd: String) {
-    let args = args.get(1..).unwrap_or_default().to_vec();
-    installed::take_args(&args);
-    // the other process waits for this handler: windows are made in a task, after it has returned
+/// Another start of VibeOffice while this one runs (Windows: `second_start`; Linux: instance.rs): its files
+/// open here, each in a window of its own; without any, the Start Center comes forward.
+#[cfg(any(windows, target_os = "linux"))]
+fn another_start(app: &AppHandle, args: Vec<std::ffi::OsString>, cwd: std::path::PathBuf) {
+    // the other process waits for its handler: windows are made in a task, after that has returned
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-        let files = doc::files_among(&args, std::path::Path::new(&cwd));
+        let files = doc::files_among(args, &cwd);
         if open_files(&app, &files) == 0 {
             show_start_center(&app);
         }
     });
+}
+
+/// Another start on Windows (tauri-plugin-single-instance). What the installer asked for (pin, Default apps) is
+/// done here.
+#[cfg(windows)]
+fn second_start(app: &AppHandle, args: Vec<String>, cwd: String) {
+    let args = args.get(1..).unwrap_or_default().to_vec();
+    installed::take_args(&args);
+    another_start(app, args.into_iter().map(Into::into).collect(), cwd.into());
 }
 
 /// An app window's close button: its page answers (doc::close_requested), not the window. The Start Center and
@@ -248,19 +270,33 @@ fn main() {
     if !installed::start() {
         return;
     }
+    let mut context = tauri::generate_context!();
+    settings::serve(&mut context);
     let builder = tauri::Builder::default();
     // One VibeOffice per user session on Windows: a second start (the Start menu, a double-click on a
     // file) hands its arguments to this one and exits. The plugin goes first, before anything is made.
     #[cfg(windows)]
     let builder = builder.plugin(tauri_plugin_single_instance::init(second_start));
+    // and on Linux (instance.rs): a later start hands its files over here and exits
+    #[cfg(target_os = "linux")]
+    let listener = {
+        let cwd = std::env::current_dir().unwrap_or_default();
+        let args: Vec<_> = std::env::args_os().skip(1).collect();
+        match instance::folder(std::env::home_dir()) {
+            Some(dir) => match instance::claim(&dir, &cwd, &args) {
+                instance::Claim::Sent => return,
+                instance::Claim::First(listener) => listener,
+            },
+            None => None,
+        }
+    };
     #[cfg(target_os = "macos")]
     let builder = builder.menu(mac_menu);
     let app = builder
         .manage(host::Host::default())
         .invoke_handler(tauri::generate_handler![
             host::host_open_url,
-            host::host_ui_scale,
-            host::host_set_ui_scale,
+            settings::host_set_setting,
             host::host_new_window,
             host::host_close_window,
             doc::host_document,
@@ -280,6 +316,7 @@ fn main() {
             doc::host_focus,
             doc::host_closing,
             doc::host_save,
+            doc::host_allow_access,
             doc::host_choose,
             doc::host_write_chosen,
             doc::host_cancel_choice,
@@ -287,9 +324,24 @@ fn main() {
             doc::host_open_version
         ])
         .on_window_event(window_event)
-        .setup(|app| {
-            app.state::<host::Host>().load_settings(app.handle());
-            app.manage(doc::Docs::new(store::Store::at(app.path().home_dir().ok())));
+        .setup(move |app| {
+            #[cfg(target_os = "linux")]
+            if let Some(listener) = listener {
+                let app = app.handle().clone();
+                instance::listen(listener, move |cwd, args| another_start(&app, args, cwd));
+            }
+            let home = app.path().home_dir().ok();
+            // an earlier version kept the UI size in settings.json, in the app's config folder
+            let old = app
+                .path()
+                .app_config_dir()
+                .ok()
+                .map(|d| d.join("settings.json"));
+            app.manage(settings::Settings::load(
+                store::Store::at(home.clone()),
+                old.as_deref(),
+            ));
+            app.manage(doc::Docs::new(store::Store::at(home)));
             // the files on the command line (Open with, a double-click on a file: "%1") open in their own windows;
             // without any, the Start Center
             let cwd = std::env::current_dir().unwrap_or_default();
@@ -316,10 +368,14 @@ fn main() {
             start();
             Ok(())
         })
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while starting VibeOffice");
     #[cfg(not(target_os = "macos"))]
-    app.run(|_, _| {});
+    app.run(|app, event| {
+        if let tauri::RunEvent::Exit = event {
+            app.state::<settings::Settings>().flush();
+        }
+    });
     #[cfg(target_os = "macos")]
     app.run(|app, event| match event {
         // Files from Finder (a double-click, Open With, a drop on the Dock icon), at start or later. The
@@ -345,6 +401,7 @@ fn main() {
         tauri::RunEvent::ExitRequested {
             code: None, api, ..
         } => api.prevent_exit(),
+        tauri::RunEvent::Exit => app.state::<settings::Settings>().flush(),
         _ => {}
     });
 }

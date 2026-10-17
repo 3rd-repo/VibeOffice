@@ -14,14 +14,14 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 
 /** only our own script files run; styles may be inline (style attributes everywhere); pictures, fonts and data
  * from the site itself or from inside the page (data:, blob:); connections to the site, the update check
- * (https://vibeoffice.work) and the desktop app's IPC (ipc: on macOS and Linux, http://ipc.localhost on Windows) */
+ * (https://vibeoffice.work) and the desktop app's IPC (ipc: on macOS and Linux, https://ipc.localhost on Windows) */
 export const POLICY = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self' data: blob: https://vibeoffice.work ipc: http://ipc.localhost",
+  "connect-src 'self' data: blob: https://vibeoffice.work ipc: https://ipc.localhost",
   "worker-src 'self'",
   "manifest-src 'self'",
   "frame-src 'none'",

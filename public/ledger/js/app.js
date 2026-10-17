@@ -130,7 +130,7 @@
   };
   function updateTitle() {
     const b = book();
-    document.title = (b ? b.name + ' - ' : '') + 'Ledger';
+    document.title = (b ? L.file.titled(b.name) + ' - ' : '') + 'Ledger';
   }
 
   /* ------------------------------------------------------------ open */
@@ -139,6 +139,8 @@
     const files = await L.pickFiles(accept || '.xlsx,.xlsm,.xltx,.xltm,.csv,.txt,.tsv,.prn,.xml', true);
     if (files.length) A.openFiles(files);
   };
+  /** the type Ledger saves a file of these kinds as, where it is (A.openFile; a recovered draft, VO.attach's open) */
+  const FILE_TYPES = { csv: 'csv', txt: 'txt', tsv: 'txt', prn: 'txt', xml: 'xmlss', htm: 'html', html: 'html' };
   A.openFiles = async function (files) {
     for (const f of files) {
       try { await A.openFile(f); } catch (e) { A.error(e); }
@@ -270,6 +272,7 @@
     const b = book();
     if (L.editor.active && !L.editor.commit()) return false;
     const w = b.wb;
+    const before = window.VO ? VO.changeCount(b) : 0;
     name = name || b.name.replace(/\.[^.]+$/, '') + '.' + ({ xmlss: 'xml', html: 'htm', txt: 'txt' }[type] || type);
     ui.busy(true, L.t('Saving {0}...', name));
     try {
@@ -301,7 +304,11 @@
         L.opc.acknowledge(w, losses);
         /* the workbook's own file now: on the web any save of a workbook type; the desktop app's Save, or a Save As it bound */
         const own = !L.file.native() || how === 'save' || written.bound;
-        if (own && type !== 'csv' && type !== 'txt' && type !== 'html') { b.name = name; b.type = type; b.untitled = false; b.dirty = false; w.fileName = name; }
+        /* changes made while it was written stay unsaved */
+        const changed = !!window.VO && VO.changeCount(b) !== before;
+        if (own && type !== 'csv' && type !== 'txt' && type !== 'html') { b.name = name; b.type = type; b.untitled = false; b.dirty = changed; w.fileName = name; }
+        /* the desktop app's Save of the text or web page file it opened: saved, but for the sheets a text file can't hold */
+        else if (how === 'save') b.dirty = changed || (type !== 'html' && w.sheets.length > 1);
         else if (b.untitled && !L.file.native()) b.dirty = false;
         if (window.VO && type !== 'html') VO.saved(name, blob, b);
         updateTitle();
@@ -1462,7 +1469,7 @@
     const launch = window.VO && VO.launch;
     const tpl = launch && launch.template && L.panes && L.panes.TEMPLATES[launch.template];
     const w = tpl ? L.panes.buildTemplate(launch.template) : launch ? A.blankWorkbook() : A.sampleWorkbook();
-    untitled = 1;
+    untitled = (launch && launch.n) || 1;   // the desktop app's number for it
     A.prepare(w);
     G().init(w);
     L.editor.init();
@@ -1476,7 +1483,7 @@
     if (L.panes) L.panes.task.mount(L.$('#taskpane'));
     /* the open task pane follows the selected object to its tool set (common/ribbon.js) */
     if (L.panes) L.ribbonUI.follow({ task: L.panes.task, sets: { chart: true, picture: true, drawing: true }, on: () => A.opts.paneFollows !== false });
-    A.addBook(w, tpl ? tpl.name.replace(/\s+/g, '') + '1' : 'Book1', { type: 'xlsx', untitled: true });
+    A.addBook(w, (tpl ? tpl.name.replace(/\s+/g, '') : 'Book') + untitled, { type: 'xlsx', untitled: true });
     setupDrop();
     L.bus.on('selection', () => { updateStatus(); ui.refresh(); A.updateToolbars(); });
     L.bus.on('changed', () => { updateStatus(); ui.refresh(); renderTabsSoon(); });
@@ -1498,6 +1505,8 @@
         if (o && o.made && b) { b.untitled = true; b.saved = false; b.name = o.name.replace(/\.(xlsx|xlsm|xltx|xltm)$/i, ''); updateTitle(); }
         if (o?.draft && b) L.opc.recoverLosses(b.wb, o.lossState);
         if (o && o.draft && b) { b.dirty = true; b.name = o.saved ? o.name : o.name.replace(/\.(xlsx|xlsm|xltx|xltm)$/i, ''); b.untitled = !o.saved; b.saved = !!o.saved; updateTitle(); A.status(L.t('Recovered the unsaved changes. Save the workbook to keep them.')); ui.refresh(); }
+        /* the draft is a workbook (snapshot); a file of text, XML Spreadsheet or a web page is saved as what it is */
+        if (o && o.draft && o.saved && b) b.type = FILE_TYPES[(o.name.split('.').pop() || '').toLowerCase()] || b.type;
       },
       snapshot: (b) => L.xlsxWrite.write(b.wb, { type: L.opc.formats[b.type] ? b.type : b.wb.ooxmlFormat || 'xlsx', password: b.password }),
       docInfo(b) {
