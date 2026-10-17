@@ -87,19 +87,41 @@ pub fn page_url(app: &AppHandle, url: WebviewUrl) -> Option<Url> {
 
 /// A window open_window has just made, on about:blank: the rules go on its web view, then it goes to `page`.
 /// If they can't, it never gets there (`refuse`).
+///
+/// It goes on from here, not from inside with_webview: Tauri holds the web view's lock while that runs the
+/// closure, which it does at once when called on the main thread, and navigate takes the same lock (the
+/// main thread hung there, 2026-10-17). From another thread the closure runs later, on the main thread, and
+/// a thread of its own waits for it.
 #[cfg(any(windows, target_os = "macos"))]
 pub fn guard(window: &WebviewWindow, page: Option<Url>) -> tauri::Result<()> {
-    let w = window.clone();
+    use std::sync::mpsc::{channel, TryRecvError};
+    let (applied, result) = channel();
     window.with_webview(move |webview| {
-        let page = page.ok_or_else(|| "the window has no page".to_string());
-        match apply(webview).and(page) {
+        let _ = applied.send(apply(webview));
+    })?;
+    let w = window.clone();
+    let go = move |result: Result<(), String>| {
+        match result.and(page.ok_or_else(|| "the window has no page".to_string())) {
             Ok(page) if w.label() == "main" && probe::wanted() => probe::start(&w, page),
             Ok(page) => {
                 let _ = w.navigate(page);
             }
-            Err(why) => refuse(&w, &why),
+            // on the main thread, which the alert needs (AppKit)
+            Err(why) => {
+                let window = w.clone();
+                let _ = w.run_on_main_thread(move || refuse(&window, &why));
+            }
         }
-    })
+    };
+    let gone = || Err("the window's web view is gone".to_string());
+    match result.try_recv() {
+        Ok(result) => go(result),
+        Err(TryRecvError::Disconnected) => go(gone()),
+        Err(TryRecvError::Empty) => {
+            std::thread::spawn(move || go(result.recv().unwrap_or_else(|_| gone())));
+        }
+    }
+    Ok(())
 }
 
 /// The rules on a window's web view: WebKit's compiled list (macOS), WebView2's request filter (Windows).
@@ -201,12 +223,12 @@ const socket = (src) => new Promise((done) => { try { const s = new WebSocket(sr
         }
         if let Some(result) = title.strip_prefix("network probe: ") {
             eprintln!("network probe: {result}");
-            if let Some(page) = NEXT
+            let next = NEXT
                 .lock()
                 .unwrap()
                 .as_mut()
-                .and_then(|n| n.remove(window.label()))
-            {
+                .and_then(|n| n.remove(window.label()));
+            if let Some(page) = next {
                 let _ = window.navigate(page);
             }
         }
