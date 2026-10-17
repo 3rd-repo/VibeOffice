@@ -112,6 +112,151 @@ Phase 3: the Mac sandbox (2026-10-17: built; type-checked, not yet run on a Mac)
       Mac: a file whose folder the sandbox refuses (a file-only grant where the save needs the folder), both editions,
       another volume
 
+### Audit of real open and save — 2026-10-17
+
+Audited `4f9e9fd` plus the working tree's save fixes and in-progress native-settings work. The core real-saving
+implementation is committed in `4f9e9fd`; the older "not committed" status above predates that commit. Other work
+continued during this audit, so the native executables tested, their SHA-256 hashes, working diffs, source-fixture
+hashes, screenshots and raw results are retained in `tmp/real-save-audit-20261017/`. No implementation was changed
+by this audit. **Real file I/O works, but the close/open failures below prevent calling the workflow complete.**
+
+Verified with the native Linux executable, real keyboard input and files on disk (isolated display and store):
+- Independently authored POI corpus DOCX, XLSX and PPTX: open, edit, Ctrl+S, inspect the written package, then start
+  the native app again on the saved file. All three retain the typed marker on reopening. LibreOffice opens both
+  originals and saved files; page counts remain **2→2, 1→1, 1→1** respectively, with **zero new package findings**.
+  These three samples are a smoke check, not a whole-corpus fidelity or Microsoft Office acceptance result.
+- Quire's native Save As Cancel leaves every file unchanged; Save As to another DOCX changes the window's identity,
+  and the next Ctrl+S changes only that copy. The first overwritten DOCX is retained byte-identically in Previous
+  Versions. Native CSV Ctrl+S also writes the edit to disk, with the dirty-state problem below.
+- Latest checks: **29/29 Rust tests**, **35/35 Chromium host-stub tests**. The first browser run was 30/33 while
+  settings and its stub were being migrated; that log is retained separately. The native findings below are not
+  exercised by those passing tests. SDK validation was not rerun successfully here (the runtime was unavailable);
+  package and LibreOffice checks are in `validation-lo.jsonl`. Windows, macOS and Microsoft Office runtime
+  acceptance remain pending.
+
+To do from the audit:
+- [x] **P1 — An unbound app window can take another Recent Files document into its existing script context.**
+  Source-confirmed in `4f9e9fd` and the current tree (2026-10-17): `doc.rs::host_open_recent` accepts the page's
+  `here: true` when the caller's app matches and `Doc.file` is `None` (or no `Doc` exists). Dropped documents,
+  never-saved documents and their drafts satisfy this even after parsing untrusted content. A compromised page
+  can enumerate keys with `host_recent`, choose an entry not open in another window, then call
+  `host_open_recent({ key, draft: false, here: true })` and `host_document_bytes` to read its file without a picker.
+  `draft: true` likewise exposes a stored draft. `suite.js`'s `pristine()` is only a page-side check; the direct
+  host call bypasses it. Open Recent Files in a fresh native window (or use a native authorization boundary that
+  cannot trust the caller's blank/dirty claim). Add a native regression covering consumed dropped bytes and a
+  never-saved draft; the existing host-stub tests exercise ordinary UI routing, not this forged request. This
+  finding is from source review, not a native runtime reproduction. A window already bound to a path fails the
+  reuse guard; the target must belong to the same app and not already be open. This contradicts the Threat model's
+  claim that a compromised window cannot read another file.
+  Fixed (2026-10-17, then as the user designed it, 2026-10-18): no page already running is given another document.
+  Recent Files are the Start Center's alone: app windows lost `host_recent`, `host_recent_preview`,
+  `host_open_recent` and `host_discard_draft`, and their lists lead to the Start Center (`host_show_recent`). File ▸
+  Open in an app window holds the user's pick, asks "Save changes?", then reloads the window (`host_reopen`) to a page
+  whose address has a one-time word: only that page is given the document (`Doc::token`); a window otherwise gets
+  its document as it is made (`Docs::adopt`). Tests: cargo `a_window_keeps_the_document_it_was_made_with`,
+  `a_window_reloaded_for_a_file_gives_it_only_to_the_page_with_its_word`; host.test.mjs "File > Open asks to save"
+  (the replaced page asks for the document and gets nothing) and "an app window's Recent Files".
+- [x] **P1 — Escape must cancel closing, not discard the document.** `public/common/ui.js` marks both No and Cancel
+  as `cancel` buttons (`ui.msg`), and its Escape handler picks the first, No. Native reproduction: edit `Escape.csv`,
+  wait for its actual draft, Ctrl+W, Escape. The process exits, the file lacks the edit, and the draft is deleted
+  (`escape-entry-before.json`, `escape-entry-after.json`, `native-csv-probe.py`). The same path calls
+  `host_clear_draft` and `host_close_window` in all three apps' browser probes (`escape-*-later.log`).
+  Fixed (2026-10-17): `ui.msg` flags Cancel for Esc, No only where there is no Cancel. Test: host.test.mjs, "Esc in
+  Save changes?", all three apps (fails with the old ui.js); natively, Ctrl+W then Esc on an edited CSV with its
+  draft written keeps the window, the edit and the draft.
+- [x] **P1 — Opening another native Linux window fails.** File ▸ Open from an existing Ledger window, and clicking
+  a Start Center recent-file card, create a window saying "The URL can’t be shown". Opening the same files at
+  process startup succeeds. Reproduced again with the later build (`native-open-later.png`, binary hash in
+  `binary-later.sha256`). Investigate `desktop/src/main.rs`'s new `.incognito(true)`: Wry 0.57 creates a fresh
+  ephemeral WebContext for each such window, while tauri-runtime-wry 2.12.1 skips custom-scheme registration after
+  the first window against its cached context. The host stub replaces its one tab when opening a window, so it
+  cannot catch this. Native Recent Files/draft/previous-version opening needs a real multiple-window test.
+  Fixed before the audit's later binary was replaced (it was copied at 20:48; incognito went off on Linux at 20:52,
+  main.rs): natively, a Recent Files card, File ▸ Open from a Ledger window and a draft's card each open a new
+  window.
+- [x] **P2 — Saving an opened CSV leaves it dirty.** Native `Budget.csv`: edit, Ctrl+S, verify the edit on disk,
+  then Ctrl+W still asks to save (`native-csv-close-after-save.png`). `public/ledger/js/app.js` excludes csv/txt/html
+  from clearing `b.dirty` even when `how === 'save'` wrote the bound file. Distinguish saving that file from an export.
+  Fixed: Save of the window's own text or web page file clears it, but for a workbook of more sheets than a text file
+  holds. Natively: edit, Ctrl+S, Ctrl+W closes without asking.
+- [x] **P2 — CSV draft recovery keeps the XLSX writer for the bound CSV file.** Ledger snapshots CSV as XLSX, then
+  its recovery hook restores the name but not the source format. The focused page/host-stub probe opens a recovery
+  descriptor for `Budget.csv` / `Budget.xlsx` and records `b.type === 'xlsx'` and ZIP bytes passed to `host_save`
+  for `Budget.csv` (`recovered-csv.log`). The real host chooses CSV by path and its text-byte guard rejects those
+  bytes. This routing finding is not a completed native recovery test: the native new-window failure above blocks
+  that path. Preserve the original type or explicitly offer Save As; cover XML Spreadsheet/text recovery too.
+  Fixed: a recovered draft of a saved file takes its file's type by name (csv; txt, tsv, prn; xml; htm, html). Test:
+  host.test.mjs, "Ledger saves the CSV it opened" (the stub hands over Ledger's own XLSX snapshot). Natively: a
+  killed app's CSV draft, opened from its card and saved, writes CSV text, clears the draft, closes without asking.
+
+Additional source review (2026-10-17): the findings below are from reading the current native host and its callers.
+No tests, builds or runtime reproductions were run for these findings.
+
+- [ ] **P2 — Failed draft metadata validation can leave unlimited orphan draft files.**
+  `doc.rs::split_draft` accepts an arbitrary `lossState`; `Store::set_draft` writes the up-to-50-MiB draft before
+  `Store::put` checks whether the serialized entry exceeds `MAX_ENTRY` (2 MiB). In a never-saved window with no
+  existing entry, oversized metadata therefore leaves `<key>.recent.draft` without `<key>.recent` and returns an
+  error. `host_clear_draft` then sees no entry, does not remove those bytes, and clears the window's key. Repeating
+  the two commands allocates a new key each time and accumulates files, without opening more windows or obtaining
+  a file-picker grant. `folder_of`, `list`, `prune` and `clear` discover entries through `.recent`, so they cannot
+  reclaim these orphans. Validate and serialize the complete entry before writing any draft bytes, clean up failed
+  new-entry transactions, and enforce a total storage budget. Per-file size limits do not satisfy the Threat model's
+  claim that a compromised page cannot fill the disk. Sources: `desktop/src/doc.rs` (`host_set_draft`,
+  `split_draft`, `host_clear_draft`), `desktop/src/store.rs` (`put`, `set_draft`, `drop_draft`, `folder_of`).
+
+- [ ] **P2 — Cancelling a new Save dialog leaves an earlier destination authorized.**
+  `doc.rs::host_choose` leaves `Doc.choice` intact while showing a new dialog and returns `None` on Cancel or a
+  declined final-name overwrite question without revoking it. A previously selected destination, including one
+  retained after a failed write, remains writable by `host_write_chosen` after the user cancels the later dialog.
+  `common/core.js::L.file.choose` sets its page-side `pending` to null, but that does not revoke the native choice;
+  compromised script can call the host directly. Also, an in-flight write's error path restores its old choice with
+  `get_or_insert`, even if `host_cancel_choice` ran while that write was in progress. This requires an earlier user
+  selection; it is a stale grant, not an arbitrary-path write. Give choices a generation, revoke the prior grant
+  when replacing/cancelling a dialog, and prevent old write completions from restoring a revoked grant. Sources:
+  `desktop/src/doc.rs` (`host_choose`, `host_write_chosen`, `host_cancel_choice`), `public/common/core.js` (`L.file.choose`).
+
+- [ ] **P2 — Save As and exports do not revalidate the chosen destination before overwriting it.**
+  `Choice` stores only path, type and purpose; the planned `existed: base or none` is absent. `host_write_chosen`
+  passes `Over::Chosen`, which `files::write` exempts from the change check. If a user chooses a new name and another
+  program creates that file while the document is being serialized, the write can replace it without an overwrite
+  confirmation; an existing file changed after the dialog is likewise overwritten. The `open-elsewhere` check runs
+  only in `host_choose`, so a file opened in another VibeOffice window after selection can also be overwritten and
+  then bound to both windows. The write mutex only excludes simultaneous writes, not this stale authorization.
+  Capture the approved destination's existence and identity/version, reserve its normalized key, and revalidate
+  both the file and its window ownership at the write boundary. Sources: `desktop/src/doc.rs` (`Choice`,
+  `host_choose`, `host_write_chosen`, `claim`), `desktop/src/files.rs` (`Over`, `write`).
+
+- [x] **P2 — Concurrent opens can bind the same Recent Files entry to multiple windows.**
+  `host_open_recent` and `open_path` check `Docs::window_of` and release its mutex before `open_in_window` calls
+  `Docs::set`. Two concurrent opens of the same unopened key can both pass the check and create distinct owners.
+  Those windows share the same file and draft entry; clearing a draft from one can remove the other's recovery
+  data. This remains possible when every open goes into a new window, so removing `here` does not close it.
+  Reserve document ownership atomically by key before opening a window, and release the reservation on failure or
+  destruction. Sources: `desktop/src/doc.rs` (`window_of`, `set`, `open_path`, `host_open_recent`, `open_in_window`,
+  `host_clear_draft`). This is a source-visible interleaving; its runtime frequency has not been measured.
+  Fixed: `Docs::adopt` refuses a key another window holds under the windows lock and the open brings that window
+  forward (same cargo test). The store's entry update before it is idempotent (`record`).
+
+- [ ] **P2 — Page-made documents and reopened versions lose Windows source-zone provenance.**
+  `host_new_document` and `host_open_version` create `Start::Bytes` with a default `Doc`: no bound source file and
+  no separate provenance field. When that window saves to a fresh filename, `host_write_chosen` calls
+  `files::carry_mark` only if `own_file` exists, so it does not carry the original document's `Zone.Identifier`.
+  This affects a document made from an internet-marked source (for example Quire's mail-merge output) and a previous
+  version reopened from one, despite the plan explicitly requiring never-saved derived documents to carry the mark.
+  The new file consequently lacks that source's Protected View provenance. Keep source-zone metadata in Rust
+  separately from the writable file binding, inherit it when making a document from another window, and preserve
+  it through drafts and version recovery. Sources: `desktop/src/doc.rs` (`Doc`, `Start`, `host_new_document`,
+  `host_open_version`, `host_write_chosen`), `desktop/src/files.rs` (`carry_mark`). Windows behavior was not exercised.
+
+- [ ] **P2 — A failed previous-version backup is silently treated as successful protection.**
+  `Store::keep_previous` returns no result and logs copy/sync/rename failures only to stderr. `files::write` proceeds
+  with the replacement, and `host_save` sets `Doc.kept = true` after the successful write even if no previous version
+  was retained. For example, an unwritable backup directory with a writable document directory allows the original
+  to be overwritten without its promised recovery copy, and subsequent saves in that window never retry retention.
+  This is separate from the documented 200-MiB exclusion. Return a retention result, set `kept` only after an actual
+  retained copy, and handle failure before replacement according to an explicit user-visible policy. Sources:
+  `desktop/src/store.rs` (`keep_previous`), `desktop/src/files.rs` (`write`), `desktop/src/doc.rs` (`host_save`).
+
 ## Decisions (the user, 2026-10-11)
 
 - The desktop app never uses the web view's storage: no localStorage, sessionStorage, IndexedDB, Cache Storage or
@@ -581,7 +726,10 @@ save (the dialog already asked).
 `~/.vibeoffice/previous_versions/<yyyy-mm>/<sha256 of the path>.<unix ms>.previous`: the version on disk before the
 first write over it from a window (one per editing session, not per save), and before an export replaces an existing
 file. Same naming rule as Recent Files: no user file name in the path. Kept 30 days, at most 5 per file and 1 GB in
-all (oldest go first); files over 200 MB aren't kept. Pruned at start and after writes. Even a compromised page can't
+all, no file's over half of it (the file taking the most gives first, its oldest first; a file's last version goes
+last); files over 200 MB aren't kept. Pruned at start and after writes (built 2026-10-18, `Store::sweep`, with the temp
+files a crash left). Later, maybe: store only what changed (content-defined chunks, each kept once), after measuring
+how much repeats between versions of corpus files. Even a compromised page can't
 destroy the one file it may write, and a bad save (a writer bug Office complains about) can be undone. File ▸
 Versions… (desktop only; Paper 2016: File ▸ Info) lists them; Open shows one in a new window, from which the user
 saves it where they like.

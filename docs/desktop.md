@@ -45,8 +45,8 @@ One interface between the pages and what runs them, so a page never asks which: 
 | `onFiles(fn)` | `launchQueue` (the PWA's file handlers) | nothing: the native side opens the files the app is started with, or that another start (Windows) or Finder (macOS) hands over, each in a window of its own |
 | `openUrl(url)` | a new tab | `host_open_url`, from the Start Center: the update page and our GitHub only (Links, below), to the system (`ShellExecuteW`, `NSWorkspace openURL:`, `xdg-open`) |
 | `newWindow(url)` | `window.open` (false if blocked) | `host_new_window`: told the page (`quire`, `ledger`, `lectern`, `licenses`) and how it starts (`VO.launch`: `new`, `template`), never an address; Rust makes the address (`host::page_path`) and a full window with the host script and handlers, labelled `<page>-<n>`. An app window opens a blank document or a template of its own app, and the licences page; at most 64 windows. A Recent Files card's address (`recent`, `draft`) goes to `openRecent` |
-| `open()` | — | `host_open`: the system's Open dialog (the window's app's types; the Start Center's, all), each file in a window of its own, never in the page asking; how many opened (Documents and windows, below) |
-| `openRecent(key, draft)` | — | `host_open_recent`: a Recent Files entry, by its key, as `open` does |
+| `open()`, `reopen(go)` | — | `host_open`: the system's Open dialog (the window's app's types; the Start Center's, all): `{ opened, here }`. In an app window the first file of its app is held (`here`, its name) until the page has let its document go, then `host_reopen` reloads the window with it; every other file opens in a window of its own (Documents and windows, below) |
+| `openRecent(key, draft)`, `showRecent()` | — | the Start Center's `host_open_recent`: a Recent Files entry, by its key, in a window of its own; an app window's `host_show_recent`: the Start Center on its Recent Files |
 | `newDocument(blob, name, made)` | — | `host_new_document`: bytes in a new window (raw, the name in a header): a file dropped on a window that holds a document, or one a page made (`made`: never saved) |
 | `document()` | — | `host_document`, `host_document_bytes`: this window's starting document, once (`{ info, file }`, or null) |
 | `windows()`, `focus(id)` | `[]` | `host_windows`, `host_focus`: the app's other windows, for its Window menu |
@@ -59,7 +59,7 @@ One interface between the pages and what runs them, so a page never asks which: 
 
 `fn(files)` gets `File` objects; the Start Center calls `onFiles` and opens the first file in its app (`VO.handoff`). The service worker is registered only on the web.
 
-Each kind of window calls only its own commands (`desktop/permissions/host.toml`, granted in `desktop/capabilities/`; Tauri refuses the rest, and every Tauri core command, which nothing grants): the Start Center (`main`) Open File, Recent Files (`host_recent`, `host_recent_preview`, `host_recent_remove`, `host_recent_clear`, `host_open_recent`), a dropped file (`host_new_document`), app windows, the update page and the settings (`host_set_setting`); the apps (`quire-*`, `ledger-*`, `lectern-*`) their document (`host_document`, `host_document_bytes`, `host_set_draft`, `host_clear_draft`, `host_set_preview`), saving it (`host_save`, `host_allow_access`, `host_choose`, `host_write_chosen`, `host_cancel_choice`, `host_versions`, `host_open_version`), File ▸ Open, Recent Files and Document Recovery (no removing entries but a draft), the Window menu, closing, the licences page and the settings; the licences page (`licenses-*`) none (it reads the settings it is served). A new command goes into a permission there, and into `tests/desktop/host-stub.js`, which refuses the same (a test compares them).
+Each kind of window calls only its own commands (`desktop/permissions/host.toml`, granted in `desktop/capabilities/`; Tauri refuses the rest, and every Tauri core command, which nothing grants): the Start Center (`main`) Open File, Recent Files, the one window that lists them (`host_recent`, `host_recent_preview`, `host_recent_remove`, `host_recent_clear`, `host_open_recent`, `host_discard_draft`), a dropped file (`host_new_document`), app windows, the update page and the settings (`host_set_setting`); the apps (`quire-*`, `ledger-*`, `lectern-*`) their document (`host_document`, `host_document_bytes`, `host_set_draft`, `host_clear_draft`, `host_set_preview`), saving it (`host_save`, `host_allow_access`, `host_choose`, `host_write_chosen`, `host_cancel_choice`, `host_versions`, `host_open_version`), File ▸ Open into the window (`host_open`, `host_reopen`), the Start Center for Recent Files (`host_show_recent`; no entry's key), the Window menu, closing, the licences page and the settings; the licences page (`licenses-*`) none (it reads the settings it is served). A new command goes into a permission there, and into `tests/desktop/host-stub.js`, which refuses the same (a test compares them).
 
 Deadlocks: a command without `async` runs on the main thread, which runs every window, so one that makes a window is `async` (`host_new_window`: from a sync command that deadlocks on Windows). Tauri holds a web view's lock while it runs a `with_webview` closure, at once when called on the main thread, so the closure calls no method of that window or web view (`navigate`, `eval`, `set_zoom`): `net::guard` did, and the app hung at start (2026-10-17).
 
@@ -97,12 +97,17 @@ todos/DESKTOP_REAL_SAVE.md, Phase 1):
   Open dialog's (`VO.host.open`: the Start Center's Open File, the apps' File ▸ Open) and Recent Files
   (`VO.host.openRecent`) each open in their app's window, made for them (`<app>/?doc`; the page asks
   `host_document`), or bring forward the window that already has the file (one Recent Files key per file:
-  `store::key_of`, the sha256 of its real path, lower case on Windows). A window gets a document only as it is made
-  (`Docs::adopt`): never one for a page already running, which may have parsed something hostile and knows every
-  entry's key (`host_recent`), so File ▸ Open and Recent Files always make a new window. A window whose document is
-  an untouched blank (each app's `hooks.pristine`) then closes itself, as Word's blank Document1 gives way; the page
-  claiming so can only close itself. `adopt` also refuses a file another window has, under the same lock, so two
-  opens of one file at once make one window and bring it forward.
+  `store::key_of`, the sha256 of its real path, lower case on Windows). No page already running is ever given
+  another document: it may have parsed something hostile. A window gets its document as it is made (`Docs::adopt`),
+  or by reloading: File ▸ Open in an app window holds the file the user picked (`next`), the page asks "Save changes?"
+  as when it closes (Cancel keeps everything), and `host_reopen` reloads the window to `<app>/?doc&t=<word>`; only the
+  page with that one-time word is given the document (`Doc::token`), not the one it replaces, which runs on while the
+  reload starts. `adopt` and `replace` refuse a file another window has, under the windows lock, so two opens of one
+  file at once make one window and bring it forward.
+- **Recent Files are the Start Center's.** It alone lists them (`host_recent`, previews), opens them by key
+  (`host_open_recent`), removes them and discards their unsaved changes. In the apps, File ▸ Recent Files..., the
+  task pane's link and the Document Recovery pane bring the Start Center forward on its Recent Files
+  (`host_show_recent`, then `vo-show-recent` there); an app page holds no entry's key.
 - **One document per window.** On the desktop (`VO.oneDocument`) the apps' New, templates and Open make windows
   (`VO.go`, `VO.openDialog`), a file dropped on a window with a document goes to a new window as bytes
   (`VO.elsewhere`), as does a document a page makes (Quire's New with content and mail merge's letters:
@@ -166,8 +171,12 @@ side is `L.file` in `public/common/core.js`):
   the right one; Cancel in the chooser asks again. Type-checked, not yet run on a Mac.
 - **Previous versions**: the version a window's first save replaces, and a file an export replaces, are kept in
   `~/.vibeoffice/previous_versions/<yyyy-mm>/<file's key>.<ms>.previous` (no user file name), 30 days, five a file,
-  1 GB in all, none over 200 MB. File ▸ Versions… (desktop only; the ribbon's File tab too) lists them; Open shows one
-  in a new window as a document never saved.
+  1 GB in all and no file's over half of it, none over 200 MB. Over 1 GB, space comes first from the file whose
+  versions take the most, its oldest first, and a file's last version goes last (then the largest), so one large
+  file saved often trims its own history, not every other file's (`store::prune_versions_within`). Pruned after each
+  version kept and at start, when the temp files a crash left (an hour old) go too (`Store::sweep`). A file's key is
+  its path: a renamed or moved file starts a new history. File ▸ Versions… (desktop only; the ribbon's File tab too)
+  lists them; Open shows one in a new window as a document never saved.
 - Web view downloads are refused (`on_download`), and the File System Access pickers are removed from every frame
   (`host::NO_FILE_PICKERS`), so nothing else writes a file.
 - One write at a time per window (`L.file.write` queues them), and two writes to one file never overlap (`Docs::writing`).

@@ -5441,7 +5441,7 @@
  },
  "All files VibeOffice opens": {
   "where": [
-   "common/suite.js:116"
+   "common/suite.js:121"
   ]
  },
  "All pages in range": {
@@ -6611,18 +6611,18 @@
  },
  "Blank Document": {
   "where": [
-   "common/suite.js:296",
+   "common/suite.js:306",
    "quire/js/dialogs3.js:768"
   ]
  },
  "Blank Presentation": {
   "where": [
-   "common/suite.js:296"
+   "common/suite.js:306"
   ]
  },
  "Blank Workbook": {
   "where": [
-   "common/suite.js:296"
+   "common/suite.js:306"
   ]
  },
  "Blank document": {
@@ -7493,7 +7493,7 @@
  "Cancel": {
   "where": [
    "common/charts.js:438",
-   "common/suite.js:597",
+   "common/suite.js:613",
    "common/ui.js:547",
    "common/ui.js:571"
   ]
@@ -8245,7 +8245,7 @@
  },
  "Choose Blank or a template:": {
   "where": [
-   "common/suite.js:595"
+   "common/suite.js:611"
   ]
  },
  "Choose a Theme:": {
@@ -8323,7 +8323,7 @@
  },
  "Classic": {
   "where": [
-   "common/suite.js:297",
+   "common/suite.js:307",
    "quire/js/dialogs2.js:311"
   ]
  },
@@ -11230,7 +11230,7 @@
  },
  "Discard the changes": {
   "where": [
-   "common/suite.js:759"
+   "common/suite.js:780"
   ]
  },
  "Discard the unsaved changes": {
@@ -11524,7 +11524,7 @@
  },
  "Documents": {
   "where": [
-   "common/suite.js:116",
+   "common/suite.js:121",
    "start.js:130"
   ]
  },
@@ -17249,7 +17249,7 @@
  },
  "Light and calm: warm paper tones, one teal accent, rounded shapes.": {
   "where": [
-   "common/suite.js:298"
+   "common/suite.js:308"
   ]
  },
  "Light bulb": {
@@ -18733,7 +18733,7 @@
  },
  "New Document": {
   "where": [
-   "common/suite.js:597",
+   "common/suite.js:613",
    "quire/js/panes.js:81"
   ]
  },
@@ -18744,7 +18744,7 @@
  },
  "New Presentation": {
   "where": [
-   "common/suite.js:597",
+   "common/suite.js:613",
    "lectern/js/panes.js:544"
   ]
  },
@@ -18768,7 +18768,7 @@
  },
  "New Spreadsheet": {
   "where": [
-   "common/suite.js:597"
+   "common/suite.js:613"
   ]
  },
  "New Style": {
@@ -19136,7 +19136,7 @@
  },
  "No unsaved versions are waiting.": {
   "where": [
-   "common/suite.js:763"
+   "common/suite.js:784"
   ]
  },
  "No-Width Non Break": {
@@ -19708,7 +19708,7 @@
  },
  "Open": {
   "where": [
-   "common/suite.js:116",
+   "common/suite.js:121",
    "lectern/js/commands.js:24",
    "lectern/js/panes.js:537",
    "ledger/js/panes.js:70"
@@ -19758,7 +19758,7 @@
  },
  "Open the unsaved version": {
   "where": [
-   "common/suite.js:756"
+   "common/suite.js:777"
   ]
  },
  "Open the version saved before the changes": {
@@ -20425,12 +20425,12 @@
  },
  "Paper": {
   "where": [
-   "common/suite.js:298"
+   "common/suite.js:308"
   ]
  },
  "Paper 2016": {
   "where": [
-   "common/suite.js:299"
+   "common/suite.js:309"
   ]
  },
  "Paper bag": {
@@ -20450,7 +20450,7 @@
  },
  "Paper with tabs of commands, grouped by task, instead of menus and toolbars.": {
   "where": [
-   "common/suite.js:299"
+   "common/suite.js:309"
   ]
  },
  "Paper:": {
@@ -21190,7 +21190,7 @@
  },
  "Presentations": {
   "where": [
-   "common/suite.js:116",
+   "common/suite.js:121",
    "start.js:130",
    "index.html:245"
   ]
@@ -21952,6 +21952,11 @@
    "quire/js/dialogs3.js:656"
   ]
  },
+ "Recent &Files...": {
+  "where": [
+   "common/suite.js:733"
+  ]
+ },
  "Recent Files": {
   "where": [
    "start.js:155",
@@ -21968,6 +21973,12 @@
  "Recent Files are not available in this browser ({0}).": {
   "where": [
    "start.js:80"
+  ]
+ },
+ "Recent Files...": {
+  "where": [
+   "common/suite.js:740",
+   "common/suite.js:764"
   ]
  },
  "Recently Used Fonts": {
@@ -27016,7 +27027,7 @@
  },
  "Spreadsheets": {
   "where": [
-   "common/suite.js:116",
+   "common/suite.js:121",
    "start.js:130"
   ]
  },
@@ -28344,8 +28355,8 @@
  },
  "That file is no longer available here. Open it again from your computer.": {
   "where": [
-   "common/suite.js:489",
-   "common/suite.js:551"
+   "common/suite.js:499",
+   "common/suite.js:567"
   ]
  },
  "The Find What text contains a Pattern Match expression which is not valid.": {
@@ -28433,7 +28444,7 @@
  },
  "The classic blue toolbars and menus.": {
   "where": [
-   "common/suite.js:297"
+   "common/suite.js:307"
   ]
  },
  "The comments from Document Properties": {
@@ -30264,14 +30275,19 @@
    "start.js:113"
   ]
  },
+ "Unsaved changes are kept for each document in Recent Files, in the Start Center: open them from there, or discard them.": {
+  "where": [
+   "common/suite.js:764"
+  ]
+ },
  "Unsaved changes from {0}": {
   "where": [
-   "common/suite.js:752"
+   "common/suite.js:773"
   ]
  },
  "Unsaved changes from {0} (never saved)": {
   "where": [
-   "common/suite.js:752"
+   "common/suite.js:773"
   ]
  },
  "Untitled": {
@@ -31982,12 +31998,12 @@
  },
  "{0} (unsaved changes)": {
   "where": [
-   "common/suite.js:715"
+   "common/suite.js:734"
   ]
  },
  "{0} (unsaved)": {
   "where": [
-   "common/suite.js:731"
+   "common/suite.js:751"
   ]
  },
  "{0} ({1} seconds)": {
@@ -32165,7 +32181,7 @@
  },
  "{0} kept the unsaved changes of these documents. Open the ones you want to keep and save them; discard the rest.": {
   "where": [
-   "common/suite.js:767"
+   "common/suite.js:788"
   ]
  },
  "{0} key sentence highlighted. Undo to restore.": {
@@ -32290,17 +32306,17 @@
  },
  "{0} — open in another window": {
   "where": [
-   "common/suite.js:754"
+   "common/suite.js:775"
   ]
  },
  "{0} — open in this window": {
   "where": [
-   "common/suite.js:754"
+   "common/suite.js:775"
   ]
  },
  "{0} — unsaved changes from {1}": {
   "where": [
-   "common/suite.js:727"
+   "common/suite.js:747"
   ]
  },
  "{0}% normal size": {

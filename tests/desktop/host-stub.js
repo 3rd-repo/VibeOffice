@@ -6,7 +6,7 @@
 // what the last window made was given). The pages have no browser storage, as in the app (host.rs, NO_STORAGE): the
 // tab's sessionStorage is window.stubSession, for the stub and the tests' steps. Records there: hostCalls (each
 // command, with the page), opened (host_open_url), uiScale, newWindow, closed (host_close_window), focused
-// (host_focus), dialogs (the Open dialog's labels), chose (the Save dialog's arguments), saves (each write), touched
+// (host_focus), reopened (host_reopen's address), showRecent (host_show_recent), dialogs (the Open dialog's labels), chose (the Save dialog's arguments), saves (each write), touched
 // (each use of a storage API the app removes); stubSettings, the settings (settings.rs, config.json).
 // The clock says 2026-10-16 (?today=yyyy-mm-dd another day), so the versions here don't grow old (VO.isOutdated).
 // ?web: no host, only the version a published copy of the site is stamped with.
@@ -49,9 +49,9 @@
   const app = kind === 'app' ? location.pathname.split('/')[1] : null;
   const grants = {
     start: ['host_open', 'host_open_recent', 'host_new_document', 'host_recent', 'host_recent_preview', 'host_recent_remove',
-      'host_recent_clear', 'host_new_window', 'host_open_url', 'host_set_setting'],
-    app: ['host_document', 'host_document_bytes', 'host_open', 'host_open_recent', 'host_new_document', 'host_recent',
-      'host_set_preview', 'host_set_draft', 'host_clear_draft', 'host_discard_draft', 'host_windows',
+      'host_recent_clear', 'host_discard_draft', 'host_new_window', 'host_open_url', 'host_set_setting'],
+    app: ['host_document', 'host_document_bytes', 'host_open', 'host_reopen', 'host_show_recent', 'host_new_document',
+      'host_set_preview', 'host_set_draft', 'host_clear_draft', 'host_windows',
       'host_focus', 'host_closing', 'host_save', 'host_allow_access', 'host_choose', 'host_write_chosen', 'host_cancel_choice', 'host_versions',
       'host_open_version', 'host_new_window', 'host_close_window', 'host_set_setting'],
     none: [],
@@ -89,12 +89,26 @@
       log('hostCalls');
       sessionStorage.hostCalls += ':' + cmd;
       if (!grants.includes(cmd)) throw `Command ${cmd} not allowed by ACL`;
-      if (cmd === 'host_open') {
+      if (cmd === 'host_open') {   // an app window: its app's first file is held for host_reopen (next)
         sessionStorage.dialogs = JSON.stringify(args.labels);
-        const picked = (q.get('pick') || '').split(',').filter(Boolean);
-        for (const name of picked) open(fileDoc(name));
-        return picked.length;
+        let opened = 0, here = null;
+        for (const name of (q.get('pick') || '').split(',').filter(Boolean)) {
+          if (!here && kind === 'app' && appFor(name) === app) { here = name; sessionStorage.next = name; } else { open(fileDoc(name)); opened++; }
+        }
+        return { opened, here };
       }
+      if (cmd === 'host_reopen') {   // this tab reloads to the app's page with a one-time word (token)
+        const name = sessionStorage.next;
+        delete sessionStorage.next;
+        if (!args.go || !name) return null;
+        const token = Math.random().toString(36).slice(2);
+        sessionStorage.stubDoc = JSON.stringify({ ...fileDoc(name), token });
+        delete sessionStorage.stubKey;
+        sessionStorage.reopened = `/${app}/?doc&t=${token}`;
+        setTimeout(() => { location.href = sessionStorage.reopened; });
+        return null;
+      }
+      if (cmd === 'host_show_recent') { log('showRecent'); return null; }
       if (cmd === 'host_open_recent') {
         const e = recent().find((x) => x.key === args.key);
         if (!e) throw 'That file is no longer in Recent Files.';
@@ -107,13 +121,15 @@
         windowFor({ key: '', info: { fileName: name, name, saved: !options.headers['X-Made'], draft: false, lossState: null, bound: false, readOnly: false }, text: text(args) });
         return null;
       }
+      // a window reloaded for a file gives it only to the page with its word (doc.rs, takes)
+      const mine = (d) => d && (!d.token || (args && args.t) === d.token) ? d : null;
       if (cmd === 'host_document') {
-        const d = JSON.parse(sessionStorage.stubDoc || 'null');
+        const d = mine(JSON.parse(sessionStorage.stubDoc || 'null'));
         if (d && d.key) sessionStorage.stubKey = d.key;
         return d && d.info;
       }
       if (cmd === 'host_document_bytes') {
-        const d = JSON.parse(sessionStorage.stubDoc || 'null');
+        const d = mine(JSON.parse(sessionStorage.stubDoc || 'null'));
         if (!d) throw 'no document';
         delete sessionStorage.stubDoc;
         // b64: bytes that aren't text (a workbook's draft, as Ledger's snapshot makes it)

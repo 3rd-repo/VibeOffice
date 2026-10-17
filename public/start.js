@@ -163,6 +163,8 @@ VO.i18n.whenReady(function () {
   $('createbtn').addEventListener('click', () => { if (location.hash !== '#create') location.hash = 'create'; else show(); });
   window.addEventListener('hashchange', show);
   window.addEventListener('popstate', show);
+  /* the desktop app: an app window's Recent Files brings this window forward on them (host_show_recent) */
+  window.addEventListener('vo-show-recent', () => $('recentbtn').click());
   show();
 
   /* ---------- install, about */

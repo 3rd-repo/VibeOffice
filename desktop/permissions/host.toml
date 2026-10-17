@@ -4,7 +4,7 @@
 
 [[permission]]
 identifier = "start-center"
-description = "The Start Center: Open File, Recent Files, a dropped file, app windows, the settings (the UI size, the look, the language), the update page"
+description = "The Start Center: Open File, Recent Files (the one window that lists them, their unsaved changes too), a dropped file, app windows, the settings (the UI size, the look, the language), the update page"
 commands.allow = [
   "host_open",
   "host_open_recent",
@@ -13,6 +13,7 @@ commands.allow = [
   "host_recent_preview",
   "host_recent_remove",
   "host_recent_clear",
+  "host_discard_draft",
   "host_new_window",
   "host_open_url",
   "host_set_setting",
@@ -20,18 +21,17 @@ commands.allow = [
 
 [[permission]]
 identifier = "app-window"
-description = "Quire, Ledger and Lectern: the window's document, its draft and preview, saving it (Save, Save As, exports, previous versions), File > Open, Recent Files, Document Recovery, the Window menu, closing, the licences page (About), the settings"
+description = "Quire, Ledger and Lectern: the window's document, its draft and preview, saving it (Save, Save As, exports, previous versions), File > Open into the window, the Start Center for Recent Files, the Window menu, closing, the licences page (About), the settings"
 commands.allow = [
   "host_document",
   "host_document_bytes",
   "host_open",
-  "host_open_recent",
+  "host_reopen",
+  "host_show_recent",
   "host_new_document",
-  "host_recent",
   "host_set_preview",
   "host_set_draft",
   "host_clear_draft",
-  "host_discard_draft",
   "host_windows",
   "host_focus",
   "host_closing",

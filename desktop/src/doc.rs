@@ -50,6 +50,11 @@ struct Doc {
     choice: Option<Choice>,
     /// the folder of the window's last Save dialog
     folder: Option<PathBuf>,
+    /// the file the user just picked in this window's Open dialog to take the window's place (`host_reopen`)
+    next: Option<PathBuf>,
+    /// the one-time word in the address of the page the window reloads to for `next` (`?doc&t=`): only that page is
+    /// given the document (`host_document`), not the one it replaces, which runs on while the reload starts
+    token: Option<String>,
     /// macOS: the sandbox's access to the file, from its bookmark, while the window has it (held, never read)
     #[cfg(target_os = "macos")]
     #[allow(dead_code)]
@@ -159,13 +164,22 @@ impl Docs {
     /// under the same lock, so two opens of a file at once make one window. Else the window that has it.
     fn adopt(&self, label: &str, doc: Doc) -> Result<(), String> {
         let mut windows = self.windows.lock().unwrap();
-        if let Some(key) = &doc.key {
-            if let Some((holder, _)) = windows.iter().find(|(_, d)| d.key.as_ref() == Some(key)) {
-                return Err(holder.clone());
-            }
+        if let Some(holder) = holder(&windows, &doc, label) {
+            return Err(holder);
         }
         if windows.contains_key(label) {
             return Err(label.into());
+        }
+        windows.insert(label.into(), doc);
+        Ok(())
+    }
+
+    /// File ▸ Open in an app window: the window's document gives way to the file the user picked, for the page the
+    /// window reloads to, which alone has the document's `token` (`host_reopen`). Else the window that has it.
+    fn replace(&self, label: &str, doc: Doc) -> Result<(), String> {
+        let mut windows = self.windows.lock().unwrap();
+        if let Some(holder) = holder(&windows, &doc, label) {
+            return Err(holder);
         }
         windows.insert(label.into(), doc);
         Ok(())
@@ -248,6 +262,21 @@ fn raise(app: &AppHandle, label: &str) {
         let _ = w.unminimize();
         let _ = w.set_focus();
     }
+}
+
+/// The window other than `label` that has `doc`'s file or entry already.
+fn holder(windows: &HashMap<String, Doc>, doc: &Doc, label: &str) -> Option<String> {
+    let key = doc.key.as_ref()?;
+    windows
+        .iter()
+        .find(|(l, d)| l.as_str() != label && d.key.as_ref() == Some(key))
+        .map(|(l, _)| l.clone())
+}
+
+/// Whether the page asking may be given the window's document: any page of a window made for it, only the page
+/// with the word (`t`) of a window reloaded for it.
+fn takes(doc: &Doc, t: Option<&str>) -> bool {
+    doc.token.as_deref().is_none_or(|token| t == Some(token))
 }
 
 /// Opens `doc` in a new window of `app` (`<app>/?doc`).
@@ -349,14 +378,23 @@ fn open_filters(app: Option<&str>, l: &Labels) -> Vec<dialog::Filter> {
     }
 }
 
-/// File ▸ Open and the Start Center's Open File: the system's Open dialog; each file chosen opens in a window
-/// of its own, or comes forward in the one that has it (an untouched blank page then closes itself). How many did.
+/// What `host_open` did: how many files opened in windows of their own (or came forward in the one that has them),
+/// and the name of the one that is to take this app window's place (`host_reopen`).
+#[derive(Serialize)]
+pub struct Opened {
+    opened: usize,
+    here: Option<String>,
+}
+
+/// File ▸ Open and the Start Center's Open File: the system's Open dialog. In an app window the first file of its
+/// app takes the window's place once its page has let its document go (`host_reopen`); every other file opens in a
+/// window of its own, or comes forward in the one that has it. The Start Center opens each in its own window.
 #[tauri::command]
 pub async fn host_open(
     app: AppHandle,
     window: WebviewWindow,
     labels: Option<Labels>,
-) -> Result<usize, String> {
+) -> Result<Opened, String> {
     let labels = labels.unwrap_or_default();
     let own = app_of(&window);
     let files = dialog::open(
@@ -365,19 +403,92 @@ pub async fn host_open(
         open_filters(own, &labels),
     )
     .await;
+    let docs = app.state::<Docs>();
+    let open_elsewhere = |f: &Path| {
+        store::key_of(f)
+            .ok()
+            .and_then(|(k, _)| docs.window_of(&k))
+            .is_some()
+    };
+    let mut here = None;
     let mut opened = 0;
     let mut errors = Vec::new();
     for f in files {
+        if here.is_none() && own.is_some() && types::app_for(&f) == own && !open_elsewhere(&f) {
+            here = Some(file_name(&f));
+            docs.windows
+                .lock()
+                .unwrap()
+                .entry(window.label().into())
+                .or_default()
+                .next = Some(f);
+            continue;
+        }
         match open_path(&app, &f) {
             Ok(()) => opened += 1,
             Err(e) => errors.push(e),
         }
     }
     if errors.is_empty() {
-        Ok(opened)
+        Ok(Opened { opened, here })
     } else {
         Err(errors.join("\n"))
     }
+}
+
+/// The file the user picked in this app window's Open dialog takes the window's place, once its page has let its
+/// document go (saved or given up: the "Save changes?" question); `go`: false lets the pick go instead. The window
+/// reloads to its app's page for the file, whose address has a one-time word only that page knows (`token`), so the
+/// page it replaces, which may have parsed something hostile, is never given the file.
+#[tauri::command]
+pub async fn host_reopen(app: AppHandle, window: WebviewWindow, go: bool) -> Result<(), String> {
+    let docs = app.state::<Docs>();
+    let next = docs
+        .windows
+        .lock()
+        .unwrap()
+        .get_mut(window.label())
+        .and_then(|d| d.next.take());
+    let (Some(path), true) = (next, go) else {
+        return Ok(());
+    };
+    let own = own_app(&window)?;
+    if types::app_for(&path) != Some(own) {
+        return Err(format!("{own} doesn't open “{}”", file_name(&path)));
+    }
+    let (key, real) = docs.record(own, &path)?;
+    recent_changed(&app);
+    let token = store::random_key();
+    let doc = Doc {
+        key: Some(key),
+        file: Some(real),
+        start: Some(Start::File),
+        token: Some(token.clone()),
+        ..Doc::default()
+    };
+    if let Err(holder) = docs.replace(window.label(), doc) {
+        raise(&app, &holder);
+        return Ok(());
+    }
+    let url = crate::net::page_url(
+        &app,
+        WebviewUrl::App(format!("{own}/?doc&t={token}").into()),
+    )
+    .ok_or("no address for the page")?;
+    app.state::<crate::host::Host>()
+        .expect(window.label(), crate::host::Page::new(url.clone(), false));
+    window.navigate(url).map_err(|e| e.to_string())
+}
+
+/// An app window's Recent Files: the Start Center, the one window that lists them, brought forward (or opened again)
+/// on its Recent Files.
+#[tauri::command]
+pub async fn host_show_recent(app: AppHandle) -> Result<(), String> {
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.eval("window.dispatchEvent(new Event('vo-show-recent'));");
+    }
+    crate::show_start_center(&app);
+    Ok(())
 }
 
 /// A Recent Files entry (`draft`: its unsaved version): the window that has it comes forward, else a new window
@@ -502,9 +613,15 @@ fn percent_decode(s: &str) -> Option<String> {
 
 /// What this window's document is (null: blank, a template, the sample).
 #[tauri::command]
-pub fn host_document(window: WebviewWindow, docs: State<Docs>) -> Option<DocInfo> {
+pub fn host_document(
+    window: WebviewWindow,
+    docs: State<Docs>,
+    t: Option<String>,
+) -> Option<DocInfo> {
     let windows = docs.windows.lock().unwrap();
-    let doc = windows.get(window.label())?;
+    let doc = windows
+        .get(window.label())
+        .filter(|d| takes(d, t.as_deref()))?;
     let entry = doc.key.as_deref().and_then(|k| docs.store.get(k));
     let read_only = doc.file.as_deref().is_some_and(files::read_only);
     info(doc, entry.as_ref(), read_only)
@@ -550,10 +667,17 @@ fn info(doc: &Doc, entry: Option<&Entry>, read_only: bool) -> Option<DocInfo> {
 /// This window's starting document's bytes, once. The version of its file it holds from now on is the one read
 /// (an unsaved version's: the one its entry last saw).
 #[tauri::command(async)]
-pub fn host_document_bytes(window: WebviewWindow, docs: State<Docs>) -> Result<Response, String> {
+pub fn host_document_bytes(
+    window: WebviewWindow,
+    docs: State<Docs>,
+    t: Option<String>,
+) -> Result<Response, String> {
     let (start, key, file) = {
         let mut windows = docs.windows.lock().unwrap();
-        let doc = windows.get_mut(window.label()).ok_or("no document")?;
+        let doc = windows
+            .get_mut(window.label())
+            .filter(|d| takes(d, t.as_deref()))
+            .ok_or("no document")?;
         (
             doc.start.take().ok_or("no document")?,
             doc.key.clone(),
@@ -1414,6 +1538,39 @@ mod tests {
             "two opens at once: one window, the other brought forward"
         );
         assert!(!docs.windows.lock().unwrap().contains_key("quire-3"));
+    }
+
+    #[test]
+    fn a_window_reloaded_for_a_file_gives_it_only_to_the_page_with_its_word() {
+        let reloaded = Doc {
+            token: Some("w1".into()),
+            start: Some(Start::File),
+            ..Doc::default()
+        };
+        assert!(
+            !takes(&reloaded, None),
+            "the page it replaces doesn't know the word"
+        );
+        assert!(!takes(&reloaded, Some("w2")));
+        assert!(takes(&reloaded, Some("w1")));
+        assert!(
+            takes(&Doc::default(), None),
+            "a window made for its document: its one page"
+        );
+        let docs = Docs::new(Store::new(std::env::temp_dir().join("vo-replace")));
+        let file = |key: &str| Doc {
+            key: Some(key.into()),
+            file: Some(PathBuf::from(format!("/d/{key}.docx"))),
+            ..Doc::default()
+        };
+        docs.adopt("quire-1", file("Report")).unwrap();
+        assert_eq!(
+            docs.replace("quire-2", file("Report")),
+            Err("quire-1".into()),
+            "open in another window"
+        );
+        docs.replace("quire-2", file("Notes")).unwrap();
+        assert_eq!(docs.key_of("quire-2").as_deref(), Some("Notes"));
     }
 
     #[test]

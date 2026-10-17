@@ -49,12 +49,33 @@ test('desktop: Open File in the Start Center asks the system\'s Open dialog, and
   assert.match(out, /no errors, no external requests/);
 });
 
-test('desktop: File > Open opens the file in a window of its own; an untouched blank window then closes', () => {
-  const where = `return JSON.stringify({ path: location.pathname, title: document.title, newWindow: stubSession.newWindow || '', closed: stubSession.closed || '' })`;
-  const blank = shot('quire/', [{ js: `L.app.openDialog(); return '1'`, wait: 2000 }, { js: where }], ...stubbed, '--qs', 'new&pick=Notes.md').r;
-  assert.deepEqual(blank, { path: '/quire/', title: 'Notes - Quire', newWindow: 'http://127.0.0.1:8760/quire/?doc', closed: '/quire/' }, 'the blank document gave way');
-  const { r } = shot('quire/', [{ js: `L.app.saved = true; L.app.openDialog(); return '1'`, wait: 2000 }, { js: where }], ...stubbed, '--qs', 'new&pick=Report.txt');
-  assert.deepEqual(r, { path: '/quire/', title: 'Report - Quire', newWindow: 'http://127.0.0.1:8760/quire/?doc', closed: '' }, 'a window with a document stays');
+test('desktop: File > Open asks to save a changed document, then the window reloads with the file; the page it replaces gets nothing', () => {
+  const ask = (answer) => `L.D.doc.dirty = true; const p = L.app.openDialog(); ${wait(500)} const asked = /save the changes/.test(${boxText});
+    ${click(answer)} await p;
+    /* the page being replaced asks for the window's new document before the reload: it doesn't know the word */
+    let info = 'error', bytes = 'given';
+    try { info = await window.__TAURI_INTERNALS__.invoke('host_document', {}); } catch (e) { /* refused */ }
+    try { await window.__TAURI_INTERNALS__.invoke('host_document_bytes', {}); } catch (e) { bytes = 'refused'; }
+    stubSession.old = JSON.stringify({ asked, info, bytes, calls: stubSession.hostCalls.split(' ').map((c) => c.split(':').pop()).filter((c) => /reopen|clear_draft/.test(c)) });
+    return '1'`;
+  const then = `return JSON.stringify({ old: JSON.parse(stubSession.old), path: location.pathname, title: document.title, reopened: stubSession.reopened || '', newWindow: stubSession.newWindow || '' })`;
+  const no = shot('quire/', [{ wait: 1500 }, { js: ask('No'), wait: 2500 }, { js: then }], ...stubbed, '--qs', 'new&pick=Notes.md').r;
+  assert.deepEqual(no.old, { asked: true, info: null, bytes: 'refused', calls: ['host_clear_draft', 'host_reopen'] }, 'No gives the changes up; the old page is given nothing');
+  assert.match(no.reopened, /^\/quire\/\?doc&t=\w+$/);
+  assert.deepEqual([no.path, no.title, no.newWindow], ['/quire/', 'Notes - Quire', ''], 'the same window, reloaded with the file');
+  const cancel = shot('quire/', [{ wait: 1500 }, { js: ask('Cancel'), wait: 1500 }, { js: then }], ...stubbed, '--qs', 'new&pick=Notes.md').r;
+  assert.deepEqual([cancel.old.asked, cancel.old.calls, cancel.reopened, cancel.title], [true, ['host_reopen'], '', 'Document1 - Quire'], 'Cancel keeps the document');
+});
+
+test('desktop: an app window\'s Recent Files are the Start Center\'s: its lists lead there, and it never reads them', () => {
+  const { r } = shot('quire/', [{ wait: 2500 }, { js: `const items = VO.recentMenuItems(4); items[0].run(); ${wait(300)}
+    const links = [...VO.recentLinks(4).querySelectorAll('button')].map((b) => b.textContent);
+    return JSON.stringify({ items: items.map((i) => i.label), links, calls: stubSession.hostCalls.split(' ').map((c) => c.split(':').pop()), touched: stubSession.touched || '' })` }],
+  ...stubbed, '--qs', 'doc&file=Notes.md&recent=Budget.csv,Notes.md*');
+  assert.deepEqual(r.items, ['Recent &Files...']);
+  assert.deepEqual(r.links, ['Recent Files...']);
+  assert.ok(r.calls.includes('host_show_recent'), r.calls.join(' '));
+  assert.ok(!r.calls.some((c) => /host_recent|host_open_recent|host_discard_draft/.test(c)), 'no list, no entry opened by key: ' + r.calls.join(' '));
 });
 
 test('desktop: a file dropped on a window with a document opens in a new window, with its bytes', () => {

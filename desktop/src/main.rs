@@ -303,6 +303,8 @@ fn main() {
             doc::host_document_bytes,
             doc::host_open,
             doc::host_open_recent,
+            doc::host_reopen,
+            doc::host_show_recent,
             doc::host_new_document,
             doc::host_recent,
             doc::host_recent_preview,
@@ -341,6 +343,9 @@ fn main() {
                 store::Store::at(home.clone()),
                 old.as_deref(),
             ));
+            // expired versions and what a crash left, away from the windows' start
+            let sweep = store::Store::at(home.clone());
+            std::thread::spawn(move || sweep.sweep());
             app.manage(doc::Docs::new(store::Store::at(home)));
             // the files on the command line (Open with, a double-click on a file: "%1") open in their own windows;
             // without any, the Start Center

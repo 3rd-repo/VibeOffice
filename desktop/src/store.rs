@@ -13,7 +13,7 @@
 //! folder is left alone, and links are never followed. Every file is written whole or not at all (`write_atomic`).
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     io::{self, Read, Write},
     path::{Path, PathBuf},
@@ -367,25 +367,93 @@ impl Store {
     }
 
     fn prune_versions(&self, now: u64) {
-        let all = self.all_versions();
-        let mut total: u64 = all.iter().map(|(_, _, s)| s).sum();
-        let mut per_file: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
-        for (id, _, _) in &all {
-            *per_file
-                .entry(id.split('.').next().unwrap_or(""))
-                .or_default() += 1;
+        self.prune_versions_within(now, VERSIONS_IN_ALL);
+    }
+
+    /// Keeps the versions in their bounds: none older than KEEP_MS, VERSIONS_PER_FILE a file, `budget` bytes in
+    /// all and no file's over half of it. Space comes first from the file whose versions take the most, its oldest
+    /// first, and a file's last version goes last (then the largest): a large file saved often trims its own
+    /// history, not every other file's.
+    fn prune_versions_within(&self, now: u64, budget: u64) {
+        let mut files: HashMap<String, Vec<(PathBuf, u64)>> = HashMap::new();
+        for (id, path, size) in self.all_versions() {
+            let key = id.split('.').next().unwrap_or("").to_string();
+            if version_time(&id).is_none_or(|t| now.saturating_sub(t) > KEEP_MS) {
+                drop_version(&path);
+            } else {
+                files.entry(key).or_default().push((path, size)); // oldest first
+            }
         }
-        for (id, path, size) in &all {
-            let key = id.split('.').next().unwrap_or("");
-            let old = version_time(id).is_none_or(|t| now.saturating_sub(t) > KEEP_MS);
-            let many = per_file.get(key).is_some_and(|n| *n > VERSIONS_PER_FILE);
-            if (old || many || total > VERSIONS_IN_ALL) && fs::remove_file(path).is_ok() {
-                total -= size;
-                *per_file.entry(key).or_default() -= 1;
-                if let Some(dir) = path.parent() {
-                    let _ = fs::remove_dir(dir); // only when emptied
+        let bytes = |v: &Vec<(PathBuf, u64)>| v.iter().map(|(_, s)| s).sum::<u64>();
+        for versions in files.values_mut() {
+            while versions.len() > VERSIONS_PER_FILE
+                || (versions.len() > 1 && bytes(versions) > budget / 2)
+            {
+                drop_version(&versions.remove(0).0);
+            }
+        }
+        let mut total: u64 = files.values().map(bytes).sum();
+        while total > budget {
+            // the file with the most bytes among those with more than one version; else the largest last version
+            let pick = files
+                .iter()
+                .filter(|(_, v)| v.len() > 1)
+                .max_by_key(|(_, v)| bytes(v))
+                .or_else(|| {
+                    files
+                        .iter()
+                        .filter(|(_, v)| !v.is_empty())
+                        .max_by_key(|(_, v)| bytes(v))
+                })
+                .map(|(k, _)| k.clone());
+            let Some(key) = pick else { break };
+            let versions = files.get_mut(&key).unwrap();
+            let (path, size) = versions.remove(0);
+            drop_version(&path);
+            total -= size;
+        }
+    }
+
+    /// At start: the versions pruned, and the temp files a crash left (anything named `.~vibeoffice-*.tmp` an hour
+    /// old, so never one a write is using).
+    pub fn sweep(&self) {
+        self.prune_versions(now_ms());
+        let hour_ago = SystemTime::now() - std::time::Duration::from_secs(3600);
+        let mut folders = vec![self.root.clone()];
+        for top in [self.recent(), self.versions_dir()] {
+            folders.extend(
+                fs::read_dir(&top)
+                    .into_iter()
+                    .flatten()
+                    .flatten()
+                    .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
+                    .filter(|e| e.file_name().to_str().is_some_and(is_month))
+                    .map(|e| e.path()),
+            );
+        }
+        for folder in folders {
+            for e in fs::read_dir(&folder).into_iter().flatten().flatten() {
+                let stale = e
+                    .file_name()
+                    .to_str()
+                    .is_some_and(|n| n.starts_with(".~vibeoffice-") && n.ends_with(".tmp"))
+                    && e.file_type().is_ok_and(|t| t.is_file())
+                    && e.metadata()
+                        .and_then(|m| m.modified())
+                        .is_ok_and(|t| t < hour_ago);
+                if stale {
+                    let _ = fs::remove_file(e.path());
                 }
             }
+        }
+    }
+}
+
+/// Removes a kept version, and its month folder once that is empty.
+fn drop_version(path: &Path) {
+    if fs::remove_file(path).is_ok() {
+        if let Some(dir) = path.parent() {
+            let _ = fs::remove_dir(dir); // only when emptied
         }
     }
 }
@@ -703,6 +771,60 @@ mod tests {
         // a month later they go
         s.prune_versions(now_ms() + KEEP_MS + 1000);
         assert!(s.versions(&key).is_empty());
+        let _ = fs::remove_dir_all(&s.root);
+    }
+
+    #[test]
+    fn a_large_file_saved_often_trims_its_own_versions_not_the_others() {
+        let s = scratch("fair");
+        let keep = |key: &str, bytes: usize| {
+            let file = s.root.join("f");
+            fs::create_dir_all(&s.root).unwrap();
+            fs::write(&file, vec![b'x'; bytes]).unwrap();
+            s.keep_previous(key, &file);
+            std::thread::sleep(std::time::Duration::from_millis(3));
+        };
+        let (small, two, large) = (random_key(), random_key(), random_key());
+        keep(&small, 1000);
+        keep(&two, 1000);
+        keep(&two, 1000);
+        for _ in 0..5 {
+            keep(&large, 3000);
+        }
+        let count = |k: &str| s.versions(k).len();
+        // half the budget at most for one file: the large one keeps one version, the others all theirs
+        s.prune_versions_within(now_ms(), 10_000);
+        assert_eq!((count(&small), count(&two), count(&large)), (1, 2, 1));
+        // tighter: a file's extra versions go before any file's last one, then the largest last one
+        s.prune_versions_within(now_ms(), 4_500);
+        assert_eq!((count(&small), count(&two), count(&large)), (1, 1, 0));
+        let _ = fs::remove_dir_all(&s.root);
+    }
+
+    #[test]
+    fn the_sweep_removes_what_a_crash_left_and_nothing_in_use() {
+        let s = scratch("sweep");
+        let month = s.recent().join(month(now_ms()));
+        fs::create_dir_all(&month).unwrap();
+        let old = month.join(".~vibeoffice-0011223344556677.tmp");
+        let fresh = month.join(".~vibeoffice-8899aabbccddeeff.tmp");
+        let other = month.join("notes.txt");
+        for f in [&old, &fresh, &other] {
+            fs::write(f, b"x").unwrap();
+        }
+        let two_hours_ago = SystemTime::now() - std::time::Duration::from_secs(7200);
+        fs::File::options()
+            .write(true)
+            .open(&old)
+            .unwrap()
+            .set_modified(two_hours_ago)
+            .unwrap();
+        s.sweep();
+        assert!(!old.exists(), "a crash's leftover goes");
+        assert!(
+            fresh.exists() && other.exists(),
+            "a write under way and what isn't ours stay"
+        );
         let _ = fs::remove_dir_all(&s.root);
     }
 

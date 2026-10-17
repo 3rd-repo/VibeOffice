@@ -68,6 +68,10 @@
    *  Tauri's or the system's file APIs directly. */
   const native = window.__VO_HOST__ && window.__TAURI_INTERNALS__ ? window.__VO_HOST__ : null;
   const call = (cmd, args, options) => window.__TAURI_INTERNALS__.invoke(cmd, args, options);
+  /* an app page, not the Start Center (the desktop app: only the Start Center lists Recent Files) */
+  const appPage = !!document.documentElement.dataset.app;
+  /* the one-time word of a window reloaded for a file (?doc&t=): its document is given only to the page with it */
+  const docWord = new URLSearchParams(location.search).get('t');
   /** bytes for a command's body (raw, never JSON) */
   const raw = async (blob) => new Uint8Array(await blob.arrayBuffer());
   VO.host = {
@@ -110,14 +114,20 @@
     /* The desktop app: a window holds one document, and only the native side gives a window its file
        (desktop/src/doc.rs). A page names no file: it asks for the system's Open dialog, a Recent Files entry
        by its key, or a new window for bytes it has. */
-    /** the system's Open dialog: each file chosen opens in a window of its own (or comes forward in the one that
-     *  has it), never in this page, which gets only the document its window was made with. How many opened */
+    /** the system's Open dialog: { opened, here }. In an app window the first file of its app is to take the
+     *  window's place (here: its name; reopen() then reloads the window with it); every other file opens in a window
+     *  of its own, or comes forward in the one that has it (opened: how many) */
     async open() {
       const labels = { title: VO.t('Open'), all: VO.t('All files VibeOffice opens'), quire: VO.t('Documents'), ledger: VO.t('Spreadsheets'), lectern: VO.t('Presentations') };
       return call('host_open', { labels });
     },
-    /** a Recent Files entry (draft: its unsaved version), as open() does */
+    /** the file open() picked takes this window's place: the window reloads with it (go: false lets it go) */
+    async reopen(go) { return call('host_reopen', { go: !!go }); },
+    /** the Start Center's Recent Files entry (draft: its unsaved version) in a window of its own, or the window that
+     *  has it brought forward */
     async openRecent(key, draft) { return call('host_open_recent', { key, draft: !!draft }); },
+    /** an app window's Recent Files: the Start Center, the one window that lists them, on its Recent Files */
+    async showRecent() { return call('host_show_recent'); },
     /** a document as bytes in a new window: a file dropped on a page, or one a page made (made: never saved) */
     async newDocument(blob, name, made) {
       const headers = { 'X-Name': encodeURIComponent(name) };
@@ -127,9 +137,9 @@
     /** this window's document: { info: { fileName, name, saved, draft, lossState, bound }, file: File }, or null
      *  (blank, a template, the sample) */
     async document() {
-      const info = native && await call('host_document');
+      const info = native && await call('host_document', { t: docWord });
       if (!info) return null;
-      return { info, file: new File([await call('host_document_bytes')], info.fileName) };
+      return { info, file: new File([await call('host_document_bytes', { t: docWord })], info.fileName) };
     },
     /** the Window menu: this app's windows [{ id, title, current }], and one brought forward */
     async windows() { return native ? call('host_windows') : []; },
@@ -406,7 +416,7 @@
   };
   /* the desktop app keeps Recent Files itself (~/.vibeoffice, desktop/src/store.rs) and says when they change; a
      window's own entry changes only through its document (the draft, the preview), never by a key */
-  if (native) window.addEventListener('vo-recent', notify);
+  if (native && !appPage) window.addEventListener('vo-recent', notify);
   /** whether an entry's document is open (in the desktop app: in any window; on the web: in this page) */
   const isOpen = (e) => (native ? e.open : openKeys.has(e.key));
 
@@ -473,7 +483,7 @@
    *  new one), close() -> false when the user cancels closing (the "Save changes?" question) */
   VO.attach = async (app, hooks) => {
     current = { app, hooks: hooks || {} };
-    VO.recent.refresh();
+    if (!native) VO.recent.refresh();
     readWindows();
     const l = VO.launch;
     if (l && !l.new) {
@@ -489,7 +499,8 @@
         else (current.hooks.message || alert)(VO.t('That file is no longer available here. Open it again from your computer.'));
       } else if (l.recent) await VO.openRecent(l.recent, { draft: l.draft });
     }
-    setTimeout(async () => {
+    /* (the desktop app: the Start Center shows them) */
+    if (!native) setTimeout(async () => {
       const others = (await VO.recent.list()).filter((e) => e.app === app && e.draft && !isOpen(e));
       if (others.length && current.hooks.showRecovery) current.hooks.showRecovery();
     }, 700);
@@ -508,11 +519,21 @@
   const pristine = () => !!(current && current.hooks.pristine && current.hooks.pristine());
   /** the desktop app: a window whose document is an untouched blank closes once the file asked for has opened in
    *  a window of its own, as Word's blank Document1 gives way (the page only closes itself: its claim gets it nothing) */
-  const giveWay = () => { if (pristine()) VO.host.closeWindow().catch(() => {}); };
-  /** File ▸ Open in the desktop app: the system's Open dialog; each file opens in a window of its own */
+  /** File ▸ Open in the desktop app: the system's Open dialog. The first file of this app takes this window's place
+   *  once its document has gone, saved or given up as when the window closes ("Save changes?"; Cancel keeps it):
+   *  the window reloads with the file, as a fresh page. Other files open in windows of their own */
   VO.openDialog = async () => {
-    try { if (await VO.host.open()) giveWay(); } catch (e) { say(e); }
+    try {
+      const r = await VO.host.open();
+      if (!r || !r.here) return;
+      const go = !current || !current.hooks.close || await current.hooks.close();
+      leaving = go;
+      await VO.host.reopen(go);
+    } catch (e) { leaving = false; say(e); }
   };
+  /* its document let go, the page leaves without the apps' "Leave the page?" (their beforeunload, added after this) */
+  let leaving = false;
+  window.addEventListener('beforeunload', (e) => { if (leaving) e.stopImmediatePropagation(); }, true);
   /** whether a window holds one document (the desktop app, docs/desktop.md): the apps' New, Open and Close then
    *  make or close windows, and their Window menus list windows (VO.windowItems) */
   VO.oneDocument = !!native;
@@ -540,12 +561,9 @@
     return true;
   };
   /** open a Recent Files entry in this app: its unsaved version when draft is true, else the saved file (the
-   *  desktop app: in a window of its own, an untouched blank here giving way) */
+   *  desktop app: the Start Center instead, the one window that lists them) */
   VO.openRecent = async (key, o) => {
-    if (native) {
-      try { await VO.host.openRecent(key, o && o.draft); giveWay(); } catch (e) { say(e); }
-      return;
-    }
+    if (native) { VO.host.showRecent().catch(say); return; }   // the Start Center lists them
     let e = null;
     try { e = await VO.recent.get(key); } catch (err) { console.error(err); }
     const draft = !!(o && o.draft && e && e.draft);
@@ -712,14 +730,18 @@
   /* its text in the UI's language (common/i18n.js) */
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = VO.t ? VO.t(text) : text; return e; };
   const icon = (name) => (window.L && L.icons ? L.icons.get(name) : '');
-  /** File menu: the app's four most recent entries ({ label, run } items for L.ui menus) */
-  VO.recentMenuItems = (max) => VO.recent.forApp().slice(0, max || 4).map((e, i) => ({
+  /* the desktop app: Recent Files are the Start Center's alone; an app's lists are a way there */
+  const toStart = (text) => { const b = el('button', 'tp-link', null); b.type = 'button'; const ic = el('span'); ic.innerHTML = icon('open'); b.append(ic, el('span', null, text)); b.addEventListener('click', () => VO.host.showRecent().catch(() => {})); return b; };
+  /** File menu: the app's four most recent entries ({ label, run } items for L.ui menus); the desktop app's Recent
+   *  Files... */
+  VO.recentMenuItems = (max) => (native ? [{ label: VO.t('Recent &Files...'), raw: true, run: () => VO.host.showRecent().catch(() => {}) }] : VO.recent.forApp().slice(0, max || 4).map((e, i) => ({
     label: '&' + (i + 1) + ' ' + (e.draft ? VO.t('{0} (unsaved changes)', e.name) : e.name).replace(/&/g, '&&'), raw: true,
     run: () => VO.openRecent(e.key, { draft: !!e.draft }),
-  }));
+  })));
   /** task pane: the app's recent entries as links (Getting Started ▸ Open); keeps itself up to date */
   VO.recentLinks = (max) => {
     const box = el('div', 'vo-recent');
+    if (native) { box.append(toStart('Recent Files...')); return box; }
     const draw = () => {
       if (!box.isConnected && box.dataset.drawn) { stop(); return; }
       box.dataset.drawn = '1';
@@ -743,6 +765,7 @@
   };
   /** the Document Recovery task pane: this app's unsaved versions, each to open or to discard */
   VO.recoveryPane = (b) => {
+    if (native) { b.append(el('div', 'tp-note', 'Unsaved changes are kept for each document in Recent Files, in the Start Center: open them from there, or discard them.'), toStart('Recent Files...')); return; }
     const list = el('div', 'vo-recovery');
     const draw = () => {
       if (!list.isConnected && list.dataset.drawn) { stop(); return; }
