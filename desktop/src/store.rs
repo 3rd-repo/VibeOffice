@@ -327,7 +327,8 @@ impl Store {
             .and_then(|()| {
                 let tmp = folder.join(format!(".~vibeoffice-{}.tmp", hex(&random::<8>())));
                 let done = fs::copy(file, &tmp)
-                    .and_then(|_| fs::File::open(&tmp)?.sync_all())
+                    // opened to write: Windows flushes no handle that can't (FlushFileBuffers)
+                    .and_then(|_| fs::OpenOptions::new().write(true).open(&tmp)?.sync_all())
                     .and_then(|()| {
                         fs::rename(&tmp, folder.join(format!("{key}.{}.previous", now_ms())))
                     });

@@ -1162,7 +1162,7 @@
  },
  "&Edit Comment": {
   "where": [
-   "quire/js/app.js:1120"
+   "quire/js/app.js:1122"
   ]
  },
  "&Edit Field...": {
@@ -2522,7 +2522,7 @@
  "&Open Hyperlink": {
   "where": [
    "ledger/js/app.js:860",
-   "quire/js/app.js:1112"
+   "quire/js/app.js:1114"
   ]
  },
  "&Open...": {
@@ -2956,7 +2956,7 @@
  "&Remove Hyperlink": {
   "where": [
    "ledger/js/commands.js:123",
-   "quire/js/app.js:1112",
+   "quire/js/app.js:1114",
    "quire/js/commands.js:304"
   ]
  },
@@ -4180,7 +4180,7 @@
  },
  "(This page intentionally left blank by a section break)": {
   "where": [
-   "quire/js/app.js:1361"
+   "quire/js/app.js:1363"
   ]
  },
  "(Top 10...)": {
@@ -4312,12 +4312,12 @@
  },
  "1 file": {
   "where": [
-   "start.js:264"
+   "start.js:268"
   ]
  },
  "1 file, with unsaved changes": {
   "where": [
-   "start.js:264"
+   "start.js:268"
   ]
  },
  "1 page": {
@@ -4689,7 +4689,7 @@
  },
  "A newer version of VibeOffice is available. This one is {0}.": {
   "where": [
-   "start.js:178"
+   "start.js:182"
   ]
  },
  "A pasted slicer or timeline will be saved as a plain shape and won't filter anything, because its table or pivot table isn't in this workbook.": {
@@ -4739,7 +4739,7 @@
  },
  "A small table": {
   "where": [
-   "quire/js/app.js:1332"
+   "quire/js/app.js:1334"
   ]
  },
  "A source column used by the pivot table was deleted. Its remaining result cells are kept.": {
@@ -4841,12 +4841,12 @@
  },
  "About {0} MB, kept by VibeOffice on this computer.": {
   "where": [
-   "start.js:265"
+   "start.js:269"
   ]
  },
  "About {0} MB, kept in this browser.": {
   "where": [
-   "start.js:265"
+   "start.js:269"
   ]
  },
  "Above selected item": {
@@ -6031,7 +6031,7 @@
  "Auto (as the browser)": {
   "where": [
    "common/ui.js:671",
-   "start.js:275"
+   "start.js:279"
   ]
  },
  "Auto Outline": {
@@ -6793,7 +6793,7 @@
  },
  "Bookmark \"{0}\" not found.": {
   "where": [
-   "quire/js/app.js:1093"
+   "quire/js/app.js:1095"
   ]
  },
  "Bookmark names must begin with a letter and contain only letters, numbers and underscores.": {
@@ -7029,52 +7029,52 @@
  },
  "Browse by Comment": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Browse by Edits": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Browse by Endnote": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Browse by Field": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Browse by Footnote": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Browse by Graphic": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Browse by Heading": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Browse by Page": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Browse by Section": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Browse by Table": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Browse...": {
@@ -7340,7 +7340,7 @@
  },
  "Caching resources for offline use": {
   "where": [
-   "start.js:216"
+   "start.js:220"
   ]
  },
  "Calc &Now (F9)": {
@@ -7493,7 +7493,7 @@
  "Cancel": {
   "where": [
    "common/charts.js:438",
-   "common/suite.js:613",
+   "common/suite.js:626",
    "common/ui.js:547",
    "common/ui.js:571"
   ]
@@ -7657,7 +7657,7 @@
  },
  "Cell Alignment": {
   "where": [
-   "quire/js/app.js:1113",
+   "quire/js/app.js:1115",
    "quire/js/tables.js:565"
   ]
  },
@@ -7890,12 +7890,12 @@
  },
  "Chapter One": {
   "where": [
-   "quire/js/app.js:1341"
+   "quire/js/app.js:1343"
   ]
  },
  "Chapter Two": {
   "where": [
-   "quire/js/app.js:1342"
+   "quire/js/app.js:1344"
   ]
  },
  "Chapter starts with style:": {
@@ -8245,7 +8245,7 @@
  },
  "Choose Blank or a template:": {
   "where": [
-   "common/suite.js:611"
+   "common/suite.js:624"
   ]
  },
  "Choose a Theme:": {
@@ -9207,7 +9207,7 @@
  },
  "Content Control &Value...": {
   "where": [
-   "quire/js/app.js:1117"
+   "quire/js/app.js:1119"
   ]
  },
  "Content Layouts": {
@@ -9787,7 +9787,7 @@
  "Creating PDF... (page {0} of {1})": {
   "where": [
    "lectern/js/app.js:557",
-   "quire/js/app.js:967"
+   "quire/js/app.js:969"
   ]
  },
  "Creating PDF... (slide {0} of {1})": {
@@ -10875,7 +10875,7 @@
  "Delete Co&mment": {
   "where": [
    "ledger/js/commands.js:116",
-   "quire/js/app.js:1120"
+   "quire/js/app.js:1122"
   ]
  },
  "Delete Column": {
@@ -11230,7 +11230,7 @@
  },
  "Discard the changes": {
   "where": [
-   "common/suite.js:780"
+   "common/suite.js:808"
   ]
  },
  "Discard the unsaved changes": {
@@ -11833,7 +11833,7 @@
  },
  "Drop a document to open it, or pictures to insert them": {
   "where": [
-   "quire/js/app.js:1239"
+   "quire/js/app.js:1241"
   ]
  },
  "Drop a workbook to open it, or pictures to insert them": {
@@ -12699,12 +12699,12 @@
  },
  "Even Page Footer": {
   "where": [
-   "quire/js/app.js:1028"
+   "quire/js/app.js:1030"
   ]
  },
  "Even Page Header": {
   "where": [
-   "quire/js/app.js:1028"
+   "quire/js/app.js:1030"
   ]
  },
  "Even page": {
@@ -13404,7 +13404,7 @@
  "Find and Replace": {
   "where": [
    "ledger/js/dialogs.js:535",
-   "quire/js/app.js:1334",
+   "quire/js/app.js:1336",
    "quire/js/find.js:364"
   ]
  },
@@ -13430,7 +13430,7 @@
  },
  "Find...": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Find:": {
@@ -13501,12 +13501,12 @@
  },
  "First Page Footer": {
   "where": [
-   "quire/js/app.js:1028"
+   "quire/js/app.js:1030"
   ]
  },
  "First Page Header": {
   "where": [
-   "quire/js/app.js:1028"
+   "quire/js/app.js:1030"
   ]
  },
  "First Record": {
@@ -13911,8 +13911,8 @@
  "Footer": {
   "where": [
    "ledger/js/dialogs3.js:400",
-   "quire/js/app.js:1001",
-   "quire/js/app.js:1028"
+   "quire/js/app.js:1003",
+   "quire/js/app.js:1030"
   ]
  },
  "Footer (optional)": {
@@ -14617,7 +14617,7 @@
  },
  "Getting around": {
   "where": [
-   "quire/js/app.js:1327"
+   "quire/js/app.js:1329"
   ]
  },
  "Globe": {
@@ -14667,7 +14667,7 @@
  },
  "Go To...": {
   "where": [
-   "quire/js/app.js:1128"
+   "quire/js/app.js:1130"
   ]
  },
  "Go back to previous edit": {
@@ -15019,8 +15019,8 @@
  "Header": {
   "where": [
    "ledger/js/dialogs3.js:400",
-   "quire/js/app.js:1001",
-   "quire/js/app.js:1028"
+   "quire/js/app.js:1003",
+   "quire/js/app.js:1030"
   ]
  },
  "Header & Footer": {
@@ -15239,7 +15239,7 @@
  "Highlight": {
   "where": [
    "quire/js/app.js:202",
-   "quire/js/app.js:1312",
+   "quire/js/app.js:1314",
    "quire/js/commands.js:348",
    "quire/js/dialogs3.js:595"
   ]
@@ -16129,7 +16129,7 @@
  },
  "Insert footnote": {
   "where": [
-   "quire/js/app.js:1334"
+   "quire/js/app.js:1336"
   ]
  },
  "Insert hyperlinks": {
@@ -16184,7 +16184,7 @@
  },
  "Insert ▸ Reference": {
   "where": [
-   "quire/js/app.js:1334"
+   "quire/js/app.js:1336"
   ]
  },
  "Insert ▸ Reference ▸ Footnote (Ctrl+Alt+F footnote, Ctrl+Alt+D endnote), Caption, Cross-reference and Index and Tables (table of contents, figures, index). Right-click a field and choose Update Field, or press F9. Alt+F9 shows field codes.": {
@@ -16504,12 +16504,12 @@
  },
  "Kept by VibeOffice on this computer.": {
   "where": [
-   "start.js:265"
+   "start.js:269"
   ]
  },
  "Kept in this browser.": {
   "where": [
-   "start.js:265"
+   "start.js:269"
   ]
  },
  "Key assignments": {
@@ -17530,7 +17530,7 @@
  },
  "Load fonts on this computer": {
   "where": [
-   "start.js:251",
+   "start.js:255",
    "index.html:320"
   ]
  },
@@ -17784,7 +17784,7 @@
  "Made possible by open source software: {0}.": {
   "where": [
    "common/ui.js:538",
-   "start.js:181"
+   "start.js:185"
   ]
  },
  "Magnification": {
@@ -18733,7 +18733,7 @@
  },
  "New Document": {
   "where": [
-   "common/suite.js:613",
+   "common/suite.js:626",
    "quire/js/panes.js:81"
   ]
  },
@@ -18744,7 +18744,7 @@
  },
  "New Presentation": {
   "where": [
-   "common/suite.js:613",
+   "common/suite.js:626",
    "lectern/js/panes.js:544"
   ]
  },
@@ -18768,7 +18768,7 @@
  },
  "New Spreadsheet": {
   "where": [
-   "common/suite.js:613"
+   "common/suite.js:626"
   ]
  },
  "New Style": {
@@ -19136,7 +19136,7 @@
  },
  "No unsaved versions are waiting.": {
   "where": [
-   "common/suite.js:784"
+   "common/suite.js:812"
   ]
  },
  "No-Width Non Break": {
@@ -19579,12 +19579,12 @@
  },
  "Odd Page Footer": {
   "where": [
-   "quire/js/app.js:1028"
+   "quire/js/app.js:1030"
   ]
  },
  "Odd Page Header": {
   "where": [
-   "quire/js/app.js:1028"
+   "quire/js/app.js:1030"
   ]
  },
  "Odd page": {
@@ -19747,7 +19747,7 @@
  "Open source licenses": {
   "where": [
    "common/ui.js:539",
-   "start.js:181"
+   "start.js:185"
   ]
  },
  "Open source under the Apache License 2.0, provided as is, without warranty. VibeOffice.work is an independent project. Product names in its documentation are trademarks of their owners; VibeOffice.work is not affiliated with them.": {
@@ -19758,7 +19758,7 @@
  },
  "Open the unsaved version": {
   "where": [
-   "common/suite.js:777"
+   "common/suite.js:805"
   ]
  },
  "Open the version saved before the changes": {
@@ -21954,7 +21954,7 @@
  },
  "Recent &Files...": {
   "where": [
-   "common/suite.js:733"
+   "common/suite.js:761"
   ]
  },
  "Recent Files": {
@@ -21967,7 +21967,7 @@
  },
  "Recent Files are not available here.": {
   "where": [
-   "start.js:266"
+   "start.js:270"
   ]
  },
  "Recent Files are not available in this browser ({0}).": {
@@ -21977,8 +21977,8 @@
  },
  "Recent Files...": {
   "where": [
-   "common/suite.js:740",
-   "common/suite.js:764"
+   "common/suite.js:768",
+   "common/suite.js:792"
   ]
  },
  "Recently Used Fonts": {
@@ -22054,7 +22054,7 @@
  },
  "Recovered the unsaved changes. Save the document to keep them.": {
   "where": [
-   "quire/js/app.js:1398"
+   "quire/js/app.js:1400"
   ]
  },
  "Recovered the unsaved changes. Save the presentation to keep them.": {
@@ -22245,7 +22245,7 @@
  },
  "Reload fonts on this computer": {
   "where": [
-   "start.js:251"
+   "start.js:255"
   ]
  },
  "Reload fonts on your computer...": {
@@ -24732,7 +24732,7 @@
  },
  "Same as Previous": {
   "where": [
-   "quire/js/app.js:1361"
+   "quire/js/app.js:1363"
   ]
  },
  "Same as the whole &table": {
@@ -24760,7 +24760,7 @@
  },
  "Sample document": {
   "where": [
-   "quire/js/app.js:1348"
+   "quire/js/app.js:1350"
   ]
  },
  "Sample:": {
@@ -25156,7 +25156,7 @@
  },
  "Section Break (Next Page)": {
   "where": [
-   "quire/js/app.js:1362",
+   "quire/js/app.js:1364",
    "quire/js/render.js:370"
   ]
  },
@@ -25405,7 +25405,7 @@
  },
  "Select text to highlight. Press Esc to stop.": {
   "where": [
-   "quire/js/app.js:1313"
+   "quire/js/app.js:1315"
   ]
  },
  "Select text, then use the Formatting toolbar or Format ▸ Font. Bullets and numbering live under Format ▸ Bullets and Numbering. Press Tab at the start of a bullet to demote it.": {
@@ -25440,7 +25440,7 @@
  },
  "Select the text to apply the formatting to.": {
   "where": [
-   "quire/js/app.js:1308"
+   "quire/js/app.js:1310"
   ]
  },
  "Select the text you want to store as AutoText first.": {
@@ -27642,7 +27642,7 @@
  },
  "Switch views with the buttons in the lower-left corner: Normal, Web Layout, Print Layout, Outline and Reading Layout.": {
   "where": [
-   "quire/js/app.js:1330"
+   "quire/js/app.js:1332"
   ]
  },
  "Symbol": {
@@ -27945,7 +27945,7 @@
  },
  "Tabs, leaders and fields": {
   "where": [
-   "quire/js/app.js:1340"
+   "quire/js/app.js:1342"
   ]
  },
  "Tab|key": {
@@ -28231,7 +28231,7 @@
  },
  "Text W&rapping": {
   "where": [
-   "quire/js/app.js:1110"
+   "quire/js/app.js:1112"
   ]
  },
  "Text Width": {
@@ -28356,7 +28356,7 @@
  "That file is no longer available here. Open it again from your computer.": {
   "where": [
    "common/suite.js:499",
-   "common/suite.js:567"
+   "common/suite.js:580"
   ]
  },
  "The Find What text contains a Pattern Match expression which is not valid.": {
@@ -28367,17 +28367,17 @@
  },
  "The Font boxes also list the {0} fonts installed on this computer.": {
   "where": [
-   "start.js:252"
+   "start.js:256"
   ]
  },
  "The Font boxes list the frequently used Office fonts and the document's own.": {
   "where": [
-   "start.js:254"
+   "start.js:258"
   ]
  },
  "The Font boxes list the frequently used Office fonts and the document's own. They can also list the fonts installed on this computer, once you allow it.": {
   "where": [
-   "start.js:253"
+   "start.js:257"
   ]
  },
  "The Normal style cannot be deleted.": {
@@ -28388,7 +28388,7 @@
  "The PDF could not be created: {0}": {
   "where": [
    "lectern/js/app.js:580",
-   "quire/js/app.js:978",
+   "quire/js/app.js:980",
    "quire/js/dialogs3.js:719"
   ]
  },
@@ -28597,7 +28597,7 @@
  },
  "The fonts on this computer could not be listed: permission was not given.": {
   "where": [
-   "start.js:285"
+   "start.js:289"
   ]
  },
  "The fonts on this computer could not be listed: permission was not given. You can allow it in the site settings of your browser.": {
@@ -28608,7 +28608,7 @@
  "The fonts on this computer could not be listed: {0}": {
   "where": [
    "common/core.js:729",
-   "start.js:285"
+   "start.js:289"
   ]
  },
  "The formula contains an error.": {
@@ -28644,7 +28644,7 @@
  },
  "The list is empty.": {
   "where": [
-   "start.js:267"
+   "start.js:271"
   ]
  },
  "The list range is not valid.": {
@@ -29169,7 +29169,7 @@
  },
  "This browser blocked the page image.": {
   "where": [
-   "quire/js/app.js:969"
+   "quire/js/app.js:971"
   ]
  },
  "This chart will be saved as ordinary shapes, because it was edited here.": {
@@ -29830,7 +29830,7 @@
  },
  "Track changes": {
   "where": [
-   "quire/js/app.js:1334",
+   "quire/js/app.js:1336",
    "quire/js/panes.js:107"
   ]
  },
@@ -30277,17 +30277,17 @@
  },
  "Unsaved changes are kept for each document in Recent Files, in the Start Center: open them from there, or discard them.": {
   "where": [
-   "common/suite.js:764"
+   "common/suite.js:792"
   ]
  },
  "Unsaved changes from {0}": {
   "where": [
-   "common/suite.js:773"
+   "common/suite.js:801"
   ]
  },
  "Unsaved changes from {0} (never saved)": {
   "where": [
-   "common/suite.js:773"
+   "common/suite.js:801"
   ]
  },
  "Untitled": {
@@ -30390,7 +30390,7 @@
  },
  "Updating cached resources": {
   "where": [
-   "start.js:216",
+   "start.js:220",
    "index.html:252"
   ]
  },
@@ -30636,7 +30636,7 @@
  "Version {0}": {
   "where": [
    "common/ui.js:536",
-   "start.js:179"
+   "start.js:183"
   ]
  },
  "Versions": {
@@ -30930,8 +30930,8 @@
  },
  "Welcome to Quire": {
   "where": [
-   "quire/js/app.js:1323",
-   "quire/js/app.js:1325"
+   "quire/js/app.js:1325",
+   "quire/js/app.js:1327"
   ]
  },
  "Welcome to VibeOffice.work.": {
@@ -31552,7 +31552,7 @@
  },
  "[object]": {
   "where": [
-   "quire/js/app.js:1362",
+   "quire/js/app.js:1364",
    "quire/js/panes.js:201",
    "quire/js/review.js:38"
   ]
@@ -31998,12 +31998,12 @@
  },
  "{0} (unsaved changes)": {
   "where": [
-   "common/suite.js:734"
+   "common/suite.js:762"
   ]
  },
  "{0} (unsaved)": {
   "where": [
-   "common/suite.js:751"
+   "common/suite.js:779"
   ]
  },
  "{0} ({1} seconds)": {
@@ -32023,7 +32023,7 @@
  },
  "{0} -Section {1}-": {
   "where": [
-   "quire/js/app.js:1035"
+   "quire/js/app.js:1037"
   ]
  },
  "{0} Column": {
@@ -32121,12 +32121,12 @@
  },
  "{0} files": {
   "where": [
-   "start.js:264"
+   "start.js:268"
   ]
  },
  "{0} files, {1} with unsaved changes": {
   "where": [
-   "start.js:264"
+   "start.js:268"
   ]
  },
  "{0} found a problem with content in {1} and repaired the presentation.": {
@@ -32181,7 +32181,7 @@
  },
  "{0} kept the unsaved changes of these documents. Open the ones you want to keep and save them; discard the rest.": {
   "where": [
-   "common/suite.js:788"
+   "common/suite.js:816"
   ]
  },
  "{0} key sentence highlighted. Undo to restore.": {
@@ -32306,17 +32306,17 @@
  },
  "{0} — open in another window": {
   "where": [
-   "common/suite.js:775"
+   "common/suite.js:803"
   ]
  },
  "{0} — open in this window": {
   "where": [
-   "common/suite.js:775"
+   "common/suite.js:803"
   ]
  },
  "{0} — unsaved changes from {1}": {
   "where": [
-   "common/suite.js:747"
+   "common/suite.js:775"
   ]
  },
  "{0}% normal size": {
@@ -32413,6 +32413,11 @@
  "“{0}” is open in another {1} window. Close it there, or choose another name.": {
   "where": [
    "common/core.js:305"
+  ]
+ },
+ "“{0}” is over 50 MB, so its changes aren't kept for recovery after a crash. Save it to keep them.": {
+  "where": [
+   "common/suite.js:711"
   ]
  },
  "“{0}” was changed by another program after you opened it. Replace it with this version, or save this version under another name?": {

@@ -117,6 +117,46 @@ test('desktop: Esc in "Save changes?" cancels closing, in every app: the documen
   }
 });
 
+test('autosave: a draft 15 s after the last change, then at most every 2 minutes, a large document less often; typing on doesn\'t put it off; over 50 MB none, said once', () => {
+  const { out, r } = shot('quire/', [{ wait: 2000 }, { js: `const doc = L.D.doc, realTimeout = window.setTimeout, realNow = Date.now;
+    let now = 0, fire = null;
+    Date.now = () => now;
+    /* at t seconds, a change: how long until its draft (s); the timer is kept to be fired by hand */
+    const change = (t) => { now = t * 1000; let ms = null; window.setTimeout = (fn, d) => { fire = fn; ms = d; return 0; };
+      try { doc.dirty = true; VO.changed(doc); } finally { window.setTimeout = realTimeout; } return ms / 1000; };
+    /* the draft written at t seconds (bytes: a document of that size), its size as the host got it */
+    const write = async (t, bytes) => { now = t * 1000; stubSession.draft = ''; if (bytes) L.docx.write = async () => new Blob([new Uint8Array(bytes)]);
+      await fire(); ${wait(300)} return stubSession.draft ? JSON.parse(stubSession.draft).size : 0; };
+    const toast = () => { const e = document.querySelector('.toast'); const shown = !!e && !e.hidden && /over 50 MB/.test(e.textContent); if (e) e.hidden = true; return shown; };
+    const waits = [change(0), change(5), change(110)];
+    const first = await write(120) > 0;
+    waits.push(change(130));
+    const mb24 = await write(240, 24 << 20);
+    waits.push(change(250));
+    const mb51 = await write(528, 51 << 20), told = toast();
+    waits.push(change(530));
+    await write(1140, 51 << 20);
+    const toldAgain = toast();
+    Date.now = realNow;
+    return JSON.stringify({ waits, first, mb24, mb51, told, toldAgain });` }], ...stubbed, '--qs', 'new');
+  assert.deepEqual(r.waits, [15, 15, 10, 110, 278, 610],
+    '15 s after the last change; typing on, 2 minutes after the first; then 2 minutes after the last draft; 12 s a MB after 24 MB; after 51 MB too');
+  assert.deepEqual([r.first, r.mb24, r.mb51], [true, 24 << 20, 0], 'the drafts the host got: none over 50 MB');
+  assert.deepEqual([r.told, r.toldAgain], [true, false], 'a document over 50 MB says so once');
+  assert.match(out, /no errors, no external requests/);
+});
+
+test('desktop: the Mac\'s menu bar runs Open… and Help in the window in front (vo-menu), never behind its dialog', () => {
+  const menu = (what) => `window.dispatchEvent(new CustomEvent('vo-menu', { detail: '${what}' })); ${wait(400)}`;
+  const asked = `!!stubSession.dialogs`;
+  const { r } = shot('quire/', [{ wait: 1800 }, { js: `${menu('help')} const help = document.querySelector('#taskpane .tp-title').textContent;
+    L.ui.exec('about'); ${wait(300)} ${menu('open')} const behind = ${asked};
+    document.querySelector('.dlg .btn.primary').click(); ${wait(300)} ${menu('open')}
+    return JSON.stringify({ help, behind, open: ${asked} })` }], ...stubbed, '--qs', 'new');
+  assert.deepEqual(r, { help: 'Quire Help', behind: false, open: true }, 'Help shows the app\'s Help; Open… waits for About to close');
+  assert.equal(shot('', [{ wait: 1500 }, { js: `${menu('open')} return JSON.stringify(${asked})` }], ...stubbed).r, true, 'the Start Center\'s Open File');
+});
+
 test('the stub grants each kind of window the commands the desktop app does (desktop/permissions/, capabilities/)', () => {
   const list = (text) => [...text.matchAll(/["'](host_\w+)["']/g)].map((m) => m[1]).sort();
   const perms = {};

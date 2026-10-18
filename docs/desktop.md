@@ -295,11 +295,17 @@ The Mac's ways (`main.rs`):
   read them, and their Recent Files entries keep a bookmark for after it quits. `Info.plist` lists .docx, .xlsx
   and .pptx (Quire Document, Ledger Worksheet, Lectern Presentation), as the Windows installer does: in Open With, never
   taking the default (`LSHandlerRank` Alternate); the system draws their icons from the app's.
-- The app stays open, with its menu bar, after its last window closes; a click on the Dock icon brings the Start
-  Center back; Quit (⌘Q) ends it.
-- The menu bar (`mac_menu`): the app menu (About, Services, Hide, Quit), File ▸ Close Window, Edit with Cut, Copy, Paste
-  and Select All (WKWebView gets ⌘X, ⌘C, ⌘V and ⌘A through them), View ▸ Full Screen, Window, Help. No Undo or Redo
-  there: they would run WebKit's own undo, not the document's; ⌘Z reaches the page, as in Safari.
+- The app stays open, with its menu bar, after its last window closes; a click on the Dock icon or Window ▸ Start
+  Center brings the Start Center back; Quit (⌘Q) ends it.
+- The menu bar (`mac_menu`): the app menu (About, Services, Hide, Quit); File ▸ New Document, New Spreadsheet, New
+  Presentation, Open…, Close Window; Edit with Cut, Copy, Paste and Select All (WKWebView gets ⌘X, ⌘C, ⌘V and ⌘A
+  through them); View ▸ Full Screen; Window (Minimize, Zoom, Start Center, the open windows); Help ▸ VibeOffice Help.
+  The File, Window and Help items work with no window open, as App Review checks (`mac_menu_event`): Open… and Help
+  run the Open and Help of the window in front (the page hears `vo-menu`; not while a dialog of its own is open),
+  with none of ours in front Open… is the system's dialog on its own and Help the project's page in the browser. They
+  have no shortcuts: ⌘N and ⌘O stay the page's. No Undo or Redo there: they would run WebKit's own undo, not the
+  document's; ⌘Z reaches the page, as in Safari. The app's commands are in the window's own menus; the menu bar
+  doesn't mirror them yet (to do).
 - ⌘ does what Ctrl does in every app, and on a Mac shortcuts show as ⌘, ⌥ and ⇧ (`ui.keyText`; Safari too).
 
 **Building**, on a Mac with Xcode's command line tools and Rust's `aarch64-apple-darwin` and `x86_64-apple-darwin`:
@@ -356,6 +362,13 @@ The same crate builds for Linux against WebKitGTK 4.1, GTK 3 and libsoup 3 (`lib
 
     cd desktop && cargo build --release --target x86_64-unknown-linux-gnu
 
+Without root to install them, the development packages can be unpacked into a folder instead (`apt-get download` those
+three and what they depend on, `dpkg -x` each into `tmp/linuxdev/root`), with pkg-config pointed there; the runtime
+libraries are the system's:
+
+    R=$PWD/tmp/linuxdev/root
+    export PKG_CONFIG_SYSROOT_DIR=$R PKG_CONFIG_PATH=$R/usr/lib/x86_64-linux-gnu/pkgconfig:$R/usr/share/pkgconfig
+
 Run it with a file to open: `target/x86_64-unknown-linux-gnu/release/vibeoffice ~/Budget.csv`. No package yet. When Linux has a release, its one package is an AppImage (with a `.desktop` file and the MIME types), not sandboxed: no Flatpak, Snap or `.deb`. On macOS both editions stay in the App Sandbox.
 
 ## Size
@@ -381,12 +394,19 @@ No exe packers (UPX): antivirus flags packed exes. The largest pages are the the
 - macOS (2026-10-15, the CI's first run, macos-15): builds universal (arm64 and x86_64, 15.3 MB), signed ad hoc; the smoke run opens the Start Center, then `linecases.docx` in Quire, `Budget.csv` in Ledger and `Notes.md` in Quire, each in a window of its own in the one running process, under the App Sandbox with no denials, and quits cleanly. Not yet used by a person on a Mac (menus, ⌘ keys, saving, Browse, links, the Dock). The network rules (2026-10-16; failing closed, with the probe, the same day): the first macOS run with them (2026-10-17) hung as the Start Center opened, on both systems' path: `net::guard` went on to the page from inside `with_webview`, which holds the web view's lock that `navigate` takes. Fixed; with `guard` compiled for Linux for the check, the probe (which reports `REACHED` there, with no rules), an app's window and refusing either run. Not yet run on macOS or Windows.
 - Not yet run against the published site: the update check (the site has no `updater/current.json` yet).
 - Installer (2026-10-11), Wine 10.0, `tests/desktop/setup-wine.py`: passes. The dialog shows the pinning hint (Wine has no TaskbarManager); install writes the three files, both shortcuts and the HKCU values; the same version again shows no dialog; uninstall (Enter) leaves no folder, shortcut or value of VibeOffice's and keeps another program's. `cargo test` (Windows target, under Wine): 5 passed. Wine cannot show the app itself (no WebView2), the pin prompt or Default apps.
+- `cargo test`, Windows target under Wine 10.0 (2026-10-18, a prefix of its own in `tmp/`): 32 passed, after a fix
+  the run found: a save's previous version was never kept on Windows, as `FlushFileBuffers` refuses a handle opened
+  only to read (`Store::keep_previous`, "Access denied", printed on stderr alone).
 - Windows: built, not yet run. To check, as a user without administrator rights: install (the dialog at 100 % and 200 %), the pin prompt on an up-to-date Windows 11 and the hint on Windows 10, Default apps opening at VibeOffice's page, a double-clicked .docx afterwards; Open with lists VibeOffice for .docx, .xlsx and .pptx with their document icons; an update while the app runs; Uninstall from Apps & features; all three apps, saving, drops.
 
 ## Known limits / to do
 
 - GNU builds import `WebView2Loader.dll`, installed beside the exe (Microsoft's static loader is MSVC-only).
 - Saving (Saving, above) has run on Linux only: Windows' `ReplaceFileW` and macOS's `replaceItemAtURL:` are type-checked, not yet run.
+- macOS: the menu bar has the suite's own items only (New, Open…, Start Center, Help); the apps' commands stay in the
+  window's menus. To do before App Review if it asks, or anyway: each app window sends its menus to the host, which
+  draws them in the menu bar for the window in front (with Undo and Redo going to the document's own undo, and ⌘
+  shortcuts the menu catches running in the page), and the window's own menu bar hides on a Mac.
 - macOS: the menu bar is in English whatever the UI's language; the system draws the document icons (the app's icon on a page) rather than Quire's, Ledger's and Lectern's.
 - Windows and macOS: incognito web views, `https://tauri.localhost` and the settings served with `look.js` are type-checked, not yet run there (2026-10-17).
 - Linux: the web views aren't incognito (Settings and storage, above).

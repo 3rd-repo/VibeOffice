@@ -25,9 +25,23 @@ impl Filter {
 /// The Open dialog: the files chosen, none when cancelled.
 #[cfg(any(windows, target_os = "macos"))]
 pub async fn open(window: &WebviewWindow, title: &str, filters: Vec<Filter>) -> Vec<PathBuf> {
-    let mut d = rfd::AsyncFileDialog::new()
-        .set_title(title)
-        .set_parent(window);
+    pick(
+        rfd::AsyncFileDialog::new().set_parent(window),
+        title,
+        filters,
+    )
+    .await
+}
+
+/// macOS: the Open dialog on no window, the menu bar's File ▸ Open… with none of ours in front (main.rs).
+#[cfg(target_os = "macos")]
+pub async fn open_alone(title: &str, filters: Vec<Filter>) -> Vec<PathBuf> {
+    pick(rfd::AsyncFileDialog::new(), title, filters).await
+}
+
+#[cfg(any(windows, target_os = "macos"))]
+async fn pick(d: rfd::AsyncFileDialog, title: &str, filters: Vec<Filter>) -> Vec<PathBuf> {
+    let mut d = d.set_title(title);
     for f in &filters {
         d = d.add_filter(&f.name, &f.exts);
     }

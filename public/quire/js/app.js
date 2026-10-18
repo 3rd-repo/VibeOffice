@@ -930,9 +930,11 @@
     }
     return css + '.crop{display:none}.pg-hdr,.pg-ftr{opacity:1!important}.cmk,.cmr{background:none!important}td.csel{background-image:none!important}.p.chg::before{display:none}';
   }
-  async function mediaDataMap() {
+  /** the pictures as data: URLs, by their blob: URLs; within: only those an element shows (a page's thumbnail) */
+  async function mediaDataMap(within) {
+    const html = within ? within.outerHTML : null;
     const map = new Map();
-    for (const [, m] of L.media.all()) { try { map.set(m.url, await L.blobToDataURL(m.view || m.blob)); } catch (e) { /* skip */ } }
+    for (const [, m] of L.media.all()) { if (html && !html.includes(m.url)) continue; try { map.set(m.url, await L.blobToDataURL(m.view || m.blob)); } catch (e) { /* skip */ } }
     return map;
   }
   A.rasterizePage = async function (pgEl, scale, css, map) {
@@ -1422,7 +1424,7 @@
   /** Recent Files picture: the first page, drawn as for PDF (print layout only) */
   async function pageThumb() {
     const p = LY.view === 'print' && LY.pages && LY.pages[0];
-    return p ? A.rasterizePage(p.el, 400 / p.el.offsetWidth, docCSS(), await mediaDataMap()) : null;
+    return p ? A.rasterizePage(p.el, 400 / p.el.offsetWidth, docCSS(), await mediaDataMap(p.el)) : null;
   }
   /* once the page and the UI's dictionary are here (common/i18n.js) */
   const boot = () => (window.VO && VO.i18n ? VO.i18n.whenReady(() => A.init()) : A.init());

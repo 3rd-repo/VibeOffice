@@ -207,8 +207,11 @@ fn window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
 #[cfg(target_os = "macos")]
 fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     use tauri::menu::{
-        AboutMetadata, Menu, PredefinedMenuItem as P, Submenu, HELP_SUBMENU_ID, WINDOW_SUBMENU_ID,
+        AboutMetadata, Menu, MenuItem, PredefinedMenuItem as P, Submenu, HELP_SUBMENU_ID,
+        WINDOW_SUBMENU_ID,
     };
+    // no shortcuts: ⌘N and ⌘O stay the page's, where they make a document of its own app and open into its window
+    let item = |id: &str, text: &str| MenuItem::with_id(app, id, text, true, None::<&str>);
     let info = app.package_info();
     let about = AboutMetadata {
         name: Some(info.name.clone()),
@@ -234,7 +237,20 @@ fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
                     &P::quit(app, None)?,
                 ],
             )?,
-            &Submenu::with_items(app, "File", true, &[&P::close_window(app, None)?])?,
+            &Submenu::with_items(
+                app,
+                "File",
+                true,
+                &[
+                    &item("vo-new-quire", "New Document")?,
+                    &item("vo-new-ledger", "New Spreadsheet")?,
+                    &item("vo-new-lectern", "New Presentation")?,
+                    &P::separator(app)?,
+                    &item("vo-open", "Open…")?,
+                    &P::separator(app)?,
+                    &P::close_window(app, None)?,
+                ],
+            )?,
             &Submenu::with_items(
                 app,
                 "Edit",
@@ -256,12 +272,56 @@ fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
                     &P::minimize(app, None)?,
                     &P::maximize(app, None)?,
                     &P::separator(app)?,
+                    &item("vo-start", "Start Center")?,
+                    &P::separator(app)?,
                     &P::close_window(app, None)?,
                 ],
             )?,
-            &Submenu::with_id_and_items(app, HELP_SUBMENU_ID, "Help", true, &[])?,
+            &Submenu::with_id_and_items(
+                app,
+                HELP_SUBMENU_ID,
+                "Help",
+                true,
+                &[&item("vo-help", "VibeOffice Help")?],
+            )?,
         ],
     )
+}
+
+/// The Mac's own items in the menu bar (mac_menu), which App Review tries with every window closed: a new document of
+/// each app, Open… (the window in front's own, else the system's dialog on its own), the Start Center again, and
+/// Help (the app in front's Help pane, else the project's page in the browser). The pages hear `vo-menu`.
+#[cfg(target_os = "macos")]
+fn mac_menu_event(app: &AppHandle, id: &str) {
+    const HELP: &str = "https://github.com/tcchen2026/VibeOffice#readme";
+    let (app, id) = (app.clone(), id.to_string());
+    let tell = |w: &tauri::WebviewWindow, what: &str| {
+        let _ = w.eval(format!(
+            "window.dispatchEvent(new CustomEvent('vo-menu', {{ detail: '{what}' }}));"
+        ));
+    };
+    // windows are made in a task, after the menu's handler has returned (as another_start)
+    tauri::async_runtime::spawn(async move {
+        match id.as_str() {
+            "vo-new-quire" | "vo-new-ledger" | "vo-new-lectern" => {
+                if let Err(e) = host::open_blank(&app, &id["vo-new-".len()..]) {
+                    eprintln!("new window: {e}");
+                }
+            }
+            "vo-open" => match doc::front(&app) {
+                Some(w) => tell(&w, "open"),
+                None => doc::open_alone(&app).await,
+            },
+            "vo-start" => show_start_center(&app),
+            "vo-help" => match doc::front(&app).filter(|w| w.label() != "main") {
+                Some(w) => tell(&w, "help"),
+                None => {
+                    let _ = host::open_external(&HELP.parse().expect("a URL"));
+                }
+            },
+            _ => {}
+        }
+    });
 }
 
 fn main() {
@@ -291,7 +351,9 @@ fn main() {
         }
     };
     #[cfg(target_os = "macos")]
-    let builder = builder.menu(mac_menu);
+    let builder = builder
+        .menu(mac_menu)
+        .on_menu_event(|app, event| mac_menu_event(app, event.id().as_ref()));
     let app = builder
         .manage(host::Host::default())
         .invoke_handler(tauri::generate_handler![

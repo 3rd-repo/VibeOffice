@@ -165,6 +165,8 @@ VO.i18n.whenReady(function () {
   window.addEventListener('popstate', show);
   /* the desktop app: an app window's Recent Files brings this window forward on them (host_show_recent) */
   window.addEventListener('vo-show-recent', () => $('recentbtn').click());
+  /* the Mac's menu bar: File ▸ Open… with the Start Center in front (desktop/src/main.rs, mac_menu_event) */
+  window.addEventListener('vo-menu', (e) => { if (e.detail === 'open' && !VO.busyDialog()) $('open').click(); });
   show();
 
   /* ---------- install, about */

@@ -436,6 +436,28 @@ pub async fn host_open(
     }
 }
 
+/// macOS: the menu bar's File ▸ Open… with none of the suite's windows in front (main.rs, mac_menu): the system's
+/// Open dialog on its own, each file in a window of its own, or the one that has it brought forward.
+#[cfg(target_os = "macos")]
+pub async fn open_alone(app: &AppHandle) {
+    let labels = Labels::default();
+    let files =
+        dialog::open_alone(&label(&labels.title, "Open"), open_filters(None, &labels)).await;
+    for f in files {
+        if let Err(e) = open_path(app, &f) {
+            eprintln!("open: {e}");
+        }
+    }
+}
+
+/// macOS: the suite's window in front, the Start Center's or an app's (not the licences page's), for the menu bar.
+#[cfg(target_os = "macos")]
+pub fn front(app: &AppHandle) -> Option<WebviewWindow> {
+    app.webview_windows()
+        .into_values()
+        .find(|w| w.is_focused().unwrap_or(false) && (w.label() == "main" || app_of(w).is_some()))
+}
+
 /// The file the user picked in this app window's Open dialog takes the window's place, once its page has let its
 /// document go (saved or given up: the "Save changes?" question); `go`: false lets the pick go instead. The window
 /// reloads to its app's page for the file, whose address has a one-time word only that page knows (`token`), so the

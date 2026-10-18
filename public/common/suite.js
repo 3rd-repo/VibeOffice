@@ -534,6 +534,15 @@
   /* its document let go, the page leaves without the apps' "Leave the page?" (their beforeunload, added after this) */
   let leaving = false;
   window.addEventListener('beforeunload', (e) => { if (leaving) e.stopImmediatePropagation(); }, true);
+  /** a dialog of the page is open: the Mac's menu bar (vo-menu) waits for it, as a Mac app's menus do */
+  VO.busyDialog = () => !!document.querySelector('.dlg-overlay, [aria-modal="true"]');
+  /* the Mac's menu bar (desktop/src/main.rs, mac_menu_event): its File ▸ Open… and Help in the app window in front run
+     the app's own Open and Help (the Start Center answers Open itself, start.js) */
+  if (native) window.addEventListener('vo-menu', (e) => {
+    const ui = window.L && window.L.ui;
+    if (!current || !ui || VO.busyDialog() || !['open', 'help'].includes(e.detail)) return;
+    ui.exec(e.detail);
+  });
   /** whether a window holds one document (the desktop app, docs/desktop.md): the apps' New, Open and Close then
    *  make or close windows, and their Window menus list windows (VO.windowItems) */
   VO.oneDocument = !!native;
@@ -646,8 +655,12 @@
   /* ------------------------------------------------------------ documents, autosave */
   const docKeys = new WeakMap();   // the app's document object -> its Recent Files key
   const openKeys = new Set();      // keys of the documents open in this page (left out of Document Recovery)
-  const timers = new WeakMap(), slow = new WeakMap();
-  const DRAFT_DELAY = 15000;
+  /* a document's unsaved version is written 15 s after its last change, at most once every 2 minutes, larger
+     documents less often (12 s a MB: 50 MB, every 10 minutes, as Word's AutoRecover), slow ones too (30 × the time
+     the last write took); typing on doesn't put it off past that gap */
+  const drafts = new WeakMap();   // doc -> { timer, since: its first change not yet written, last: the last write, gap, big }
+  const DRAFT_IDLE = 15000, DRAFT_GAP = 120000, DRAFT_PER_MB = 12000;
+  const draftOf = (doc) => { let s = drafts.get(doc); if (!s) drafts.set(doc, (s = { timer: 0, since: null, last: -Infinity, gap: DRAFT_GAP, big: false })); return s; };
   const bind = (doc, key) => { if (doc) docKeys.set(doc, key); openKeys.add(key); };
   /** the app opened a file (from any source) as doc */
   VO.opened = (file, doc) => {
@@ -660,7 +673,7 @@
   VO.saved = (name, blob, doc) => {
     if (!current) return;
     const old = doc && docKeys.get(doc);
-    if (doc) clearTimeout(timers.get(doc));
+    if (doc) { const s = draftOf(doc); clearTimeout(s.timer); s.since = null; s.last = Date.now(); }   // a save is a write too
     if (doc && current.hooks.isDirty && current.hooks.isDirty(doc)) VO.changed(doc);   // changed while it was saved
     if (native) { thumbLater(); return; }   // the native side cleared the draft as it wrote the file
     VO.recent.put(current.app, name, blob, false).then(async (key) => {
@@ -677,18 +690,28 @@
   VO.changed = (doc) => {
     if (doc) changes.set(doc, (changes.get(doc) || 0) + 1);
     if (!current || !doc || !current.hooks.snapshot) return;
-    clearTimeout(timers.get(doc));
-    timers.set(doc, setTimeout(() => saveDraft(doc), Math.max(DRAFT_DELAY, slow.get(doc) || 0)));
+    const s = draftOf(doc), now = Date.now();
+    if (s.since === null) s.since = now;
+    clearTimeout(s.timer);
+    const at = Math.min(Math.max(now + DRAFT_IDLE, s.last + s.gap), s.since + s.gap);
+    s.timer = setTimeout(() => saveDraft(doc), Math.max(0, at - now));
   };
   async function saveDraft(doc) {
-    const H = current.hooks;
+    const H = current.hooks, s = draftOf(doc);
+    s.since = null;   // changes from here on wait for the next one
     if ((H.isDirty && !H.isDirty(doc)) || (H.autosave && H.autosave() === false)) return;
+    s.last = Date.now();
     const t0 = performance.now();
     let blob = null;
     try { blob = await H.snapshot(doc); } catch (e) { console.warn('autosave:', e); return; }
-    slow.set(doc, (performance.now() - t0) * 30);   // a document that takes 1 s to write is saved every 30 s at most
-    if (!blob || blob.size > MAX_BYTES || (H.isDirty && !H.isDirty(doc))) return;
+    if (blob) s.gap = Math.max(DRAFT_GAP, DRAFT_PER_MB * blob.size / 1048576, (performance.now() - t0) * 30);
+    if (!blob || (H.isDirty && !H.isDirty(doc))) return;
     const info = H.docInfo(doc);
+    if (blob.size > MAX_BYTES) {
+      if (!s.big && window.L && L.ui) L.ui.toast(VO.t('“{0}” is over 50 MB, so its changes aren\'t kept for recovery after a crash. Save it to keep them.', info.name), 10000);
+      s.big = true;
+      return;
+    }
     if (native) {
       try { await setDraft(info, blob); } catch (e) { console.warn('autosave:', e); return; }
       thumbLater();
@@ -712,7 +735,8 @@
   /** the user chose not to keep doc's changes (No in "Do you want to save the changes…?") */
   VO.discard = (doc) => {
     if (!doc) return;
-    clearTimeout(timers.get(doc));
+    clearTimeout(draftOf(doc).timer);
+    drafts.delete(doc);
     if (native) { call('host_clear_draft').catch(() => {}); return; }
     const key = docKeys.get(doc);
     if (!key) return;

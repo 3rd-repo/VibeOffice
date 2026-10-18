@@ -114,17 +114,35 @@ pub async fn host_new_window(
     if !(caller == "main" || caller == page || page == "licenses") {
         return Err(format!("{caller} doesn't open {page}"));
     }
+    open_page(&app, &page, &start)
+}
+
+/// A new blank document of `app` (quire, ledger, lectern) in a window of its own: the Mac's File menu (main.rs).
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub fn open_blank(app: &AppHandle, page: &str) -> Result<(), String> {
+    open_page(
+        app,
+        page,
+        &Start {
+            new: true,
+            template: None,
+        },
+    )
+}
+
+/// The window for `page` started as `start` (`host_new_window`, `open_blank`).
+fn open_page(app: &AppHandle, page: &str, start: &Start) -> Result<(), String> {
     // a new document's number: Document2 in the second window that makes one
     let n = (start.new || start.template.is_some()).then(|| {
         let host = app.state::<Host>();
         let mut untitled = host.untitled.lock().unwrap();
-        let n = untitled.entry(page.clone()).or_default();
+        let n = untitled.entry(page.to_string()).or_default();
         *n += 1;
         *n
     });
-    let path = page_path(&page, &start, n)?;
-    let label = new_label(&app, &page)?;
-    crate::open_window(&app, &label, WebviewUrl::App(PathBuf::from(path)))
+    let path = page_path(page, start, n)?;
+    let label = new_label(app, page)?;
+    crate::open_window(app, &label, WebviewUrl::App(PathBuf::from(path)))
         .map_err(|e| e.to_string())?;
     Ok(())
 }
