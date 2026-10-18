@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=VibeOffice
+GenericName=Office Suite
+Comment=Documents, spreadsheets and presentations in Office Open XML
+Exec=vibeoffice %F
+Icon=vibeoffice
+Terminal=false
+Categories=Office;WordProcessor;Spreadsheet;Presentation;
+MimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.openxmlformats-officedocument.presentationml.presentation;
+StartupWMClass=vibeoffice

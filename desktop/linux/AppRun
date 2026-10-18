@@ -1,0 +1,59 @@
+#!/bin/sh
+# The AppImage's entry point (desktop/linux/build.sh; docs/desktop.md, Linux). VibeOffice uses the system's WebKitGTK
+# 4.1 (with GTK 3 and libsoup 3). Without it the system refuses to start the app and says so only on a terminal, so
+# the system's loader is asked first (as ldd does, which not every system has): when a library is missing, a message
+# says how to install it (a dialog, and on stderr), else the app takes this process's place.
+here=$(dirname "$(readlink -f "$0")")
+app="$here/usr/bin/vibeoffice"
+
+# (plain sh throughout: no awk or sed, which a bare system may lack)
+not_found() {
+  sep=
+  while read -r lib arrow rest; do
+    [ "$arrow $rest" = "=> not found" ] && printf '%s%s' "$sep" "$lib" && sep=", "
+  done
+}
+missing=$(LD_TRACE_LOADED_OBJECTS=1 "$app" 2> /dev/null | not_found)
+[ -z "$missing" ] && exec "$app" "$@"
+
+# the system's own command, from /etc/os-release (ID, and ID_LIKE for the systems built on another)
+id= like=
+if [ -r /etc/os-release ]; then
+  while IFS='=' read -r key value; do
+    value=${value#\"}; value=${value%\"}
+    case $key in ID) id=$value ;; ID_LIKE) like=$value ;; esac
+  done < /etc/os-release
+fi
+case " $id $like " in
+  *" debian "* | *" ubuntu "*) command="sudo apt install libwebkit2gtk-4.1-0" ;;
+  *" fedora "* | *" rhel "*) command="sudo dnf install webkit2gtk4.1" ;;
+  *" suse "* | *" opensuse "*) command="sudo zypper install libwebkit2gtk-4_1-0" ;;
+  *" arch "*) command="sudo pacman -S webkit2gtk-4.1" ;;
+  *) command="" ;;
+esac
+if [ -n "$command" ]; then
+  how="Install it from a terminal:
+
+    $command
+
+then open VibeOffice again."
+else
+  how="Install WebKitGTK 4.1 (the build for GTK 3) with your system's package manager, then open VibeOffice again."
+fi
+text="VibeOffice needs WebKitGTK 4.1, which isn't installed on this computer.
+
+$how
+
+Missing: $missing"
+
+printf '%s\n' "$text" >&2
+if [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+  if command -v zenity > /dev/null 2>&1; then
+    zenity --error --title=VibeOffice --no-markup --text="$text" 2> /dev/null
+  elif command -v kdialog > /dev/null 2>&1; then
+    kdialog --title VibeOffice --error "$text" 2> /dev/null
+  elif command -v xmessage > /dev/null 2>&1; then
+    xmessage -center "$text" 2> /dev/null
+  fi
+fi
+exit 1

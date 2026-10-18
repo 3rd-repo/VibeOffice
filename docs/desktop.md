@@ -21,14 +21,16 @@
 | `desktop/src/installed.rs` | Windows: `vibeoffice.exe -uninstall`, and the first start after installing (taskbar pin request, Default apps) |
 | `desktop/app.manifest` | common controls v6 and `asInvoker` (never asks for administrator rights) |
 | `desktop/macos/` | `Info.plist` (the bundle's, filled in by `build.sh`), `direct.entitlements` and `appstore.entitlements`, `build.sh` (the macOS release, on a Mac: macOS, below) |
-| `desktop/release-notes.md` | the GitHub release's notes, both downloads (either workflow may create the release) |
+| `desktop/linux/` | `build.sh` (the AppImage: Linux, below), `AppRun` (its entry point: the check for WebKitGTK 4.1), `vibeoffice.desktop`, `smoke.sh` and `on-system.sh` (the CI's runs) |
+| `desktop/release-notes.md` | the GitHub release's notes, every download (any of the workflows may create the release) |
 | `desktop/setup/` | the installer, `VibeOfficeSetup.exe`: carries the app; its dialog, manifest and version in `setup.rc` |
 | `desktop/permissions/host.toml`, `desktop/capabilities/` | which `host_*` commands each kind of window may call (Host interface, below); no Tauri core commands |
 | `desktop/icons/` | `icon.icns` (macOS: the app icon on Apple's grid, 16–1024 px, from `public/icons/icon.svg` by `tools/desktop-icons.py`), `icon.ico` (16–256 px; the exe and the installer), `quire.ico`, `ledger.ico`, `lectern.ico` (document icons, resources 40101–40103 in the exe, numbered after the app icon's 32512 so that stays the exe's first, generated from each app's SVG by `tools/desktop-icons.py`), and `icon.png` (128 px, Linux window icon; Tauri embeds it as raw RGBA, so keep it small) |
-| `desktop/licenses/` | license texts of what ships with the app but is not a crate (`WebView2Loader.txt`, from the WebView2 SDK package), and in `crates/` those of the crates whose package has none (taken from their repositories), for `public/oss-licenses.html` |
+| `desktop/licenses/` | license texts of what ships with the app but is not a crate (`WebView2Loader.txt`, from the WebView2 SDK package; `appimage-runtime.txt`, the AppImage runtime's and its parts'), and in `crates/` those of the crates whose package has none (taken from their repositories), for `public/oss-licenses.html` |
 | `desktop/patches/option-ext/` | our own stand-in for the `option-ext` crate (MPL-2.0), which `dirs-sys` uses through Tauri: the one method it needs, Apache-2.0, put in its place by `[patch.crates-io]` in `Cargo.toml` (AGENTS.md, Code from other projects) |
 | `desktop/build.sh` | release build: the exe, the installer and the zip in `desktop/target/dist/` |
 | `.github/workflows/windows.yml` | CI, run by hand: `build.sh` on Ubuntu; the zip as the run's artifact and a GitHub release |
+| `.github/workflows/linux.yml` | CI, run by hand: `linux/build.sh` on Ubuntu 22.04 with a smoke run there, then each system in a container (without WebKitGTK, then with it), screenshots; the AppImage in the version's GitHub release when asked |
 | `.github/workflows/macos.yml` | CI, run by hand: `macos/build.sh` on a macOS runner, a smoke run with screenshots; the DMG in the version's GitHub release; the App Store package to App Store Connect when asked (macOS, below) |
 | `tests/desktop/` | `host.test.mjs` and `host-stub.js` (Host interface, below); `setup-wine.py`, the installer end to end in Wine (The installer, below) |
 
@@ -356,11 +358,36 @@ to be tried on a Mac (todos/DESKTOP_REAL_SAVE.md, Phase 2: built, run on Linux o
 
 ## Linux
 
-Not supported for now (2026-10-13): no Linux release is made; Windows and macOS are the desktop app. The build below still works for development. The binary links the system's GTK 3 (LGPL-2.1-or-later), WebKitGTK (LGPL and BSD) and libsoup dynamically, which the LGPL allows (AGENTS.md, Code from other projects); the licence check below covers only the Rust crates, not these native libraries, so before a Linux release they are listed too, and what a package bundles is told apart from what it requires of the system.
+One download, `VibeOffice-Linux-x86_64.AppImage` (`desktop/linux/build.sh`), for x86_64 systems with WebKitGTK 4.1:
+Ubuntu 22.04 to 26.04, Debian 12 and 13, Fedora. Not sandboxed: no Flatpak, Snap or `.deb` (on macOS both editions
+stay in the App Sandbox). Debian 10 and 11 are left out: they have no WebKitGTK 4.1, which needs libsoup 3 (Debian has
+it from 12 on).
 
-The same crate builds for Linux against WebKitGTK 4.1, GTK 3 and libsoup 3 (`libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libsoup-3.0-dev`):
+- **The system's WebKitGTK.** The app links the system's WebKitGTK 4.1, GTK 3 (LGPL-2.1-or-later) and libsoup 3
+  dynamically, which the LGPL allows (AGENTS.md, Code from other projects); the AppImage carries none of them. Built on
+  Ubuntu 22.04 (glibc 2.35, the oldest of these systems) it starts on every newer one; built on a newer system it needs
+  that system's glibc (on Debian 13, 2.39).
+- **`AppRun`**, the AppImage's entry point, asks the system's loader which of the app's libraries are missing
+  (`LD_TRACE_LOADED_OBJECTS`, what `ldd` does; plain `sh`, as a bare system may lack awk and sed). When one is, it says
+  how to install WebKitGTK 4.1 with the system's own command, from `/etc/os-release` (apt, dnf, zypper, pacman), in a
+  dialog (zenity, kdialog or xmessage) and on stderr, in English; otherwise the app takes its place.
+- **The AppImage** is the AppImage project's runtime (type2-runtime 20251108, a static program, pinned by its
+  checksum) followed by a squashfs (zstd) of the folder: `AppRun`, `usr/bin/vibeoffice`, `vibeoffice.desktop` (.docx,
+  .xlsx and .pptx for an AppImage tool's Open With) and the icon (`public/icons/icon.svg`). The runtime mounts it with
+  FUSE (`fusermount3`); without FUSE, `--appimage-extract-and-run` or `APPIMAGE_EXTRACT_AND_RUN=1`. Its licences,
+  libfuse's (LGPL-2.1, inside the runtime) among them, are in the open source licenses
+  (`desktop/licenses/appimage-runtime.txt`).
+- **CI** (`.github/workflows/linux.yml`, run by hand): builds on `ubuntu-22.04` and runs the smoke run there
+  (`desktop/linux/smoke.sh`: the Start Center, then a .docx, a CSV and a .md handed to the running app, each found by
+  its window's title, a screenshot after each); then Ubuntu 24.04 and 26.04, Debian 12 and 13 and Fedora, each in a
+  container (`desktop/linux/on-system.sh`): without WebKitGTK the AppImage must not start and must name that system's
+  command, with it the smoke run. Ticking "release" puts the AppImage into the version's release.
+
+Building here needs the development files of WebKitGTK 4.1, GTK 3 and libsoup 3 (`libwebkit2gtk-4.1-dev`,
+`libgtk-3-dev`, `libsoup-3.0-dev`), and squashfs-tools for the AppImage:
 
     cd desktop && cargo build --release --target x86_64-unknown-linux-gnu
+    desktop/linux/build.sh
 
 Without root to install them, the development packages can be unpacked into a folder instead (`apt-get download` those
 three and what they depend on, `dpkg -x` each into `tmp/linuxdev/root`), with pkg-config pointed there; the runtime
@@ -369,7 +396,8 @@ libraries are the system's:
     R=$PWD/tmp/linuxdev/root
     export PKG_CONFIG_SYSROOT_DIR=$R PKG_CONFIG_PATH=$R/usr/lib/x86_64-linux-gnu/pkgconfig:$R/usr/share/pkgconfig
 
-Run it with a file to open: `target/x86_64-unknown-linux-gnu/release/vibeoffice ~/Budget.csv`. No package yet. When Linux has a release, its one package is an AppImage (with a `.desktop` file and the MIME types), not sandboxed: no Flatpak, Snap or `.deb`. On macOS both editions stay in the App Sandbox.
+Run it with a file to open: `target/x86_64-unknown-linux-gnu/release/vibeoffice ~/Budget.csv`, or the AppImage the
+same way; `desktop/linux/smoke.sh <AppImage> <folder>` on a display (or with Xvfb) does what the CI does.
 
 ## Size
 
@@ -391,6 +419,11 @@ No exe packers (UPX): antivirus flags packed exes. The largest pages are the the
 
 - Linux (Debian 13, WebKitGTK 2.52.6, Xfce): Start Center, all three apps; `vibeoffice Budget.csv` opens it in Ledger and `Notes.md` in Quire, the title bar follows the document; Recent Files and the look are kept between runs. With no network at all (`unshare -rn`), a fresh profile: everything loads, in Paper; the GitHub button goes to `xdg-open`; UI size 150 % and 200 % scale the whole UI, sharp, and are back after a restart; the Start Center keeps Settings reachable in its narrow layout. Started with `Budget.csv`, the Start Center stays and Ledger opens in a window of its own; Quire from the Start Center opens a third window, and its File ▸ Exit closes only that one.
 - Linux (2026-10-17), settings and one instance: a fresh `~/.vibeoffice` starts in Paper at the 125 % an old `settings.json` held; Français in Settings writes `config.json` (folder 0700) and the Start Center reloads in French; Quire opens in a second window in French; Paper 2016 picked in the Start Center turns the open Quire window to the ribbon. `vibeoffice Budget.csv` while it runs hands the file over and exits (0.45 s), Ledger opens it in the running app; with the Start Center closed, a start without files opens it again; once every window is closed the process ends, and the next start takes over the old socket.
+- Linux AppImage (2026-10-18, built here on Debian 13, 7.2 MB): `smoke.sh` on Xvfb, mounted with FUSE: the Start
+  Center, then `linecases.docx`, `Budget.csv` and `Notes.md` handed over by second starts, each in its window, and
+  nothing left running or mounted after. `AppRun` with a library missing (a stand-in app): the zenity dialog and the
+  message on stderr, exit 1; the command for Fedora, Ubuntu, Linux Mint, openSUSE and the general advice for Gentoo.
+  Not yet run in CI (`linux.yml`: Ubuntu 22.04, the other systems in containers).
 - macOS (2026-10-15, the CI's first run, macos-15): builds universal (arm64 and x86_64, 15.3 MB), signed ad hoc; the smoke run opens the Start Center, then `linecases.docx` in Quire, `Budget.csv` in Ledger and `Notes.md` in Quire, each in a window of its own in the one running process, under the App Sandbox with no denials, and quits cleanly. Not yet used by a person on a Mac (menus, ⌘ keys, saving, Browse, links, the Dock). The network rules (2026-10-16; failing closed, with the probe, the same day): the first macOS run with them (2026-10-17) hung as the Start Center opened, on both systems' path: `net::guard` went on to the page from inside `with_webview`, which holds the web view's lock that `navigate` takes. Fixed; with `guard` compiled for Linux for the check, the probe (which reports `REACHED` there, with no rules), an app's window and refusing either run. Not yet run on macOS or Windows.
 - Not yet run against the published site: the update check (the site has no `updater/current.json` yet).
 - Installer (2026-10-11), Wine 10.0, `tests/desktop/setup-wine.py`: passes. The dialog shows the pinning hint (Wine has no TaskbarManager); install writes the three files, both shortcuts and the HKCU values; the same version again shows no dialog; uninstall (Enter) leaves no folder, shortcut or value of VibeOffice's and keeps another program's. `cargo test` (Windows target, under Wine): 5 passed. Wine cannot show the app itself (no WebView2), the pin prompt or Default apps.
@@ -401,6 +434,8 @@ No exe packers (UPX): antivirus flags packed exes. The largest pages are the the
 
 ## Known limits / to do
 
+- Linux: the AppImage adds no menu entry or file types by itself (AppImage tools such as Gear Lever do, from its
+  `vibeoffice.desktop`); `AppRun`'s message is in English; x86_64 only.
 - GNU builds import `WebView2Loader.dll`, installed beside the exe (Microsoft's static loader is MSVC-only).
 - Saving (Saving, above) has run on Linux only: Windows' `ReplaceFileW` and macOS's `replaceItemAtURL:` are type-checked, not yet run.
 - macOS: the menu bar has the suite's own items only (New, Open…, Start Center, Help); the apps' commands stay in the

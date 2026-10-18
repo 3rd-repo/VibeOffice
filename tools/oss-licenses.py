@@ -124,6 +124,8 @@ def main():
         apache = keep(f.read().strip())
     with open(os.path.join(ROOT, 'desktop', 'licenses', 'WebView2Loader.txt'), encoding='utf-8') as f:
         webview2 = keep(f.read().strip())
+    with open(os.path.join(ROOT, 'desktop', 'licenses', 'appimage-runtime.txt'), encoding='utf-8') as f:
+        appimage = keep(f.read().strip())
 
     def notice(name):
         with open(os.path.join(ROOT, 'public', 'common', 'licenses', name), encoding='utf-8') as f:
@@ -192,6 +194,10 @@ def main():
     names = {'windows': 'Windows', 'macos': 'macOS', 'linux': 'Linux'}
     desktop = work('WebView2Loader.dll', 'BSD-3-Clause (Microsoft WebView2 SDK)', [('aka.ms/webview2', 'https://aka.ms/webview2')],
                    'Finds the system\'s WebView2 (Edge) runtime; ships beside vibeoffice.exe. Copyright Microsoft Corporation.', files='Windows', texts_=[webview2])
+    desktop += work('AppImage runtime', 'MIT; with libfuse (LGPL-2.1), squashfuse, zstd, zlib and musl inside',
+                    [('github.com/AppImage/type2-runtime', 'https://github.com/AppImage/type2-runtime/tree/20251108')],
+                    'The first part of the Linux download (VibeOffice-Linux-x86_64.AppImage), unmodified: a program of the AppImage project (release 20251108) that mounts the rest and starts the app. Copyright probonopd and the AppImage contributors.',
+                    files='Linux', texts_=[appimage])
     missing = []
     for c in sorted(crates.values(), key=lambda c: (c['name'].lower(), c['version'])):
         if not c['texts']:

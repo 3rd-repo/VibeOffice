@@ -1,0 +1,135 @@
+# The Linux desktop app (desktop/, docs/desktop.md, Linux): VibeOffice-Linux-x86_64.AppImage, built on Ubuntu 22.04
+# (glibc 2.35, the oldest system with WebKitGTK 4.1) so that it starts on every newer one that has WebKitGTK 4.1:
+# Ubuntu 22.04 to 26.04, Debian 12 and 13, Fedora. The app uses the system's WebKitGTK, GTK and libsoup; AppRun says
+# how to install WebKitGTK where it is missing.
+# Each run tries it: the smoke run here on Ubuntu 22.04, and on each other system in a container, first without
+# WebKitGTK (the install command must show), then with it (desktop/linux/on-system.sh). Screenshots are artifacts.
+# Run by hand only: Actions ▸ Linux ▸ Run workflow. With "release" ticked, the AppImage goes into the version's
+# GitHub release (tools/current-tree-version.sh), the same one as Windows and macOS; its name stays the same in every
+# release, so releases/latest/download/VibeOffice-Linux-x86_64.AppImage is always the newest.
+name: Linux
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Add the AppImage to the version's GitHub release
+        type: boolean
+        default: false
+      prerelease:
+        description: Mark the release as a pre-release (when this run creates it)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # create the release and its tag
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev \
+            squashfs-tools fuse3 xvfb x11-utils imagemagick
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/target
+          key: desktop-linux-${{ hashFiles('desktop/Cargo.lock') }}
+
+      - name: Build
+        id: build
+        run: |
+          desktop/linux/build.sh
+          echo "version=$(tools/current-tree-version.sh)" >> "$GITHUB_OUTPUT"
+
+      # here the AppImage mounts itself with FUSE, as on a desktop
+      - name: Smoke (Ubuntu 22.04)
+        run: xvfb-run -a -s "-screen 0 1400x900x24" desktop/linux/smoke.sh desktop/target/dist/VibeOffice-Linux-x86_64.AppImage "$RUNNER_TEMP/smoke"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: VibeOffice-Linux-smoke-ubuntu-22.04
+          path: ${{ runner.temp }}/smoke/*.*
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VibeOffice-Linux-x86_64
+          path: desktop/target/dist/VibeOffice-Linux-x86_64.AppImage
+          if-no-files-found: error
+
+  systems:
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { image: "ubuntu:24.04", name: ubuntu-24.04 }
+          - { image: "ubuntu:26.04", name: ubuntu-26.04 }
+          - { image: "debian:12", name: debian-12 }
+          - { image: "debian:13", name: debian-13 }
+          - { image: "fedora:latest", name: fedora }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: VibeOffice-Linux-x86_64
+          path: dist
+
+      # --privileged: WebKitGTK's web processes run in a bubblewrap sandbox, which a container allows only so
+      - name: ${{ matrix.image }}
+        run: |
+          chmod 755 dist/VibeOffice-Linux-x86_64.AppImage
+          mkdir -p "$RUNNER_TEMP/out"
+          docker run --rm --privileged -v "$PWD:/repo:ro" -v "$RUNNER_TEMP/out:/out" "${{ matrix.image }}" \
+            /repo/desktop/linux/on-system.sh /repo/dist/VibeOffice-Linux-x86_64.AppImage /out
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: VibeOffice-Linux-smoke-${{ matrix.name }}
+          path: ${{ runner.temp }}/out/*.*
+          if-no-files-found: warn
+
+  release:
+    needs: [build, systems]
+    if: inputs.release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: VibeOffice-Linux-x86_64
+          path: dist
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          files="dist/VibeOffice-Linux-x86_64.AppImage"
+          if gh release view "$VERSION" > /dev/null 2>&1; then
+            gh release upload "$VERSION" $files --clobber
+          else
+            flag=""
+            [ "$PRERELEASE" = "true" ] && flag="--prerelease"
+            gh release create "$VERSION" $files --target "$GITHUB_SHA" --title "VibeOffice $VERSION" $flag \
+              --notes-file desktop/release-notes.md
+          fi
