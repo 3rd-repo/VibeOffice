@@ -368,6 +368,7 @@ const update = `await new Promise((r) => setTimeout(r, 500));
   const out = { button: !document.getElementById('update').hidden, check: !document.getElementById('updatecheck').hidden,
     dialog: document.getElementById('updatedlg').open };
   if (out.dialog) out.news = [...document.querySelectorAll('#updatenews > *')].map((e) => e.textContent);
+  if (out.check) out.age = document.getElementById('updateage').textContent;
   if (out.dialog) { const d = document.getElementById('updatedlg'); d.querySelector('button[value=download]').click(); }
   else if (out.button) document.getElementById('update').click();
   else if (out.check) document.getElementById('updatecheck').click();
@@ -405,7 +406,7 @@ test('the published updater/current.json: a build from 10-08 gets the button, 10
 test('desktop: a version over two months old offers to check for updates, when current.json asks nothing or cannot be read', () => {
   for (const policy of ['none', 'offline']) {
     const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', `update=${policy}&version=v2026.08.16-000000`);
-    assert.deepEqual(r, { button: false, check: true, dialog: false,
+    assert.deepEqual(r, { button: false, check: true, dialog: false, age: 'This version is 2 months old.',
       opened: 'https://vibeoffice.work/updater/?from_version=v2026.08.16-000000&current_platform=windows' }, policy);
   }
   const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'update=none&version=v2026.08.17-000000');
@@ -418,9 +419,12 @@ test('desktop: when current.json asks for an update, an old version gets the Upd
     opened: 'https://vibeoffice.work/updater/?from_version=v2026.07.01-000000&current_platform=windows' });
 });
 
-test('desktop: the Mac App Store edition never checks nor offers to, even when current.json asks for a dialog', () => {
+test('desktop: the Mac App Store edition never reads current.json; old, its Check for updates opens the page for the App Store', () => {
   const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'appstore&update=dialog&version=v2026.07.01-000000');
-  assert.deepEqual(r, { button: false, check: false, dialog: false, opened: '' });
+  assert.deepEqual(r, { button: false, check: true, dialog: false, age: 'This version is 3 months old.',
+    opened: 'https://vibeoffice.work/updater/?from_version=v2026.07.01-000000&current_platform=macos_store' }, 'no Update button or dialog, though current.json asks');
+  assert.deepEqual(shot('', [{ js: update }], '--pre', stub, '--qs', 'appstore&update=dialog&version=v2026.10.01-000000').r,
+    { button: false, check: false, dialog: false, opened: '' }, 'two weeks old');
 });
 
 test('web: no update check', () => {
@@ -430,7 +434,7 @@ test('web: no update check', () => {
 
 test('web and the installed PWA: a copy over two months old offers to check for updates', () => {
   const { r } = shot('', [{ js: update }], '--pre', stub, '--qs', 'web&version=v2026.08.16-000000');
-  assert.deepEqual(r, { button: false, check: true, dialog: false,
+  assert.deepEqual(r, { button: false, check: true, dialog: false, age: 'This version is 2 months old.',
     opened: 'https://vibeoffice.work/updater/?from_version=v2026.08.16-000000&current_platform=web' });
   assert.deepEqual(shot('', [{ js: update }], '--pre', stub, '--qs', 'web&version=v2026.10.01-000000').r,
     { button: false, check: false, dialog: false, opened: '' }, 'two weeks old');
@@ -441,6 +445,14 @@ test('a version is outdated two calendar months after its day', () => {
     o('v2026.08.16-abc123', 2026, 10, 16), o('v2026.08.17-abc123', 2026, 10, 16), o('v2026.12.31-abc123', 2027, 3, 2),
     o('v2026.12.31-abc123', 2027, 3, 3), o('2026.08.8f8494', 2026, 10, 1), o('dev', 2099, 1, 1), VO.isOutdated()]);` }]);
   assert.deepEqual(r, [true, false, false, true, true, false, false], 'a dev build is never outdated');
+});
+
+test('a version\'s age in whole calendar months', () => {
+  const { r } = shot('', [{ js: `const m = (v, y, mo, d) => VO.monthsOld(v, new Date(y, mo - 1, d)); return JSON.stringify([
+    m('v2026.08.16-abc123', 2026, 10, 16), m('v2026.08.17-abc123', 2026, 10, 16), m('v2025.10.16-abc123', 2026, 10, 16),
+    m('v2026.08.31-abc123', 2026, 10, 30), m('v2026.08.31-abc123', 2026, 10, 31), m('v2026.12.31-abc123', 2027, 3, 3),
+    m('2026.08.8f8494', 2026, 10, 1), m('v2026.10.16-abc123', 2026, 10, 16), m('dev', 2099, 1, 1)]);` }]);
+  assert.deepEqual(r, [2, 1, 12, 1, 2, 2, 2, 0, null], 'a dev build has no age');
 });
 
 test('versions compare by date alone', () => {

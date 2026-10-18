@@ -6,7 +6,9 @@ Scans the Office-saved files of the corpora (tools/corpora.sh) for the ones a Ja
 Office made, and prints the most common value of each default with its count:
 
   Word        page size and margins, document grid, docDefaults fonts, size and languages, the Normal style's
-              paragraph settings, themeFontLang, characterSpacingControl, the theme's Latin and East Asian fonts
+              paragraph settings, themeFontLang, characterSpacingControl, the theme's Latin and East Asian fonts;
+              the built-in styles that name a font or size in English Word (headings, Title, …: STYLES), each
+              style's whole pPr and rPr as one value
   Excel       the default font (name, size, charset), the default row height, the theme's fonts
   PowerPoint  the slide size, the theme's Latin and East Asian fonts, the text language
 
@@ -19,6 +21,10 @@ import collections, os, re, sys, zipfile
 
 CORPORA = os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else '~/corpora')
 LANGS = ['ja', 'ko', 'zh-CN', 'zh-Hant', 'fr', 'de']
+# the built-in styles whose font or size Quire's English set names (public/quire/js/dmodel.js, D.builtinStyles)
+STYLES = ['heading %d' % i for i in range(1, 10)] + ['Title', 'Subtitle', 'Body Text 3', 'Plain Text', 'caption', 'footnote text',
+          'endnote text', 'annotation text', 'Balloon Text', 'envelope address', 'envelope return', 'index heading',
+          'Document Map', 'macro', 'HTML Preformatted', 'annotation reference', 'header', 'footer', 'toc 1']
 
 
 def chinese(tag):
@@ -93,6 +99,11 @@ def word(path):
         'defaultTabStop': attr(sett, 'w:defaultTabStop', 'w:val'),
         'compat': ' '.join(sorted(set(re.findall(r'<w:(\w+)/>', (re.search(r'<w:compat>.*?</w:compat>', sett, re.S) or [''])[0])))),
     }
+    for m in re.finditer(r'<w:style\b[^>]*>.*?</w:style>', sty, re.S):
+        name = attr(m.group(0), 'w:name', 'w:val')
+        if name in STYLES:
+            body = re.sub(r'\s+w:rsid\w*="[^"]*"|<w:rsid\b[^>]*/>', '', m.group(0))
+            v['style ' + name] = ''.join(re.findall(r'<w:pPr>.*?</w:pPr>|<w:rPr>.*?</w:rPr>', body, re.S)) or '(none)'
     v.update(theme_fonts(read(z, 'word/theme/theme1.xml')))
     return which, v
 
@@ -149,7 +160,8 @@ def main():
             for k in sorted({k for v in files for k in v}):
                 common = collections.Counter(v.get(k) for v in files if v.get(k)).most_common(2)
                 if common:
-                    print(f'  {k}: ' + '; '.join(f'{val!s:.110} ({n})' for val, n in common))
+                    width = 600 if k.startswith('style ') else 110
+                    print(f'  {k}: ' + '; '.join(f'{val!s:.{width}} ({n})' for val, n in common))
 
 
 if __name__ == '__main__':

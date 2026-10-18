@@ -1162,7 +1162,7 @@
  },
  "&Edit Comment": {
   "where": [
-   "quire/js/app.js:1122"
+   "quire/js/app.js:1142"
   ]
  },
  "&Edit Field...": {
@@ -1182,7 +1182,7 @@
  },
  "&Edit Wrap Points": {
   "where": [
-   "quire/js/app.js:405"
+   "quire/js/app.js:425"
   ]
  },
  "&Edit...": {
@@ -1623,7 +1623,7 @@
  },
  "&Grid...": {
   "where": [
-   "quire/js/app.js:401"
+   "quire/js/app.js:421"
   ]
  },
  "&Gridlines": {
@@ -2522,7 +2522,7 @@
  "&Open Hyperlink": {
   "where": [
    "ledger/js/app.js:860",
-   "quire/js/app.js:1114"
+   "quire/js/app.js:1134"
   ]
  },
  "&Open...": {
@@ -2554,7 +2554,7 @@
   "where": [
    "lectern/js/app.js:157",
    "lectern/js/app.js:1765",
-   "quire/js/app.js:400"
+   "quire/js/app.js:420"
   ]
  },
  "&Ordinals (1st) with superscript": {
@@ -2956,7 +2956,7 @@
  "&Remove Hyperlink": {
   "where": [
    "ledger/js/commands.js:123",
-   "quire/js/app.js:1114",
+   "quire/js/app.js:1134",
    "quire/js/commands.js:304"
   ]
  },
@@ -3609,7 +3609,7 @@
  },
  "&Text Wrapping": {
   "where": [
-   "quire/js/app.js:402",
+   "quire/js/app.js:422",
    "quire/js/dialogs3.js:73"
   ]
  },
@@ -4180,7 +4180,7 @@
  },
  "(This page intentionally left blank by a section break)": {
   "where": [
-   "quire/js/app.js:1363"
+   "quire/js/app.js:1383"
   ]
  },
  "(Top 10...)": {
@@ -4312,12 +4312,12 @@
  },
  "1 file": {
   "where": [
-   "start.js:268"
+   "start.js:270"
   ]
  },
  "1 file, with unsaved changes": {
   "where": [
-   "start.js:268"
+   "start.js:270"
   ]
  },
  "1 page": {
@@ -4704,7 +4704,7 @@
  },
  "A picture is not in the .md file and shows as a box. Open a .zip holding the file and its pictures to see them.": {
   "where": [
-   "quire/js/app.js:778"
+   "quire/js/app.js:798"
   ]
  },
  "A presentation editor that runs entirely in your browser. Presentations are read and written as Office Open XML (.pptx, .pptm); nothing is uploaded.": {
@@ -4739,7 +4739,7 @@
  },
  "A small table": {
   "where": [
-   "quire/js/app.js:1334"
+   "quire/js/app.js:1354"
   ]
  },
  "A source column used by the pivot table was deleted. Its remaining result cells are kept.": {
@@ -4841,12 +4841,12 @@
  },
  "About {0} MB, kept by VibeOffice on this computer.": {
   "where": [
-   "start.js:269"
+   "start.js:271"
   ]
  },
  "About {0} MB, kept in this browser.": {
   "where": [
-   "start.js:269"
+   "start.js:271"
   ]
  },
  "Above selected item": {
@@ -5441,7 +5441,7 @@
  },
  "All files VibeOffice opens": {
   "where": [
-   "common/suite.js:121"
+   "common/suite.js:122"
   ]
  },
  "All pages in range": {
@@ -5896,7 +5896,7 @@
    "lectern/js/app.js:231",
    "lectern/js/ribbon.js:97",
    "quire/js/app.js:316",
-   "quire/js/app.js:423"
+   "quire/js/app.js:443"
   ]
  },
  "Arrow keys": {
@@ -5997,7 +5997,7 @@
  },
  "At {0}": {
   "where": [
-   "quire/js/app.js:489"
+   "quire/js/app.js:509"
   ]
  },
  "Attaching a template with \"Automatically update document styles\" copies its styles into this document.": {
@@ -6031,7 +6031,7 @@
  "Auto (as the browser)": {
   "where": [
    "common/ui.js:671",
-   "start.js:279"
+   "start.js:281"
   ]
  },
  "Auto Outline": {
@@ -6611,18 +6611,18 @@
  },
  "Blank Document": {
   "where": [
-   "common/suite.js:306",
+   "common/suite.js:322",
    "quire/js/dialogs3.js:768"
   ]
  },
  "Blank Presentation": {
   "where": [
-   "common/suite.js:306"
+   "common/suite.js:322"
   ]
  },
  "Blank Workbook": {
   "where": [
-   "common/suite.js:306"
+   "common/suite.js:322"
   ]
  },
  "Blank document": {
@@ -6793,7 +6793,7 @@
  },
  "Bookmark \"{0}\" not found.": {
   "where": [
-   "quire/js/app.js:1095"
+   "quire/js/app.js:1115"
   ]
  },
  "Bookmark names must begin with a letter and contain only letters, numbers and underscores.": {
@@ -6991,7 +6991,7 @@
  "Brightness": {
   "where": [
    "lectern/js/app.js:1330",
-   "quire/js/app.js:432"
+   "quire/js/app.js:452"
   ]
  },
  "Bring &Forward": {
@@ -7029,52 +7029,52 @@
  },
  "Browse by Comment": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Browse by Edits": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Browse by Endnote": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Browse by Field": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Browse by Footnote": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Browse by Graphic": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Browse by Heading": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Browse by Page": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Browse by Section": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Browse by Table": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Browse...": {
@@ -7493,7 +7493,7 @@
  "Cancel": {
   "where": [
    "common/charts.js:438",
-   "common/suite.js:626",
+   "common/suite.js:642",
    "common/ui.js:547",
    "common/ui.js:571"
   ]
@@ -7657,7 +7657,7 @@
  },
  "Cell Alignment": {
   "where": [
-   "quire/js/app.js:1115",
+   "quire/js/app.js:1135",
    "quire/js/tables.js:565"
   ]
  },
@@ -7890,12 +7890,12 @@
  },
  "Chapter One": {
   "where": [
-   "quire/js/app.js:1343"
+   "quire/js/app.js:1363"
   ]
  },
  "Chapter Two": {
   "where": [
-   "quire/js/app.js:1344"
+   "quire/js/app.js:1364"
   ]
  },
  "Chapter starts with style:": {
@@ -8124,7 +8124,7 @@
  },
  "Checking spelling and grammar as you type in this document.": {
   "where": [
-   "quire/js/app.js:456"
+   "quire/js/app.js:476"
   ]
  },
  "Checks whether a condition is met, and returns one value if TRUE, and another value if FALSE.": {
@@ -8223,9 +8223,14 @@
    "quire/js/drawing.js:142"
   ]
  },
- "Chinese (PRC)": {
+ "Chinese (Simp.)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
+  ]
+ },
+ "Chinese (Trad.)": {
+  "where": [
+   "quire/js/app.js:526"
   ]
  },
  "Chinese Simplified (GB18030)": {
@@ -8245,7 +8250,7 @@
  },
  "Choose Blank or a template:": {
   "where": [
-   "common/suite.js:624"
+   "common/suite.js:640"
   ]
  },
  "Choose a Theme:": {
@@ -8323,7 +8328,7 @@
  },
  "Classic": {
   "where": [
-   "common/suite.js:307",
+   "common/suite.js:323",
    "quire/js/dialogs2.js:311"
   ]
  },
@@ -8697,8 +8702,8 @@
  },
  "Col {0}": {
   "where": [
-   "quire/js/app.js:493",
-   "quire/js/app.js:499"
+   "quire/js/app.js:513",
+   "quire/js/app.js:519"
   ]
  },
  "Col&umn": {
@@ -8936,7 +8941,7 @@
  },
  "Column|position": {
   "where": [
-   "quire/js/app.js:440"
+   "quire/js/app.js:460"
   ]
  },
  "Comb Horizontal": {
@@ -9207,7 +9212,7 @@
  },
  "Content Control &Value...": {
   "where": [
-   "quire/js/app.js:1119"
+   "quire/js/app.js:1139"
   ]
  },
  "Content Layouts": {
@@ -9264,7 +9269,7 @@
  "Contrast": {
   "where": [
    "lectern/js/app.js:1330",
-   "quire/js/app.js:432"
+   "quire/js/app.js:452"
   ]
  },
  "Convert Notes": {
@@ -9787,7 +9792,7 @@
  "Creating PDF... (page {0} of {1})": {
   "where": [
    "lectern/js/app.js:557",
-   "quire/js/app.js:969"
+   "quire/js/app.js:989"
   ]
  },
  "Creating PDF... (slide {0} of {1})": {
@@ -10408,7 +10413,7 @@
  },
  "Danish": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Dark": {
@@ -10487,7 +10492,7 @@
    "lectern/js/app.js:231",
    "lectern/js/ribbon.js:97",
    "quire/js/app.js:316",
-   "quire/js/app.js:419"
+   "quire/js/app.js:439"
   ]
  },
  "Dash dot": {
@@ -10875,7 +10880,7 @@
  "Delete Co&mment": {
   "where": [
    "ledger/js/commands.js:116",
-   "quire/js/app.js:1122"
+   "quire/js/app.js:1142"
   ]
  },
  "Delete Column": {
@@ -11230,7 +11235,7 @@
  },
  "Discard the changes": {
   "where": [
-   "common/suite.js:808"
+   "common/suite.js:824"
   ]
  },
  "Discard the unsaved changes": {
@@ -11450,7 +11455,7 @@
  },
  "Do you want to save the changes to {0}?": {
   "where": [
-   "quire/js/app.js:703"
+   "quire/js/app.js:723"
   ]
  },
  "Do you want to save the changes you made to '{0}'?": {
@@ -11524,7 +11529,7 @@
  },
  "Documents": {
   "where": [
-   "common/suite.js:121",
+   "common/suite.js:122",
    "start.js:130"
   ]
  },
@@ -11833,7 +11838,7 @@
  },
  "Drop a document to open it, or pictures to insert them": {
   "where": [
-   "quire/js/app.js:1241"
+   "quire/js/app.js:1261"
   ]
  },
  "Drop a workbook to open it, or pictures to insert them": {
@@ -11870,7 +11875,7 @@
  },
  "Dutch (Netherlands)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "E&mphasis": {
@@ -11946,7 +11951,7 @@
  },
  "EXT": {
   "where": [
-   "quire/js/app.js:444"
+   "quire/js/app.js:464"
   ]
  },
  "Each item in a circle, its sub-items on a card beside it.": {
@@ -12306,19 +12311,19 @@
  },
  "English (Australia)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "English (Canada)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "English (U.K.)": {
   "where": [
    "ledger/js/dialogs.js:814",
    "ledger/js/spell.js:128",
-   "quire/js/app.js:506",
+   "quire/js/app.js:526",
    "quire/js/dialogs2.js:118"
   ]
  },
@@ -12327,7 +12332,7 @@
    "lectern/js/app.js:281",
    "ledger/js/dialogs.js:814",
    "ledger/js/spell.js:128",
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "English (United States)": {
@@ -12699,12 +12704,12 @@
  },
  "Even Page Footer": {
   "where": [
-   "quire/js/app.js:1030"
+   "quire/js/app.js:1050"
   ]
  },
  "Even Page Header": {
   "where": [
-   "quire/js/app.js:1030"
+   "quire/js/app.js:1050"
   ]
  },
  "Even page": {
@@ -12855,7 +12860,7 @@
  },
  "Extend selection": {
   "where": [
-   "quire/js/app.js:441",
+   "quire/js/app.js:461",
    "quire/js/panes.js:107"
   ]
  },
@@ -13404,7 +13409,7 @@
  "Find and Replace": {
   "where": [
    "ledger/js/dialogs.js:535",
-   "quire/js/app.js:1336",
+   "quire/js/app.js:1356",
    "quire/js/find.js:364"
   ]
  },
@@ -13430,7 +13435,7 @@
  },
  "Find...": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Find:": {
@@ -13470,7 +13475,7 @@
  },
  "Finnish": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Fir&st column": {
@@ -13501,12 +13506,12 @@
  },
  "First Page Footer": {
   "where": [
-   "quire/js/app.js:1030"
+   "quire/js/app.js:1050"
   ]
  },
  "First Page Header": {
   "where": [
-   "quire/js/app.js:1030"
+   "quire/js/app.js:1050"
   ]
  },
  "First Record": {
@@ -13911,8 +13916,8 @@
  "Footer": {
   "where": [
    "ledger/js/dialogs3.js:400",
-   "quire/js/app.js:1003",
-   "quire/js/app.js:1030"
+   "quire/js/app.js:1023",
+   "quire/js/app.js:1050"
   ]
  },
  "Footer (optional)": {
@@ -14365,12 +14370,12 @@
  },
  "French (Canada)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "French (France)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Fro&m center": {
@@ -14590,7 +14595,7 @@
  },
  "German (Germany)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Get External Data": {
@@ -14617,7 +14622,7 @@
  },
  "Getting around": {
   "where": [
-   "quire/js/app.js:1329"
+   "quire/js/app.js:1349"
   ]
  },
  "Globe": {
@@ -14667,7 +14672,7 @@
  },
  "Go To...": {
   "where": [
-   "quire/js/app.js:1130"
+   "quire/js/app.js:1150"
   ]
  },
  "Go back to previous edit": {
@@ -15019,8 +15024,8 @@
  "Header": {
   "where": [
    "ledger/js/dialogs3.js:400",
-   "quire/js/app.js:1003",
-   "quire/js/app.js:1030"
+   "quire/js/app.js:1023",
+   "quire/js/app.js:1050"
   ]
  },
  "Header & Footer": {
@@ -15239,7 +15244,7 @@
  "Highlight": {
   "where": [
    "quire/js/app.js:202",
-   "quire/js/app.js:1314",
+   "quire/js/app.js:1334",
    "quire/js/commands.js:348",
    "quire/js/dialogs3.js:595"
   ]
@@ -16129,7 +16134,7 @@
  },
  "Insert footnote": {
   "where": [
-   "quire/js/app.js:1336"
+   "quire/js/app.js:1356"
   ]
  },
  "Insert hyperlinks": {
@@ -16184,7 +16189,7 @@
  },
  "Insert ▸ Reference": {
   "where": [
-   "quire/js/app.js:1336"
+   "quire/js/app.js:1356"
   ]
  },
  "Insert ▸ Reference ▸ Footnote (Ctrl+Alt+F footnote, Ctrl+Alt+D endnote), Caption, Cross-reference and Index and Tables (table of contents, figures, index). Right-click a field and choose Update Field, or press F9. Alt+F9 shows field codes.": {
@@ -16385,7 +16390,7 @@
  },
  "Italian (Italy)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Italic": {
@@ -16438,7 +16443,7 @@
  },
  "Japanese": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Japanese (Shift-JIS)": {
@@ -16504,12 +16509,12 @@
  },
  "Kept by VibeOffice on this computer.": {
   "where": [
-   "start.js:269"
+   "start.js:271"
   ]
  },
  "Kept in this browser.": {
   "where": [
-   "start.js:269"
+   "start.js:271"
   ]
  },
  "Key assignments": {
@@ -16538,7 +16543,7 @@
  },
  "Korean": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Korean (EUC-KR)": {
@@ -16604,7 +16609,7 @@
  },
  "Language": {
   "where": [
-   "quire/js/app.js:442",
+   "quire/js/app.js:462",
    "quire/js/dialogs.js:1006",
    "quire/js/dialogs.js:1007",
    "quire/js/ribbon.js:64"
@@ -16798,6 +16803,7 @@
  },
  "Lectern": {
   "where": [
+   "lectern/js/panes.js:535",
    "index.html:245",
    "index.html:280",
    "lectern/index.html:9"
@@ -16813,11 +16819,6 @@
    "lectern/js/commands.js:149"
   ]
  },
- "Lectern Web Edition": {
-  "where": [
-   "lectern/js/panes.js:535"
-  ]
- },
  "Lectern presentation editor": {
   "where": [
    "lectern/index.html:284"
@@ -16825,6 +16826,7 @@
  },
  "Ledger": {
   "where": [
+   "ledger/js/panes.js:68",
    "index.html:244",
    "index.html:279",
    "ledger/index.html:2"
@@ -16849,11 +16851,6 @@
   "where": [
    "ledger/js/app.js:28",
    "ledger/js/dialogs.js:751"
-  ]
- },
- "Ledger Web Edition": {
-  "where": [
-   "ledger/js/panes.js:68"
   ]
  },
  "Ledger builds the report as a formatted summary of values; rebuild it after the source data changes.": {
@@ -17249,7 +17246,7 @@
  },
  "Light and calm: warm paper tones, one teal accent, rounded shapes.": {
   "where": [
-   "common/suite.js:308"
+   "common/suite.js:324"
   ]
  },
  "Light bulb": {
@@ -17335,7 +17332,7 @@
   "where": [
    "lectern/js/app.js:1167",
    "lectern/js/commands.js:125",
-   "quire/js/app.js:413",
+   "quire/js/app.js:433",
    "quire/js/commands.js:499"
   ]
  },
@@ -17424,7 +17421,7 @@
  },
  "Line|position": {
   "where": [
-   "quire/js/app.js:440"
+   "quire/js/app.js:460"
   ]
  },
  "Link to Previous": {
@@ -17520,7 +17517,7 @@
  },
  "Ln {0}": {
   "where": [
-   "quire/js/app.js:492"
+   "quire/js/app.js:512"
   ]
  },
  "Load all fonts on your computer...": {
@@ -17530,7 +17527,7 @@
  },
  "Load fonts on this computer": {
   "where": [
-   "start.js:255",
+   "start.js:257",
    "index.html:320"
   ]
  },
@@ -17963,12 +17960,12 @@
  },
  "Markdown (*.md)": {
   "where": [
-   "quire/js/app.js:833"
+   "quire/js/app.js:853"
   ]
  },
  "Markdown with pictures (*.zip)": {
   "where": [
-   "quire/js/app.js:834"
+   "quire/js/app.js:854"
   ]
  },
  "Marked {0} difference as tracked changes.": {
@@ -18382,7 +18379,7 @@
  "More Lines...": {
   "where": [
    "lectern/js/app.js:128",
-   "quire/js/app.js:418"
+   "quire/js/app.js:438"
   ]
  },
  "More items...": {
@@ -18733,7 +18730,7 @@
  },
  "New Document": {
   "where": [
-   "common/suite.js:626",
+   "common/suite.js:642",
    "quire/js/panes.js:81"
   ]
  },
@@ -18744,7 +18741,7 @@
  },
  "New Presentation": {
   "where": [
-   "common/suite.js:626",
+   "common/suite.js:642",
    "lectern/js/panes.js:544"
   ]
  },
@@ -18768,12 +18765,12 @@
  },
  "New Spreadsheet": {
   "where": [
-   "common/suite.js:626"
+   "common/suite.js:642"
   ]
  },
  "New Style": {
   "where": [
-   "quire/js/app.js:365",
+   "quire/js/app.js:385",
    "quire/js/dialogs.js:975",
    "quire/js/dialogs.js:983"
   ]
@@ -18954,7 +18951,7 @@
    "lectern/js/app.js:190",
    "ledger/js/app.js:611",
    "quire/js/app.js:214",
-   "quire/js/app.js:429"
+   "quire/js/app.js:449"
   ]
  },
  "No Borders": {
@@ -19008,7 +19005,7 @@
  "No Shadow": {
   "where": [
    "lectern/js/app.js:146",
-   "quire/js/app.js:427"
+   "quire/js/app.js:447"
   ]
  },
  "No Transition": {
@@ -19136,7 +19133,7 @@
  },
  "No unsaved versions are waiting.": {
   "where": [
-   "common/suite.js:812"
+   "common/suite.js:828"
   ]
  },
  "No-Width Non Break": {
@@ -19203,7 +19200,7 @@
  },
  "Norwegian (Bokmål)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Not": {
@@ -19346,7 +19343,7 @@
  "Nud&ge": {
   "where": [
    "lectern/js/app.js:158",
-   "quire/js/app.js:401"
+   "quire/js/app.js:421"
   ]
  },
  "Nudge": {
@@ -19531,7 +19528,7 @@
  },
  "OVR": {
   "where": [
-   "quire/js/app.js:444"
+   "quire/js/app.js:464"
   ]
  },
  "Oak": {
@@ -19579,12 +19576,12 @@
  },
  "Odd Page Footer": {
   "where": [
-   "quire/js/app.js:1030"
+   "quire/js/app.js:1050"
   ]
  },
  "Odd Page Header": {
   "where": [
-   "quire/js/app.js:1030"
+   "quire/js/app.js:1050"
   ]
  },
  "Odd page": {
@@ -19708,7 +19705,7 @@
  },
  "Open": {
   "where": [
-   "common/suite.js:121",
+   "common/suite.js:122",
    "lectern/js/commands.js:24",
    "lectern/js/panes.js:537",
    "ledger/js/panes.js:70"
@@ -19758,7 +19755,7 @@
  },
  "Open the unsaved version": {
   "where": [
-   "common/suite.js:805"
+   "common/suite.js:821"
   ]
  },
  "Open the version saved before the changes": {
@@ -19778,7 +19775,7 @@
  },
  "Opened a template. Save keeps its template format.": {
   "where": [
-   "quire/js/app.js:775"
+   "quire/js/app.js:795"
   ]
  },
  "Opening {0}...": {
@@ -19796,7 +19793,7 @@
  },
  "Opening...": {
   "where": [
-   "quire/js/app.js:796"
+   "quire/js/app.js:816"
   ]
  },
  "Opens .xlsx, .xlsm, .xltx, .csv, .txt and XML Spreadsheet 2003 files; drop a file anywhere on the window to open it. Saves .xlsx, .xlsm, .xltx, .csv, .txt, .htm, .xml and PDF.": {
@@ -20107,7 +20104,7 @@
  },
  "Overtype (double-click to toggle)": {
   "where": [
-   "quire/js/app.js:441"
+   "quire/js/app.js:461"
   ]
  },
  "Overtype mode": {
@@ -20155,7 +20152,7 @@
  "PDF (*.pdf)": {
   "where": [
    "ledger/js/app.js:260",
-   "quire/js/app.js:834"
+   "quire/js/app.js:854"
   ]
  },
  "PDF, one slide per page (*.pdf)": {
@@ -20181,7 +20178,7 @@
  "Page": {
   "where": [
    "ledger/js/dialogs3.js:426",
-   "quire/js/app.js:440",
+   "quire/js/app.js:460",
    "quire/js/dialogs.js:742",
    "quire/js/dialogs3.js:61"
   ]
@@ -20213,7 +20210,7 @@
  },
  "Page / pages": {
   "where": [
-   "quire/js/app.js:440"
+   "quire/js/app.js:460"
   ]
  },
  "Page Background": {
@@ -20380,8 +20377,8 @@
  "Page {0}": {
   "where": [
    "ledger/js/render.js:817",
-   "quire/js/app.js:482",
-   "quire/js/app.js:496"
+   "quire/js/app.js:502",
+   "quire/js/app.js:516"
   ]
  },
  "Pages": {
@@ -20425,12 +20422,12 @@
  },
  "Paper": {
   "where": [
-   "common/suite.js:308"
+   "common/suite.js:324"
   ]
  },
  "Paper 2016": {
   "where": [
-   "common/suite.js:309"
+   "common/suite.js:325"
   ]
  },
  "Paper bag": {
@@ -20450,7 +20447,7 @@
  },
  "Paper with tabs of commands, grouped by task, instead of menus and toolbars.": {
   "where": [
-   "common/suite.js:309"
+   "common/suite.js:325"
   ]
  },
  "Paper:": {
@@ -20881,7 +20878,7 @@
  "Picture Color": {
   "where": [
    "lectern/js/app.js:1329",
-   "quire/js/app.js:431"
+   "quire/js/app.js:451"
   ]
  },
  "Picture Styles": {
@@ -21006,7 +21003,7 @@
  },
  "Plain Text (*.txt)": {
   "where": [
-   "quire/js/app.js:833"
+   "quire/js/app.js:853"
   ]
  },
  "Plaque": {
@@ -21065,7 +21062,7 @@
  },
  "Polish": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Por&trait": {
@@ -21080,12 +21077,12 @@
  },
  "Portuguese (Brazil)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Portuguese (Portugal)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Position": {
@@ -21190,7 +21187,7 @@
  },
  "Presentations": {
   "where": [
-   "common/suite.js:121",
+   "common/suite.js:122",
    "start.js:130",
    "index.html:245"
   ]
@@ -21666,6 +21663,7 @@
  },
  "Quire": {
   "where": [
+   "quire/js/panes.js:73",
    "index.html:243",
    "index.html:278",
    "quire/index.html:13"
@@ -21685,13 +21683,8 @@
   "where": [
    "quire/js/app.js:27",
    "quire/js/app.js:43",
-   "quire/js/app.js:871",
+   "quire/js/app.js:891",
    "quire/js/autocorrect.js:299"
-  ]
- },
- "Quire Web Edition": {
-  "where": [
-   "quire/js/panes.js:73"
   ]
  },
  "Quire could not shrink this document by one page.": {
@@ -21806,7 +21799,7 @@
  },
  "REC": {
   "where": [
-   "quire/js/app.js:444"
+   "quire/js/app.js:464"
   ]
  },
  "Radar": {
@@ -21954,7 +21947,7 @@
  },
  "Recent &Files...": {
   "where": [
-   "common/suite.js:761"
+   "common/suite.js:777"
   ]
  },
  "Recent Files": {
@@ -21967,7 +21960,7 @@
  },
  "Recent Files are not available here.": {
   "where": [
-   "start.js:270"
+   "start.js:272"
   ]
  },
  "Recent Files are not available in this browser ({0}).": {
@@ -21977,8 +21970,8 @@
  },
  "Recent Files...": {
   "where": [
-   "common/suite.js:768",
-   "common/suite.js:792"
+   "common/suite.js:784",
+   "common/suite.js:808"
   ]
  },
  "Recently Used Fonts": {
@@ -22039,7 +22032,7 @@
  },
  "Record macro": {
   "where": [
-   "quire/js/app.js:441"
+   "quire/js/app.js:461"
   ]
  },
  "Recorded by": {
@@ -22054,7 +22047,7 @@
  },
  "Recovered the unsaved changes. Save the document to keep them.": {
   "where": [
-   "quire/js/app.js:1400"
+   "quire/js/app.js:1420"
   ]
  },
  "Recovered the unsaved changes. Save the presentation to keep them.": {
@@ -22100,12 +22093,12 @@
  },
  "Redo {0} Action": {
   "where": [
-   "quire/js/app.js:384"
+   "quire/js/app.js:404"
   ]
  },
  "Redo {0} Actions": {
   "where": [
-   "quire/js/app.js:384"
+   "quire/js/app.js:404"
   ]
  },
  "Reduce Hanging Indent": {
@@ -22245,7 +22238,7 @@
  },
  "Reload fonts on this computer": {
   "where": [
-   "start.js:255"
+   "start.js:257"
   ]
  },
  "Reload fonts on your computer...": {
@@ -24325,7 +24318,7 @@
  },
  "Rich Text Format (*.rtf)": {
   "where": [
-   "quire/js/app.js:832"
+   "quire/js/app.js:852"
   ]
  },
  "Rig&ht": {
@@ -24481,7 +24474,7 @@
  "Rotate or Fl&ip": {
   "where": [
    "lectern/js/app.js:160",
-   "quire/js/app.js:402"
+   "quire/js/app.js:422"
   ]
  },
  "Rotation: {0}°": {
@@ -24661,7 +24654,7 @@
  },
  "Russian": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "S&cale:": {
@@ -24732,7 +24725,7 @@
  },
  "Same as Previous": {
   "where": [
-   "quire/js/app.js:1363"
+   "quire/js/app.js:1383"
   ]
  },
  "Same as the whole &table": {
@@ -24760,7 +24753,7 @@
  },
  "Sample document": {
   "where": [
-   "quire/js/app.js:1350"
+   "quire/js/app.js:1370"
   ]
  },
  "Sample:": {
@@ -24798,7 +24791,7 @@
  },
  "Save .md &without them": {
   "where": [
-   "quire/js/app.js:886"
+   "quire/js/app.js:906"
   ]
  },
  "Save As": {
@@ -24843,7 +24836,7 @@
  },
  "Save as .&zip": {
   "where": [
-   "quire/js/app.js:886"
+   "quire/js/app.js:906"
   ]
  },
  "Save as P&DF...": {
@@ -24881,7 +24874,7 @@
  "Saved {0}": {
   "where": [
    "lectern/js/app.js:490",
-   "quire/js/app.js:913"
+   "quire/js/app.js:933"
   ]
  },
  "Saving {0}...": {
@@ -24893,8 +24886,8 @@
   "where": [
    "lectern/js/app.js:472",
    "ledger/js/app.js:284",
-   "quire/js/app.js:713",
-   "quire/js/app.js:866"
+   "quire/js/app.js:733",
+   "quire/js/app.js:886"
   ]
  },
  "Sc&enarios...": {
@@ -25107,8 +25100,8 @@
  },
  "Sec {0}": {
   "where": [
-   "quire/js/app.js:483",
-   "quire/js/app.js:497"
+   "quire/js/app.js:503",
+   "quire/js/app.js:517"
   ]
  },
  "Second level": {
@@ -25128,7 +25121,7 @@
  },
  "Section": {
   "where": [
-   "quire/js/app.js:440",
+   "quire/js/app.js:460",
    "quire/js/dialogs.js:742",
    "quire/js/dialogs2.js:173",
    "quire/js/find.js:249"
@@ -25156,7 +25149,7 @@
  },
  "Section Break (Next Page)": {
   "where": [
-   "quire/js/app.js:1364",
+   "quire/js/app.js:1384",
    "quire/js/render.js:370"
   ]
  },
@@ -25291,7 +25284,7 @@
  },
  "Select a drawing object first.": {
   "where": [
-   "quire/js/app.js:409"
+   "quire/js/app.js:429"
   ]
  },
  "Select a functio&n:": {
@@ -25405,7 +25398,7 @@
  },
  "Select text to highlight. Press Esc to stop.": {
   "where": [
-   "quire/js/app.js:1315"
+   "quire/js/app.js:1335"
   ]
  },
  "Select text, then use the Formatting toolbar or Format ▸ Font. Bullets and numbering live under Format ▸ Bullets and Numbering. Press Tab at the start of a bullet to demote it.": {
@@ -25440,7 +25433,7 @@
  },
  "Select the text to apply the formatting to.": {
   "where": [
-   "quire/js/app.js:1310"
+   "quire/js/app.js:1330"
   ]
  },
  "Select the text you want to store as AutoText first.": {
@@ -26168,7 +26161,7 @@
  },
  "Single File Web Page (*.htm)": {
   "where": [
-   "quire/js/app.js:832"
+   "quire/js/app.js:852"
   ]
  },
  "Single File Web Page (*.html)": {
@@ -26818,12 +26811,12 @@
  },
  "Spanish (Mexico)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Spanish (Spain)": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Sparkle Text": {
@@ -26897,22 +26890,22 @@
  },
  "Spelling and grammar are checked as you type. Click to stop.": {
   "where": [
-   "quire/js/app.js:461"
+   "quire/js/app.js:481"
   ]
  },
  "Spelling and grammar are no longer marked in this document.": {
   "where": [
-   "quire/js/app.js:456"
+   "quire/js/app.js:476"
   ]
  },
  "Spelling and grammar are not checked as you type. Click to check this document.": {
   "where": [
-   "quire/js/app.js:461"
+   "quire/js/app.js:481"
   ]
  },
  "Spelling and grammar status": {
   "where": [
-   "quire/js/app.js:442"
+   "quire/js/app.js:462"
   ]
  },
  "Spelling is checked as you type: misspelled words get a wavy red underline while you edit text.\nHold Shift and right-click a flagged word to see your browser's suggestions.": {
@@ -27027,7 +27020,7 @@
  },
  "Spreadsheets": {
   "where": [
-   "common/suite.js:121",
+   "common/suite.js:122",
    "start.js:130"
   ]
  },
@@ -27632,7 +27625,7 @@
  },
  "Swedish": {
   "where": [
-   "quire/js/app.js:506"
+   "quire/js/app.js:526"
   ]
  },
  "Switch Between Header and Footer": {
@@ -27642,7 +27635,7 @@
  },
  "Switch views with the buttons in the lower-left corner: Normal, Web Layout, Print Layout, Outline and Reading Layout.": {
   "where": [
-   "quire/js/app.js:1332"
+   "quire/js/app.js:1352"
   ]
  },
  "Symbol": {
@@ -27715,7 +27708,7 @@
  },
  "TRK": {
   "where": [
-   "quire/js/app.js:444"
+   "quire/js/app.js:464"
   ]
  },
  "Ta&b leader:": {
@@ -27945,7 +27938,7 @@
  },
  "Tabs, leaders and fields": {
   "where": [
-   "quire/js/app.js:1342"
+   "quire/js/app.js:1362"
   ]
  },
  "Tab|key": {
@@ -28231,7 +28224,7 @@
  },
  "Text W&rapping": {
   "where": [
-   "quire/js/app.js:1112"
+   "quire/js/app.js:1132"
   ]
  },
  "Text Width": {
@@ -28245,7 +28238,7 @@
   "where": [
    "quire/js/app.js:298",
    "quire/js/app.js:304",
-   "quire/js/app.js:404"
+   "quire/js/app.js:424"
   ]
  },
  "Text alignment": {
@@ -28355,8 +28348,8 @@
  },
  "That file is no longer available here. Open it again from your computer.": {
   "where": [
-   "common/suite.js:499",
-   "common/suite.js:580"
+   "common/suite.js:515",
+   "common/suite.js:596"
   ]
  },
  "The Find What text contains a Pattern Match expression which is not valid.": {
@@ -28367,17 +28360,17 @@
  },
  "The Font boxes also list the {0} fonts installed on this computer.": {
   "where": [
-   "start.js:256"
+   "start.js:258"
   ]
  },
  "The Font boxes list the frequently used Office fonts and the document's own.": {
   "where": [
-   "start.js:258"
+   "start.js:260"
   ]
  },
  "The Font boxes list the frequently used Office fonts and the document's own. They can also list the fonts installed on this computer, once you allow it.": {
   "where": [
-   "start.js:257"
+   "start.js:259"
   ]
  },
  "The Normal style cannot be deleted.": {
@@ -28388,7 +28381,7 @@
  "The PDF could not be created: {0}": {
   "where": [
    "lectern/js/app.js:580",
-   "quire/js/app.js:980",
+   "quire/js/app.js:1000",
    "quire/js/dialogs3.js:719"
   ]
  },
@@ -28444,7 +28437,7 @@
  },
  "The classic blue toolbars and menus.": {
   "where": [
-   "common/suite.js:307"
+   "common/suite.js:323"
   ]
  },
  "The comments from Document Properties": {
@@ -28587,7 +28580,7 @@
  "The file could not be saved: {0}": {
   "where": [
    "lectern/js/app.js:495",
-   "quire/js/app.js:918"
+   "quire/js/app.js:938"
   ]
  },
  "The file is saved to your browser's downloads.": {
@@ -28597,7 +28590,7 @@
  },
  "The fonts on this computer could not be listed: permission was not given.": {
   "where": [
-   "start.js:289"
+   "start.js:291"
   ]
  },
  "The fonts on this computer could not be listed: permission was not given. You can allow it in the site settings of your browser.": {
@@ -28608,7 +28601,7 @@
  "The fonts on this computer could not be listed: {0}": {
   "where": [
    "common/core.js:729",
-   "start.js:289"
+   "start.js:291"
   ]
  },
  "The formula contains an error.": {
@@ -28644,7 +28637,7 @@
  },
  "The list is empty.": {
   "where": [
-   "start.js:271"
+   "start.js:273"
   ]
  },
  "The list range is not valid.": {
@@ -28739,7 +28732,7 @@
  },
  "The password is incorrect. {0} cannot open the document.": {
   "where": [
-   "quire/js/app.js:800"
+   "quire/js/app.js:820"
   ]
  },
  "The password to open was removed; the next save is not encrypted.": {
@@ -29169,7 +29162,7 @@
  },
  "This browser blocked the page image.": {
   "where": [
-   "quire/js/app.js:971"
+   "quire/js/app.js:991"
   ]
  },
  "This chart will be saved as ordinary shapes, because it was edited here.": {
@@ -29189,7 +29182,7 @@
  },
  "This document has pictures that a .md file cannot hold. Save it as Markdown with pictures (.zip), which holds the .md file and its pictures?": {
   "where": [
-   "quire/js/app.js:886"
+   "quire/js/app.js:906"
   ]
  },
  "This document is already one page long.": {
@@ -29199,7 +29192,7 @@
  },
  "This document is encrypted in a way {0} cannot read.": {
   "where": [
-   "quire/js/app.js:800"
+   "quire/js/app.js:820"
   ]
  },
  "This document is protected from unintentional editing.": {
@@ -29209,27 +29202,27 @@
  },
  "This document is protected: comments only": {
   "where": [
-   "quire/js/app.js:779"
+   "quire/js/app.js:799"
   ]
  },
  "This document is protected: filling in forms": {
   "where": [
-   "quire/js/app.js:779"
+   "quire/js/app.js:799"
   ]
  },
  "This document is protected: no changes (read only)": {
   "where": [
-   "quire/js/app.js:779"
+   "quire/js/app.js:799"
   ]
  },
  "This document is protected: restricted": {
   "where": [
-   "quire/js/app.js:779"
+   "quire/js/app.js:799"
   ]
  },
  "This document is protected: tracked changes": {
   "where": [
-   "quire/js/app.js:779"
+   "quire/js/app.js:799"
   ]
  },
  "This document is read-only.": {
@@ -29375,9 +29368,9 @@
    "quire/js/dialogs.js:413"
   ]
  },
- "This version is over two months old.": {
+ "This version is {0} months old.": {
   "where": [
-   "index.html:250"
+   "start.js:248"
   ]
  },
  "This video or sound will be saved as a picture and will no longer play, because its picture was replaced.": {
@@ -29815,7 +29808,7 @@
  },
  "Track Changes (double-click to toggle)": {
   "where": [
-   "quire/js/app.js:441"
+   "quire/js/app.js:461"
   ]
  },
  "Track Changes is off.": {
@@ -29830,7 +29823,7 @@
  },
  "Track changes": {
   "where": [
-   "quire/js/app.js:1336",
+   "quire/js/app.js:1356",
    "quire/js/panes.js:107"
   ]
  },
@@ -30153,12 +30146,12 @@
  },
  "Undo {0} Action": {
   "where": [
-   "quire/js/app.js:384"
+   "quire/js/app.js:404"
   ]
  },
  "Undo {0} Actions": {
   "where": [
-   "quire/js/app.js:384"
+   "quire/js/app.js:404"
   ]
  },
  "Unformatted Text": {
@@ -30277,17 +30270,17 @@
  },
  "Unsaved changes are kept for each document in Recent Files, in the Start Center: open them from there, or discard them.": {
   "where": [
-   "common/suite.js:792"
+   "common/suite.js:808"
   ]
  },
  "Unsaved changes from {0}": {
   "where": [
-   "common/suite.js:801"
+   "common/suite.js:817"
   ]
  },
  "Unsaved changes from {0} (never saved)": {
   "where": [
-   "common/suite.js:801"
+   "common/suite.js:817"
   ]
  },
  "Untitled": {
@@ -30708,7 +30701,7 @@
  },
  "Vertical position": {
   "where": [
-   "quire/js/app.js:440"
+   "quire/js/app.js:460"
   ]
  },
  "Vertical ruler (Print view only)": {
@@ -30930,8 +30923,8 @@
  },
  "Welcome to Quire": {
   "where": [
-   "quire/js/app.js:1325",
-   "quire/js/app.js:1327"
+   "quire/js/app.js:1345",
+   "quire/js/app.js:1347"
   ]
  },
  "Welcome to VibeOffice.work.": {
@@ -31204,23 +31197,23 @@
  },
  "Word Document (*.docx)": {
   "where": [
-   "quire/js/app.js:830",
+   "quire/js/app.js:850",
    "quire/js/dialogs3.js:599"
   ]
  },
  "Word Macro-Enabled Document (*.docm)": {
   "where": [
-   "quire/js/app.js:830"
+   "quire/js/app.js:850"
   ]
  },
  "Word Macro-Enabled Template (*.dotm)": {
   "where": [
-   "quire/js/app.js:831"
+   "quire/js/app.js:851"
   ]
  },
  "Word Template (*.dotx)": {
   "where": [
-   "quire/js/app.js:831",
+   "quire/js/app.js:851",
    "quire/js/dialogs3.js:599"
   ]
  },
@@ -31552,7 +31545,7 @@
  },
  "[object]": {
   "where": [
-   "quire/js/app.js:1364",
+   "quire/js/app.js:1384",
    "quire/js/panes.js:201",
    "quire/js/review.js:38"
   ]
@@ -31998,12 +31991,12 @@
  },
  "{0} (unsaved changes)": {
   "where": [
-   "common/suite.js:762"
+   "common/suite.js:778"
   ]
  },
  "{0} (unsaved)": {
   "where": [
-   "common/suite.js:779"
+   "common/suite.js:795"
   ]
  },
  "{0} ({1} seconds)": {
@@ -32023,7 +32016,7 @@
  },
  "{0} -Section {1}-": {
   "where": [
-   "quire/js/app.js:1037"
+   "quire/js/app.js:1057"
   ]
  },
  "{0} Column": {
@@ -32069,11 +32062,6 @@
    "lectern/js/panes.js:140"
   ]
  },
- "{0} Web Edition": {
-  "where": [
-   "common/ui.js:536"
-  ]
- },
  "{0} What would you like to do?": {
   "where": [
    "common/scout/assistant.js:113"
@@ -32086,7 +32074,7 @@
  },
  "{0} can't open {1}. {2}": {
   "where": [
-   "quire/js/app.js:785"
+   "quire/js/app.js:805"
   ]
  },
  "{0} can't read {1}. {2}\nMake sure the file is a PowerPoint 2007 or later presentation (.pptx).": {
@@ -32121,12 +32109,12 @@
  },
  "{0} files": {
   "where": [
-   "start.js:268"
+   "start.js:270"
   ]
  },
  "{0} files, {1} with unsaved changes": {
   "where": [
-   "start.js:268"
+   "start.js:270"
   ]
  },
  "{0} found a problem with content in {1} and repaired the presentation.": {
@@ -32181,7 +32169,7 @@
  },
  "{0} kept the unsaved changes of these documents. Open the ones you want to keep and save them; discard the rest.": {
   "where": [
-   "common/suite.js:816"
+   "common/suite.js:832"
   ]
  },
  "{0} key sentence highlighted. Undo to restore.": {
@@ -32263,7 +32251,7 @@
  },
  "{0} pictures are not in the .md file and show as a box. Open a .zip holding the file and its pictures to see them.": {
   "where": [
-   "quire/js/app.js:778"
+   "quire/js/app.js:798"
   ]
  },
  "{0} pt": {
@@ -32271,7 +32259,7 @@
    "lectern/js/app.js:128",
    "lectern/js/app.js:203",
    "lectern/js/app.js:1496",
-   "quire/js/app.js:418"
+   "quire/js/app.js:438"
   ]
  },
  "{0} seconds": {
@@ -32306,17 +32294,17 @@
  },
  "{0} — open in another window": {
   "where": [
-   "common/suite.js:803"
+   "common/suite.js:819"
   ]
  },
  "{0} — open in this window": {
   "where": [
-   "common/suite.js:803"
+   "common/suite.js:819"
   ]
  },
  "{0} — unsaved changes from {1}": {
   "where": [
-   "common/suite.js:775"
+   "common/suite.js:791"
   ]
  },
  "{0}% normal size": {
@@ -32417,7 +32405,7 @@
  },
  "“{0}” is over 50 MB, so its changes aren't kept for recovery after a crash. Save it to keep them.": {
   "where": [
-   "common/suite.js:711"
+   "common/suite.js:727"
   ]
  },
  "“{0}” was changed by another program after you opened it. Replace it with this version, or save this version under another name?": {

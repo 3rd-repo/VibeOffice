@@ -48,7 +48,7 @@ for (const [lang, font, pitch, size, tab, charset, row, script, tag] of [
   assert.ok(p['ppt/theme/theme1.xml'].includes('script="' + script + '" typeface="' + font + '"'));
 });
 
-test('Quire, Japanese: A4, Office\'s margins, an 18pt line grid, Century with ＭＳ 明朝 10.5pt, punctuation compressed', async () => {
+test('Quire, Japanese: A4, Office\'s margins, an 18pt line grid, Century with ＭＳ 明朝 10.5pt, headings in ＭＳ ゴシック, punctuation compressed', async () => {
   const x = await quire('ja');
   const doc = x['word/document.xml'], st = x['word/styles.xml'], set = x['word/settings.xml'];
   assert.match(doc, /<w:pgSz w:w="11906" w:h="16838"/);
@@ -65,6 +65,12 @@ test('Quire, Japanese: A4, Office\'s margins, an 18pt line grid, Century with �
   assert.match(set, /<w:characterSpacingControl w:val="compressPunctuation"\/>/);
   assert.match(set, /<w:themeFontLang w:val="en-US" w:eastAsia="ja-JP"\/>/);
   assert.match(x['word/theme/theme1.xml'], /<a:minorFont>.*<a:font script="Jpan" typeface="ＭＳ 明朝"\/>.*<\/a:minorFont>/s);
+  const heading = st.match(/<w:style [^>]*w:styleId="Heading1".*?<\/w:style>/s)[0];
+  assert.match(heading, /<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="ＭＳ ゴシック"/, 'headings in the theme\'s heading font, as Japanese Word\'s');
+  const plain = st.match(/<w:style [^>]*w:styleId="PlainText".*?<\/w:style>/s);
+  if (plain) assert.doesNotMatch(plain[0], /w:eastAsia=/, 'Courier New beside the body\'s ＭＳ 明朝, inherited');
+  const zh = (await quire('zh-CN'))['word/styles.xml'].match(/<w:style [^>]*w:styleId="Heading1".*?<\/w:style>/s)[0];
+  assert.doesNotMatch(zh, /w:eastAsia=/, 'Chinese headings and text share 宋体');
 });
 
 test('Quire, French and German: A4, 2.5 cm margins (German 2 cm at the bottom), the text\'s language', async () => {
@@ -82,6 +88,41 @@ test('Quire, English: the app\'s own Letter page, no grid', async () => {
   assert.doesNotMatch(x['word/document.xml'], /<w:docGrid w:type/);
   assert.match(x['word/settings.xml'], /<w:themeFontLang w:val="en-US"\/>/);
   assert.match(x['word/settings.xml'], /<w:characterSpacingControl w:val="doNotCompress"\/>/);
+});
+
+/** what Quire's Font box and status bar show in a new document with the UI in lang: blank, after Latin text,
+ *  after East Asian text; with ja, also the fonts of the text after choosing ＭＳ ゴシック, then Arial */
+async function shown(lang) {
+  const page = await openPage('quire', { lang, persistence: false, automated: true });
+  try {
+    return await page.evaluate(`(async () => {
+      for (let i = 0; i < 100 && !(L.app && L.app.sb && L.ed && L.ed.sel); i++) await new Promise((r) => setTimeout(r, 100));
+      const wait = () => new Promise((r) => setTimeout(r, 250)), box = document.getElementById('tb-font');
+      /* the box's own refresh: ui.refresh waits for a frame, which a tab in the background doesn't get */
+      const st = async () => { box.parentElement._refresh(); L.app.updateStatus(); await wait(); return [box.value, L.app.sb.lang.textContent]; };
+      const fonts = () => L.D.doc.main.blocks[0].runs.filter((r) => r.t === 'text').map((r) => [r.rPr.font, r.rPr.fontEA]);
+      const out = { blank: await st() };
+      L.ed.typeText('abc'); out.latin = await st();
+      L.ed.typeText('日本'); out.ea = await st();
+      if (${JSON.stringify(lang)} === 'ja') {
+        L.ui.exec('selectAll'); L.app.setFont('ＭＳ ゴシック'); out.gothic = fonts();
+        L.app.setFont('Arial'); out.arial = fonts();
+      }
+      return out;
+    })()`);
+  } finally { await page.close(); }
+}
+
+test('Quire, Japanese, Korean, Chinese: the Font box and status bar show the East Asian font and language, as that Word does with its keyboard', async () => {
+  const ja = await shown('ja');
+  assert.deepEqual([ja.blank, ja.latin, ja.ea], [['ＭＳ 明朝', '日本語'], ['Century', '英語 (米国)'], ['ＭＳ 明朝', '日本語']],
+    'blank: the UI\'s language stands in for the keyboard; then the text before the insertion point decides');
+  assert.deepEqual(ja.gothic, [['ＭＳ ゴシック', 'ＭＳ ゴシック']], 'an East Asian font is for all the text');
+  assert.deepEqual(ja.arial, [['Arial', 'ＭＳ ゴシック']], 'a Western font for the Latin text only');
+  assert.deepEqual((await shown('zh-Hant')).blank, ['新細明體', 'Chinese (Trad.)'], 'zh-HK has a name');
+  const en = await shown('en');
+  assert.deepEqual([en.blank, en.latin, en.ea], [['Times New Roman', 'English (U.S.)'], ['Times New Roman', 'English (U.S.)'], ['Times New Roman', 'English (U.S.)']],
+    'English: no East Asian font or language to show');
 });
 
 test('Ledger, Japanese and Korean: their Excel\'s default font on A4', async () => {

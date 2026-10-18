@@ -78,7 +78,8 @@
     kind: native ? 'desktop' : 'web',
     platform: native ? native.platform : 'web',
     version: native ? native.version : 0,
-    /** whether this edition looks for its updates (updater/current.json): not the Mac App Store's, which the store updates */
+    /** whether this edition looks for its updates (updater/current.json): not the Mac App Store's, which the store
+     *  updates and which has no network */
     updates: !native || native.edition !== 'appstore',
     /** open a web or mail address in the system's browser: a new tab on the web, the default browser in the
      *  desktop app (which also sends every link that leaves the app there) */
@@ -175,6 +176,14 @@
     },
   };
 
+  /** an app's name with this edition's, for Help ▸ About and Getting Started, in English in every language: Quire Web Edition, Quire
+   *  Windows Edition, Quire macOS Edition (DMG) or (App Store), Quire Linux Edition */
+  VO.editionName = (app) => {
+    if (!native) return app + ' Web Edition';
+    const system = { windows: 'Windows', macos: 'macOS', linux: 'Linux' }[native.platform] || native.platform;
+    return `${app} ${system} Edition` + (native.platform === 'macos' ? (native.edition === 'appstore' ? ' (App Store)' : ' (DMG)') : '');
+  };
+
   /* ------------------------------------------------------------ updates */
   /** updater/current.json on the published site says, per policy and platform, the version an edition must
    *  be at least: older than "show-update-dialog" asks with a dialog, older than "show-update-button" shows an
@@ -183,16 +192,23 @@
   VO.UPDATES = (native && native.updates) || 'https://vibeoffice.work/updater/current.json';
   /** updater/whatsnew.json: { "<version>": "<plain text>" }, one list for every platform */
   VO.WHATSNEW = (native && native.whatsnew) || 'https://vibeoffice.work/updater/whatsnew.json';
-  /** the page the Update button opens (in the system's browser): it gets this edition's version and platform */
+  /** the page the Update button opens (in the system's browser): it gets this edition's version and platform, the
+   *  Mac App Store's as macos_store (the page then sends people to the App Store) */
   VO.updateUrl = () => 'https://vibeoffice.work/updater/?from_version=' + encodeURIComponent(VO.VERSION)
-    + '&current_platform=' + encodeURIComponent(VO.host.platform);
-  /** whether a version (by default this one) is over two months old on `now`, by its date: the Start Center then
-   *  offers to check for updates, wherever the version runs (the site, the installed PWA's cache, the desktop app)
-   *  and whether or not current.json can be read. A dev build never is. */
-  VO.isOutdated = (v = VO.VERSION, now = new Date()) => {
+    + '&current_platform=' + encodeURIComponent(native && native.edition === 'appstore' ? 'macos_store' : VO.host.platform);
+  /** how many whole calendar months a version (by default this one) is old on `now`, by its date; null for a dev build */
+  VO.monthsOld = (v = VO.VERSION, now = new Date()) => {
     const d = versionDay(v);
-    return d !== null && now >= new Date(Math.floor(d / 10000), Math.floor(d / 100) % 100 + 1, d % 100 || 1);
+    if (d === null) return null;
+    const y = Math.floor(d / 10000), m = Math.floor(d / 100) % 100 - 1, day = d % 100 || 1;
+    let n = (now.getFullYear() - y) * 12 + now.getMonth() - m;
+    while (n > 0 && now < new Date(y, m + n, day)) n--;   // a 31st's mark in a shorter month runs on: Feb 31 is Mar 3
+    return n;
   };
+  /** whether a version (by default this one) is two months old or more on `now`: the Start Center then offers to
+   *  check for updates, wherever the version runs (the site, the installed PWA's cache, the desktop app, the Mac App
+   *  Store's too) and whether or not current.json can be read. A dev build never is. */
+  VO.isOutdated = (v = VO.VERSION, now = new Date()) => VO.monthsOld(v, now) >= 2;
   /** { ask: 'dialog', 'button' or null (up to date), news: [{ version, text }] }: when an update is due, the
    *  whatsnew.json entries newer than this version, newest first (none if that file cannot be read).
    *  Throws when current.json cannot be read (offline). */

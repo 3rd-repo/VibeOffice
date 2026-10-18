@@ -224,9 +224,10 @@ VO.i18n.whenReady(function () {
   $('cachingreload').addEventListener('click', () => location.reload());
 
   /* Updates (desktop app): an Update button, or once a day a dialog, when updater/current.json asks for it. Everywhere
-     (the site, the installed PWA, the desktop app), a version over two months old shows Check for updates instead,
-     even when current.json cannot be read; it waits up to 5 s for the check, so the two buttons don't swap places.
-     Both open the updater page. The Mac App Store edition is updated by the store (VO.host.updates) */
+     (the site, the installed PWA, the desktop app), a version two months old or more shows Check for updates instead,
+     with its age, even when current.json cannot be read; it waits up to 5 s for the check, so the two buttons don't
+     swap places. Both open the updater page. The Mac App Store edition never reads current.json (VO.host.updates: no
+     network, the store updates it), but its Check for updates opens the page for the App Store */
   const download = () => VO.host.openUrl(VO.updateUrl()).catch((e) => status(String(e)));
   $('update').addEventListener('click', download);
   $('updatecheck').addEventListener('click', download);
@@ -243,7 +244,8 @@ VO.i18n.whenReady(function () {
       $('updatedlg').showModal();
     }
   }).catch((e) => console.info('update check:', e.message)) : null;   // offline: nothing to show
-  if (VO.host.updates && VO.isOutdated()) {
+  if (VO.isOutdated()) {
+    $('updateage').textContent = VO.t('This version is {0} months old.', VO.monthsOld());
     Promise.race([checked, new Promise((r) => setTimeout(r, 5000))]).then(() => { $('updatecheck').hidden = !$('update').hidden; });
   }
 

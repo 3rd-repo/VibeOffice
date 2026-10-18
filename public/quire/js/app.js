@@ -273,7 +273,7 @@
       preview: (v) => { const s = A.styleOptions().find((x) => x.label === v); return s ? s.css : ''; },
       value: () => (E.sel ? styleState() : ''), onChange: (v) => A.applyStyleByName(v),
     }, o)),
-    font: (o) => ui.combo(Object.assign({ id: 'tb-font', width: 136, tip: 'Font', options: () => A.fontOptions(), preview: (v) => `font-family:${L.fontStack(v)};font-size:13px`, note: L.fontNote, listCls: 'fonts', value: () => { const v = E.uniformRun('font'); return v || ''; }, onChange: (v) => A.setFont(v) }, o)),
+    font: (o) => ui.combo(Object.assign({ id: 'tb-font', width: 136, tip: 'Font', options: () => A.fontOptions(), preview: (v) => `font-family:${L.fontStack(v)};font-size:13px`, note: L.fontNote, listCls: 'fonts', value: () => (A.typingEA() && E.uniformRun('fontEA')) || E.uniformRun('font') || '', onChange: (v) => A.setFont(v) }, o)),
     size: (o) => ui.combo(Object.assign({ id: 'tb-size', width: 48, tip: 'Font Size', options: () => L.SIZE_LIST, value: () => { const v = E.uniformRun('sz'); return v ? String(L.round(v, 1)) : ''; }, onChange: (v) => A.setFontSize(parseFloat(v)) }, o)),
     zoom: (o) => ui.combo(Object.assign({ id: 'tb-zoom', width: 74, tip: 'Zoom', options: () => ['500%', '200%', '150%', '100%', '75%', '50%', '25%', '10%'].concat([L.N('Page Width'), L.N('Text Width'), L.N('Whole Page'), L.N('Two Pages')].map((v) => ({ value: v, label: L.t(v) }))), value: () => Math.round(LY.zoom * 100) + '%', onChange: (v) => A.zoomTo(v) }, o)),
   };
@@ -325,7 +325,27 @@
     for (const k in doc().styles) { const r = doc().styles[k].rPr; if (r && r.font) docFonts.push(r.font); }
     return L.fontSections({ major: doc().theme?.major, minor: doc().theme?.minor, extra: docFonts });
   };
-  A.setFont = (v) => { if (!v) return; L.addRecentFont(v); E.formatRun({ font: v }, L.N('Font')); E.refocus(); };
+  /* as in Word, an East Asian font is for all the text (its letters too), a Western font for the Latin text only */
+  A.setFont = (v) => { if (!v) return; L.addRecentFont(v); E.formatRun(L.fontIsEA(v) ? { font: v, fontEA: v } : { font: v }, L.N('Font')); E.refocus(); };
+  /** whether East Asian text is typed here, as Word tells by an East Asian keyboard: the selection has East Asian
+      characters, or the character before the insertion point is one (after it, at a paragraph's start); with no text
+      there, the UI's language stands in for the keyboard, which the page can't see (Japanese, Korean, Chinese: the
+      languages whose new documents have an East Asian language, common/locales.js). The Font box and the status bar
+      then show the East Asian font and language. */
+  A.typingEA = function () {
+    if (!E.sel) return false;
+    let seen = false;
+    const look = (t) => { t = t.replace(/[\s\ufffc]/g, ''); if (t) seen = true; return L.hasEAText(t); };
+    if (E.collapsed()) {
+      const { p, o } = E.sel.f;
+      if (look(D.ptext(p, Math.max(0, o - 1), o) || D.ptext(p, o, o + 1))) return true;
+    } else {
+      const [a, b] = E.range();
+      for (const p of D.parasBetween(doc(), a.p, b.p)) if (look(D.ptext(p, p === a.p ? a.o : 0, p === b.p ? b.o : undefined))) return true;
+    }
+    const loc = !seen && L.locale && L.locale.get();
+    return !!(loc && loc.rPr && loc.rPr.langEA);
+  };
   A.setFontSize = (v) => { if (!(v > 0)) return; v = L.clamp(Math.round(v * 2) / 2, 1, 1638); E.formatRun({ sz: v }, 'Font Size'); E.refocus(); };
   function styleState() {
     const d = doc();
@@ -498,12 +518,12 @@
       A.sb.pages.textContent = LY.view === 'print' ? '' : '';
       A.sb.at.textContent = ''; A.sb.ln.textContent = ''; A.sb.col.textContent = L.t('Col {0}', sel.f.o + 1);
     }
-    const r = E.curRun();
-    const lang = r.lang || (d.defaults.rPr && d.defaults.rPr.lang) || 'en-US';
+    const r = E.curRun(), def = d.defaults.rPr || {};
+    const lang = (A.typingEA() && (r.langEA || def.langEA)) || r.lang || def.lang || 'en-US';
     A.sb.lang.textContent = A.langName(lang);
   }, 60);
   /* [code, name]: the names are UI text, shown through L.t; A.langName gives the name as shown */
-  A.LANGS = [['en-US', L.N('English (U.S.)')], ['en-GB', L.N('English (U.K.)')], ['en-AU', L.N('English (Australia)')], ['en-CA', L.N('English (Canada)')], ['fr-FR', L.N('French (France)')], ['fr-CA', L.N('French (Canada)')], ['de-DE', L.N('German (Germany)')], ['es-ES', L.N('Spanish (Spain)')], ['es-MX', L.N('Spanish (Mexico)')], ['it-IT', L.N('Italian (Italy)')], ['pt-BR', L.N('Portuguese (Brazil)')], ['pt-PT', L.N('Portuguese (Portugal)')], ['nl-NL', L.N('Dutch (Netherlands)')], ['sv-SE', L.N('Swedish')], ['da-DK', L.N('Danish')], ['nb-NO', L.N('Norwegian (Bokmål)')], ['fi-FI', L.N('Finnish')], ['pl-PL', L.N('Polish')], ['ru-RU', L.N('Russian')], ['ja-JP', L.N('Japanese')], ['zh-CN', L.N('Chinese (PRC)')], ['ko-KR', L.N('Korean')]];
+  A.LANGS = [['en-US', L.N('English (U.S.)')], ['en-GB', L.N('English (U.K.)')], ['en-AU', L.N('English (Australia)')], ['en-CA', L.N('English (Canada)')], ['fr-FR', L.N('French (France)')], ['fr-CA', L.N('French (Canada)')], ['de-DE', L.N('German (Germany)')], ['es-ES', L.N('Spanish (Spain)')], ['es-MX', L.N('Spanish (Mexico)')], ['it-IT', L.N('Italian (Italy)')], ['pt-BR', L.N('Portuguese (Brazil)')], ['pt-PT', L.N('Portuguese (Portugal)')], ['nl-NL', L.N('Dutch (Netherlands)')], ['sv-SE', L.N('Swedish')], ['da-DK', L.N('Danish')], ['nb-NO', L.N('Norwegian (Bokmål)')], ['fi-FI', L.N('Finnish')], ['pl-PL', L.N('Polish')], ['ru-RU', L.N('Russian')], ['ja-JP', L.N('Japanese')], ['zh-CN', L.N('Chinese (Simp.)')], ['zh-HK', L.N('Chinese (Trad.)')], ['ko-KR', L.N('Korean')]];
   A.langName = (code) => { const hit = A.LANGS.find((x) => x[0].toLowerCase() === String(code).toLowerCase()); return hit ? L.t(hit[1]) : code; };
   A.lineCol = function (pos, pg) {
     const frag = LY.fragFor(pos.p, pos.o);

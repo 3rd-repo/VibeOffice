@@ -9,7 +9,7 @@
 <style>
   /* The update page (the desktop app's Update and Check for updates buttons open it), in English: the night before
      daybreak, a new version as the new day. The sky is a picture, so its colours are its own, in every look (as the
-     icons' are). */
+     icons' are). Each system its own steps (updater.js, from the app's current_platform); without one, all of them. */
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body { margin: 0; min-height: 100%; display: grid; place-items: center; padding: 32px 16px 120px; overflow-x: hidden;
@@ -51,6 +51,7 @@
   .how b { display: block; margin-bottom: 2px; color: #ffd9a8; }
   .note { margin: 14px 0 0; color: #aab2d8; font-size: 13px; }
   .note a { color: #ffd9a8; }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -71,14 +72,21 @@
 <main>
   <img src="../icons/icon.svg" alt="">
   <h1>A new version of VibeOffice is here</h1>
-  <p class="lead">Every version of the desktop app is published on GitHub. Download the newest one there.</p>
-  <a class="go" href="https://github.com/tcchen2026/VibeOffice/releases/latest">Get the latest version on GitHub</a>
-  <ul class="how">
-    <li><b translate="no">Windows</b>Close VibeOffice, then download VibeOffice-Windows-x64.zip, open it, run VibeOfficeSetup.exe and choose Update.</li>
-    <li><b translate="no">macOS</b>Quit VibeOffice, then download VibeOffice-macOS.dmg, open it and drag VibeOffice into Applications, replacing the one there.</li>
+  <p class="lead" data-for="windows macos all">Every version of the desktop app is published on GitHub. Download the newest one there.</p>
+  <a class="go" data-for="windows macos all" href="https://github.com/tcchen2026/VibeOffice/releases/latest">Get the latest version on GitHub</a>
+  <p class="lead" data-for="linux" hidden>VibeOffice for Linux has no download yet: build the new version from its source on GitHub, or use VibeOffice in your browser, which is always the newest.</p>
+  <a class="go" data-for="linux" hidden href="https://github.com/tcchen2026/VibeOffice">Get the source on GitHub</a>
+  <p class="lead" data-for="web" hidden>VibeOffice in your browser updates itself: open it again, or reload the page, to get the newest version.</p>
+  <a class="go" data-for="web" hidden href="../">Open VibeOffice</a>
+  <p class="lead" data-for="macos_store" hidden>VibeOffice from the Mac App Store is updated by the App Store: open the App Store, choose Updates, then Update next to VibeOffice. If it isn't listed there, you have the newest version.</p>
+  <ul class="how" data-for="windows macos all">
+    <li data-for="windows all"><b translate="no">Windows</b>Close VibeOffice, then download VibeOffice-Windows-x64.zip, open it, run VibeOfficeSetup.exe and choose Update.</li>
+    <li data-for="macos all"><b translate="no">macOS</b>Quit VibeOffice, then download VibeOffice-macOS.dmg, open it and drag VibeOffice into Applications, replacing the one there.</li>
+    <li data-for="all"><b translate="no">Linux</b>No download yet: build the new version from its source on GitHub, or use VibeOffice in your browser.</li>
   </ul>
-  <p class="note">Installed from the Mac App Store? The App Store updates it for you.</p>
-  <p class="note">Using VibeOffice in your browser? It updates itself when you reload the page. <a href="../">Open VibeOffice</a></p>
+  <p class="note" data-for="macos all">Installed from the Mac App Store? The App Store updates it for you.</p>
+  <p class="note" data-for="windows macos linux all">Using VibeOffice in your browser? It updates itself when you reload the page. <a href="../">Open VibeOffice</a></p>
 </main>
+<script src="updater.js"></script>
 </body>
 </html>

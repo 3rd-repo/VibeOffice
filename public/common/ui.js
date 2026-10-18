@@ -533,7 +533,7 @@
   ui.about = function (o) {
     const body = h('div', { class: 'col about' },
       h('div', { class: 'about-head' }, h('span', { html: L.icons.app ? L.icons.app(48) : '' }),
-        h('div', null, h('div', { class: 'about-name', text: t('{0} Web Edition', o.name) }), h('div', { text: t('Version {0}', L.VERSION) }))),
+        h('div', null, h('div', { class: 'about-name', translate: 'no', text: root.VO ? root.VO.editionName(o.name) : o.name }), h('div', { text: t('Version {0}', L.VERSION) }))),
       ...o.text.map((t) => h('p', { text: t })),
       h('p', null, ...t('Made possible by open source software: {0}.').split('{0}').flatMap((part, i) => (i ? [h('a', { href: root.VO ? root.VO.LICENSES : '../oss-licenses.html', target: '_blank', rel: 'noopener',
         class: 'about-oss', text: 'Open source licenses', onclick: (e) => { if (root.VO) { e.preventDefault(); root.VO.showLicenses(); } } }), part] : [part]))),
