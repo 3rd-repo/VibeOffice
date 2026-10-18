@@ -2,7 +2,7 @@
 # signed with Developer ID, notarized and published in the version's GitHub release (the same tag as Windows', e.g.
 # v2026.10.11-d2134d); with app_store ticked, also VibeOffice-macOS-AppStore.pkg uploaded to App Store Connect
 # (TestFlight, then review). Every run also opens the app with a few files and keeps screenshots (artifact
-# VibeOffice-macOS-smoke).
+# VibeOffice-macOS-smoke), and the DMG's window when there is one.
 # The signing material lives in the "release" environment's secrets (docs/desktop.md lists them). Without them the
 # app is signed ad hoc and the run makes no release: an artifact with the app and the screenshots only.
 # Run by hand only: Actions ▸ macOS ▸ Run workflow. Running it again on the same commit replaces the release's DMG.
@@ -103,6 +103,16 @@ jobs:
           cp tests/quire/lines/linecases.docx "$out/files/"
           printf 'Item,Cost\nRent,900\nFood,250\n' > "$out/files/Budget.csv"
           printf '# Notes\n\nHello from the smoke run.\n' > "$out/files/Notes.md"
+          # the DMG's window as Finder shows it once opened (a DMG only with a Developer ID)
+          dmg=desktop/target/dist/VibeOffice-macOS.dmg
+          if [ -f "$dmg" ]; then
+            vol=$(hdiutil attach "$dmg" | sed -n 's|.*\(/Volumes/.*\)$|\1|p' | tail -1)
+            open "$vol"
+            sleep 8
+            screencapture -x "$out/0-dmg.png"
+            osascript -e 'tell application "Finder" to close every window' || true
+            hdiutil detach "$vol" || hdiutil detach -force "$vol" || true
+          fi
           # VO_NET_PROBE: before the Start Center, its window tries other sites and prints what it reached (net.rs)
           open --env VO_NET_PROBE=1 --stderr "$out/stderr.log" -a "$app"
           sleep 20

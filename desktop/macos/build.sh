@@ -3,7 +3,8 @@
 # x86_64-apple-darwin): one universal binary, bundled as VibeOffice.app twice over, as the identities in the
 # keychain allow (docs/desktop.md, macOS):
 #   - none: the app signed ad hoc, for trying it on this Mac and the smoke run in CI;
-#   - Developer ID Application: VibeOffice-macOS.dmg, signed, notarized and stapled
+#   - Developer ID Application: VibeOffice-macOS.dmg, signed, notarized and stapled; its window laid out by dmgbuild
+#     (python3, 3.9 or later; macos/dmg-requirements.txt, fetched into target/dmgbuild)
 #     (needs ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_PATH, an App Store Connect API key, for notarytool);
 #   - Apple Distribution and Mac Installer Distribution: VibeOffice-macOS-AppStore.pkg for App Store Connect
 #     (needs MACOS_PROVISION_PROFILE, the profile's path; APPLE_TEAM_ID if the identity's name doesn't carry it).
@@ -61,17 +62,19 @@ else
   codesign --force --timestamp --options runtime --entitlements macos/direct.entitlements --sign "$DEVELOPER_ID" "$APP"
   codesign --verify --strict --verbose=2 "$APP"
   DMG="$DIST/VibeOffice-macOS.dmg"   # one name for every version, as the Windows zip
-  stage=$(mktemp -d)
-  cp -R "$APP" "$stage/"
-  ln -s /Applications "$stage/Applications"
+  # The app and an Applications link on a background (macos/dmg-settings.py): dmgbuild writes the window's layout
+  # itself, where scripting Finder times out on CI machines
+  rm -rf target/dmgbuild
+  python3 -m venv target/dmgbuild
+  target/dmgbuild/bin/pip install --quiet --disable-pip-version-check --require-hashes --no-deps --only-binary :all: \
+    -r macos/dmg-requirements.txt
   # hdiutil sometimes finds the new image busy on CI machines: try again
   n=0
-  until hdiutil create -volname VibeOffice -srcfolder "$stage" -fs HFS+ -format UDZO -ov "$DMG"; do
+  until target/dmgbuild/bin/dmgbuild -s macos/dmg-settings.py -D app="$APP" VibeOffice "$DMG"; do
     n=$((n + 1))
     [ $n -lt 5 ] || exit 1
     sleep 5
   done
-  rm -rf "$stage"
   codesign --force --timestamp --sign "$DEVELOPER_ID" "$DMG"
   : "${ASC_KEY_PATH:?the App Store Connect API key (.p8) to notarize with}" "${ASC_KEY_ID:?}" "${ASC_ISSUER_ID:?}"
   out=$(xcrun notarytool submit "$DMG" --key "$ASC_KEY_PATH" --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER_ID" \

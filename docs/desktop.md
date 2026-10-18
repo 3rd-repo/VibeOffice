@@ -320,7 +320,15 @@ It builds both binaries, joins them (`lipo`) and bundles `VibeOffice.app`; then,
 
 - none: the app signed ad hoc, to try on that Mac (and the CI smoke run);
 - Developer ID Application: the DMG (the app and an Applications link), notarized with an App Store Connect API key
-  (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH`, the .p8 file) and stapled;
+  (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH`, the .p8 file) and stapled. Its window shows the two side by side
+  on a light sky with an arrow from the app to Applications and Scout under it, pointing the same way; the volume has
+  the app's icon. dmgbuild (MIT; Python 3.9 or later, fetched into `target/dmgbuild` from
+  `macos/dmg-requirements.txt`, pinned with hashes) writes the window's layout (`macos/dmg-settings.py`) without
+  Finder, which can't be scripted reliably on CI machines. The background is `macos/dmg/background.png` and its `@2x`,
+  joined into one HiDPI TIFF; `node tools/dmg-background.mjs` draws them in Chromium (Scout by his own rig,
+  GestureRight) from the settings' window size and icon places, so run it after changing those (`--preview` adds
+  stand-ins for the icons, in `tmp/dmg-preview.png`). Finder draws the icons' names in black on a background picture,
+  in Dark Mode too, so the picture stays light under them;
 - Apple Distribution and Mac Installer Distribution, with `MACOS_PROVISION_PROFILE` (the profile's path): the App Store
   package.
 
@@ -336,10 +344,11 @@ only, so nothing here links, bundles or runs. After `rustup target add aarch64-a
 
 **CI**, run by hand: Actions ▸ macOS ▸ Run workflow (`.github/workflows/macos.yml`, on `macos-15`). It builds, then
 opens the app alone and with a .docx, a .csv and a .md (`open -a`, as Finder does) and keeps a screenshot after each
-(artifact `VibeOffice-macOS-smoke`, with the app's log). With the signing secrets it adds the DMG to the version's
-GitHub release (the tag Windows uses, so one release holds both; `desktop/release-notes.md`) and, with *app_store*
-ticked, uploads the package to App Store Connect (`altool`). Without them the app is signed ad hoc and nothing is
-released: artifact `VibeOffice-macOS-unsigned`, which starts after `xattr -dr com.apple.quarantine VibeOffice.app`.
+(artifact `VibeOffice-macOS-smoke`, with the app's log), and one of the DMG's window opened in Finder when there is a
+DMG (`0-dmg.png`). With the signing secrets it adds the DMG to the version's GitHub release (the tag Windows uses, so
+one release holds both; `desktop/release-notes.md`) and, with *app_store* ticked, uploads the package to App Store
+Connect (`altool`). Without them the app is signed ad hoc and nothing is released: artifact
+`VibeOffice-macOS-unsigned`, which starts after `xattr -dr com.apple.quarantine VibeOffice.app`.
 
 The signing material is in the secrets of the `release` environment (Settings ▸ Environments; limit it to `main`, so
 runs from other branches and from forks never see them):
